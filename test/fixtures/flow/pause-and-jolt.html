@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- A known pause and a known jolt (design-vault#60). #glide goes out and back
+     with ease-in-out over 0–1000 ms and ends where it began, fill none, so it
+     drops out of getAnimations() before the sampler looks. Nothing moves from
+     1000 to 1600 ms. #dash moves at one linear speed from 1600 to 2400 ms: it
+     starts and stops at full speed, two jolts. -->
+<html><head><style>div { position: absolute; width: 40px; height: 40px; background: #333; }</style></head>
+<body>
+<div id="glide" style="top: 20px"></div>
+<div id="dash" style="top: 100px"></div>
+<script>
+document.getElementById("glide").animate(
+  [{ transform: "translateX(0)", easing: "ease-in-out" },
+   { transform: "translateX(300px)", easing: "ease-in-out" },
+   { transform: "translateX(0)" }],
+  { duration: 1000 });
+document.getElementById("dash").animate(
+  [{ transform: "translateX(0)" }, { transform: "translateX(300px)" }],
+  { duration: 800, delay: 1600, easing: "linear", fill: "forwards" });
+</script>
+</body></html>

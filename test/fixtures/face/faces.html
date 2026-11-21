@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>face-profile fixture</title>
+<style>
+  /* flex.ttf and plain.ttf: make-fonts.py gives each figure. */
+  @font-face { font-family: "Fixture Flex"; src: url(flex.ttf) format("truetype"); font-weight: 100 900; font-stretch: 75% 125%; font-display: block; }
+  @font-face { font-family: "Fixture Plain"; src: url(plain.ttf) format("truetype"); font-display: block; }
+  body { margin: 24px; font: 400 16px/1.5 "Fixture Flex", serif; letter-spacing: 0.3em; word-spacing: 1em; }
+  h1 { font-size: 48px; font-weight: 400; }
+  small { font-size: 12px; }
+  code, button { font-family: "Fixture Plain", monospace; font-size: 14px; }
+  .bold { font-weight: 700; }
+  .grade { font-variation-settings: "GRAD" 150; }
+  .fixed { font-size: 48px; font-optical-sizing: none; }
+  .adjusted { font-family: "Fixture Plain", monospace; font-size-adjust: 0.6; }
+  .gone { display: none; font-size: 40px; }
+  .unseen { visibility: hidden; font-size: 36px; }
+  .faded { opacity: 0; font-size: 34px; }
+  .pinned { font-size: 24px; font-variation-settings: "opsz" 200; }
+  .missing { font-family: "Not Here", "Fixture Plain", monospace; font-size: 20px; }
+  .clip { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  @media (max-width: 767px) { p { font-size: 18px; } }
+</style>
+</head>
+<body>
+  <h1>a heading in the flex face</h1>
+  <p>body text in the flex face, the most body text of any setting on the page, so it is the body setting at every width the script reads the page at</p>
+  <p>more body text, with <code>inline code, long enough that the plain face holds more characters than the body setting does, so the body setting is the one with the most body characters and not simply the most characters of any setting on the page, at either width</code> in the plain face</p>
+  <small>small print in the flex face</small>
+  <div class="bold">bold text</div>
+  <div class="grade">graded text</div>
+  <div class="fixed">optical size held</div>
+  <div class="adjusted">adjusted plain text</div>
+  <button>press</button>
+  <div class="missing">a face that never loads</div>
+  <div class="pinned">optical size set past the range</div>
+  <div class="unseen">invisible text</div>
+  <div class="faded">transparent text</div>
+  <div class="gone">hidden text at a size of its own</div>
+  <div class="clip" style="font-size: 30px">clipped text</div>
+</body>
+</html>

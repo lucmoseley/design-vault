@@ -1,0 +1,24 @@
+Gate list for web-surface, has-cta: 10 question(s).
+
+Look questions, for the critics:
+
+1. vault.primary-action: Does each view hold at most one part that looks like its main action, with no other part matching or outweighing it?
+   Applies to: each view: the first screen and every screen below it, at desktop and phone width
+2. vault.colour-look: Is every meaning colour carries also carried by text, an icon, a shape or a position, so a visitor who cannot tell the colours apart still gets it?
+   Applies to: every state, error, required field, selected option, chart series or other meaning shown in colour, links inside a line of text, a hover tint and a press's darker fill aside
+3. vault.curves-look: Viewed at 8× zoom, is the tightest bend of every curve free of corners?
+   Applies to: the tightest bend of every curve
+4. vault.contacts-look: Rendered at device pixel ratios 1, 2 and 3, and each render magnified 4× without being drawn again, does every contact close with no gap, no overlap and no seam of the ground along an edge both sides share (the conflation seam, which a shared edge does not cure)?
+   Applies to: every place two elements touch, on the first frame, every key frame and the last
+5. vault.pixel-image-kind: Is each such image declared as the round's `pixel-image` part, and is no photograph declared as one?
+   Applies to: every raster image shown larger than its natural size whose content is pixels or hard edges: pixel art, a QR or bar code, a screenshot of interface or a line diagram
+6. vault.affordance: Does every part a visitor can act on look as if they can, and every part they cannot look as if they cannot, save a hidden link that goes where a part that does look actable also goes, which is reported and does not fail?
+   Applies to: each part on the parts map's key, at desktop and phone width, answered part by part: does it look as if a visitor can act on it?
+7. vault.dialog-default-look: Is an action that destroys something the visitor did not deliberately choose to destroy neither the dialog's default button nor in the primary style, and is the default otherwise the action the visitor most likely came to take?
+   Applies to: every dialog, alert or confirmation whose action destroys something
+8. vault.shadow-meaning: Is each edge outside the controls that carries meaning drawn as a `border` or `outline`, or as a `box-shadow` over a transparent `border` or `outline` of equal width, so no meaning rests on a shadow that forced-colours mode drops?
+   Applies to: every edge or level outside the controls that carries meaning: a selected or current state, the edge of a menu, dialog, popover or card that must stand apart from what lies under it
+9. vault.borrowing: Does each part show its function only by that function's own look, never one another kind of part keeps for itself (a static label shaped and filled like the button, a heading in the link colour, a fact in the filter chip's shape), with each distinct look meaning one function across the page?
+   Applies to: every part, against every other part on the page
+10. vault.kept-breaks: Does text whose line breaks carry meaning, and only that text, keep its typed breaks and repeated spaces, by `pre`, `white-space-collapse: preserve` or `preserve-breaks`?
+   Applies to: code, poetry, addresses and other text whose line breaks carry meaning

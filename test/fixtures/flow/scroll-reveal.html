@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- WAAPI motion on load, and a section below the fold that fades in by CSS
+     transition once it is scrolled into view (design-vault#60). -->
+<html><head><style>
+#late { margin-top: 2000px; height: 100px; background: #333; opacity: 0; transition: opacity 400ms ease; }
+#late.in { opacity: 1; }
+</style></head>
+<body>
+<div id="top" style="width:40px;height:40px;background:#333"></div>
+<div id="late"></div>
+<script>
+document.getElementById("top").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+new IntersectionObserver((seen) => {
+  for (const s of seen) if (s.isIntersecting) s.target.classList.add("in");
+}).observe(document.getElementById("late"));
+</script>
+</body></html>

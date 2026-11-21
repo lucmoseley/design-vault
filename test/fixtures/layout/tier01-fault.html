@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tier 0 and 1 layout records, each broken</title>
+<!-- One plant per check-layout.py --records check (#311), each marked data-record with the records it fails and given an id f-<record name>; test/check-layout.test.py sweeps it at 390, 700, 1010, 1320 and 1400 px with tier01-parts.json and --brief kind=site, and every record must fail on its plant. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 monospace; }
+  img { display: block; }
+  .wrap { max-width: 1200px; margin-inline: auto; padding: 0 24px; }
+  header { padding: 8px 0; }
+  header .wrap { display: flex; gap: 24px; align-items: center; }
+  .logo .mark { display: none; }
+  @media (min-width: 1300px) { .logo .full { display: none; } .logo .mark { display: block; } }
+  #main-nav { display: none; }
+  .hero { height: calc(100vh - 56px); display: grid; place-items: center; text-align: center; background: #eef; }
+  .page { display: flex; }
+  .page > main { flex: 1; min-width: 0; }
+  .page > aside { width: 80px; flex: none; }
+  main section { padding: 16px 0; }
+  p { max-width: 32em; }
+  #f-line-length { max-width: none; }
+  .rtl { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 8px; padding: 0; list-style: none; }
+  #f-fluid-zoom { font-size: 5vw; }
+  .cols { display: flex; width: 100px; }
+  .cols div { flex: 1; height: 40px; background: #111; }
+  .centre { display: flex; justify-content: center; width: 200px; overflow-x: auto; }
+  .centre div { flex: none; width: 300px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { border: 1px solid #ccc; }
+  .cards .card { font-size: 6px; }
+  .card h3, .card p { margin: 0; }
+  .media { display: flex; gap: 12px; width: 200px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 10lvh; background: #fff; }
+  #f-optical { padding-left: 24px; }
+  #f-alignment-lines { padding-left: 64px; }
+  @media (min-width: 1301px) { #f-content-width { width: 1340px; max-width: none; margin-inline: calc((100% - 1340px) / 2); } }
+  #f-table-width { width: 220px; table-layout: fixed; }
+  #f-table-width td, .scroll td { white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tags { display: flex; gap: 8px; padding: 0; list-style: none; }
+  .tags li { white-space: nowrap; }
+  .strip { display: flex; flex-wrap: wrap; gap: 16px; padding: 0; list-style: none; margin: 0; }
+  .crumbs ol { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+  #f-popover-sheet { width: 200px; height: 100px; }
+  [role="toolbar"] { display: flex; gap: 8px; overflow: hidden; }
+  [role="toolbar"] button { flex: none; }
+  .pair { display: flex; }
+  .pair span { white-space: nowrap; }
+  .pair span:first-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  footer .band { padding: 16px 0; }
+  #f-footer-bands .wrap { max-width: 1000px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="/" data-record="vault.logo-version" id="f-logo-version"><img class="full" alt="Vault Hostel" width="160" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='40'%3E%3Crect width='160' height='40' fill='%23335'/%3E%3C/svg%3E"><img class="mark" alt="Vault Hostel" width="40" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23335'/%3E%3C/svg%3E"></a>
+  </div>
+</header>
+<div class="page wrap">
+<main id="f-panes" data-record="vault.panes-by-width">
+  <section class="hero" id="f-false-floor" data-record="vault.false-floor"><h1>Stay in the old town</h1></section>
+  <section>
+    <h2>Menu</h2>
+    <button id="f-nav-by-width" data-record="vault.nav-by-width" aria-controls="main-nav" aria-expanded="false">Menu</button>
+    <nav id="main-nav" aria-label="Main" data-record="vault.nav-wide vault.visible-nav"><ul><li><a href="#a">Home</a></li><li><a href="#b">Rooms</a></li><li><a href="#c">Food</a></li><li><a href="#d">Book</a></li></ul></nav>
+  </section>
+  <section>
+    <h2>Rooms</h2>
+    <p id="f-line-length" data-record="vault.line-length">Every room has its own window onto the square, a bed made up fresh each day, and a locker big enough for a pack. Breakfast is served downstairs from seven until ten, and the kitchen stays open late for anyone who wants to cook, with pans, plates and a long table by the window for everyone.</p>
+  </section>
+  <section>
+    <h2>Steps</h2>
+    <ol class="rtl" dir="rtl" id="f-rtl-image-order" data-record="vault.rtl-image-order">
+      <li><img alt="one" width="60" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40'/%3E"></li>
+      <li><img alt="two" width="60" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40'/%3E"></li>
+      <li><img alt="three" width="60" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40'/%3E"></li>
+    </ol>
+    <p id="f-fluid-zoom" data-record="vault.fluid-zoom">Fluid.</p>
+  </section>
+  <section>
+    <h2>Fills</h2>
+    <div class="cols" id="f-joined-fills" data-record="vault.joined-fills"><div></div><div></div><div></div></div>
+    <div class="centre" id="f-safe-centre" data-record="vault.safe-centre"><div>wide content</div></div>
+  </section>
+  <section>
+    <h2>Cards</h2>
+    <div class="cards" id="f-content-columns" data-record="vault.content-columns">
+      <article class="card"><h3>Dorm</h3><p id="f-card-alignment" data-record="vault.card-alignment">Six beds.</p></article>
+      <article class="card"><h3>Private room with a view over the square</h3><p>Two beds.</p></article>
+    </div>
+    <div><article class="card media" id="f-card-media-stack" data-record="vault.card-media-stack"><img alt="" width="80" height="60" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='60'/%3E"><p>A room with a balcony.</p></article></div>
+  </section>
+  <section>
+    <h2>Notes</h2>
+    <div><div id="f-optical-alignment" data-record="vault.optical-alignment" style="padding-left: 24px">Check-in from two.</div><div>Check-out by eleven.</div></div>
+  </section>
+  <section id="f-alignment-lines" data-record="vault.alignment-lines">
+    <h2>Getting here</h2>
+    <img id="f-content-width" data-record="vault.content-width" alt="" width="300" height="60" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='60'/%3E">
+  </section>
+  <section>
+    <h2>Prices</h2>
+    <table id="f-table-width" data-record="vault.table-width"><tr><th>Room</th><th>Monday to Thursday</th><th>Friday</th></tr><tr><td>Dorm bed by the window</td><td>20 a night</td><td>26 a night</td></tr></table>
+    <div class="scroll"><table id="f-table-narrow" data-record="vault.table-narrow"><tr><th>Room</th><th>Monday to Thursday</th><th>Friday and Saturday</th><th>Sunday</th></tr><tr><td>Dorm bed by the window</td><td>20 a night</td><td>26 a night</td><td>22 a night</td></tr></table></div>
+  </section>
+  <section>
+    <h2>Book</h2>
+    <div class="buttons" id="f-button-group-stack" data-record="vault.button-group-stack"><button>Book</button><button>Ask us a question</button><button>See the whole map</button></div>
+    <ul class="tags" id="f-row-wrap" data-record="vault.row-wrap"><li>Breakfast</li><li>Lockers</li><li>Kitchen</li><li>Laundry</li><li>Bar</li><li>Garden</li><li>Wifi</li><li>Bikes</li></ul>
+    <nav aria-label="Sections" id="f-nav-strip" data-record="vault.nav-strip"><ul class="strip"><li><a href="#s1">Breakfast</a></li><li><a href="#s2">Lockers</a></li><li><a href="#s3">Kitchen</a></li><li><a href="#s4">Laundry</a></li><li><a href="#s5">Garden</a></li><li><a href="#s6">Bikes</a></li><li><a href="#s7">Tours</a></li><li><a href="#s8">Transfers</a></li></ul></nav>
+    <nav class="crumbs" aria-label="Breadcrumb" id="f-breadcrumb-narrow" data-record="vault.breadcrumb-narrow"><ol><li><a href="/">Home</a></li><li><a href="/x">Europe</a></li><li><a href="/y">Portugal</a></li><li><a href="/z">Lisbon district</a></li><li aria-current="page">Old town hostel</li></ol></nav>
+  </section>
+  <section>
+    <h2>Tools</h2>
+    <button popovertarget="f-popover-sheet">Options</button>
+    <div popover id="f-popover-sheet" data-record="vault.popover-sheet"><p>Sort by price</p></div>
+    <div role="toolbar" aria-label="Format" id="f-bar-fit" data-record="vault.bar-fit"><button>Bold</button><button>Italic</button><button>Underline</button><button>Link</button><button>Quote</button><button>List</button><button>Image</button></div>
+    <div role="tabpanel" id="f-tabs-narrow" data-record="vault.tabs-narrow" hidden><p>Rooms panel.</p></div>
+    <div role="tabpanel" id="t2"><p>Prices panel.</p></div>
+    <ul><li><a href="#f-tabs-script">Map</a></li></ul>
+    <div role="tabpanel" id="f-tabs-script" data-record="vault.tabs-narrow" hidden><p>Map panel.</p></div>
+    <script>document.getElementById('f-tabs-script').hidden = false;</script>
+    <div class="pair" id="f-label-value-stack" data-record="vault.label-value-stack"><span>Check-in time at the front desk</span><span>From two in the afternoon until late</span></div>
+  </section>
+</main>
+<aside id="f-side-pane" data-record="vault.side-pane"><h2>Near</h2></aside>
+</div>
+<div id="f-capped-centre" data-record="vault.capped-centre" style="max-width: 600px"><span>Quiet hours</span> <span>from eleven.</span></div>
+<footer>
+  <div class="band"><div class="wrap" id="f-footer-narrow" data-record="vault.footer-narrow">
+    <div><h3>Stay</h3><ul><li><a href="#f1">Rooms</a></li><li><a href="#f2">Prices</a></li></ul></div>
+    <div><h3>Visit</h3><ul><li><a href="#f3">Map</a></li><li><a href="#f4">Tours</a></li></ul></div>
+    <div><h3>Help</h3><ul><li><a href="#f5">Contact</a></li><li><a href="#f6">Terms</a></li></ul></div>
+  </div></div>
+  <div class="band" id="f-footer-bands" data-record="vault.content-width"><div class="wrap"><small>Vault Hostel</small></div></div>
+</footer>
+<div class="bar" id="f-bottom-safe-area" data-record="vault.bottom-safe-area"><button>Book now</button></div>
+</body>
+</html>

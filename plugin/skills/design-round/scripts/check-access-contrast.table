@@ -1,0 +1,14 @@
+# check-access.py's contrast figures (#316): ID | name | numbers. Each value
+# comes from its record in design-critique/rules/; change them together.
+vault.contrast | text | 4.5, 3
+vault.contrast | large | 24, 18.66, 700
+vault.control-edges | edge | 3
+vault.contrast-ladder | icon | 3
+vault.contrast-ladder | state | 3
+vault.contrast-ladder | thin | 0.06, 400
+vault.contrast-ladder | aim | 7, 4.5
+vault.controls-on-photo | edge | 3
+vault.fill-text | split | 0.179
+vault.fill-text | gap | 0.5, 0.4
+vault.chart-contrast | mark | 3
+vault.text-tint | hued | 0.05

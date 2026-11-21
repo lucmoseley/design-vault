@@ -1,0 +1,7 @@
+# Each value comes from its record in design-critique/rules/; change them together.
+vault.one-site | phone | Pixel 7
+vault.nav-order | order
+vault.multiple-ways | ways | >= 2
+vault.multiple-ways | home-hub | pages <= 4
+vault.flow-back | back
+vault.prefilled-repeat | repeat

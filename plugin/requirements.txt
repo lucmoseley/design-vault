@@ -1,0 +1,8 @@
+# The Python packages the design-round scripts import, pinned to the versions
+# the vault's suites pass on (Python 3.12), installed machine-wide (README
+# §Installing the plugin on a second machine, #254).
+# Chromium follows the playwright pin: each Playwright release fetches its own build.
+playwright==1.61.0
+numpy==2.4.6
+Pillow==12.3.0
+scipy==1.16.3

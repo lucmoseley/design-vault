@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- check-load.py --files's page with one fault per record its table checks, each marked data-fault with its record id (#313). -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Net fault</title>
+<style>
+@font-face { font-family: "Net Good"; src: url(good.woff2) format("woff2"); }
+@font-face { font-family: "Net Plain"; src: url(plain.ttf) format("truetype"); }
+@font-face { font-family: "Net Flex"; src: url(flex.woff) format("woff"); font-weight: 100 900; }
+body { font-family: "Net Good", serif; font-size: 16px; }
+button { font: inherit; }
+h1, h2, .lead { font-family: "Net Flex", serif; font-weight: 400; }
+h1 { font-size: 32px; }
+h2 { font-size: 24px; }
+.lead { font-size: 16px; }
+.sc { font-variant-caps: small-caps; }
+.alt { font-feature-settings: "ss05" 1; }
+.num { font: 16px "Net Good", serif; font-variant-numeric: tabular-nums; }
+.plain { font-family: "Net Plain", serif; }
+</style></head>
+<body>
+<h1 data-fault="vault.type-axes">Rooms near the harbour</h1>
+<h2>Dorms and doubles</h2>
+<p class="lead">A short walk from the ferry, with a café on the ground floor.</p>
+<p data-fault="vault.glyph-coverage">Łódź</p>
+<p class="plain" data-fault="vault.glyph-distinct">Ill lit hall</p>
+<p class="sc" data-fault="vault.small-caps">open daily from seven</p>
+<p class="alt" data-fault="vault.font-features">a quiet roof garden</p>
+<table><tr><th>Room</th><th>Beds</th></tr><tr><td class="num">101</td><td class="num">8</td></tr><tr><td class="plain" data-fault="vault.figure-face">204</td><td class="num">12</td></tr></table>
+<button type="button" data-fault="vault.icon-vector"><img src="icon.png" width="24" height="24" alt="Search"></button>
+<footer><a href="cookies.html">Cookies</a></footer>
+<script data-fault="vault.cookie-banner">document.cookie = "_ga=GA1.1.1; path=/";</script>
+</body></html>

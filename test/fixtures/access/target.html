@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>target</title>
+<!-- One fault, vault.target-size: two 20 px buttons 2 px apart, so the 24 px circles on them cross.
+     And two short links in a card, with no text in their own line but a paragraph below them: not in a line of
+     text, so not exempt, and 4 px apart. And a select given padding, a button given a 12 px font, a date input given
+     both in its style attribute and a text field given size=1, stacked and centred with no gap: not at the browser's
+     own size, so not exempt by WCAG's user-agent exception (#188), and still under 24 px tall. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .tools { display: flex; gap: 2px }
+  .card a { font-size: 12px; margin-right: 4px }
+  .styled { display: inline-grid; justify-items: center; align-items: start }
+  .styled > select { padding: 0 2px }
+  .styled > button { font-size: 12px }
+  .tools button { appearance: none; border: 0; padding: 0; width: 20px; height: 20px; background: #222 }
+  @media (forced-colors: active) { .tools button { border: 1px solid } }
+</style>
+<p>Two small tools side by side.</p>
+<div class="tools"><button class="bold" aria-label="Bold"></button><button class="italic" aria-label="Italic"></button></div>
+<div class="card"><a class="in" href="#in">In</a><a class="out" href="#out">Out</a><p>A card's own text, below its links.</p></div>
+<div class="styled"><select class="sort" aria-label="Sort"><option>Newest first</option></select><button class="go">Go</button><input class="day" type="date" aria-label="Arrival" style="padding: 0 2px; font-size: 12px"><input class="one" size="1" aria-label="Beds"></div>

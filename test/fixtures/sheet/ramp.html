@@ -1,0 +1,14 @@
+<!doctype html>
+<!-- A build whose every moment is its own colour (design-vault#71): the ground's
+     red channel is a fifth of the time in ms, 0 at the start and 220 at the end,
+     1100 ms in, so a frame's time can be read back from its pixels. The end
+     falls between two 250 ms steps. -->
+<html><head><style>
+html, body { margin: 0; height: 100%; }
+</style></head>
+<body>
+<script>
+document.body.animate([{ backgroundColor: "rgb(0, 0, 0)" }, { backgroundColor: "rgb(220, 0, 0)" }],
+  { duration: 1100, easing: "linear", fill: "both" });
+</script>
+</body></html>

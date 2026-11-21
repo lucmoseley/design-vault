@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <!-- check-seams.test.py: seam.html's conflation seam as a bare SVG file, whose root takes the mattes' style. -->
+  <rect width="100" height="100" fill="#fff"/>
+  <path id="left" fill="#1a4d8f" d="M10 10 H40.5 V90 H10 Z"/>
+  <path id="right" fill="#e0a030" d="M40.5 10 H90 V90 H40.5 Z"/>
+</svg>

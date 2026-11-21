@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>strokes</title>
+<!-- vault.contrast fails twice (#257), on a legal pad. Three texts pass, each over a
+     line in its own colour that crosses its glyphs and reads 1:1 there: red handwriting over a 2 px underline,
+     tilted so the line's edge blends into the pad; a navy row over a 1 px rule; a navy paragraph on 1 px navy ruled
+     lines. Two fail: navy text over an 8 px navy band, a patch too thick to be a stroke, at 1.00:1; and navy text
+     over a 1 px rule in a lighter blue, a stroke in another colour, at 2.03:1. A sixth text passes, with that
+     lighter rule inside its box but below its letters: the page grows 1 px on the first full-page shot, and a mask from shots of two sizes reads its whole box. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/24px system-ui, sans-serif; color: #1b2a6b; background: #f6e68a }
+  p { margin: 0 0 24px }
+  .note { font-size: 30px; line-height: 40px; color: #b8322b; transform: rotate(-5deg); transform-origin: left center }
+  .note span { background: linear-gradient(#b8322b, #b8322b) 0 70% / 100% 2px no-repeat }
+  .ruled { background: linear-gradient(var(--rule), var(--rule)) 0 12px / 100% 1px no-repeat }
+  #rule { --rule: #1b2a6b; font-weight: 700 }
+  #pad { background: repeating-linear-gradient(to bottom, transparent 0 12px, #1b2a6b 12px 13px, transparent 13px 24px) }
+  #band { position: relative }
+  #band::before { content: ""; position: absolute; left: 0; width: 120px; top: 10px; height: 8px; background: #1b2a6b }
+  #band span { position: relative }
+  #other { --rule: #4a5a9b }
+  #beside { background: linear-gradient(#4a5a9b, #4a5a9b) 0 20px / 100% 1px no-repeat }
+</style>
+<p class="note"><span>Write to me</span></p>
+<p class="ruled" id="rule">Streamlining the process: a lecture</p>
+<p id="pad">A paragraph written on the pad's ruled lines, each drawn in the ink's own navy through the middle of its letters, at either width.</p>
+<p id="band"><span>Text over a band of its own navy</span></p>
+<p class="ruled" id="other">A rule in a lighter blue</p>
+<p id="beside">Ruled in the same blue beneath</p>
+<div style="height: 800px"></div>
+<div id="grow"></div>
+<script>
+  addEventListener("resize", () => { document.getElementById("grow").style.height = "1px"; }, { once: true });
+</script>
+</html>

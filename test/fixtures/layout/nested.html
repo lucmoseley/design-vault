@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>nested</title>
+<!-- A 600 px box inside a flex item: the item stretches to it, so the item is
+     the outermost element past the edge and the box inside it is the cause. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .row { display: flex }
+  .wide { width: 600px; height: 40px; background: #ccc }
+</style>
+<div class="row"><div class="card"><div class="wide"></div></div></div>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hostel guides — state checks, the rules' exemptions and a covered part</title>
+<link rel="stylesheet" href="state.css">
+<style>.away .track { display: block; } .away .thumb { left: 92px; }</style>
+</head>
+<body>
+<main>
+  <h1>Hostel guides</h1>
+  <!-- vault.act-on-release allows a press the release undoes: it peeks while held. -->
+  <button type="button" id="peek">Hold to peek</button>
+  <p id="peeked" hidden>Lisbon, Porto and Faro</p>
+  <!-- ... and an action undone after it: the press deletes and offers Undo. -->
+  <ul id="list"><li>Porto in a weekend</li></ul>
+  <button type="button" id="delete">Delete guide</button>
+  <!-- vault.key-shortcuts allows a single key a setting turns off. -->
+  <label><input type="checkbox" id="keys" checked> Keyboard shortcuts</label>
+  <label for="find">Find</label>
+  <input id="find" type="search">
+  <!-- A hover target under a sheet the pointer cannot get past is not judged. -->
+  <div style="position: relative; display: inline-block">
+    <span class="tip-host" id="covered">Fees<span class="tip" role="tooltip">No booking fee</span></span>
+    <div style="position: absolute; inset: 0"></div>
+  </div>
+  <!-- vault.slider-keys: a track inside a link, whose click leaves the page, and a slider after it that
+       ignores every key, which is still judged on the page loaded afresh (#458). -->
+  <a href="pages/a.html" class="away"><span class="track"><span class="thumb" role="slider" tabindex="0" aria-label="Rooms" aria-valuemin="0" aria-valuemax="10" aria-valuenow="5"></span></span></a>
+  <div class="track"><div class="thumb" role="slider" tabindex="0" aria-label="Floors" aria-valuemin="0" aria-valuemax="10" aria-valuenow="5"></div></div>
+</main>
+<script>
+  const rooms = document.querySelector("[aria-label=Rooms]");
+  rooms.addEventListener("keydown", (e) => {
+    const v = +rooms.getAttribute("aria-valuenow");
+    const to = { Home: 0, End: 10, ArrowRight: v + 1, ArrowUp: v + 1, ArrowLeft: v - 1, ArrowDown: v - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    rooms.setAttribute("aria-valuenow", Math.max(0, Math.min(10, to)));
+  });
+  const peek = document.getElementById("peek");
+  const peeked = document.getElementById("peeked");
+  peek.addEventListener("pointerdown", () => (peeked.hidden = false));
+  for (const e of ["pointerup", "pointerleave", "pointercancel"])
+    peek.addEventListener(e, () => (peeked.hidden = true));
+  document.getElementById("delete").addEventListener("pointerdown", (e) => {
+    const list = document.getElementById("list");
+    if (!list.firstElementChild) return;
+    list.firstElementChild.remove();
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.textContent = "Undo";
+    e.target.after(undo);
+  });
+  addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement === document.body && document.getElementById("keys").checked) {
+      e.preventDefault();
+      document.getElementById("find").focus();
+    }
+  });
+</script>
+</body>
+</html>

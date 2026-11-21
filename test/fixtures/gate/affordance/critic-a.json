@@ -1,0 +1,112 @@
+{
+ "answers": {
+  "pill": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic a on p1"
+     },
+     "p2": {
+      "answer": "Yes",
+      "evidence": "critic a on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic a on vault.edge-look"
+   }
+  },
+  "hidden": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic a on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic a on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic a on vault.edge-look"
+   }
+  },
+  "minor": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic a on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic a on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic a on vault.edge-look"
+   }
+  },
+  "split": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic a on p1"
+     },
+     "p2": {
+      "answer": "Yes",
+      "evidence": "critic a on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic a on vault.edge-look"
+   }
+  },
+  "clean": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic a on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic a on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic a on vault.edge-look"
+   }
+  },
+  "unlisted": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic a on p1"
+     }
+    },
+    "unlisted": [
+     "the 'Call us' line at the foot is in the link colour"
+    ]
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic a on vault.edge-look"
+   }
+  }
+ },
+ "clashes": []
+}

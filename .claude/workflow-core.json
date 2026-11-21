@@ -1,0 +1,373 @@
+{
+	"contract": 1,
+	"founder": "Luc Moseley",
+	"tracker": "lucmoseley/design-vault-tracker",
+	"codeRepo": "lucmoseley/design-vault",
+	"modules": [],
+	"walkedTo": "v3.0.0",
+	"refillPanel": true,
+	"commands": {
+		"test": "bash test/all.sh"
+	},
+	"fullTestShards": 4,
+	"corpus": [
+		"lucmoseley/design-vault-tracker",
+		"lucmoseley/workflow-core-tracker",
+		"lucmoseley/mantahostels"
+	],
+	"alwaysLoaded": ["CLAUDE.md", "AGENTS.md", ".claude/workflow-core.md"],
+	"archScan": {
+		"exclude": ["data/**", "specimens.js"]
+	},
+	"sensitivePaths": [
+		{
+			"name": "higgsfield-spend",
+			"description": "The design round's Higgsfield client, which spends real money on the founder's pay-per-request account and holds its API key.",
+			"globs": [
+				"plugin/skills/design-round/scripts/higgsfield.js",
+				"plugin/skills/design-round/scripts/higgsfield-client.js"
+			],
+			"focus": "the round ceiling and max_usd bind before any job is submitted; a charged job is never lost; the API key is never printed, logged or written to the ledger",
+			"examples": [
+				"#62: a finished video was charged, then lost, because the script never read video.url"
+			],
+			"live": true
+		}
+	],
+	"stepsOwed": [
+		{
+			"tag": "v1.3.16",
+			"type": "act",
+			"text": "Where module-level state has more than one writer and one is named for something else, move that write into a function named for it, or return the value instead (base §G9, workflow-core#1821). List the candidates — a module-scope `let`, `var`, Map or Set, and a `process.env` write — then read each one's writers: `git grep -nE '^(export )?(let|var) |^(export )?const \\w+(: [^=]+)? = new (Map|Set)\\b|process\\.env(\\.\\w+|\\[[^]]+\\]) *=[^=]|delete process\\.env' -- '*.js' '*.cjs' '*.mjs' '*.ts' ':!*.test.*'`. A module-scope object or array is missed. What §G9's \"Outside the rule\" names, test support among it, is no breach."
+		},
+		{
+			"tag": "v1.3.16",
+			"type": "act",
+			"text": "Give each component, layout and static data table a §N2 header that also states it performs no I/O, or, on a production adapter or a composition root, says which it is and names the suppliers it touches (base §N2, §T7, workflow-core#1824, workflow-core#1903). List the files whose first lines do not name them: `git ls-files -z 'app/**' | while IFS= read -r -d '' f; do case \"$f\" in *.test.*|*.test-support.*) ;; *.ts|*.tsx|*.js|*.jsx) head -5 \"$f\" | grep -qF \"$(basename \"$f\")\" || echo \"$f\" ;; esac; done`, and those whose text never says so: `git grep -L -i -e 'no I/O' -e 'production adapter' -e 'composition root' -- 'app/*.ts' 'app/*.tsx' ':!*.test.*' ':!*.test-support.*'`, adding any other path that holds them. A component that reads the clock or does I/O as it renders takes the value as a prop or from context instead."
+		},
+		{
+			"tag": "v1.3.16",
+			"type": "act",
+			"text": "Delete each changes-table row of your code-standards local file whose reason is that the code is presentational, or file a ticket that will (workflow-core#1824)."
+		},
+		{
+			"tag": "v1.3.16",
+			"type": "act",
+			"text": "Clear the uncited swallows already in your tree (workflow-core#1830). Paste this into a session in your repo: \"Run `node <plugin root>/scripts/check-swallowed-errors.js --all`. For each `except` it lists, decide whether swallowing is the design. Where it is, write a comment at the site saying why and citing the ticket that chose it, filing one if none exists; where the drop reaches a person reading the output, also print it (base §N5). Where it is not, let the error raise or exit non-zero. Re-run until it prints OK, then commit.\""
+		},
+		{
+			"tag": "v1.3.16",
+			"type": "act",
+			"text": "Without `docs/test-read-edges.json`, read base §X10 against your own test selector: each tracked file a test reads is one a change to it selects that test for, or the test's header carries a `full-sweep-only: <why>` line (workflow-core#1886). List the candidates: `git grep -nE -e '(readFileSync|readdirSync|existsSync|statSync)\\(' -e '(open|read_text|read_bytes)\\(' -- '*.test.*' '*test_*.py' '*_test.py'` and read each: a read of a fixture the test writes itself is no breach."
+		},
+		{
+			"tag": "v1.3.16",
+			"type": "act",
+			"text": "Where your repo runs gates of its own — a `.husky/pre-commit.local`, or a CI job beyond the plugin's — record them in your code-standards local file's §W (base §0, workflow-core#1826). Paste this into a session in your repo: \"Read the floor table in base §0 of the core's `docs/code-standards-base.md`. Then read `.husky/pre-commit.local`, if it exists, and each workflow under `.github/workflows/`. In `docs/code-standards.md`, write or update a `## §W — what tooling already enforces` section holding one row per gate the floor does not name: what it refuses, which staged paths arm it, and whether it refuses or only warns. Add the rule sets your own `biome.json`, ESLint config, `tsconfig.json` or `ruff.toml` carry, and which declared command runs each, and what your CI runs, floor gates included. Delete each statement of what a floor gate does at commit, keeping what your CI does with the same tool. Commit by pathspec.\""
+		},
+		{
+			"tag": "v1.3.16",
+			"type": "choice",
+			"text": "Turn the mutation hold on only where every `sensitivePaths` glob you declare is code your vitest tests import in process, not code they spawn as a child (workflow-core#1871, workflow-core#1912). Then, in this order: install both packages at the version the hold is verified against, `npm install --save-dev @stryker-mutator/core@10.0.0 @stryker-mutator/vitest-runner@10.0.0`; seed the cache with one cold run over the declared paths at HEAD, `node scripts/lib/resolve-core.js scripts/mutation-hold-gate.js --seed`; and add `\"mutation\"` to `modules` in `.claude/workflow-core.json`.",
+			"declined": true
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "Add `\"onFailure\": \"block\"` to each `PreToolUse` hook in your own `.claude/settings.json` that can refuse a call — by a `deny` `permissionDecision` or exit 2 — and to none that only warns (base §S3, workflow-core#2670). List the candidates: `jq -r '.hooks.PreToolUse[]?.hooks[]? | select(.onFailure == null) | .command' .claude/settings.json`; the step is done when every command left is a hook that never refuses."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "Replace `lucmoseley/workflow-core` with `lucmoseley/workflow-core-tracker` in your `.claude/workflow-core.json` `corpus`, and in any skill, doc or script of yours that reads or files the core's issues, or each search meets the public repo, which has issues off (workflow-core#1954). List them: `git grep -nE 'lucmoseley/workflow-core([^-]|$)' -- ':!*.lock' ':!package-lock.json'`; the step is done when every hit left names the code: a clone, `blob/` or marketplace url."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "Inject at `WFC_NODE`, `WFC_NPM`, `WFC_PYTHON` or `WFC_TIMEOUT` each `node`, `npm`, `python3` or `timeout` your tests fake with output or exit codes they choose per call, and have the test set the var instead of prepending `PATH` (workflow-core#2266, workflow-core#2422). List the candidates: `git grep -nE \"[\\\"'/](node|npm|python3|timeout)[\\\"']\" -- '*.test.*' '*.spec.*' 'test_*.py' '*/test_*.py' '*_test.py' 'conftest.py' '*/conftest.py'`; the step is done when every hit left is a decoy failing every call, a detached launcher's stub `node`, or a fake already set at its var."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "Where a test of yours fakes `git` with output or exit codes it chooses per call, have the program under test run `git` as `\"${WFC_GIT:-git}\"` or `process.env.WFC_GIT || \"git\"`, and the test set `WFC_GIT` to the fake instead of prepending `PATH` (base §N7, workflow-core#2581, workflow-core#2589). List the candidates: `git grep -nE \"(, *[\\\"']git[\\\"']\\)|/ *[\\\"']git[\\\"']|/git[\\\"'\\`]?( *<<| *>| *;| *,| *\\)| *$))\" -- '*.test.*' '*.spec.*' 'test_*.py' '*/test_*.py' '*_test.py' 'conftest.py' '*/conftest.py' '*.bats'`; the step is done when every hit left is a decoy failing every call, a fake already set at `WFC_GIT`, or no fake at all."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "notice",
+			"text": "The gate-switch check now counts a tracked `.spec.js`, `.spec.jsx`, `.spec.ts` or `.spec.tsx` file, or its `c` or `m` form, as a suite, so a repo holding one with `suites` off has its commits refused until it turns `suites` on (#2271)."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "Where your repo has `docs/test-read-edges.json` and tracks a test other than a `.test.ts` or `.test.tsx` one, clear each read `node <plugin root>/scripts/generate-test-read-edges.js --unseen` now lists in one: name the path as a literal the test or a helper it imports spells, or add a `full-sweep-only: <why>` line to the test's header comment (base §X10, #2545). The step is done when the listing reads `0 read(s)`."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "notice",
+			"text": "`resolve-ticket.js` refuses a completed close with no `**Practice:**` line — `ran — <note>`, `covered — <note>, <Researched date>`, `skipped — <exempt kind>` or `none-fits — nearest <craft>` — so a session or script of yours that closes through it must write one; a not-planned close owes none (#2325)."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "If you vendor skills, write the upstream record before your next commit that changes `skills-lock.json` (#2394). Run `node \"$WFC_PLUGIN_ROOT/scripts/check-vendored-skills.js\" --upstream`; where it names an `UPSTREAM-LICENCE` or licence `UPSTREAM-GONE`, refresh that `THIRD-PARTY-NOTICES.md` section from upstream and run it again. Commit the `.agents/vendored-upstream-pass.json` it writes. The step is done when `git ls-files skills-lock.json` prints nothing, or `git ls-files .agents/vendored-upstream-pass.json` prints the record."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` `commands.check_staged` runs `biome check --staged` with no `--write`, `--fix` or `--unsafe`, itself or through a `package.json` script, and your `package.json` declares `@biomejs/biome`, set `commands.check_staged` to `node \"$WFC_PLUGIN_ROOT\"/scripts/biome-staged.js` followed by that call's other flags, `--staged` dropped, then `&&` any other command the script ran (#2540). Leave the `package.json` script as it is: only the hook sets `WFC_PLUGIN_ROOT`. The step is done when `node scripts/lib/resolve-core.js scripts/lib/workflow-core-config.js command check_staged` prints neither a `biome check --staged` without a write flag nor the name of a script running one."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` `commands.check_staged` runs `lint-staged`, itself or through a `package.json` script, set it to `node \"$WFC_PLUGIN_ROOT\"/scripts/biome-staged.js` with your Biome flags, or to a command of your own that lints the index's bytes rather than the worktree's (#2587). No lint-staged flag makes it safe in a shared tree: `--no-stash` still hides the unstaged hunks, and `--no-hide-partially-staged` commits them. The step is done when `node scripts/lib/resolve-core.js scripts/lib/workflow-core-config.js command check_staged` prints neither `lint-staged` nor the name of a script running it."
+		},
+		{
+			"tag": "v1.3.18",
+			"type": "notice",
+			"text": "A commit made with any `WFC_<NAME>_OFF` variable set, such as `WFC_CITATION_TRACKER_OFF`, is now refused until a `Weakens:` line in its message names the variable (#2394)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` `commands.check_staged` runs `biome check --staged`, itself or through a `package.json` script, set `commands.check_staged` to `node \"$WFC_PLUGIN_ROOT\"/scripts/biome-staged.js` followed by that call's other flags, with `--staged` and any write flag (`--write`, `--fix`, `--unsafe`, `--apply`, `--apply-unsafe`) dropped (workflow-core#2731). Dropping a write flag loses auto-fix on commit: `biome-staged.js` lints a thrown-away extract of the index, and Biome's `--write` would rewrite the worktree file, a neighbour's hunks included (workflow-core#2583, workflow-core#2598). Where the script also runs other commands, through `&&`, `;`, `|`, a redirect or a second command, declare them in a gate of their own, never `&&`-joined onto `biome-staged.js`; where you followed v1.3.18's step and `check_staged` is now `biome-staged.js … && <other>`, move `<other>` the same way. Leave the `package.json` script as it is: only the hook sets `WFC_PLUGIN_ROOT`, and run by hand it still fixes. The step is done when `node scripts/lib/resolve-core.js scripts/lib/workflow-core-config.js command check_staged` prints neither a `biome check --staged` nor the name of a script running one. A call in one of these shapes is refused; declare instead: - a value after a space (`--reporter json`): its `=` form, `--reporter=json`; - `--config-path`, `--vcs-root`, `--reporter-file`, `--log-file` or `--stdin-file-path`, whatever the value: a `biome-staged.js` command whose flags you own; - a positional path, `.` included: the command with no path; - Biome run through anything but `biome`, `@biomejs/biome`, `npx biome` or `npx @biomejs/biome` (`npm exec`, `pnpm`, `yarn`, `bunx`, a `node_modules/.bin/` path, a version pin such as `npx @biomejs/biome@1.9.4`): a bare `biome check --staged …` script, or a `biome-staged.js` command; - `@biomejs/biome` declared in neither `dependencies` nor `devDependencies`: add it to `devDependencies`; - `--changed`, `--since`, `--watch`, `--help`, `-h` or `--`: the command without it; - a switch given a value (`--write=true`), or a value flag given an empty one (`--reporter=`): the bare switch, or the flag with its value; - a flag not on `biome-staged.js`'s allowlist, which the refusal names, every short flag but `-h` among them (`-v`): a `biome-staged.js` command whose flags you own."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "notice",
+			"text": "A review may now raise base §G7 against a fake a change adds or touches that no contract test holds to its production adapter, or against a hand-written double for a port that has a shared fake (workflow-core#2207). It binds only changes, so there is nothing to list."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "notice",
+			"text": "A review may now raise base §X11 against a case a change adds or rewrites on a program with a core: a branch case left spawned where a module case on the core would do, a program case deleted before a module case asserts its outcome, code and message, or a shell branching beyond choosing the core entry, mapping the outcome to an exit and stream, or failing open (workflow-core#2206). It binds only changes, so there is nothing to list."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "notice",
+			"text": "Base §X3 now names a Python module's `if __name__ == \"__main__\":` path as a program case, restating it: §X3 already ran that path as a top-level script (workflow-core#2249). Base §X7 no longer keeps every program case when a module is deepened, only §X11's boundary set, and §X8 (2)'s one real call for a program is §X11's item 3. Each loosens or restates a rule, so there is nothing to list."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "notice",
+			"text": "With `mutation` on, a commit adding a line inside the reach of an old unreasoned `Stryker disable` comment is now refused, naming the comment's line; give it a reason after its colon (workflow-core#2727)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-node-heap.sh` or `guard-headroom-read.sh` under `disabled`, list `guard-node-heap.js` or `guard-headroom-read.js` instead: both guards are Node now, and the old name silences nothing (workflow-core#2784)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-pull-form.sh` or `record-divergence.sh` under `disabled`, list `guard-pull-form.js` or `record-divergence.js` instead: both are Node now, and the old name silences nothing (workflow-core#2797)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-issue-create-label.sh` under `disabled`, list `guard-issue-create-label.js` instead: the guard is Node now, and the old name silences nothing (workflow-core#2796)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-suite-concurrency.sh` under `disabled`, list `guard-suite-concurrency.js` instead: the guard is Node now, and the old name silences nothing (workflow-core#2795)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-bg-job.sh`, `inject-test-rules.sh` or `guard-citation-tracker.sh` under `disabled`, list `guard-bg-job`, `inject-test-rules` or `guard-citation-tracker` instead: the three now run as cores of one Node entry, `scripts/guard-dispatch.js`, which reads `disabled` by core name, and the old name silences nothing (workflow-core#2786)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-npm-install.sh`, `guard-unasked-rerun.sh` or `guard-vitest-wrapper.sh` under `disabled`, list the same name ending `.js` instead: the three are Node now, and the old name silences nothing (workflow-core#2800)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-rm-unchecked.sh`, `guard-root-find.sh`, `guard-ugrep-pattern.sh` or `guard-hook-escape.sh` under `disabled`, list the same name ending `.js` instead: the four are Node now, and the old name silences nothing (workflow-core#2801)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-stale-script.sh`, `guard-job-dir-scratch.sh`, `guard-root-scratch.sh` or `guard-scratch-overwrite.sh` under `disabled`, list the same name without `.sh` instead: the four now run as cores of `scripts/guard-dispatch.js`, which reads `disabled` by core name, and the old name silences nothing (workflow-core#2789)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-claimed-bash-write.sh` or `guard-file-claim.sh` under `disabled`, list the same name without `.sh` instead, for the same reason (workflow-core#2788)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-last30days.sh`, `guard-review-rules.sh`, `inject-review-tier.sh`, `inject-founder-wording.sh`, `guard-tracker-rules.sh` or `guard-branch-publish.sh` under `disabled`, list the same name without `.sh` instead, for the same reason; `inject-founder-wording` silences its prompt route too (workflow-core#2792)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-self-match.sh`, `guard-wait-loop.sh`, `guard-suite-background.sh` or `guard-sweep-fire.sh` under `disabled`, list the same name without `.sh` instead, for the same reason (workflow-core#2790)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `record-tool-echo.sh`, `post-write.sh`, `refresh-claims.sh`, `scan-injection.js` or `guard-image-budget.sh` under `disabled`, list the same name without its extension instead, for the same reason (workflow-core#2787)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-recursive-dot-read.sh`, `guard-echo-call.sh`, `guard-dispatch-rewrite.sh`, `guard-blind-dispatch.sh`, `guard-wide-read.sh` or `guard-agent-poll.sh` under `disabled`, list the same name without `.sh` instead, for the same reason; `guard-wide-read` silences its Bash entry too (workflow-core#2791)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-branch.sh`, `guard-anthropic-report.sh`, `guard-check-sh.sh`, `guard-commit-form.sh` or `guard-cpu-load.sh` under `disabled`, list the same name without `.sh` instead: the five now run as cores of `scripts/guard-dispatch.js`, which reads `disabled` by core name, and the old name silences nothing (workflow-core#3224)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "If a script of yours sources `scripts/lib/guard-parse.sh`, or calls `gl_open` or `gl_exit`, port it to a Node entry over `scripts/lib/guard-entry.js` before upgrading: the file and the two functions are gone, and a guard sourcing them fails open on every call (workflow-core#2802). `rg -l 'guard-parse\\.sh|gl_open|gl_exit' scripts .claude` lists none when done."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "notice",
+			"text": "Every core `PreToolUse` and `PostToolUse` guard's hook line is now `command -v node >/dev/null 2>&1 || exit 0; node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/<entry>.js`, the entry a guard's own `guard-<name>.js` or the event's `guard-dispatch.js`; a `Stop` guard's is `command -v node >/dev/null 2>&1 && node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/<entry>.js || true`. No bash file sits in front of Node (workflow-core#2802)."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "Rename each JS or TS function of yours that returns what it read from a file, a directory or a command's output and carries a noun name to `readX` (base §G5, workflow-core#2750). `node scripts/lib/resolve-core.js scripts/list-noun-readers.js`, run from your repo root, lists the candidates; one whose job is not returning what it read keeps its name."
+		},
+		{
+			"tag": "v2.0.0",
+			"type": "act",
+			"text": "The load ceiling that holds new test runs and session spawns drops from load1 6 per core to 3 per core (workflow-core#3223). To keep 6 per core on your machine, write its whole-machine figure to `~/.claude/load-ceiling` (`echo $((6 * $(nproc))) > ~/.claude/load-ceiling`), re-read at every launch; `WFC_LOAD_CEILING` still overrides the file."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "If a script of yours passes `refill-loop.js start --away` or `--exclude`: run `start`, then `set --away` and `set --repos`, `--tick` or `--untick`."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "If your plugin install has a refill loop running across this bump: that process stays on its older release, whose control names its count's start `startedAt`, where this release reads only `noProgressFrom` (workflow-core#3888). So this release's `stop` does not reach it, and `start --unless-stopped` exits 1. Run `node \"$WFC_PLUGIN_ROOT\"/scripts/refill-loop.js start`, which writes fresh settings and prints the loop as still running; the older release reads those as no control and exits at its next tick, recording an explicit stop. Run `start` again once it has gone. Fresh settings mean this repo alone, normal mode, no goal: restore yours with `refill-loop.js set --repos`, `--goal` or `--away`. Away mode's old set, every included checkout bar `exclude`, does not carry over: name each repo it should serve in `--repos` (workflow-core#3921). A session still on an older release that runs `start` over this release's loop writes the old shape back, and the loop stops once as `control-damaged`; the next `start` from this release rewrites it."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "choice",
+			"text": "To have the refill loop come back after a machine restart on a host running systemd, run `node <plugin>/scripts/install-refill-boot-unit.js` from the shell you start the loop in. It enables a user unit and turns linger on, and needs re-running after each release bump, which moves the script the unit names."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-headroom-read.js`, `guard-hook-escape.js`, `guard-issue-body.js`, `guard-issue-close.js`, `guard-issue-create-label.js` or `guard-issue-phase-scope.js` under `disabled`, list the same name without `.js` instead: the six now run as cores of `scripts/guard-dispatch.js`, which reads `disabled` by core name, and the old name silences nothing."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "If your `.claude/workflow-core.json` lists `guard-registry-atomicity.js`, `guard-pull-form.js`, `guard-push-rules.js`, `guard-node-heap.js`, `guard-rm-unchecked.js` or `guard-npm-install.js` under `disabled`, list the same name without `.js` instead: the six now run as cores of `scripts/guard-dispatch.js`, and the old name silences nothing."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "The same for `guard-root-find.js`, `guard-suite-concurrency.js`, `guard-ugrep-pattern.js`, `guard-unasked-rerun.js`, `guard-vitest-wrapper.js` and `guard-wide-read.js`; `guard-wide-read` already silenced the `Read` limb, and now silences the Bash limbs too."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "If your host root's `.env` holds `AI_GATEWAY_API_KEY`, or the `key=<VAR>` an api seat in `~/.claude/refill-seats` names, move each such value into the secrets file through `write-secret.js`, which prints nothing of it. From the host root, with `<VAR>` the variable's name: `grep -E '^[[:space:]]*(export[[:space:]]+)?<VAR>[[:space:]]*=' .env | head -1 | sed -E \"s/^[^=]*=[[:space:]]*//; s/^(['\\\"])(.*)\\1[[:space:]]*$/\\2/\" | node \"$WFC_PLUGIN_ROOT\"/scripts/write-secret.js <VAR>`. Then delete those lines from `.env`."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "notice",
+			"text": "Your `docs/code-standards.md` may now hold a `## Primitives` table of the base's shape (`| Job | Primitive | Exemplar | Rule | Enforcing check |`) for your repo's own primitives: base §0's fifth kind of local change. Its paths resolve at your repo root. A row naming a job the base table already has is a finding, and the pre-commit `check-primitives.js --paths-only` refuses it, as it does a row whose path or § id does not resolve."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your `scripts/` programs' hand-parsed JSONL reads with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-jsonl-reads.js`, run from your repo root. The pre-commit refuses every commit staging a `scripts/` program while any remains; read each through `readJsonl` (a file), `parseJsonl` (text) or `parseJsonlRow` (one streamed line) from the plugin's `scripts/lib/jsonl.js`, or mark it `jsonl-read-exempt: <why>` where the text is no JSONL."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your pre-commit lines that exit 1 on a checker's failure with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-precommit-exit.js`, run from your repo root. The pre-commit refuses every commit staging `.husky/pre-commit` or `.husky/pre-commit.local` while any remains; end each with `|| exit \"$?\"` instead, or in a block `|| { rc=$?; ...; exit \"$rc\"; }`, so the checker's own exit code reaches git."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your `scripts/` programs' hand-spelt arbiter commands with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-arbiter-commands.js`, run from your repo root. The pre-commit refuses every commit staging a `scripts/` program while any remains; print each through `buildArbiterCommand` from the plugin's `scripts/lib/build-arbiter-command.js`."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your `scripts/` programs' own reads of `WFC_NOW` with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-clock-copies.js`, run from your repo root. The pre-commit refuses every commit staging a `scripts/` program while any remains; read the clock through `now()` from the plugin's `scripts/lib/check.js`, catching its throw on a malformed `WFC_NOW` where the program refuses its own way, or mark the read `clock-kept: <why>`."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your `report-*` programs' output past `writeFd` with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-report-programs.js`, run from your repo root: its `writes past writeFd` lines. The pre-commit refuses every commit staging a `scripts/report-*` program while any remains; write each through `writeFd(1, …)` or `writeFd(2, …)` from the plugin's `scripts/lib/write-fd.js`, adding the newline `console.log` added."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your `report-*` programs' own `gh issue create` calls with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-report-programs.js`, run from your repo root: its `files past createIssue` lines. Under the same refusal, file each through `createIssue`, or `fileOrRefresh` for a standing condition, from the plugin's `scripts/lib/tracking-issue.js`."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List the candidate Stop blocks your code writes itself (base §G10) with `git grep -lE 'decision\"?[[:space:]]*:[[:space:]]*\"block\"' -- scripts .claude`, run from your repo root. Move each Node Stop hook's block onto `blockStop` from the plugin's `scripts/lib/hook-block.js`; give a shell one a per-session marker written before it blocks. A `PostToolUse` deny is outside the rule."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List the candidates in your code reaching the arbiter's record files by hand (base §N10) with `git grep -lE '\"(locks|issue-claims|wants|debts|observations|bases|session-bases|breaks|requests)\"' -- scripts .claude`, run from your repo root. Reach each record through `readRecord` / `writeRecord` and `paths` in the plugin's `scripts/lib/arbiter-core.js`, or an arbiter family function."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List the candidate copies of a rule-text fragment's words in your code (base §G11) with `for f in docs/agents/rules/*.txt \"$WFC_PLUGIN_ROOT\"/docs/agents/rules/*.txt; do s=\"$(head -n1 \"$f\" | cut -c1-60)\"; [ -n \"$s\" ] && git grep -lF -- \"$s\" -- scripts .claude .husky; done | sort -u`, run from your repo root. It finds only copies of a fragment's opening words. Print each rule through `rule_text <id>` (shell), or `readRuleText` or `readRuleTextOr` (Node), from the plugin's `scripts/lib/rule-text.sh` or `.js`; a copy kept for a byte cap or a literal-text measurer names its fragment and the reason in a comment beside it."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your pre-commit gates staging blobs out of the index by hand (base §S6) with `git grep -nE 'git (show .?:|cat-file|checkout-index)|gate_stage_out' -- .husky/pre-commit.local`, run from your repo root. Declare each as one `staged_gate` line from the plugin's `scripts/lib/precommit-gate.sh`."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "With `landing` on, make your CI's pytest step, and any other full-suite call of `run-pytest.js`, pass `--full` (`npm run test:py -- --full`)."
+		},
+		{
+			"tag": "v2.0.1",
+			"type": "act",
+			"text": "List your second `gh` and `claude` routes with `node \"$WFC_PLUGIN_ROOT\"/scripts/check-gh-route.js`, run from your repo root. The pre-commit refuses every commit while any remains; call `gh` through the plugin's `scripts/lib/gh.js` in Node, as `\"${WFC_GH:-gh}\"` in shell, and stub it in a test at `WFC_GH` with `stubGhScript` or `stubGhRoutes` from `scripts/lib/gh-stub.ts`. Rename any `WFC_ARBITER_GH` your own tests set to `WFC_GH`. Call `claude` through `claudeBin()` from `scripts/lib/claude-bin.js` in Node, as `\"${WFC_CLAUDE_BIN:-claude}\"` in shell, and stub it in a test at `WFC_CLAUDE_BIN`. Mark a shell line naming either only as text, or a test asserting what a bare name on `PATH` resolves to, `gh-route-exempt: <why>` or `claude-route-exempt: <why>`."
+		},
+		{
+			"tag": "v2.1.0",
+			"type": "choice",
+			"text": "If you installed the refill loop's boot unit, re-run `node \"$WFC_PLUGIN_ROOT\"/scripts/install-refill-boot-unit.js` from the shell you start the loop in, for the timer and the new value (workflow-core#4139)."
+		},
+		{
+			"tag": "v3.0.0",
+			"type": "choice",
+			"text": "To let commits skip the suite, add a canary test file that passes on a normal run and fails only where `WFC_VERDICT_PROBE=1` is set, and name it as `commands.testCanary` in `.claude/workflow-core.json`. The next commit probes the test command against the verdict contract, written at the `commands.test` row of §0's gate table in the plugin's `docs/code-standards-base.md`, and stands its run down on a pass. Without a canary every commit runs the declared test command, even where the command runs the plugin's `run-vitest.js`, whose commits ran none before this upgrade."
+		},
+		{
+			"tag": "v3.0.0",
+			"type": "choice",
+			"text": "To run CI on GitHub, add `\"ci\": {\"runner\": \"ubuntu-slim\"}` to `.claude/workflow-core.json` (`\"ubuntu-24.04-arm\"` where the job needs more than one core, with `\"timeoutMinutes\"` raised where it runs past 15 minutes), re-run the upgrade, and commit the workflow it writes. A check of your own that the job should run goes in `commands.check`. Where `test` runs only the tests touched since `main`, as the plugin's `run-vitest.js` does, declare the whole suite as `full_test` first: on a clean checkout a narrowing `test` selects nothing."
+		}
+	],
+	"pythonRoutes": {
+		"server.py": "program",
+		"ledger-stop-numbers.py": "program",
+		"plugin/skills/design-round/scripts/access-pixels.py": "library",
+		"plugin/skills/design-round/scripts/access-answers.py": "library",
+		"plugin/skills/design-round/scripts/access-boxes.py": "library",
+		"plugin/skills/design-round/scripts/probe.py": "library",
+		"plugin/skills/design-round/scripts/conditions.py": "library",
+		"plugin/skills/design-round/scripts/drive-overlay.py": "library",
+		"plugin/skills/design-round/scripts/drive-form.py": "library",
+		"plugin/skills/design-round/scripts/drive-pointer.py": "library",
+		"kits/planted-faults/tools/*.py": "program"
+	}
+}

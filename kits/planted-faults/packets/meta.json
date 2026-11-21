@@ -1,0 +1,53 @@
+{
+ "ids": {
+  "r1-v3": "c01",
+  "r2-v7": "c02",
+  "r2-v1p": "c03",
+  "r2-v7p": "c04",
+  "r2-v1": "c05",
+  "manta-home-p": "c06",
+  "r1-v1": "c07",
+  "manta-canggu-p": "c08",
+  "r2-v5p": "c09",
+  "manta-rank": "c10",
+  "r2-v3p": "c11",
+  "r1-v5": "c12",
+  "r1-v2": "c13",
+  "r1-v5g": "c14",
+  "r2-v7g": "c15",
+  "manta-rank-g": "c16"
+ },
+ "project": {
+  "r1-v1": "mmm1",
+  "r1-v2": "mmm1",
+  "r1-v3": "mmm1",
+  "r1-v5": "mmm1",
+  "r2-v1": "mmm2",
+  "r2-v7": "mmm2",
+  "r2-v1p": "mmm2",
+  "r2-v3p": "mmm2",
+  "r2-v5p": "mmm2",
+  "r2-v7p": "mmm2",
+  "manta-home-p": "manta",
+  "manta-canggu-p": "manta",
+  "manta-rank": "manta",
+  "r1-v5g": "mmm1",
+  "r2-v7g": "mmm2",
+  "manta-rank-g": "manta"
+ },
+ "persona": {
+  "mmm1": "a senior official at a multilateral development bank, looking for an independent legal advisor on a Public-Private Partnership law",
+  "mmm2": "a senior official at a multilateral development bank, looking for an independent legal advisor on a Public-Private Partnership law",
+  "manta": "a backpacker in their twenties planning a first trip to Bali and Lombok, deciding where to stay"
+ },
+ "gate_pages": [
+  "manta-rank-g",
+  "r1-v5g",
+  "r2-v7g"
+ ],
+ "sources": {
+  "manta-rank-g": "manta-rank",
+  "r1-v5g": "r1-v5",
+  "r2-v7g": "r2-v7"
+ }
+}

@@ -1,0 +1,14 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "MMM Infra, home"  acts: link -> #
+p2  "Profile"  acts: link -> #
+p3  "Articles"  acts: link -> #
+p4  "Blog"  acts: link -> #
+p5  "Contact"  acts: link -> #
+p6  "Write to me"  acts: link -> mailto:Mark.Moseley@MMMinfra.com
+p7  "Stand-in for a portrait of Mark"  static  (could look actable: draws its own box)
+p8  "Texture: ruled canary paper under the gummed binding and its perforat…"  static  (could look actable: draws its own box)
+p9  "Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge"  acts: link -> #
+p10  "Replay the note"  acts: button

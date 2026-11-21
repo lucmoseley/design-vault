@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- A site with its header laid over the hero (#311's spec review), a filter pane opened by popovertarget, and footer groups in details with headed summaries. check-layout.py --records --brief kind=site faults nothing. -->
+<style>
+body{margin:0;font:16px/1.5 sans-serif}
+header{position:absolute;top:0;left:0;right:0;padding:12px 24px;display:flex;justify-content:space-between}
+header ul{display:flex;gap:16px;list-style:none;margin:0;padding:0}
+.hero{background:#335;color:#fff;padding:120px 24px 60px}
+.layout{display:flex;gap:24px;padding:24px}
+.layout .content{flex:1}
+aside{width:240px}
+@media (max-width:839px){aside{display:none}}
+footer .groups{display:grid;gap:16px}
+@media (min-width:480px){footer .groups{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<header role="banner"><a href="/">Hostel</a><nav aria-label="Main"><ul><li><a href="/a">Rooms</a></li><li><a href="/b">Food</a></li></ul></nav></header>
+<main>
+<div class="hero"><h1>Welcome</h1></div>
+<div class="layout"><div class="content"><p>Body text.</p><button popovertarget="filters">Filters</button></div></div>
+</main>
+<aside id="filters" aria-label="Filters"><p>Filter options here.</p></aside>
+<footer><div class="groups">
+<details><summary><h3>Company</h3></summary><ul><li><a href="/1">About</a></li><li><a href="/2">Jobs</a></li></ul></details>
+<details><summary><h3>Help</h3></summary><ul><li><a href="/4">FAQ</a></li><li><a href="/5">Contact</a></li></ul></details>
+</div></footer>
+</body></html>

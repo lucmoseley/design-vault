@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>motion</title>
+<!-- One fault, vault.pause, twice: an SVG square spinning forever and a band sliding once for over 5 s, both from load, with
+     a Pause button that pauses neither. A 3 s fade, under WCAG 2.2.2's 5 s, passes. The slide runs far past 5 s because a
+     busy machine's late read found a 6 s one already ended (#364); 60 s is a guess at headroom, ten times that. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .spin { display: block; width: 40px; height: 40px; margin: 16px; fill: #0a3542; animation: spin 2s linear infinite }
+  .slide { width: 120px; height: 16px; background: #0a3542; animation: slide 60s ease-out }
+  .fade { animation: fade 3s }
+  .pause { padding: 8px 16px; font: inherit }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  @keyframes slide { from { transform: translateX(200px) } }
+  @keyframes fade { from { opacity: 0 } }
+</style>
+<p class="fade">Beds by the sea.</p>
+<svg class="spin" viewBox="0 0 40 40"><rect width="40" height="40"/></svg>
+<div class="slide"></div>
+<button class="pause" type="button">Pause</button>

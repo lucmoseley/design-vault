@@ -1,0 +1,29 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "Mark M. Moseley, MMM Infra, home"  acts: link -> #
+p2  "Profile"  acts: link -> #
+p3  "Articles"  acts: link -> #
+p4  "Blog"  acts: link -> #
+p5  "Contact"  acts: link -> #
+p6  "In my view, we are at a turning point in the story of public-private …"  static  (could look actable: a link's colour)
+p7  "In my view,"  static  (could look actable: a link's colour)
+p8  "public-private"  static  (could look actable: a link's colour)
+p9  "I advise multilateral development banks, development agencies and gov…"  static  (could look actable: a link's colour)
+p10  "PPP Law"  static  (could look actable: draws its own box, a link's colour)
+p11  "Infrastructure"  static  (could look actable: draws its own box, a link's colour)
+p12  "Development banks"  static  (could look actable: draws its own box, a link's colour)
+p13  "Governments"  static  (could look actable: draws its own box, a link's colour)
+p14  "Risk allocation"  static  (could look actable: draws its own box, a link's colour)
+p15  "Write to me at"  static  (could look actable: a link's colour)
+p16  "Mark.Moseley@MMMinfra.com"  acts: link -> #
+p17  "Mark M. Moseley. Placeholder: Mark's photo from the current site, unt…"  static  (could look actable: a link's colour)
+p18  "Mark M. Moseley."  static  (could look actable: a link's colour)
+p19  "The flat blue field with the mark reversed to white"  static  (could look actable: draws its own box)
+p20  "Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge"  acts: link -> #
+p21  "In my view, we are at a turning point in the story of public-private …"  static  (could look actable: draws its own box)
+p22  "In my view, we are at a turning point in the story of public-private …"  static  (could look actable: a link's colour)
+p23  "In my view,"  static  (could look actable: a link's colour)
+p24  "public-private"  static  (could look actable: a link's colour)
+p25  "Play again"  acts: button

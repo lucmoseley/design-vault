@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>covered</title>
+<!-- One fault, vault.contrast, four times, and vault.fill-text twice: the two dark texts in the bar's own hue. At load a fixed chat button covers "Welcome", and a sticky booking bar
+     covers "Breakfast is served" and "Quiet hours", though it lets a pointer through and holds a canvas; a visitor
+     scrolls each up clear and reads it against the white page. "Breakfast is served" passes there; "Quiet hours"
+     and its generated "from 10pm", pale grey, fail there. Only the lines a bar covers are judged: "Welcome"'s
+     second line, near the page's foot, would need more scroll than the page allows to rise above the chat button.
+     "Pay at the desk", dark on the bar, fails against the bar it sits in. The bar's own "Beds from 20 a night"
+     passes against the bar, and "Sea view" and "Lake view" pass against the dark fixed backdrop drawn beneath
+     them, though a pointer passes through "Lake view" and its wrapper to it. The header's "Rates and deals", dark
+     on the header, fails there, read with the fixed badge over part of it, since no scroll carries the header. A
+     layer over the whole window, as a grain is, is no bar. Two pale grey texts no scroll takes clear are read as
+     drawn, wholly under a bar with no glyph showing, and pass unnoted, where read clear of it they would fail:
+     "We use cookies", in a fixed notice under the booking bar, and "Rooms", under a nav that sticks just below the
+     header, since every scroll lifts it from the one into the other. Only a bar across a line bounds where it can
+     rise to: the fixed button beside "Breakfast is served", low enough to stop it, does not. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  header { position: fixed; z-index: 1; top: 0; left: 0; right: 0; height: 64px; padding: 0 16px; background: #0a3542; color: #fff; display: flex; align-items: center }
+  main { position: relative; display: flow-root; height: 3000px }
+  nav { position: sticky; z-index: 1; top: 64px; margin-top: 25vh; height: 48px; background: #0a3542 }
+  .rooms { top: calc(25vh + 12px); color: #c8c8c8 }
+  p { position: absolute; left: 16px; margin: 0 }
+  .welcome { top: calc(100vh - 188px) }
+  .welcome span { display: block; height: calc(3060px - 100vh) }
+  .book { position: fixed; z-index: 1; right: 16px; bottom: 110px; width: 120px; height: 40px; background: #0a3542 }
+  .chat { position: fixed; z-index: 1; left: 8px; bottom: 160px; width: 200px; height: 40px; border-radius: 20px; background: #0a3542 }
+  .cookies { position: fixed; left: auto; right: 16px; bottom: 60px; margin: 0; color: #c8c8c8; background: #fff }
+  .breakfast { top: calc(100vh - 60px) }
+  .quiet { top: calc(100vh - 32px); color: #c8c8c8 }
+  .quiet::after { content: " from 10pm" }
+  .bar { position: sticky; bottom: 0; pointer-events: none; height: 96px; background: #0a3542; color: #fff; display: flex; align-items: center; gap: 16px; padding: 0 16px }
+  .bar .desk, .rates { color: #2c5866 }
+  .bar canvas { width: 48px; height: 48px }
+  .rates { position: absolute; left: 220px; top: 20px }
+  .badge { position: fixed; z-index: 2; top: 18px; left: 300px; width: 40px; height: 28px; background: #c0392b }
+  .grain { position: fixed; inset: 0; pointer-events: none }
+  .backdrop { position: fixed; top: 40vh; left: 0; right: 0; height: 120px; background: #0a3542 }
+  .sea, .over { position: absolute; top: calc(40vh + 48px); color: #fff }
+  .over { left: 200px; pointer-events: none }
+  .over p { position: static }
+</style>
+<header>Hostel by the sea <a class="rates" href="#rates">Rates and deals</a></header>
+<div class="badge"></div>
+<div class="chat"></div>
+<div class="book"></div>
+<p class="cookies">We use cookies</p>
+<main>
+  <nav></nav>
+  <p class="welcome">Welcome<span></span>Check out by 11am</p>
+  <p class="breakfast">Breakfast is served</p>
+  <p class="quiet">Quiet hours</p>
+  <p class="rooms">Rooms</p>
+</main>
+<div class="backdrop"></div>
+<p class="sea">Sea view</p>
+<div class="over"><p>Lake view</p></div>
+<div class="bar"><canvas></canvas><span>Beds from 20 a night</span><span class="desk">Pay at the desk</span></div>
+<div class="grain"></div>

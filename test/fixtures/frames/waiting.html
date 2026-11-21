@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- Animations made late in held frames (design-vault#346), three ways: 150 ms
+     after #lead starts, a frame callback makes #word's animation; 150 ms
+     after that, a timer makes #bar's; 150 ms after that, a timer sets
+     body.play, which starts #note's CSS animation. Each holds its frame or
+     task 50 ms, as #326's tests held a loaded machine's. With threaded
+     animation, Chrome starts each after the hold and draws it waiting at its
+     first keyframe until then (#326); hash mode's browser does not. window.waited holds the first frame each
+     waited in. The 150 ms gaps must stay under check-frames.py's QUIET_MS;
+     the durations are arbitrary. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+#lead, #word, #bar, #note { width: 40px; height: 40px; background: #2a2a2a; }
+#line { position: absolute; top: 200px; width: 200px; height: 40px; overflow: hidden; }
+body.play #note { animation: fade 400ms forwards; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+</style></head>
+<body>
+<div id="lead"></div>
+<div id="line"><div id="word"></div></div>
+<div id="bar"></div>
+<div id="note"></div>
+<script>
+const waited = (window.waited = {});
+// Runs before any callback the page asks for in the same frame, so #word,
+// made in one, records its own frame.
+const scan = (t) => {
+  for (const a of document.getAnimations()) {
+    const id = a.effect.target.id;
+    if (a.pending && a.playState === "running" && !(id in waited)) waited[id] = t;
+  }
+  requestAnimationFrame(scan);
+};
+requestAnimationFrame(scan);
+const hold = () => { const end = performance.now() + 50; while (performance.now() < end); };
+const later = (then) => setTimeout(then, 150);
+document.getElementById("lead").animate([{ transform: "none" }, { transform: "translateX(400px)" }],
+  { duration: 1000, fill: "both" }).ready.then(() => later(() => requestAnimationFrame((t) => {
+    waited.word = t;
+    document.getElementById("word").animate([{ transform: "translateY(300px)" }, { transform: "none" }],
+      { duration: 400, fill: "forwards" });
+    hold();
+    later(() => {
+      document.getElementById("bar").animate([{ transform: "none" }, { transform: "translateX(300px)" }],
+        { duration: 400, fill: "forwards" });
+      hold();
+      later(() => { document.body.classList.add("play"); hold(); });
+    });
+  })));
+</script>
+</body></html>

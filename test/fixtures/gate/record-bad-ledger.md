@@ -1,0 +1,14 @@
+### vault.bad-ledger
+- applies-when: web-surface; every field
+- question: Does vault.bad-ledger hold?
+- answered-by: look
+- writes: bad-ledger
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: Give every field an edge.
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: FRM-82, forms
+- status: live

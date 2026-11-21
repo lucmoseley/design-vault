@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- A frame that depends on the frame before it (design-vault#67): a script
+     stretches a trail to the furthest the box has been, so a moment reached
+     after a later one draws a longer trail than it does from a fresh load. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { position: absolute; height: 40px; background: #2a2a2a; }
+#box { left: 40px; top: 120px; width: 40px; }
+#trail { left: 40px; top: 200px; width: 0; }
+</style></head>
+<body>
+<div id="box"></div>
+<div id="trail"></div>
+<script>
+const move = document.getElementById("box").animate([{ transform: "none" }, { transform: "translateX(600px)" }],
+  { duration: 1000, easing: "ease-in-out", fill: "both" });
+let furthest = 0;
+(function tick() {
+  furthest = Math.max(furthest, move.currentTime || 0);
+  document.getElementById("trail").style.width = furthest * 0.6 + "px";
+  requestAnimationFrame(tick);
+})();
+</script>
+</body></html>

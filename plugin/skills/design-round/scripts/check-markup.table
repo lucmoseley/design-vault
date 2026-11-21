@@ -1,0 +1,10 @@
+# Each line answers its record in design-critique/rules/; change them together.
+# The off rules are answered by check-access.py, which the vault owns (#250).
+off | color-contrast, link-in-text-block, target-size
+vault.lang-parts | html-has-lang, html-lang-valid, html-xml-lang-mismatch, valid-lang
+vault.heading-markup | p-as-heading, empty-heading
+vault.table-headers | td-has-header, th-has-data-cells, td-headers-attr, scope-attr-valid, empty-table-header
+vault.logo-link-name | link-name, image-alt | part:logo
+vault.label-in-name | label-content-name-mismatch
+vault.landmarks | landmark-one-main, landmark-no-duplicate-main, landmark-no-duplicate-banner, landmark-no-duplicate-contentinfo, landmark-banner-is-top-level, landmark-main-is-top-level, landmark-contentinfo-is-top-level, region
+vault.progress-name | aria-progressbar-name

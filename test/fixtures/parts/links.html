@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>links</title>
+<!-- Links that go nowhere (#236): one to `#` alone, as a placeholder button is, and one to `#destinations`, which no
+     element on the page carries. Links that do go somewhere: to an element's id, to
+     an older `a name`, to a percent-encoded id, to `#top`, which the HTML standard sends to the page's top, to `#`
+     with a click of the page's own, to quoted words by a text fragment, and to another page. 'Late rooms' goes to a
+     section the page's script adds at desktop width alone, so it is dead at phone width only. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  a { color: #0a3542; margin-right: 16px }
+  .btn { display: inline-block; background: #0a3542; color: #fff; padding: 10px 20px; text-decoration: none }
+</style>
+<nav><a href="#rooms">Rooms</a><a href="#destinations">Destinations</a><a href="#old">Old anchor</a><a href="#%C3%A9t%C3%A9">Summer</a><a href="#top">Back to top</a></nav>
+<p><a class="btn" href="#">Book a bed</a> <a class="btn" href="#" id="menu">Menu</a> <a href="other.html#destinations">Elsewhere</a> <a href="#:~:text=older%20page">Quoted</a> <a href="#late">Late rooms</a></p>
+<h2 id="rooms">Rooms</h2>
+<h2 id="été">Summer rates</h2>
+<p><a name="old"></a>Kept from an older page.</p>
+<script>if (innerWidth > 700) document.body.insertAdjacentHTML('beforeend', '<h2 id="late">Late rooms</h2>');</script>
+<script>document.getElementById('menu').addEventListener('click', (e) => e.preventDefault());</script>

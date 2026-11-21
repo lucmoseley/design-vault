@@ -1,0 +1,21 @@
+# check-flow.py --records' lines (#318): record id | check | value. Each value
+# comes from its record in design-critique/rules/; change them together.
+# 100 px: a working figure, one wheel turn and the touch drag's length, which
+# a native wheel scroll may miss by 1 px, room for Chromium rounding the
+# offset to whole device px; a guess.
+vault.native-scroll | native-scroll | wheel 100, slack 1
+# A layer is parallax after 3 scroll steps of 100 px in a row at a rate
+# neither the page's nor none, within 0.05 of it: working figures, so a
+# reveal's one step is not parallax.
+vault.parallax | parallax | steps 3, step 100, slack 0.05
+vault.parallax | replay | none
+# The watch, 30 s, is a working figure: past two 10 s frames and a third.
+vault.carousel-timing | carousel | phone under 600, at least 5 s, words per second 3, watch 30 s
+# WCAG 2.2's general and red flash thresholds and its 10° field at 1024x768;
+# the 2 s watch on each screen is a working figure, a second past the window.
+vault.flash-limit | flash | flashes 3, luminance 0.1, darker 0.8, red 0.8, chroma 0.2, screen 1024x768, field 341x256, share 0.25, watch 2 s
+# 0.998: UIScrollView.DecelerationRate.normal, the rate the record's WWDC 2018
+# projection uses; 2 px of settling slack is a working figure.
+vault.drag-release | drag-release | deceleration 0.998, slack 2
+vault.motion-frequency | frequent | under 150
+vault.slow-update | slow-update | none

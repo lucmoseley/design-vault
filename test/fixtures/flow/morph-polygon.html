@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- The same two arches morphed the wrong way (design-vault#72): each end's
+     outline is resampled into 96 points, as cth9191/animate's angle morph does,
+     and the points interpolated. The window, a hole, is lost, and every frame's
+     d is a polygon, which check-curves.js fails. The motion itself is eased. -->
+<html><body>
+<svg width="320" height="320" viewBox="0 0 320 320">
+  <defs>
+    <path id="to" d="M 0 300 C 0 283 0 267 0 250 C 0 167 67 100 150 100 C 233 100 300 167 300 250 C 300 267 300 283 300 300 C 200 300 100 300 0 300 Z"/>
+  </defs>
+  <path id="arch" fill="#333"
+    d="M 0 300 C 0 233 0 167 0 100 C 0 45 45 0 100 0 C 155 0 200 45 200 100 C 200 167 200 233 200 300 C 133 300 67 300 0 300 Z M 60 260 C 60 220 60 180 60 140 C 60 118 78 100 100 100 C 122 100 140 118 140 140 C 140 180 140 220 140 260 C 113 260 87 260 60 260 Z"/>
+</svg>
+<script>
+const path = document.getElementById("arch");
+const outline = document.createElementNS("http://www.w3.org/2000/svg", "path");
+outline.setAttribute("d", path.getAttribute("d").split(" Z")[0] + " Z");
+document.querySelector("defs").append(outline);
+const resample = (p) => Array.from({ length: 96 }, (_, k) => p.getPointAtLength((p.getTotalLength() * k) / 96));
+const from = resample(outline);
+const to = resample(document.getElementById("to"));
+const ease = (p) => p * p * (3 - 2 * p);
+let first = null;
+requestAnimationFrame(function tick(now) {
+  if (first === null) first = now;
+  const p = ease(Math.min(1, (now - first) / 1000));
+  const pts = from.map((a, k) => `${(a.x + (to[k].x - a.x) * p).toFixed(2)} ${(a.y + (to[k].y - a.y) * p).toFixed(2)}`);
+  path.setAttribute("d", `M ${pts[0]} L ${pts.slice(1).join(" ")} Z`);
+  if (p < 1) requestAnimationFrame(tick);
+});
+</script>
+</body></html>

@@ -1,0 +1,50 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "MMM Infra, Moseley Infrastructure Advisory Services, home"  acts: link -> #
+p2  "Profile"  acts: link -> #
+p3  "Articles"  acts: link -> #
+p4  "Blog"  acts: link -> #
+p5  "Contact"  acts: link -> #
+p6  "Mark M. Moseley,"  static  (could look actable: a link's colour)
+p7  "infrastructure advisor"  static  (could look actable: a link's colour)
+p8  "Advice on infrastructure projects and the laws that enable them, from…"  static  (could look actable: a link's colour)
+p9  "Get In Touch"  acts: link -> mailto:Mark.Moseley@MMMinfra.com
+p10  "Previous slide"  acts: button
+p11  "1 / 4"  static  (could look actable: a link's colour)
+p12  "Next slide"  acts: button
+p13  "Stand-in for a full-height photograph of Mark"  static  (could look actable: draws its own box)
+p14  "Palette"  static  (could look actable: a link's colour)
+p15  "White"  static  (could look actable: a link's colour)
+p16  "Logo grey"  static  (could look actable: a link's colour)
+p17  "Logo blue"  static  (could look actable: a link's colour)
+p18  "Quiet"  static  (could look actable: a link's colour)
+p19  "Hairline"  static  (could look actable: a link's colour)
+p20  "Mist"  static  (could look actable: a link's colour)
+p21  "Texture"  static  (could look actable: a link's colour)
+p22  "Type Pair"  static  (could look actable: a link's colour)
+p23  "Gelasio"  static  (could look actable: a link's colour)
+p24  "Source Sans 3"  static  (could look actable: a link's colour)
+p25  "An Article Page"  static  (could look actable: a link's colour)
+p26  "The World's Best Public-Private Partnership Law"  static  (could look actable: a link's colour)
+p27  "Public-Private"  static  (could look actable: a link's colour)
+p28  "Recently, a client with a development agency asked me “What is the be…"  static  (could look actable: a link's colour)
+p29  "“Whichever PPP Law I am currently working on with a client country!”"  static  (could look actable: a link's colour)
+p30  "On a more serious note however, the question did cause me to reflect …"  static  (could look actable: a link's colour)
+p31  "Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge"  acts: link -> #
+p32  "Motion Sketch"  static  (could look actable: a link's colour)
+p33  "cubic-bezier(0.3, 0, 0.1, 1)"  static  (could look actable: a link's colour)
+p34  "Element"  static  (could look actable: a link's colour)
+p35  "Start"  static  (could look actable: a link's colour)
+p36  "Length"  static  (could look actable: a link's colour)
+p37  "Easing"  static  (could look actable: a link's colour)
+p38  "Heading, line 1, rises out of its mask"  static  (could look actable: a link's colour)
+p39  "0 ms"  static  (could look actable: a link's colour)
+p40  "500 ms"  static  (could look actable: a link's colour)
+p41  "quick"  static  (could look actable: a link's colour)
+p42  "Heading, line 2"  static  (could look actable: a link's colour)
+p43  "80 ms"  static  (could look actable: a link's colour)
+p44  "500 ms"  static  (could look actable: a link's colour)
+p45  "quick"  static  (could look actable: a link's colour)
+p46  "Play Again"  acts: button

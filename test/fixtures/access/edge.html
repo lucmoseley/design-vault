@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>edge</title>
+<!-- One fault, vault.control-edges, three times: a white field on white whose only edge is #e7e7e7, 1.24:1, and a
+     borderless field inside a box drawn with that same edge, and a page-drawn ARIA checkbox edged so. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  label { display: block; margin-bottom: 4px }
+  input { border: 1px solid #e7e7e7; background: #fff; width: 200px; height: 36px; padding: 0 8px; font: inherit }
+  .box { display: flex; align-items: center; gap: 8px; width: 240px; height: 44px; margin-top: 16px; padding: 0 8px; border: 1px solid #e7e7e7 }
+  .box input { border: 0; height: 30px; width: 100% }
+  .tick { display: block; width: 24px; height: 24px; margin-top: 16px; border: 1px solid #e7e7e7; box-sizing: border-box }
+  .tick[aria-checked=true] { background: #222 }
+</style>
+<label for="name">Your name</label>
+<input id="name" class="faint" type="text">
+<label class="box">Find <input id="find" type="search"></label>
+<span id="news" class="tick" role="checkbox" aria-checked="false" aria-label="Send me news" tabindex="0"></span>

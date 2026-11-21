@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v3 Inscription · MMM Infra identity round 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Gelasio:wght@700&display=swap" rel="stylesheet">
+<style>
+/* Three colours, hard edges, no blending. Lime is type on minium, nothing else. */
+:root {
+  --granite: #b8b5ad;      /* dressed grey granite: the whole ground */
+  --cut: #2a2925;          /* the cut: all text, every line, the aqueduct */
+  --minium: #86230f;       /* Roman red lead: headings and the one action */
+  --lime: #ecebe6;         /* type on minium only */
+  --display: "Cinzel", "Trajan Pro", serif;
+  --text: "Alegreya Sans", "Gill Sans", sans-serif;
+  --lockup: "Gelasio", Georgia, serif;   /* the logo's Georgia letterforms */
+  --settle: cubic-bezier(0.5, 0, 0.2, 1);
+  --gutter: max(48px, calc((100% - 1184px) / 2));
+}
+* { box-sizing: border-box; }
+html { background: var(--granite); }
+body { margin: 0; min-height: 100vh; background: var(--granite); color: var(--cut); font-family: var(--text); font-size: 19px; line-height: 1.55; }
+::selection { background: var(--minium); color: var(--lime); }
+a { color: inherit; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+:focus-visible { outline: 2px solid var(--minium); outline-offset: 4px; }
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 24px var(--gutter); border-bottom: 1px solid var(--cut); }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; flex: none; }
+.brand svg { width: 60px; height: auto; color: var(--cut); }
+.brand b { font-family: var(--lockup); font-weight: 700; letter-spacing: .05em; font-size: 17px; white-space: nowrap; }
+.top nav { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .14em; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.top nav a { text-decoration: none; }
+.top nav a:hover { color: var(--minium); }
+.top nav i { font-style: normal; color: var(--minium); }
+
+.hero { text-align: center; padding: 0 var(--gutter) 24px; }
+/* The frame is open at the top edge, under the header rule: each stone is lowered in from beyond it. */
+.mark-big { width: min(640px, 86%); height: auto; display: block; margin: 0 auto 36px; overflow: hidden; }
+.mark-big .ghost path { fill: none; stroke: var(--cut); stroke-dasharray: 8 6; }
+.mark-big .ghost .edge { stroke-width: 4; }   /* clipped to the stone: 2 units show inside */
+.mark-big .ghost .joint { stroke-width: 2; }
+.mark-big .stone path { fill: var(--cut); }
+.play .mark-big .stone path { animation: lay 700ms var(--settle) both; }
+.play .mark-big .stone path:nth-child(1) { animation-name: lay-band; animation-delay: 500ms; animation-duration: 900ms; }
+.play .mark-big .stone path:nth-child(2) { animation-delay: 0ms; }
+.play .mark-big .stone path:nth-child(3) { animation-delay: 200ms; }
+.play .mark-big .stone path:nth-child(4) { animation-delay: 400ms; }
+/* each stone starts just beyond the open top edge: its lowest point (y 275.7 arches, y 167.3 band) above the frame top at y −40 */
+@keyframes lay { from { transform: translateY(-320px); } to { transform: translateY(0); } }
+@keyframes lay-band { from { transform: translateY(-212px); } to { transform: translateY(0); } }
+
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4.1vw, 58px); line-height: 1.16; letter-spacing: .06em; margin: 0 0 22px; color: var(--minium); }
+h1 .ln { display: block; white-space: nowrap; }
+.lead { max-width: 38em; margin: 0 auto 34px; font-size: 21px; }
+
+/* the tabula ansata: an inscription panel with dovetail handles, used as the one button */
+.tabula { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 54px; padding: 0 30px; margin: 0 26px; background: var(--minium); color: var(--lime); font-family: var(--display); font-weight: 700; letter-spacing: .14em; font-size: 15px; text-decoration: none; border: 0; }
+.tabula::before, .tabula::after { content: ""; position: absolute; top: 0; bottom: 0; width: 26px; background: var(--minium); }
+.tabula::before { right: 100%; clip-path: polygon(100% 50%, 0 0, 0 100%); }
+.tabula::after { left: 100%; clip-path: polygon(0 50%, 100% 0, 100% 100%); }
+.tabula:hover { text-decoration: underline; text-decoration-color: var(--lime); text-underline-offset: 5px; }
+
+h2 { font-family: var(--display); font-weight: 700; letter-spacing: .18em; font-size: 15px; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid var(--cut); }
+.board { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 64px 44px; padding: 72px var(--gutter) 80px; }
+.col-5 { grid-column: span 5; } .col-7 { grid-column: span 7; } .col-12 { grid-column: span 12; }
+
+.swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.chip { height: 64px; border: 1px solid var(--cut); }
+.chip-lime { background: var(--minium); color: var(--lime); font-family: var(--display); font-weight: 700; font-size: 28px; letter-spacing: .06em; display: flex; align-items: center; justify-content: center; }
+.sw { font-size: 14px; line-height: 1.45; }
+.sw b { display: block; font-family: var(--display); letter-spacing: .1em; font-size: 14px; margin-top: 8px; }
+.palette-note { font-size: 15px; margin: 18px 0 0; max-width: 60ch; }
+
+.spec { margin: 0; }
+.spec .big { display: block; font-family: var(--display); font-weight: 700; font-size: 56px; line-height: 1.05; letter-spacing: .06em; color: var(--minium); }
+.spec .body { display: block; font-size: 34px; line-height: 1.2; font-weight: 500; }
+.spec small { display: block; font-size: 15px; margin-top: 10px; max-width: 46ch; }
+
+.texture { height: 200px; position: relative; overflow: hidden; border: 1px solid var(--cut); }
+.texture svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.standin { position: absolute; left: 10px; bottom: 10px; background: var(--granite); border: 1px solid var(--cut); padding: 3px 8px; font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .1em; line-height: 1.3; }
+
+article.spec-post h3 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.22; letter-spacing: .04em; margin: 0 0 8px; max-width: 24ch; color: var(--minium); text-wrap: balance; }
+article.spec-post .byline { font-family: var(--display); font-weight: 500; letter-spacing: .1em; font-size: 14px; margin: 0 0 24px; }
+article.spec-post p { margin: 0 0 18px; max-width: 64ch; }
+/* the pull quote as a tabula ansata: a moulded field (two cut lines) with solid dovetail handles */
+blockquote { position: relative; margin: 14px 28px 28px; padding: 22px 30px; border: 2px solid var(--cut); outline: 1px solid var(--cut); outline-offset: -8px; font-size: 24px; line-height: 1.4; font-style: italic; max-width: 32ch; }
+blockquote::before, blockquote::after { content: ""; position: absolute; top: -2px; bottom: -2px; width: 26px; background: var(--cut); }
+blockquote::before { right: calc(100% + 2px); clip-path: polygon(100% 50%, 0 0, 0 100%); }
+blockquote::after { left: calc(100% + 2px); clip-path: polygon(0 50%, 100% 0, 100% 100%); }
+blockquote p { margin: 0 !important; }
+.doc { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--cut); border-bottom: 1px solid var(--cut); padding: 12px 0; font-size: 16px; }
+.doc a { font-weight: 700; }
+.doc span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.motion { padding: 24px; border: 1px solid var(--cut); }
+.motion .words { white-space: nowrap; font-family: var(--display); font-weight: 700; letter-spacing: .14em; font-size: 20px; color: var(--minium); margin: 0 0 14px; }
+.curve { width: 100%; max-width: 220px; height: auto; display: block; }
+.motion p { font-size: 15px; margin: 10px 0 0; }
+.motion code { font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--cut); vertical-align: top; }
+th { font-family: var(--display); letter-spacing: .08em; font-size: 12px; }
+/* the replay: a plain text control, so the tabula stays the one action */
+.textctl { margin-top: 18px; min-height: 44px; padding: 0; background: none; border: 0; color: var(--cut); font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .14em; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; cursor: pointer; }
+.textctl:hover { color: var(--minium); }
+
+/* the principle words stack, interpuncts dropped, where the panel is too narrow for one line */
+@media (max-width: 1100px) {
+  .motion .words .ip { display: none; }
+  .motion .words .w { display: block; }
+}
+@media (max-width: 960px) {
+  :root { --gutter: 20px; }
+  .top { padding-block: 18px; flex-wrap: wrap; }
+  .board { padding-block: 48px 64px; gap: 48px; grid-template-columns: minmax(0, 1fr); }
+  .board > * { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  /* three lines at phone width: the interpunct at the break is dropped */
+  h1 .ln2 .ip { display: none; }
+  h1 .ln2 .w { display: block; }
+}
+@media (max-width: 520px) {
+  .brand svg { width: 52px; }
+  .brand b { font-size: 16px; }
+  .top nav { font-size: 13px; gap: 4px 8px; letter-spacing: .08em; }
+  .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lead { font-size: 19px; }
+  .doc { flex-direction: column; gap: 4px; }
+  blockquote { font-size: 21px; padding: 20px 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play .mark-big .stone path:nth-child(n) { animation: none; }   /* :nth-child(n) matches the band rule's specificity */
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#" aria-label="MMM Infra, home">
+    <svg viewBox="20 58 708 222" aria-hidden="true"><g fill="currentColor"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></g></svg>
+    <b>MMM INFRA</b>
+  </a>
+  <nav aria-label="Main"><a href="#">PROFILE</a><i aria-hidden="true">·</i><a href="#">ARTICLES</a><i aria-hidden="true">·</i><a href="#">BLOG</a><i aria-hidden="true">·</i><a href="#">CONTACT</a></nav>
+</header>
+
+<main>
+  <section class="hero" aria-label="Homepage opening, specimen">
+    <svg class="mark-big" id="sketch-target" viewBox="20 -40 708 320" role="img" aria-label="The MMM Infra aqueduct, its stones lowered one by one onto their ghost joints">
+      <defs>
+        <clipPath id="c-band"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/></clipPath>
+        <clipPath id="c-a1"><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/></clipPath>
+        <clipPath id="c-a2"><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/></clipPath>
+        <clipPath id="c-a3"><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></clipPath>
+      </defs>
+      <!-- Ghost: each unbuilt stone's edge and its voussoir joints, normal to the mark's own intrados arcs, clipped to that stone. -->
+      <g class="ghost">
+        <g clip-path="url(#c-band)"><path class="edge" d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path class="joint" d="M671.46 145.37L702.12 75.83M609.14 123.04L630.30 50.04M536.60 106.31L549.92 31.48M457.01 95.96L463.45 20.23M373.82 92.46L373.82 16.46M290.63 95.96L284.18 20.23M211.03 106.31L197.71 31.48M138.49 123.04L117.34 50.04M76.17 145.37L45.51 75.83"/></g>
+        <g clip-path="url(#c-a1)"><path class="edge" d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path class="joint" d="M218.14 234.29L310.17 206.96M202.97 198.81L285.57 149.89M182.27 173.45L244.74 100.55M158.66 160.49L183.55 67.77M134.38 160.39L110.22 67.48M110.74 173.14L48.72 99.87"/></g>
+        <g clip-path="url(#c-a2)"><path class="edge" d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path class="joint" d="M417.34 234.29L509.37 206.96M402.17 198.81L484.77 149.89M381.47 173.45L443.93 100.55M357.86 160.49L382.75 67.77M333.58 160.39L309.42 67.47M309.94 173.14L247.92 99.87"/></g>
+        <g clip-path="url(#c-a3)"><path class="edge" d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/><path class="joint" d="M616.54 234.29L708.57 206.96M601.37 198.81L683.97 149.89M580.67 173.45L643.13 100.55M557.06 160.49L581.95 67.77M532.77 160.39L508.61 67.47M509.14 173.14L447.12 99.87"/></g>
+      </g>
+      <g class="stone"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></g>
+    </svg>
+    <h1><span class="ln">MARK <span class="ip" aria-hidden="true">·</span> M <span class="ip" aria-hidden="true">·</span> MOSELEY</span><span class="ln ln2"><span class="w">INFRASTRUCTURE</span> <span class="ip" aria-hidden="true">·</span> <span class="w">ADVISOR</span></span></h1>
+    <p class="lead">Advice on infrastructure projects and the laws that enable them, from a former Lead Lawyer in the World Bank's PPP Group.</p>
+    <a class="tabula" href="mailto:Mark.Moseley@MMMinfra.com">WRITE TO MARK</a>
+  </section>
+
+  <div class="board">
+    <section class="col-7" aria-labelledby="h-pal">
+      <h2 id="h-pal">PALETTE</h2>
+      <div class="swatches">
+        <div class="sw"><div class="chip" style="background:#b8b5ad"></div><b>GRANITE</b>#B8B5AD · the whole ground</div>
+        <div class="sw"><div class="chip" style="background:#2a2925"></div><b>CUT</b>#2A2925 · text, lines, the aqueduct</div>
+        <div class="sw"><div class="chip" style="background:#86230f"></div><b>MINIUM</b>#86230F · headings, the one action</div>
+        <div class="sw"><div class="chip chip-lime" aria-hidden="true">AA</div><b>LIME</b>#ECEBE6 · type on minium only</div>
+      </div>
+      <p class="palette-note">Three colours with hard edges and no blending: no emboss, bevel, wash or grain. Lime is never a surface; it is only the letters on minium.</p>
+    </section>
+    <section class="col-5" aria-labelledby="h-tex">
+      <h2 id="h-tex">TEXTURE</h2>
+      <div class="texture" role="img" aria-label="Stand-in texture: ashlar coursing drawn as joint lines, with one capital painted red">
+        <svg viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 40H400M0 136H400M120 0V40M330 0V40M60 40V136M340 40V136M150 136V200M290 136V200" fill="none" stroke="#2a2925" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <text x="200" y="116" text-anchor="middle" font-family="Cinzel" font-weight="700" font-size="84" fill="#86230f">M</text>
+        </svg>
+        <span class="standin">STAND-IN</span>
+      </div>
+      <p class="palette-note">A stand-in for photographed ashlar, which the image round supplies. Here the courses are drawn as joint lines, of one height with the joints staggered, as on an architect's elevation, and the capital is painted flat minium, as Roman carvers painted their letters.</p>
+    </section>
+
+    <section class="col-12" aria-labelledby="h-type">
+      <h2 id="h-type">TYPE PAIR</h2>
+      <div class="board" style="padding:0; gap:24px 44px">
+        <p class="spec col-7"><span class="big">CINZEL</span><small>Roman square capitals, after the inscriptions of the first century. Headings, the nav and the button only, always in capitals, always tracked, words parted by interpuncts.</small></p>
+        <p class="spec col-5"><span class="body">Alegreya Sans</span><small>A humanist sans with a written stroke, for reading. Regular 19/29, Medium for emphasis. The lockup “MMM INFRA” keeps the logo's Georgia letterforms (Gelasio).</small></p>
+      </div>
+    </section>
+
+    <section class="col-7" aria-labelledby="h-art">
+      <h2 id="h-art">AN ARTICLE PAGE</h2>
+      <article class="spec-post">
+        <h3>THE WORLD'S BEST PUBLIC‑PRIVATE PARTNERSHIP LAW</h3>
+        <p class="byline">MMM INFRA BLOG NO. 8 · 18 SEPTEMBER 2024</p>
+        <p>Recently, a client with a development agency asked me “What is the best Public-Private Partnership Law in the world?”</p>
+        <blockquote><p>“Whichever PPP Law I am currently working on with a client country!”</p></blockquote>
+        <p>On a more serious note however, the question did cause me to reflect on the elements that make a PPP Law particularly effective.</p>
+        <div class="doc"><a href="#">Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge</a><span>Lecture · 23 April 2026 · PDF</span></div>
+      </article>
+    </section>
+
+    <section class="col-5" aria-labelledby="h-mot">
+      <h2 id="h-mot">MOTION SKETCH</h2>
+      <div class="motion">
+        <p class="words"><span class="w">LAID</span> <span class="ip" aria-hidden="true">·</span> <span class="w">WEIGHTY</span> <span class="ip" aria-hidden="true">·</span> <span class="w">SETTLED</span></p>
+        <svg class="curve" viewBox="-10 -10 220 220" role="img" aria-label="Easing curve cubic-bezier(0.5, 0, 0.2, 1)"><rect width="200" height="200" fill="none" stroke="#2a2925"/><path d="M0 200C100 200 40 0 200 0" fill="none" stroke="#86230f" stroke-width="3"/></svg>
+        <p>Easing <code>cubic-bezier(0.5, 0, 0.2, 1)</code>: a stone lowered onto its bed. It leaves rest slowly and settles slowly, with no fade. Unbuilt stones wait as ghost joints, dashed, drawn from the mark's own arcs.</p>
+        <table aria-label="Timeline">
+          <thead><tr><th>ELEMENT</th><th>START</th><th>LENGTH</th><th>EASING</th></tr></thead>
+          <tbody>
+            <tr><td>Left arch, lowered 320 units (≈290 px) onto its ghost joints</td><td>0 ms</td><td>700 ms</td><td>settle</td></tr>
+            <tr><td>Middle arch</td><td>200 ms</td><td>700 ms</td><td>settle</td></tr>
+            <tr><td>Right arch</td><td>400 ms</td><td>700 ms</td><td>settle</td></tr>
+            <tr><td>The band, laid last, lowered 212 units (≈190 px)</td><td>500 ms</td><td>900 ms</td><td>settle</td></tr>
+          </tbody>
+        </table>
+        <p>Total 1400 ms; arches 700 ms each, the heavier band 900 ms, all inside 400–1000 ms for a large brand move (#13, <code>docs/research/animation-length.md</code> F5/F12); the moves overlap, so nothing pauses. Reduced motion: the aqueduct stands.</p>
+        <button class="textctl" type="button" id="replay">LAY AGAIN</button>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+  const root = document.body;
+  function play() { root.classList.remove('play'); void root.offsetWidth; root.classList.add('play'); }
+  document.getElementById('replay').addEventListener('click', play);
+  play();
+</script>
+</body>
+</html>

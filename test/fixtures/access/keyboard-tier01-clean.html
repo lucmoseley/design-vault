@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>keyboard clean</title>
+<!-- keyboard-tier01-fault.html's parts built to each record #315 scripts, run with keyboard-tier01-parts.json:
+     a skip link first, shown when focused; links in source order; a scrolling box with tabindex, region role and
+     name; a tab list that is one stop with arrow keys, entered on its selected tab; an APG menu button; a carousel
+     whose slide out of view is inert and whose previous and next buttons keep focus; every ring an outline on
+     :focus-visible, in a red no link or button is drawn in; and a text field that shows focus when clicked. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  :focus-visible { outline: 3px solid #b3261e; outline-offset: 2px }
+  .skip { position: absolute; left: 8px; top: 4px; padding: 8px; background: #fff }
+  .skip:not(:focus) { opacity: 0 }
+  header, main { padding: 16px }
+  header { padding-top: 56px }
+  a { color: #0a3542 }
+  nav a, .row a { display: inline-block; padding: 8px }
+  button { font: inherit; padding: 8px 12px; margin: 4px; color: #fff; background: #0a3542; border: 1px solid transparent }
+  .row { display: flex; gap: 16px }
+  .scroller { overflow: auto; height: 96px; width: 280px; border: 1px solid #767676; padding: 8px }
+  [role=menu] { list-style: none; margin: 4px; padding: 4px; border: 1px solid #767676; width: 160px }
+  [role=menuitem] { display: block; padding: 8px }
+  .carousel { overflow: hidden; width: 300px; border: 1px solid #767676 }
+  .track { display: flex; width: 600px; transition: transform 0.2s }
+  .slide { width: 300px; flex: none; padding: 16px; box-sizing: border-box }
+  label { display: block; margin: 8px 4px 0 }
+  input { font: inherit; padding: 8px; border: 1px solid #767676; margin: 4px }
+</style>
+<a class="skip" href="#main">Skip to main content</a>
+<header>
+  <nav><a href="#rooms">Rooms</a> <a href="#about">About</a></nav>
+</header>
+<main id="main" tabindex="-1">
+  <h1>Beds in Lisbon</h1>
+  <div class="row"><a href="#one">First</a><a href="#two">Second</a><a href="#three">Third</a></div>
+  <h2 id="rules">House rules</h2>
+  <div class="scroller" tabindex="0" role="region" aria-labelledby="rules">
+    <p>Check-in opens at two in the afternoon. Bags can be left at the desk from eight in the morning.</p>
+    <p>Quiet hours run from eleven at night until seven in the morning, every day of the week.</p>
+    <p>Towels are free. Lockers take a padlock, which the desk sells.</p>
+  </div>
+  <div role="tablist" class="tabs" aria-label="Room types">
+    <button role="tab" aria-selected="false" tabindex="-1">Dorm</button><button role="tab" aria-selected="true">Private</button><button role="tab" aria-selected="false" tabindex="-1">Suite</button>
+  </div>
+  <div>
+    <button class="opens" aria-haspopup="menu" aria-expanded="false" aria-controls="actions">Actions</button>
+    <ul role="menu" id="actions" hidden>
+      <li role="menuitem" tabindex="-1">Copy link</li>
+      <li role="menuitem" tabindex="-1">Share</li>
+      <li role="menuitem" tabindex="-1">Print</li>
+    </ul>
+  </div>
+  <div class="carousel" aria-roledescription="carousel" aria-label="Rooms">
+    <div class="track">
+      <div class="slide"><p>Rooftop bar, open till late.</p></div>
+      <div class="slide" inert><p><a href="#pool">See the pool</a></p></div>
+    </div>
+    <button class="step" data-by="-1">Previous</button><button class="step" data-by="1">Next</button>
+  </div>
+  <label for="name">Your name</label>
+  <input id="name" name="name">
+  <p><button>Save</button> <button class="book">Book</button></p>
+  <p>See <a href="#deal">today's deal</a> before it ends.</p>
+</main>
+<script>
+  const tabs = [...document.querySelectorAll('.tabs [role=tab]')];
+  const choose = (t) => {
+    for (const o of tabs) { o.setAttribute('aria-selected', String(o === t)); o.tabIndex = o === t ? 0 : -1; }
+    t.focus();
+  };
+  document.querySelector('.tabs').addEventListener('keydown', (e) => {
+    const i = tabs.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight') choose(tabs[(i + 1) % tabs.length]);
+    if (e.key === 'ArrowLeft') choose(tabs[(i - 1 + tabs.length) % tabs.length]);
+  });
+
+  // The menu button, by the APG Menu Button pattern.
+  const opener = document.querySelector('.opens');
+  const menu = document.getElementById('actions');
+  const items = [...menu.querySelectorAll('[role=menuitem]')];
+  const open = (at) => { menu.hidden = false; opener.setAttribute('aria-expanded', 'true'); items[at].focus(); };
+  const shut = (back) => { menu.hidden = true; opener.setAttribute('aria-expanded', 'false'); if (back) opener.focus(); };
+  opener.addEventListener('click', () => (menu.hidden ? open(0) : shut(true)));
+  opener.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); open(0); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); open(items.length - 1); }
+  });
+  menu.addEventListener('keydown', (e) => {
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+    if (e.key === 'Escape') shut(true);
+    if (e.key === 'Tab') shut(false);
+  });
+
+  const slides = [...document.querySelectorAll('.carousel .slide')];
+  let shown = 0;
+  for (const b of document.querySelectorAll('.carousel .step')) {
+    b.addEventListener('click', () => {
+      shown = (shown + Number(b.dataset.by) + slides.length) % slides.length;
+      document.querySelector('.carousel .track').style.transform = `translateX(-${shown * 300}px)`;
+      slides.forEach((s, i) => { s.inert = i !== shown; });
+    });
+  }
+</script>
+</html>

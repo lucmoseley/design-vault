@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>cut</title>
+<!-- Body hides sideways overflow while html scrolls, so nothing past the edge
+     can be reached: the address ends at 500 px and is cut off below 500 px; the
+     note, inside a 600 px box that clips, ends at 450 px; the lead starts 40 px
+     off the left edge at every width. The tag, absolute inside a box that clips
+     but is not positioned, escapes the box and ends at 480 px. -->
+<style>
+  html { overflow-y: scroll }
+  body { margin: 0; overflow-x: hidden; font: 16px/1.5 sans-serif }
+  .address { width: 500px; margin: 0; text-align: right; white-space: nowrap }
+  .wrap { width: 600px; overflow: hidden }
+  .note { width: 450px; margin: 0; text-align: right; white-space: nowrap }
+  .lead { margin: 0 0 0 -40px }
+  .box { width: 200px; height: 30px; overflow: hidden }
+  .tag { position: absolute; left: 0; width: 480px; margin: 0; text-align: right; white-space: nowrap }
+</style>
+<p class="address">12 Long Road, Somewhere</p>
+<div class="wrap"><p class="note">A note in a box</p></div>
+<p class="lead">A lead that starts off the screen.</p>
+<div class="box"><p class="tag">An escaping tag</p></div>

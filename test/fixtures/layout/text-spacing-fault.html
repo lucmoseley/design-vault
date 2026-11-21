@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text spacing fault</title>
+<style>
+  body { margin: 1rem; font-family: sans-serif; }
+  section { margin-block: 3rem; }
+  /* A label in a fixed-width box that hides its overflow: it fits until the
+     spacing widens it. Its own !important letter spacing must not stop it. */
+  .tag { display: inline-block; width: 5.75rem; white-space: nowrap; overflow: hidden; font-size: 1rem; line-height: 1.2; letter-spacing: normal !important; }
+  /* Two paragraphs in a box sized to them with no gap: spacing after the
+     first pushes the second out. */
+  .card { height: 3rem; overflow: hidden; line-height: 1.5; font-size: 1rem; }
+  .card p { margin: 0; }
+  /* One line in a box as tall as its line: line height 1.5 overflows it. */
+  .line { height: 1rem; overflow: hidden; line-height: 1; font-size: 1rem; }
+  /* Twelve one-letter words in a box that holds them with either spacing
+     alone, letter (178 px) or word (162 px), but not both (206 px). */
+  .words { width: 12rem; white-space: nowrap; overflow: hidden; font-size: 1rem; }
+  /* A heading in a box sized to its lines: line height 1.5 spills it onto
+     the next text. */
+  .head { height: 2.4rem; width: 10rem; line-height: 1.2; font-size: 1rem; margin: 0; }
+  .after { margin: 0; }
+  /* A truncated link: its page may show the rest, so it goes to the look. */
+  .more { display: inline-block; width: 5.75rem; white-space: nowrap; overflow: hidden; }
+  .fixed { font-size: 14px; }
+  .fluid { font-size: 4vw; }
+</style>
+</head>
+<body>
+<section><span class="tag" data-record="vault.text-spacing">Book a bed</span></section>
+<div class="card" data-record="vault.text-spacing"><p>First</p><p>Second</p></div>
+<div class="line" data-record="vault.text-spacing">One line</div>
+<div class="words" data-record="vault.text-spacing">a b c d e f g h i j k l</div>
+<div><h2 class="head" data-record="vault.text-spacing">A heading of two lines</h2><p class="after">Text under it.</p></div>
+<div><a class="more" href="#rooms" data-record="vault.text-spacing-reveal">Book a bed</a></div>
+<section><p class="fixed" data-probe="size">Fixed-size type that a raised default text size leaves as it is.</p></section>
+<section><p class="fluid" data-probe="zoom size">Viewport type</p></section>
+</body>
+</html>

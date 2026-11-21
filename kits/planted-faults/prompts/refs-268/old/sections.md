@@ -1,0 +1,234 @@
+# The reference sections the records cite
+
+<!-- design-round/references/impeccable.md#conditions-added -->
+
+### Conditions added
+
+- **Body measure** (`craft-floor` 65–75ch, `operate` the same; `typeset` 45–75): `vault.measure`, counted in characters rather than `ch`, on Baymard's range and WCAG 2.2 SC 1.4.8's ceiling.
+- **Line height under 1.3** (detector): `vault.leading`, a finding on body text only.
+- **`flat-type-hierarchy`** (detector: heading and body under 1.25× in size): `vault.heading-step`, no finding where weight, space or tone carries the step, as `typeset` itself says.
+- **Display at most 6rem, tracking no tighter than -0.04em** (`craft-floor`): one author's numbers with no source found; the project's type scale replaces them.
+- **Light or dark picked from the use scene** (`craft-floor`): `vault.theme`. The visitor's system setting already says which they want, and most people read long text more easily light (NN/g 2020); shipping both themes doubles the colour work, which is why a one-theme project ships light unless its rules file rules dark.
+- **Touch targets of 44×44 px** (`adapt`, `audit`): `vault.target-size`, at WCAG 2.2 SC 2.5.8's 24×24 floor. 44 px (Apple 44 pt, Material 48 dp) is a target a project's rules file may set as its own question; the vault holds only the floor.
+- **A hamburger or drawer on mobile** (`adapt`): `vault.visible-nav`. Navigation out of sight is used less and found more slowly (NN/g 2016); keeping four links in view costs header room on a phone, which is why the menu takes over past four.
+
+<!-- design-critique/references/first-visit-trust.md#the-checklist -->
+
+## The checklist
+
+An advisor sells judgement (a consultant, a lawyer); a trade does jobs at an address (a plumber); a consumer practice serves the public by appointment (a clinic). Each item's record says which of them it applies to; report a missing item only there.
+
+| # | Item | Record | Why, and what it costs |
+|---|---|---|---|
+| 1 | A named, real person and their face | `vault.trust-person` | Visitors read portraits longer than bios and ignore stock people; the humans behind a business bolster trust (NN/g 2010, 2019). The cost is a real photograph to get. |
+| 2 | What the practice does, for whom, where | `vault.trust-offer` | A hard-to-find "what the company does" was a main dissatisfaction (NN/g 2019). Saying it plainly narrows who feels addressed. |
+| 3 | Qualifications as evidence of work | `vault.trust-credentials` | A development bank picks an individual on relevant qualifications and experience, judged against the job (World Bank, ADB). A list reads as a claim; work shown reads as proof, and takes room. |
+| 4 | Publications and talks | `vault.trust-publications` | About three-quarters of decision-makers trust thought leadership over marketing to judge capability (Edelman–LinkedIn 2024, secondary). Old or thin work shown hurts more than none. |
+| 5 | Fees, or how the price is set | `vault.trust-fees` | Hidden prices look dubious, and custom work can list representative cases (NN/g 2006, 2016, 2019); UK law asks a provider for its price or method. A stated price can lose a buyer who would have asked. |
+| 6 | Location | `vault.trust-location` | A physical location bolsters trust (NN/g 2019; Stanford 2002). A home address is private, so a town or region may stand in. |
+| 7 | A contact route on every page | `vault.trust-contact` | Prominent contact information builds trust, at least an email and a phone (NN/g 2016, 2019). Each route shown is one the owner must answer. |
+| 8 | An enquiry form, within [the field budget](#the-field-budget) | `vault.trust-form`, `vault.field-budget` | Short forms, with one or two labelled optional fields, are finished more (NN/g 2016; GOV.UK question protocol). Fewer fields mean less to qualify a lead by; [the field budget](#the-field-budget) weighs that. |
+| 9 | A privacy note at the form | `vault.trust-privacy` | UK GDPR Art. 13 makes privacy information due when the data is taken (ICO). It adds a line beside the button. |
+| 10 | Legal identity | `vault.trust-legal` | UK law makes a provider show its name, legal form, address and register numbers (SI 2009/2999 reg. 8; SI 2002/2013 reg. 6). It adds footer weight. |
+| 11 | Task text in short sentences | `vault.trust-plain-words` | GOV.UK splits sentences over 25 words so more people read them first time. A specialist's argument may run longer in the owner's voice. |
+| 12 | Identity on every page | `vault.trust-identity` | A visitor from a social post lands deep, so the name and a link home belong on every page (NN/g 2002). It costs header room on each page. |
+| 13 | Dates that show the site is current | `vault.trust-current` | A site shown recently reviewed is trusted more (Stanford 2002; NN/g 2016). A visible date that goes stale says the opposite. |
+| 14 | Third-party proof | `vault.trust-proof`, `vault.proof` | Being connected to the rest of the web is a trust factor, and readers check a testimonial's author (NN/g 2016, 2019). Only real, checkable proof counts. |
+
+A response-time promise is not an item: no independent source supports one. A booking link has no source either way: the owner decides.
+
+<!-- design-critique/references/first-visit-trust.md#clashes -->
+
+## Clashes
+
+| Clash | Resolution |
+|---|---|
+| Show fees against a bespoke-quote practice | The law draws the line: `vault.trust-fees`. NN/g's representative prices suit packaged services, not bespoke work. |
+| A face against a firm that wants to look bigger | Show the real people. A "we" for one person or a stock team is invented proof (`vault.proof`). |
+| Fewer fields against qualifying the lead | [The field budget](#the-field-budget). |
+| A credential stated once against making the reader feel the CV | [Feel the CV](#feel-the-cv). |
+| A clear way to get in touch against never ending a page on "contact me" | The route is structure, not a sales line: `vault.trust-contact`. |
+| Plain English against the owner's long sentences | Split by copy type: `vault.trust-plain-words`. |
+| An on-page CV against a PDF CV | Both, as in [feel the CV](#feel-the-cv). |
+| A full address the law asks for against a home-based sole trader | The law wins where it applies; a service address may meet it (`vault.trust-location`). |
+| Work rows that name bodies against a rule banning named clients | As [feel the CV](#feel-the-cv)'s Clash line. |
+| Third-party proof against inventing none | `vault.trust-proof`. |
+| A phone number against an owner who travels | `vault.trust-contact`. |
+
+<!-- design-critique/references/first-visit-trust.md#feel-the-cv -->
+
+### Feel the CV
+
+Record: `vault.trust-cv`.
+
+- **Why.** Procurement staff judge relevant experience by project kind and region, against terms of reference (World Bank Procurement Regulations §7.34–7.39), so specifics they can check carry more than size words. A reader who buys on referral or price takes the checklist alone.
+- **Trade-off.** Specifics can expose a confidential mandate.
+- **Clash.** Rows that name bodies against a rule that bans named clients: the rows name employers and the bodies that publicly asked for or published the work.
+
+<!-- design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces -->
+
+### Sources for the rules the house enforces
+
+The rest of design-vault#119's sample stands, each rule a record citing the outside source that owns it. design-vault#119 cited three of them from memory or second-hand, not re-read: the 4 px step, web.dev's rendering and font guidance, and the W3C images tutorial.
+
+
+- **Type.** `vault.body-size`: under 16 px, screen reading slows and a phone zooms into a form field; a dense working role fits less at 16 px, so it may go smaller (Carbon's productive set). `vault.paragraph-break`: a gap and an indent each mark a paragraph, so both together say it twice; a gap costs height, an indent keeps dense text compact. `vault.no-justify`: justified web text opens uneven word gaps that slow readers, dyslexic readers most; a ragged edge looks less formal, and as SC 1.4.8 is AAA, a project's rules file may rule otherwise.
+- **Colour.** `vault.contrast`: below 4.5:1, or 3:1 for large text, many low-vision readers cannot read the text; pale brand colours lose a text role, and no brand rule lowers the floor. `vault.chroma-ends`: near white and black a screen holds little chroma, so a saturated tint or shade clips or shifts hue; the palette's ends read quieter than its middle.
+- **Layout.** `vault.spacing-step`: one 4 px step makes every gap a multiple the eye reads as ordered; an optical nudge off the step needs a reason.
+- **Motion.** `vault.motion-duration`: under about 100 ms a change reads as a jump, over 500 ms as a wait, and an exit can be quicker because the visitor has moved on; an authored focal entrance may run longer at the cost of that wait. `vault.motion-easing`: a decelerating curve reads as a thing arriving and settling; an exit or a loop may take another curve. `vault.reduced-motion`: movement can make a visitor with a vestibular disorder ill, and a designed reduced version keeps the meaning that switching motion off loses; it is more work, and as SC 2.3.3 is AAA, a project's rules file may relax it. `vault.motion-properties`: animating width, height, position or margin lays the page out again every frame and stutters, where transform and opacity do not; an effect that needs a layout change must be approximated.
+- **Content.** `vault.undo`: a confirmation dialog trains a click-through and still loses the work, where undo lets the visitor recover; it needs the action held back or reversible. `vault.decorative-alt`: a screen reader reads every non-empty alt, so alt on decoration is noise; telling decoration from an image that informs is a judgement, and the second needs its alt.
+- **Performance.** `vault.load` and `vault.web-vitals`: past web.dev's thresholds most visitors find a page slow or jumpy; heavy hero media and web fonts are what cost them. `vault.font-display`: without `swap` or `optional`, text stays invisible while the font loads; `swap` shows a fallback that then shifts, and `optional` may never show the web font on a slow first visit.
+- Heuristics: Nielsen's ten heuristics (NN/g) stand as impeccable `critique` scores them; they are a frame for judging, not one rule.
+
+<!-- design-critique/references/first-visit-trust.md#the-field-budget -->
+
+### The field budget
+
+Record: `vault.field-budget`.
+
+- **Why.** The question protocol asks only for what the service needs and the asker knows what to do with; for a plain enquiry, the first reply needs no more than who wrote and what they want.
+- **Trade-off.** A field cut raises the number of enquiries and lowers what each one says. Where more qualified leads are worth fewer leads is the owner's business fact.
+- **Clash.** A wish to qualify the lead gives way to the protocol: the copy and the reply qualify.
+
+<!-- design-critique/references/house-principles.md#the-function-walk -->
+
+### The function walk
+
+For each part, in this order, the whole-page critic answers:
+
+1. its function code: `vault.function-code`;
+2. whether a visitor can act on it and whether it looks as if they can: `vault.affordance`. Its cell is perceptible (both), hidden (acts, looks static), false (static, looks actable) or correct rejection (neither); hidden or false is a fault;
+3. whether a visitor will know the action they want is here: `vault.findable-action`;
+4. which properties carry its function, and whether it takes one reserved for another: the carrier records above and `vault.borrowing`;
+5. whether each look on the page and the site means one function: `vault.borrowing`;
+6. its rank by visual weight against its rank by task priority, with one primary action: `vault.weight-order`, `vault.primary-action`;
+7. whether decoration sits where the visitor works: `vault.decoration-place`;
+8. on a surface a visitor taps, whether each target has one action: `vault.one-target`;
+9. whether the moment is high-stakes, and its signifiers conventional: `vault.high-stakes`, `vault.brand-layer`.
+
+- **When.** Every candidate with a part a visitor acts on or reads. A render answers whether a part looks actable; only the DOM or the code answers whether it is (its role and `href`), its hover and focus rules, its hit area and nesting. Where neither is given, answer those Unsure, never from the render.
+- **Trade-off of the rules.** Every actable part looking actable costs a quiet surface some calm: a dimmed field or a borderless control reads cleaner but is found later or not at all (Gaver 1991; NN/g on low contrast). One main action per view lets a visitor find the next step at a glance; a second action of near-equal priority pays, taking a lesser look and being found less, and where two choices are truly equal `vault.primary-action`'s "at most one" lets neither take the main look. Ranking parts by task priority puts information above decoration, which spends a hero image's pull; the brand speaks through the brand layer instead (`vault.brand-layer`).
+- **Trade-off of the walk.** One more pass costs critic time, and a critic loses accuracy as checklists are added (#99 V8). A model's "no fault" on questions 4 and 5 is unverified until a seeded test shows it catches a static pill copying a button.
+- **Clash.** A false or hidden affordance, a borrowed property, or a primary-action conflict that stops a task is P0, and bars the candidate from leading however it looks. Any other is reported at its severity on design-critique §4's scale.
+- **Source.** No source walks a page part by part; the walk is #127 Part D, written by the house. Each question's source is its record's.
+
+<!-- design-critique/references/house-principles.md#the-function-codes -->
+
+### The function codes
+
+Record: `vault.function-code`. The codes:
+
+| Code | Function | Examples |
+|---|---|---|
+| N | Navigate: takes the visitor somewhere | link, nav item, a card that is one link |
+| A | Act: does something here | button |
+| I | Text input | text field, search box |
+| S | Select or filter | checkbox, radio, filter chip, switch, sort |
+| T | Status: a state that changes | availability, loading, saved, error |
+| R | Read; **R-trust** for proof | heading, body, photo; source line, review count |
+| C | Contain or group | card, section, sheet, divider |
+| D | Decorate or brand | illustration, ground, the mark |
+
+- **Why per part.** A listing card is a C whose surface is an N, holding R, R-trust, T and its own S and A. A guessed function makes every later judgement on the part a guess too, so the report carries the readings and what each changes, and judges nothing that rests on it.
+- **Trade-off.** Coding every part costs critic time, and a model may code parts unreliably from a render; coding the component once costs every clash between its parts.
+- **Clash.** ARIA's split wins over a look: a part that takes the visitor somewhere is N even when it looks like a button.
+
+<!-- design-critique/references/house-principles.md#source-precedence -->
+
+### Source precedence
+
+- **Rule.** Inside one step, a higher level wins. The levels, highest first:
+  1. law and WCAG 2.2 AA;
+  2. the project's rules file and gate;
+  3. domain evidence (Baymard, NN/g, GOV.UK, USWDS);
+  4. expert craft ranges;
+  5. impeccable's craft rules;
+  6. impeccable's "AI look" bans.
+
+  On look (the value system, the brand), the project wins at level 2 as listed. On behaviour (what a part does, how a visitor reaches it), a project rule that departs from level-3 evidence wins only on evidence of its own, recorded in its rules file; without it, the clash goes to the founder.
+- **When.** Two rules set one property of one part to different values and neither yields to the other. Between steps, the dependency order decides first.
+- **Trade-off.** A project rule may beat better evidence at level 4 on a recorded reason. Asking evidence for a behaviour that departs from level 3 slows a client's own idea down.
+- **Clash.** Two rules the levels cannot rank go to the founder: two of one project's rules, or two vault rules below level 2 where neither names the other in `yields-to`.
+- **Era.** Timeless as an order; the sources named at each level are dated, current; review by 2027-10-14.
+- **Source.** `adopt-or-build.md` F5 (#119); the founder's ruling on #103 Q5 (A). The behaviour bar is GOV.UK's (Service Manual, "Making your service look like GOV.UK"; #183 item 2).
+
+<!-- design-critique/references/house-principles.md#carriers-and-reserved-properties -->
+
+### Carriers and reserved properties
+
+Each function's carriers, and the properties it keeps for itself, are its record's; `vault.borrowing` checks the reserved properties across the page.
+
+| Code | Record | Who commonly borrows its reserved properties |
+|---|---|---|
+| N | `vault.carry-navigate`, `vault.colour-script` | Headings, labels, status text, emphasis |
+| A | `vault.carry-act`, `vault.primary-action` | Static tags, eyebrows in the button's type, decorative pills |
+| I | `vault.carry-input`, `vault.control-edges` | Summary boxes, banners that look like a search box but are links |
+| S | `vault.carry-select` | Static facts as chips, tinted "best" rows, check-mark amenity lists |
+| T | `vault.carry-status` | Brand-tinted availability, decorative pulsing |
+| R | `vault.carry-read`, `vault.proof` | Proof styled as a promotion; a paid badge styled as a merit badge |
+| C | `vault.carry-contain`, `vault.grouping` | Static cards beside tappable ones of the same look |
+| D | `vault.decoration-place`, `vault.brand-layer` | Background art where the visitor works; text inside illustration |
+
+- **Why.** A visitor reads a property as the function they have learnt it carries; a part that borrows one makes a false promise (Gaver 1991), and a functional part dressed as decoration or an ad is skipped (NN/g banner blindness, 2018). Which edges need 3:1: [two border roles](surface-styling.md#two-border-roles).
+- **Trade-off.** Every reservation takes a tool from brand expression.
+- **Clash.** The [brand-layer line](#the-brand-layer-line) settles it. A brand colour that is also a signifier colour keeps the signifier's meaning.
+- **Source.** The table is #127 B7.2's synthesis, confidence 0.8; the reserved column for C and D is inferred from false affordance and banner blindness.
+
+<!-- design-round/references/impeccable.md#struck-or-corrected -->
+
+### Struck or corrected
+
+- **Weight on light text on dark** (`typeset`: "one step more weight"): `vault.dark-text-weight`. Its extra line height and tracking stand; the weight step goes, since Material's 2022 grade study found no readability need for it. Large text going lighter is a look choice no source splits by size.
+- **The eyebrow above a heading** (`craft-floor`: "a ban, not a default"): `vault.ai-look`. GOV.UK sets a caption above a heading to say where the page belongs, so only a decorative eyebrow is an "AI look" default.
+- **Stopping a loop offscreen** (`animate`): `vault.pause`. Not enough on its own, since WCAG 2.2 SC 2.2.2 asks for a control on motion that starts by itself and runs over 5 s.
+- **Device-width breakpoints** (`adapt`: "Mobile: 320px-767px…", "640, 768, 1024px"): struck, for `vault.breakpoints`, as `adapt`'s own next line says.
+- **Ripples as touch feedback** (`adapt`: "ripples, highlights"): `vault.press-state`. The touch feedback stands; the ripple is struck as its form, since it is one design system's pressed-state value and a value comes from the project's value system ([dependency order](../../design-critique/references/house-principles.md#dependency-order), step 4).
+- **At most 4 visible options** (`critique`: "≤4 visible options", "8+ items: Overloaded"): struck as a count, for `vault.option-sets`. Short-term memory limits what a visitor holds, not what a grouped list can show.
+
+<!-- design-critique/references/surface-styling.md#dividers-against-space-and-fill -->
+
+### Dividers against space and fill
+
+Records: `vault.dividers`, `vault.grouping`.
+
+- **Why.** A divider only groups, so it needs no 3:1.
+- **Trade-off.** Space needs room; a line costs a pixel but adds noise in every gap.
+- **Clash.** A border or divider that groups differently from the spacing makes the grouping ambiguous, so the spacing is fixed first rather than a line added to override it.
+
+<!-- design-critique/references/house-principles.md#the-brand-layer-line -->
+
+### The brand-layer line
+
+Record: `vault.brand-layer`.
+
+- **Why the stakes set the room.** Under stress a visitor relies on what they already know (Norman 2002), so a price, availability, the handover to book, an error or sign-in takes the least novelty; a guide page or a home hero takes the most.
+- **Trade-off.** Fully conventional reads as the generic "AI look"; fully expressive costs first-impression trust and usability.
+- **Clash.** A brand idea that needs an unusual control keeps that control's core signifier (its label, its button or field shape, a link's underline), which still reads at a glance.
+
+<!-- design-critique/references/text-presentation.md#near-black-and-the-house-dna -->
+
+### Near-black and the House DNA
+
+Record: `vault.dna-near-black`.
+
+- **Why.** Anthropic's `frontend-design` counts "tinted near-black (#0B0B0B, #111) standing in for black" as template chrome that turns up whatever the subject (3 Sep 2026). Both values carry no hue, so "tinted" there reads as black lightened, not a hue: the tell is a stock dark nobody chose.
+- **Trade-off.** A dark tinted toward the main hue ties the page to its brand, at the cost of one more token to keep in step.
+- **Clash.** On a dark ground, and for near-black text, the tint rule wins over House DNA `never` line 5. A near-black ground is one of the neutral greys `vault.text-tint` tints, and `vault.logo-anchors` tints dark grounds toward a logo's hue. The line still catches a near-black standing in for black that nothing chose, a hue-less stock value above all, reported at P2 at most like every DNA miss.
+
+<!-- design-round/references/impeccable.md#the-ai-look-bans-dated-defaults-review-by-14-apr-2027 -->
+
+### The "AI look" bans: dated defaults, review by 14 Apr 2027
+
+The record is `vault.ai-look`. These are impeccable's reaction to 2024–2026 model output (design-vault#119 F3), so they sit at precedence level 6. The rest of the Refuse list keeps impeccable's weight, its light-or-dark row as conditioned above.
+
+A candidate that uses one is reported at P2 at most. It never fails a gate and never decides a pick. At the review date, check each against Anthropic's `frontend-design` list of current AI-made traits, which the House DNA follows, and strike what no longer marks it.
+
+<!-- design-critique/references/text-presentation.md#capitals-on-labels-and-the-house-dna -->
+
+### Capitals on labels and the House DNA
+
+Record: `vault.dna-caps-label`.
+
+- **Why.** Anthropic's `frontend-design` names "using all caps for labels" among the commonest tells of a generated page (3 Sep 2026): capitals reached for by habit, not for the content.
+- **Trade-off.** Typographers set short strings in capitals, headers, captions and labels among them, with 5–12% added tracking (Butterick). The reading cost is weaker than assumed: Arditi and Cho (2007) found capitals read faster than mixed case near the acuity limit, and no slower at larger sizes.
+- **Clash.** House DNA `never` line 7 against the case research (`docs/research/text-presentation.md` B2.3): a label in capitals that nothing asked for is weighed as the DNA's tell alone, at P2 at most, and one the brief or the rules file asks for passes. Neither is a legibility fault while it stays under one line. Capitals running longer are impeccable's "all-caps body text" finding. `vault.ai-look` decides whether a decorative eyebrow belongs at all, never its case.

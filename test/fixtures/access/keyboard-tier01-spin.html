@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>keyboard spin</title>
+<!-- Two rotating carousels for vault.carousel-focus (#315), run with keyboard-tier01-parts.json.
+     spin-on: rotates while focus or the pointer is in it, its Next button sends focus to the slide, and its
+       Next button comes before its Pause button.
+     spin-held: built right, rotating until focus or the pointer is in it, Pause first. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  :focus-visible { outline: 3px solid #b3261e; outline-offset: 2px }
+  main { padding: 16px }
+  button { font: inherit; padding: 8px 12px; margin: 4px; color: #fff; background: #0a3542; border: 1px solid transparent }
+  .carousel { overflow: hidden; width: 300px; border: 1px solid #767676; margin: 8px 0 }
+  .track { display: flex; width: 600px }
+  .slide { width: 300px; flex: none; padding: 16px; box-sizing: border-box }
+</style>
+<main>
+  <div class="carousel" id="spin-on">
+    <div class="track">
+      <div class="slide"><p>Rooftop bar.</p></div>
+      <div class="slide" inert><p>Pool.</p></div>
+    </div>
+    <button class="next">Next</button><button class="pause">Pause</button>
+  </div>
+  <div class="carousel" id="spin-held">
+    <button class="pause">Pause</button>
+    <div class="track">
+      <div class="slide"><p>Rooftop bar.</p></div>
+      <div class="slide" inert><p>Pool.</p></div>
+    </div>
+    <button class="next">Next</button>
+  </div>
+</main>
+<script>
+  for (const c of document.querySelectorAll('.carousel')) {
+    const track = c.querySelector('.track'), slides = [...c.querySelectorAll('.slide')];
+    let at = 0, held = false, paused = false;
+    const turn = () => {
+      at = (at + 1) % slides.length;
+      track.style.transform = `translateX(-${at * 300}px)`;
+      slides.forEach((s, i) => { s.inert = i !== at; });
+    };
+    setInterval(() => { if (!held && !paused) turn(); }, 400);
+    c.querySelector('.pause').addEventListener('click', () => { paused = !paused; });
+    c.querySelector('.next').addEventListener('click', () => {
+      turn();
+      if (c.id === 'spin-on') { slides[at].tabIndex = -1; slides[at].focus(); }
+    });
+    if (c.id === 'spin-held') {
+      c.addEventListener('focusin', () => { held = true; });
+      c.addEventListener('focusout', () => { held = false; });
+      c.addEventListener('pointerenter', () => { held = true; });
+      c.addEventListener('pointerleave', () => { held = false; });
+    }
+  }
+</script>
+</html>

@@ -1,0 +1,5 @@
+<!doctype html>
+<!-- check-load.py's page whose headline a script reveals 3 s in, as one held for a font or an entrance would. -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body><p style="font: 12px sans-serif">.</p><h1 id="title" style="font: 700 40px/1.2 sans-serif; visibility: hidden">The main content shows late</h1>
+<script>setTimeout(() => { title.style.visibility = "visible"; }, 3000);</script></body></html>

@@ -1,0 +1,13 @@
+### vault.no-target
+- applies-when: web-surface; every field
+- question: Does vault.no-target hold?
+- answered-by: look
+- writes: no-target
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- stage: function
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: none
+- status: live

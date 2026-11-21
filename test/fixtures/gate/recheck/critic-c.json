@@ -1,0 +1,24 @@
+{
+  "answers": {
+    "v1-arches": {
+      "vault.tone-look": {
+        "answer": "Yes",
+        "evidence": "critic c: the cards' tone now matches the brief"
+      },
+      "others": {
+        "answer": "Yes",
+        "evidence": "critic c: the edges and the focus ring are as before"
+      }
+    },
+    "v2-water": {
+      "vault.contrast": {
+        "answer": "No",
+        "evidence": "critic c on the hero text over the darkened video"
+      },
+      "others": {
+        "answer": "Yes",
+        "evidence": "critic c: nothing else on the list moved"
+      }
+    }
+  }
+}

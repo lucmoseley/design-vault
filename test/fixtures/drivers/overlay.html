@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay driver fixture</title>
+<!-- test/drive-overlay.test.py drives every overlay here. -->
+<style>
+  body { font: 16px/1.4 system-ui, sans-serif; margin: 24px; }
+  section { margin-bottom: 24px; }
+  [role="menu"] { list-style: none; margin: 4px 0 0; padding: 4px; border: 1px solid #444; width: 12em; }
+  [role="menu"][hidden] { display: none; }
+  /* The panel fades both ways, so a read taken before its transition ends gets the wrong answer. */
+  #panel { opacity: 0; visibility: hidden; transition: opacity 250ms, visibility 0s 250ms; border: 1px solid #444; padding: 8px; }
+  #panel.shown { opacity: 1; visibility: visible; transition: opacity 250ms, visibility 0s; }
+  [popover] { padding: 12px; }
+</style>
+</head>
+<body>
+
+<section>
+  <!-- Two drawers, one that slides up from below the page and one in from its right, so only their place tells
+       shut from open. -->
+  <button id="drawer-button" aria-expanded="false" aria-controls="drawer">Menu</button>
+  <nav id="drawer" style="position: fixed; left: 0; right: 0; bottom: 0; height: 80px; background: #eee; transform: translateY(100%)">
+    <p>Drawer.</p>
+  </nav>
+  <button id="side-button" aria-expanded="false" aria-controls="side">Side</button>
+  <aside id="side" style="position: fixed; top: 0; right: 0; width: 160px; height: 120px; background: #eee; transform: translateX(100%)">
+    <p>Side.</p>
+  </aside>
+</section>
+
+<section>
+  <!-- Controls that open nothing, ahead of the dialog button so the driver's trial meets them first: a button that
+       changes its own text, a button that would submit the form, a link that would leave the page, a button ARIA
+       says opens nothing, a field that opens its list by typing, and a button that opens a full-page sheet no
+       markup names, which would block every later click on the page it was clicked on. -->
+  <button id="like" type="button">Like</button>
+  <form action="about:blank"><button id="submit">Send</button></form>
+  <a id="away" role="button" href="about:blank">Away</a>
+  <input id="search" role="combobox" aria-expanded="false" aria-controls="search-list" aria-label="Search">
+  <ul id="search-list" role="listbox" hidden><li role="option">Lisbon</li></ul>
+  <button id="plain" type="button" aria-haspopup="false">Plain</button>
+  <button id="sheet-button" type="button">Photos</button>
+  <div id="sheet" role="dialog" aria-label="Photos" hidden style="position: fixed; inset: 0; background: #fff">Photos.</div>
+</section>
+
+<section>
+  <!-- A menu button: ARIA names its menu, and its script opens on Enter or ArrowDown, closes on Escape or the button.
+       Its last item opens a dialog by script, so a trial finds that opener only inside the open menu. -->
+  <button id="menu-button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">Actions</button>
+  <ul id="menu" role="menu" hidden>
+    <li role="menuitem" tabindex="-1">Rename</li>
+    <li role="menuitem" tabindex="-1">Delete</li>
+    <li id="move" role="menuitem" tabindex="-1" aria-haspopup="menu" aria-expanded="false">Move to</li>
+    <li id="report" role="menuitem" tabindex="-1">Report…</li>
+  </ul>
+  <dialog id="report-dialog" aria-label="Report"><form method="dialog"><button id="report-close">Close</button></form></dialog>
+</section>
+
+<section>
+  <!-- A dialog no markup names: only clicking the button shows that it opens one. Its form's first button books,
+       and the second, named, closes. -->
+  <button id="dialog-button" type="button">Book a bed</button>
+  <dialog id="dialog" aria-labelledby="dialog-title">
+    <h2 id="dialog-title">Book a bed</h2>
+    <form method="dialog"><button value="book">Book</button><button id="dialog-close">Close</button></form>
+  </dialog>
+</section>
+
+<section>
+  <!-- A dialog an invoker command names, closed by another whose name says nothing of closing. -->
+  <button id="command-button" commandfor="command-dialog" command="show-modal">Terms</button>
+  <dialog id="command-dialog" aria-label="Terms">
+    <p>Terms.</p>
+    <button id="command-close" commandfor="command-dialog" command="close">Accept</button>
+  </dialog>
+</section>
+
+<section>
+  <!-- A dialog ARIA names, with no control to close it: only Escape does. -->
+  <button id="notice-button" aria-haspopup="dialog" aria-controls="notice">Notice</button>
+  <dialog id="notice" aria-label="Notice"><p>Only Escape shuts this.</p></dialog>
+</section>
+
+<section>
+  <!-- A popover with its own hide button. -->
+  <button id="popover-button" popovertarget="popover">Help</button>
+  <div id="popover" popover>
+    <p>Help text.</p>
+    <button id="popover-close" popovertarget="popover" popovertargetaction="hide">Hide help</button>
+  </div>
+</section>
+
+<section>
+  <!-- The browser takes a details' first summary as its own wherever it stands; a second is only content. -->
+  <details id="details"><p>More text.</p><summary id="summary">More</summary><summary id="second-summary">Also more</summary></details>
+</section>
+
+<section>
+  <!-- A disclosure that names no panel: only what turns visible shows what it opens. Its link says close but
+       leaves the page, so its close control is the × alone. -->
+  <button id="panel-button" aria-expanded="false">Filters</button>
+  <div id="panel"><p>Filter list.</p><a href="about:blank">Close and see every filter</a> <button id="panel-close">×</button></div>
+</section>
+
+<section>
+  <!-- A disclosure that names nothing and draws a wide note and a narrow listbox: the listbox is what it opens. -->
+  <button id="sort-button" aria-expanded="false">Sort</button>
+  <div id="sort-note" hidden style="padding: 24px">Sorted by price, lowest first.</div>
+  <ul id="sort-list" role="listbox" hidden style="width: 10em"><li role="option">Price</li></ul>
+</section>
+
+<!-- A dialog open as the page loads, with nothing to open it again. -->
+<dialog id="welcome" open aria-label="Welcome"><form method="dialog"><button id="welcome-close">OK</button></form></dialog>
+
+<script>
+  const menuButton = document.getElementById("menu-button");
+  const menu = document.getElementById("menu");
+  const items = [...menu.querySelectorAll("[role=menuitem]")];
+  function openMenu() {
+    menu.hidden = false;
+    menuButton.setAttribute("aria-expanded", "true");
+    items[0].focus();
+  }
+  function closeMenu() {
+    menu.hidden = true;
+    menuButton.setAttribute("aria-expanded", "false");
+    menuButton.focus();
+  }
+  menuButton.addEventListener("click", () => (menu.hidden ? openMenu() : closeMenu()));
+  menuButton.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); openMenu(); }
+  });
+  menu.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+    const at = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") items[(at + 1) % items.length].focus();
+    if (e.key === "ArrowUp") items[(at + items.length - 1) % items.length].focus();
+  });
+
+  document.getElementById("dialog-button").addEventListener("click", () => document.getElementById("dialog").showModal());
+  document.getElementById("notice-button").addEventListener("click", () => document.getElementById("notice").showModal());
+
+  const panelButton = document.getElementById("panel-button");
+  const panel = document.getElementById("panel");
+  function setPanel(shown) {
+    panel.classList.toggle("shown", shown);
+    panelButton.setAttribute("aria-expanded", String(shown));
+  }
+  panelButton.addEventListener("click", () => setPanel(!panel.classList.contains("shown")));
+  document.getElementById("panel-close").addEventListener("click", () => setPanel(false));
+  panel.addEventListener("keydown", (e) => e.key === "Escape" && setPanel(false));
+  panelButton.addEventListener("keydown", (e) => e.key === "Escape" && setPanel(false));
+
+  const sortButton = document.getElementById("sort-button");
+  function setSort(shown) {
+    for (const id of ["sort-note", "sort-list"]) document.getElementById(id).hidden = !shown;
+    sortButton.setAttribute("aria-expanded", String(shown));
+  }
+  sortButton.addEventListener("click", () => setSort(sortButton.getAttribute("aria-expanded") !== "true"));
+  sortButton.addEventListener("keydown", (e) => e.key === "Escape" && setSort(false));
+
+  for (const [id, away] of [["drawer", "translateY(100%)"], ["side", "translateX(100%)"]]) {
+    const button = document.getElementById(id + "-button");
+    const set = (shown) => {
+      document.getElementById(id).style.transform = shown ? "none" : away;
+      button.setAttribute("aria-expanded", String(shown));
+    };
+    button.addEventListener("click", () => set(button.getAttribute("aria-expanded") !== "true"));
+    button.addEventListener("keydown", (e) => e.key === "Escape" && set(false));
+  }
+
+  document.getElementById("sheet-button").addEventListener("click", () => (document.getElementById("sheet").hidden = false));
+  document.getElementById("report").addEventListener("click", () => {
+    closeMenu();
+    document.getElementById("report-dialog").showModal();
+  });
+
+  const like = document.getElementById("like");
+  like.addEventListener("click", () => (like.textContent = like.textContent === "Like" ? "Liked" : "Like"));
+</script>
+</body>
+</html>

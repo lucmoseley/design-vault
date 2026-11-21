@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>wide</title>
+<!-- Only past 2200 px a rail grows 10% wider than the screen, so a sweep that stops at 1920 never sees it (#197). -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .rail { height: 40px; background: #ddd }
+  @media (min-width: 2200px) { .rail { width: 110vw } }
+</style>
+<p>A page laid out for the common desktops.</p>
+<div class="rail"></div>

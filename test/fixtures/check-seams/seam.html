@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: a ground-coloured seam. The two fills meet on one exact edge at x = 40.5 CSS px, so each
+     covers half its edge pixels and the white ground shows through (the conflation seam) at device pixel ratios 1
+     and 3. At 2 the edge falls on a device pixel's boundary and no ground shows. The white rect is the art's own
+     ground: the mattes must hide it. -->
+<style>body { margin: 0; background: #fff; } svg { display: block; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <rect width="100" height="100" fill="#fff"/>
+  <path id="left" fill="#1a4d8f" d="M10 10 H40.5 V90 H10 Z"/>
+  <path id="right" fill="#e0a030" d="M40.5 10 H90 V90 H40.5 Z"/>
+</svg>
+</body>
+</html>

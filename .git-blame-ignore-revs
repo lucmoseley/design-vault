@@ -1,0 +1,3 @@
+# Formatting-only commits, skipped by `git blame --ignore-revs-file .git-blame-ignore-revs`.
+# ruff format and shfmt over the vault, v1.3.14 (#181)
+fe3d77e732e6b9a00896d5cdc7183abbd226db6e

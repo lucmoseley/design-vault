@@ -1,0 +1,61 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "Mark M. Moseley"  static  (could look actable: draws its own box, a link's colour)
+p2  "MMM Infra, home"  acts: link -> #top
+p3  "Profile"  acts: link -> #article
+p4  "Articles and talks"  acts: link -> #article
+p5  "Blog"  acts: link -> #article
+p6  "In my view, we are at a turning point in the story of Public-Private …"  static  (could look actable: a link's colour)
+p7  "Public-Private"  static  (could look actable: a link's colour)
+p8  "I advise multilateral development banks, development agencies and gov…"  static  (could look actable: a link's colour)
+p9  "Write to me directly Mark.Moseley@MMMinfra.com"  acts: link -> mailto:Mark.Moseley@MMMinfra.com
+p10  "Placeholder: Mark's photo from the current site, until the image roun…"  static  (could look actable: a link's colour)
+p11  "Text pair"  static  (could look actable: draws its own box)
+p12  "Ratio"  static  (could look actable: draws its own box)
+p13  "Used for"  static  (could look actable: draws its own box)
+p14  "Aa warm white on slate"  static  (could look actable: draws its own box)
+p15  "Aa"  static  (could look actable: draws its own box, a link's colour)
+p16  "11.66 : 1"  static  (could look actable: draws its own box)
+p17  "the line, the address, the name"  static  (could look actable: draws its own box)
+p18  "Aa mist on slate"  static  (could look actable: draws its own box)
+p19  "Aa"  static  (could look actable: draws its own box, a link's colour)
+p20  "6.98 : 1"  static  (could look actable: draws its own box)
+p21  "lede, nav links, label, photo note"  static  (could look actable: draws its own box)
+p22  "Aa grey on warm white"  static  (could look actable: draws its own box)
+p23  "Aa"  static  (could look actable: draws its own box)
+p24  "9.52 : 1"  static  (could look actable: draws its own box)
+p25  "all reading text"  static  (could look actable: draws its own box)
+p26  "Aa blue on warm white"  static  (could look actable: draws its own box)
+p27  "Aa"  static  (could look actable: draws its own box, a link's colour)
+p28  "4.73 : 1"  static  (could look actable: draws its own box)
+p29  "links, the replay control, list numbers"  static  (could look actable: draws its own box)
+p30  "Aa warm white on blue"  static  (could look actable: draws its own box)
+p31  "Aa"  static  (could look actable: draws its own box, a link's colour)
+p32  "4.73 : 1"  static  (could look actable: draws its own box)
+p33  "the action on the first screen"  static  (could look actable: draws its own box)
+p34  "Type pair Newsreader Mark's voice, from the first line to the article…"  static  (could look actable: draws its own box)
+p35  "Texture As on the current site Graded for the site No texture. The ph…"  static  (could look actable: draws its own box)
+p36  "Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge Lectu…"  acts: link -> #article
+p37  "In my view, we are at a turning point in the story of Public-Private …"  static  (could look actable: draws its own box)
+p38  "In my view, we are at a turning point in the story of Public-Private …"  static  (could look actable: a link's colour)
+p39  "Element"  static  (could look actable: draws its own box)
+p40  "Start"  static  (could look actable: draws its own box)
+p41  "Length"  static  (could look actable: draws its own box)
+p42  "Move"  static  (could look actable: draws its own box)
+p43  "Photograph"  static  (could look actable: draws its own box)
+p44  "0 ms"  static  (could look actable: draws its own box)
+p45  "1000 ms"  static  (could look actable: draws its own box)
+p46  "settles, scale 1.035 to 1"  static  (could look actable: draws its own box)
+p47  "Mark's line (enters)"  static  (could look actable: draws its own box)
+p48  "150 ms"  static  (could look actable: draws its own box)
+p49  "900 ms"  static  (could look actable: draws its own box)
+p50  "opacity 0 to 1, rises 0.16 em"  static  (could look actable: draws its own box)
+p51  "Whole"  static  (could look actable: draws its own box)
+p52  "0 ms"  static  (could look actable: draws its own box)
+p53  "1050 ms"  static  (could look actable: draws its own box)
+p54  "then still; hover only after"  static  (could look actable: draws its own box)
+p55  "Replay the opening"  acts: button
+p56  "MMM Infra, back to top"  acts: link -> #top
+p57  "Mark.Moseley@MMMinfra.com"  acts: link -> mailto:Mark.Moseley@MMMinfra.com

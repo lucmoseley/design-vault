@@ -1,0 +1,53 @@
+# Each value comes from its record in design-critique/rules/, or is the
+# script's own reading marked "measured guess" until a run calibrates it;
+# change a record's number and its line here together.
+vault.hover-reveal | reveal
+# measured guess: WCAG 1.4.13 sets no time; 3 s outlasts every common tooltip delay.
+vault.hover-content | persist | stays ms >= 3000
+vault.menu-click | click-opens
+vault.editable-cue | editable | part editable-value
+# measured guess: under a device pixel, below which no reader sees a shift.
+vault.hover-reflow | reflow | shift px <= 0.5
+vault.control-states | states
+# CIE L* = 50, the lightness midpoint, as relative luminance.
+vault.inverse-surface | inverse | split luminance 0.184
+vault.dialog-default | default | not cancel, close, dismiss, no, not now
+vault.toggle-state | toggle
+# The words SC 2.5.2's "undone after" and SC 2.1.4's "turned off" name.
+vault.act-on-release | release | undone by undo
+vault.key-shortcuts | single-key | turned off by shortcut
+vault.on-focus | on-focus
+vault.space-plays | space | part video
+vault.slider-keys | slider-keys
+vault.slider-direction | direction
+vault.drag-tracking | drag
+vault.scroller-input | wheel
+# measured guess: past a 2 px border and its anti-aliasing.
+vault.whole-target | whole | inset px 4
+# measured guess: a 5% grow is a zoom, not layout jitter; a drift of
+# about a fingertip's tenth.
+vault.pinch-anchor | pinch | part zoomable; zoom ratio >= 1.05; drift px <= 8
+# vault.ground-step's whole neutral span, 1.3:1.
+vault.target-highlight | target | fill contrast <= 1.3
+vault.visited-links | visited | contrast >= 4.5
+vault.validation-timing | timing
+vault.field-paste | paste
+vault.auth-paste | auth-paste
+vault.on-input | on-input
+vault.enter-submits | enter
+vault.answers-kept | kept
+vault.error-summary-focus | summary-focus
+vault.suggestions-announced | suggest | type a; axe aria-required-attr aria-valid-attr-value
+vault.mixed-check | mixed | part select-all
+vault.submenu-close | submenu
+# measured guess: long enough that an overlay coming back on a timer shows.
+vault.interruptions | interrupt | shut ms >= 5000
+vault.dialog-name | dialog-name | axe aria-dialog-name
+vault.menu-ellipsis | ellipsis
+vault.expanded-state | expanded | axe aria-valid-attr-value
+vault.live-region-ready | live-region
+# measured guess: past the 4–8 s most toasts hold.
+vault.status-no-focus | toast | part toast; stays ms >= 10000
+vault.exit-warning | exit
+# 20 s warning and the 20 h exemption, from vault.time-limit's question.
+vault.time-limit | time-limit | warn ms >= 20000; horizon ms 72000000

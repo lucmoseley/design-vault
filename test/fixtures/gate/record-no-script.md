@@ -1,0 +1,13 @@
+### vault.no-script
+- applies-when: web-surface; every field
+- question: Does vault.no-script hold?
+- answered-by: script
+- writes: no-script
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- stage: value
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: none
+- status: live

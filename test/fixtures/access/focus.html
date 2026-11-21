@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>focus</title>
+<!-- One fault, vault.focus, five times. A button whose outline is taken off with nothing in its place. A button
+     shut in a box of no height takes focus where it cannot be seen. A dark button given a transparent border with
+     its fill painted under it, where Chromium draws its own near-black ring, so the ring cannot be seen (#424). Tab centres
+     "Find us" in the window, which leaves "Rates" in view but under the fixed booking bar, so focus on it is not
+     scrolled and cannot be seen. Tab then centres "Contact", which leaves "Opening hours" under the sticky header,
+     as the page's end stops the scroll short, where Shift+Tab, coming back, finds it. Every other stop shows the browser's focus ring. The page scrolls
+     smoothly, which the check turns off so it reads each stop where the scroll ends. -->
+<style>
+  html { scroll-behavior: smooth }
+  body { margin: 0; min-height: 3000px; font: 16px/1.5 sans-serif; color: #222 }
+  header { position: sticky; z-index: 1; top: 0; height: 64px; padding: 0 16px; background: #0a3542; color: #fff; display: flex; align-items: center }
+  a { position: absolute; left: 16px; padding: 8px 0 }
+  .plain { margin: 32px 16px 0; padding: 8px 16px; font: inherit }
+  .plain:focus { outline: none }
+  .dark { appearance: none; display: block; margin: 16px; border: 1px solid transparent; background: #0a3542; color: #fff; height: 44px; padding: 0 16px; font: inherit }
+  .shut { height: 0; overflow: hidden; margin: 0 16px }
+  .mid { top: 1000px }
+  .under { top: calc(1020px + 50vh - 72px) }
+  .hours { top: calc(3000px - 100vh + 8px) }
+  .end { top: calc(3000px - 50vh + 50px) }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 96px; background: #0a3542; color: #fff; display: flex; align-items: center; gap: 16px; padding: 0 16px }
+  .bar .inner { flex: 1; align-self: stretch; display: flex; align-items: center; gap: 16px }
+  .bar button { padding: 8px 16px; font: inherit }
+</style>
+<header>Hostel by the sea</header>
+<button class="plain" type="button">Show rooms</button>
+<div class="shut"><button type="button">Late check-in</button></div>
+<button class="dark" type="button">Book a bed</button>
+<a class="mid" href="#mid">Find us</a>
+<a class="under" href="#under">Rates</a>
+<a class="hours" href="#hours">Opening hours</a>
+<a class="end" href="#end">Contact</a>
+<div class="bar"><div class="inner">Beds from 20 a night <button type="button">Book</button></div></div>

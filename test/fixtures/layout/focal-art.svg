@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <!-- The focal box the pages declare: x 1100, y 350, 200 by 200. -->
+  <rect width="1600" height="900" fill="#81b29a"/>
+  <rect x="1100" y="350" width="200" height="200" fill="#e07a5f"/>
+</svg>

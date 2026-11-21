@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: a closed contact whose upper fill is a 3 CSS px strip, so the white ground past its far
+     side lies within reach of the contact: it is outside the contact and must not count. -->
+<style>body { margin: 0; background: #fff; } svg { display: block; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <rect width="100" height="100" fill="#fff"/>
+  <path id="under" fill="#1a4d8f" d="M10 10 H42 V90 H10 Z"/>
+  <path id="over" fill="#e0a030" d="M41 10 H44 V90 H41 Z"/>
+</svg>
+</body>
+</html>

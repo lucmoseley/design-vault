@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A page that cancels its keys and touches</title>
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff; }
+  /* Touch-actions that leave the vertical pan to the page, so the touch is judged. */
+  html { touch-action: manipulation; }
+  .spacer { height: 4000px; touch-action: pan-y; }
+</style>
+</head>
+<body>
+<!-- vault.native-scroll: Page Down and a touch drag are cancelled and the page's script moves it. -->
+<div class="spacer" data-record="vault.native-scroll"></div>
+<script>
+  addEventListener('keydown', (e) => { if (e.key === 'PageDown') { e.preventDefault(); scrollBy(0, innerHeight); } });
+  let y = null;
+  addEventListener('touchstart', (e) => { y = e.touches[0].clientY; }, { passive: true });
+  addEventListener('touchmove', (e) => { e.preventDefault(); scrollBy(0, y - e.touches[0].clientY); y = e.touches[0].clientY; }, { passive: false });
+</script>
+</body>
+</html>

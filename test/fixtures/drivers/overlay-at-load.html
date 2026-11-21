@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay driver fixture: a dialog at load</title>
+</head>
+<body>
+<!-- test/drive-overlay.test.py: a modal the page opens as it loads blocks every click until it shuts, so the trial must
+     shut it before it can find what the button opens. -->
+<button id="rooms-button" type="button">Rooms</button>
+<dialog id="rooms" aria-label="Rooms"><form method="dialog"><button>Close</button></form></dialog>
+<dialog id="cookies" aria-label="Cookies"><form method="dialog"><button>Accept</button></form></dialog>
+<script>
+  document.getElementById("rooms-button").addEventListener("click", () => document.getElementById("rooms").showModal());
+  document.getElementById("cookies").showModal();
+</script>
+</body>
+</html>

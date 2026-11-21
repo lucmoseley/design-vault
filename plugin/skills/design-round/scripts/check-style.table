@@ -1,0 +1,243 @@
+# check-style.py's rule table (#309): one line or more per rule record, in
+# probe.py's form, in check-style.py's blocks. Each value comes from its
+# record in design-critique/rules/; change them together.
+
+define $prose = css:p, li, dd, blockquote
+define $copy = css:p, li, dd, dt, blockquote, figcaption, caption, td, th, label, small, h1, h2, h3, h4, h5, h6
+define $text = css:p, li, dd, dt, blockquote, figcaption, caption, td, th, label, small, h1, h2, h3, h4, h5, h6, a, button, span, strong, em, b, i, code
+define $headings = css:h1, h2, h3, h4, h5, h6
+define $controls = css:input, select, textarea, button
+define $not-pill = where style:border-top-left-radius per height < 0.5
+define $gradient = where style:background-image matches gradient\(
+define $on-dark = where ground as luminance < 0.179
+define $on-light = where ground as luminance >= 0.179
+define $over-dark = where backdrop as luminance < 0.179
+define $per-em = style:line-height per style:font-size
+
+# Buttons
+vault.action-on-dark | role:button $over-dark | edge-contrast | >= 3
+vault.button-group-size | role:button | distinct height within parent | <= 1
+vault.button-group-size | role:button | distinct style:border-top-left-radius within parent | <= 1
+vault.button-size | role:button | distinct height | <= 3
+vault.key-action | part:primary-action | height | > all of (role:button) height
+vault.key-action | part:primary-action | style:border-top-left-radius per height | >= 0.5
+vault.action-colour | role:button where style:background-color as alpha > 0 where style:background-color as oklch-c >= 0.05 | distinct style:background-color | <= 2
+vault.destructive-fill | part:destructive-action | style:background-color | != all of (part:primary-action) style:background-color
+
+# Colour: text and grounds
+vault.body-ink | $prose $on-light | contrast | >= 7
+vault.text-steps | $copy | distinct style:color within ground | <= 2
+vault.text-on-dark | $prose $on-dark | style:color | != rgb(255, 255, 255)
+vault.text-on-dark | $prose $on-dark where style:font-size < 24px | contrast | >= 7
+vault.dark-ground | css:html, body, main $on-dark where style:background-color as alpha = 1 | ground as oklch-l | between 0.18 and 0.22
+vault.color-scheme | all css:html | style:color-scheme | != normal
+vault.color-scheme | all css:meta[name="color-scheme"] | attr:content | = root style:color-scheme
+vault.colour-pair | css:body, body * where authored:color matches . | ground-set | = 1
+vault.image-fallback-colour | css:body, body * where style:background-image matches url\( where text matches \S | style:background-color as alpha | > 0
+vault.image-wash | css:body * where over-image = 1 where text matches ^$ where style:background-color as alpha > 0 | style:background-color as alpha | < 0.9
+vault.heading-fill | $headings | style:background-color as alpha | = 0
+vault.disabled-dim | css:button:disabled, input:disabled, select:disabled, textarea:disabled, [aria-disabled="true"] | style:opacity | = 1
+vault.disabled-dim | css:button:disabled, button[aria-disabled="true"] | style:background-color | != all of (css:button:enabled:not([aria-disabled="true"])) style:background-color
+vault.ground-step | css:body * where style:background-color as alpha = 1 where ground as oklch-c < 0.05 | page-contrast | <= 1.3
+vault.ground-step | css:body * where style:background-color as alpha = 1 where ground as oklch-c < 0.05 where fill-distance > 0 | fill-distance | >= 3
+vault.price-ground | css:body * where text matches ^\s*[£$€]\s?\d | ground | = parent ground
+vault.footer-ground | css:footer > :last-child | ground as luminance | < parent ground as luminance
+vault.region-fill | css:nav, aside, [role=navigation], [role=complementary] | ground as oklch-c | < 0.05
+vault.bar-ground | css:header, nav, [role=banner], [role=navigation] where ground as oklch-c >= 0.05 | count | <= 1
+vault.bar-ground | part:service-bar | ground as oklch-l | > all of (part:brand-bar) ground as oklch-l
+vault.tag-fill | part:tag $on-light | style:color as oklch-l | < self ground as oklch-l
+vault.list-header-fill | part:list-header | style:background-color as alpha | > 0
+
+under scheme=dark
+vault.dark-ground | css:html, body, main $on-dark where style:background-color as alpha = 1 | ground as oklch-l | between 0.18 and 0.22
+vault.text-on-dark | $prose $on-dark | style:color | != rgb(255, 255, 255)
+vault.text-on-dark | $prose $on-dark where style:font-size < 24px | contrast | >= 7
+
+end
+# Gradients
+vault.gradient-kind | css:body, body * | style:background-image | not matches repeating-(linear|radial|conic)
+vault.gradient-kind | css:body * where over-image = 1 where text matches ^$ $gradient | style:background-image | matches ^linear-gradient
+vault.gradient-space | css:body, body * $gradient | style:background-image | matches \bin (oklab|oklch)\b|oklab\(|oklch\(
+vault.gradient-text | $text | style:background-clip | != text
+vault.gradient-place | css:form, table, [role=grid], [role=listbox], input, textarea, select | style:background-image | not matches gradient\(
+vault.gradient-place | part:hero | style:background-image | not matches radial-gradient
+vault.gradient-place | $text | style:text-shadow | not matches \s0px 0px [1-9]
+
+# Typography: faces
+vault.face-count | $text where style:font-family not matches (?i)mono | distinct style:font-family | <= 2
+vault.face-count | $headings | distinct style:font-family | <= 1
+vault.face-count | $prose | distinct style:font-family | <= 1
+vault.face-count | css:code, pre, kbd, samp | style:font-family | matches (?i)mono
+vault.weight-count | $text | distinct style:font-weight | <= 4
+vault.weight-count | css:strong, b | style:font-weight | between 600 and 700
+vault.emphasis-weight | css:strong, b | style:font-weight minus parent style:font-weight | >= 300
+vault.type-weight | $text where style:font-size <= 16px | style:font-weight | >= 400
+vault.type-weight | $text where style:font-size <= 14px | style:font-weight | <= 700
+vault.type-weight | sheet where media matches resolution|pixel-ratio|font-smoothing | decl:font-weight | absent
+vault.true-faces | $text | synthesised | = 0
+vault.kerning | $text | style:font-kerning | != none
+vault.kerning | $text | style:text-rendering | != optimizespeed
+vault.font-stack | $text | style:font-family | matches (serif|sans-serif|monospace|system-ui|ui-[a-z-]+|cursive|fantasy|math)$
+vault.fallback-metrics | sheet where decl:src matches local\( | decl:size-adjust | present
+vault.axis-properties | $text | style:font-optical-sizing | = auto
+vault.axis-properties | $text | style:font-variation-settings | not matches "(wght|wdth|opsz|ital|slnt)"
+vault.font-smoothing | $text $on-dark | style:-webkit-font-smoothing | in antialiased or grayscale
+vault.font-smoothing | $text $on-light where style:font-weight < 400 | style:-webkit-font-smoothing | not in antialiased or grayscale
+vault.prose-width | $prose | style:font-stretch | = 100%
+vault.figures | css:td, th, output, [aria-live] where text matches \d where style:font-family not matches (?i)mono | style:font-variant-numeric | matches tabular-nums
+vault.figures | css:td, th where text matches \d | style:font-variant-numeric | not matches oldstyle-nums
+vault.figures | $prose where text matches \d | style:font-variant-numeric | not matches tabular-nums
+vault.figures | $text where text matches \d where style:text-transform = uppercase | style:font-variant-numeric | not matches oldstyle-nums
+vault.emphasis-form | css:em, strong, i, b | style:text-decoration-line | = none
+vault.emphasis-form | css:em, i where style:font-weight >= 600 | style:font-style | != italic
+vault.emphasis-cue | css:strong, b, em, i, mark | style:font-size | = parent style:font-size
+vault.emphasis-cue | css:strong, b, em, i | style:color | = parent style:color
+vault.emphasis-cue | $copy | distinct contrast within ground | <= 3
+
+# Typography: size and leading
+vault.type-size | $prose | style:font-size | >= 16px
+vault.type-size | $prose | style:font-size times xheight | >= 8.32px
+vault.type-size | $prose where webfont = 1 | style:font-size-adjust | != none
+vault.type-floor | $text | style:font-size | >= 11px
+vault.type-floor | $text | style:font-size times xheight | >= 5.72px
+vault.type-floor | css:small, figcaption, caption | style:font-size | >= 12px
+vault.type-floor | css:small, figcaption, caption | style:font-size times xheight | >= 6.24px
+vault.code-size | css:p code, li code, p kbd, p samp | style:font-size times xheight | within 3% of parent style:font-size times parent xheight
+vault.fluid-type | $text where authored:font-size matches vw | authored:font-size | matches ^clamp\(\s*[\d.]+rem\s*,.*vw\b.*,\s*[\d.]+rem\s*\)$
+vault.leading-unitless | $text | authored:line-height | matches ^(|normal|[\d.]+|var\(.+\)|inherit|initial|unset)$
+vault.type-leading | $prose where lines >= 2 | $per-em | >= 1.3
+vault.type-leading | $prose where lines >= 3 where measure between 45 and 65 | $per-em | between 1.4 and 1.6
+vault.type-leading | $prose where lines >= 3 where measure > 65 | $per-em | between 1.4 and 1.7
+vault.type-leading | $prose where lines >= 3 where measure < 45 | $per-em | between 1.3 and 1.6
+vault.type-leading | $headings where style:font-size <= 20px | $per-em | between 1.25 and 1.4
+vault.type-leading | $headings where style:font-size between 24px and 40px | $per-em | between 1.15 and 1.3
+vault.type-leading | $headings where style:font-size >= 48px where style:font-size < 72px | $per-em | between 1.0 and 1.15
+vault.type-leading | $headings where style:font-size >= 72px | $per-em | between 0.9 and 1.05
+vault.type-leading | css:figcaption, caption | $per-em | between 1.3 and 1.43
+vault.type-leading | role:button where lines = 1 | $per-em | between 1.0 and 1.25
+vault.type-leading | css:li, [role=option], [role=menuitem] where lines >= 3 | $per-em | >= 1.0
+vault.type-leading | $prose where lang matches ^(vi|th|hi|de)\b | $per-em | >= 1.6
+vault.heading-space | css::is(h1, h2, h3, h4, h5, h6):not(:first-child) | style:margin-top per style:margin-bottom | >= 1.5
+
+# Typography: tracking
+vault.type-tracking | $text where style:text-transform = uppercase | style:letter-spacing | between 0.05em and 0.10em
+vault.type-tracking | css:abbr, p, li, td, th, span, strong, a, button, label, small where text matches ^[A-Z]{2,}$ | style:letter-spacing | between 0.05em and 0.10em
+vault.type-tracking | $prose where style:font-size >= 13px where style:font-size < 22px where style:text-transform = none | style:letter-spacing | = 0px
+vault.type-tracking | $text where style:font-size <= 12px where style:text-transform = none | style:letter-spacing | >= 0.025em
+vault.type-tracking | $headings where style:font-size >= 22px where style:font-size < 32px | style:letter-spacing | between -0.01em and 0em
+vault.type-tracking | $headings where style:font-size >= 32px where style:font-size < 64px | style:letter-spacing | between -0.02em and 0em
+vault.type-tracking | $headings where style:font-size >= 64px | style:letter-spacing | between -0.03em and 0em
+vault.type-tracking | $text | style:letter-spacing | >= -0.03em
+vault.type-tracking | $text where style:font-weight >= 700 | style:letter-spacing | >= 0em
+vault.type-tracking | $text where style:font-stretch < 100% | style:letter-spacing | >= 0em
+
+# Text
+vault.text-align | $prose where style:direction = ltr | style:text-align | in start or left or center
+vault.text-align | $prose where style:direction = rtl | style:text-align | in start or right or center
+vault.centred-text | css:p, li, blockquote, dd where style:text-align = center | lines | <= 3
+vault.alignment-count | css:p, li, blockquote, dd where lines > 3 | distinct style:text-align within css:section, article, aside, main, header, footer, nav, form | <= 1
+vault.justify-space | $prose where style:text-align = justify | style:text-justify | not in inter-character or distribute
+vault.justify-space | $prose where style:text-align = justify | style:letter-spacing | = 0px
+vault.hyphens-body | $prose where style:text-align = justify | style:hyphens | = auto
+vault.hyphens-body | $prose where style:text-align != justify where lines >= 3 where measure < 40 | style:hyphens | = auto
+vault.hyphens-body | $prose where style:text-align != justify where lines >= 3 where measure >= 50 | style:hyphens | = manual
+vault.hyphens-body | $prose where style:hyphens = auto | lang | present
+vault.hyphen-chars | $text where style:hyphens = auto | style:hyphenate-limit-chars | = 5 2 3
+vault.hyphen-lines | $text where style:hyphens = auto | hyphen-run | <= 3
+vault.hyphen-char | $text where style:hyphens = auto | style:hyphenate-character | = auto
+vault.heading-hyphens | $headings | style:hyphens | in manual or none
+vault.text-wrap | css:h1, h2, h3, h4, h5, h6, figcaption, blockquote where lines <= 6 | style:text-wrap-style | in balance or pretty
+vault.text-wrap | css:p, li | style:text-wrap-style | = pretty
+vault.edit-wrap | css:textarea, [contenteditable] | style:text-wrap-style | in stable or auto
+vault.text-columns | css:body * where style:column-count != auto | screens | <= 1
+vault.text-columns | $headings where parent style:column-count != auto | style:column-span | = all
+vault.side-indent | css:p:not(blockquote p, aside p, [role=note] p) | style:padding-left | = 0px
+vault.side-indent | css:p:not(blockquote p, aside p, [role=note] p) | style:margin-left | = 0px
+vault.measure-unit | css:p, article, main, section where authored:max-width matches . | authored:max-width | matches ^none$|(rem|em|ex|ch)\b
+vault.table-align | css:td where text matches ^[-+−]?[£$€]?(\d{1,3}(,\d{3})+|\d{1,3})(\.\d+)?%?$ | style:text-align | in right or end
+vault.table-align | css:td where text not matches \d | style:text-align | in start or left
+vault.table-align | css:th, td | distinct style:text-align within column | <= 1
+vault.list-marker | css:ul > li | style:list-style-type | in disc or circle or square or none or "–" or "—"
+vault.list-marker | css:ul > li | style:content of ::marker | not matches [\U0001F300-\U0001FAFF☀-➿]
+vault.name-case | part:user-name | style:text-transform | = none
+vault.badge-case | part:badge | style:text-transform | not in uppercase or capitalize
+vault.spelling-mark | css:textarea[spellcheck], [contenteditable][spellcheck] | attr:spellcheck | != false
+vault.spelling-mark | part:misspelling | style:text-decoration-line | in spelling-error or grammar-error
+vault.skip-ink | $text | style:text-decoration-skip-ink | != none
+vault.text-stroke | $text where style:-webkit-text-stroke-width > 0px | style:paint-order | matches ^stroke
+vault.ruby-position | css:ruby | style:ruby-position | = over
+vault.white-space | css:p, li, h1, h2, h3, h4, h5, h6, td, dd, blockquote | style:white-space-collapse | = collapse
+
+under rtl
+vault.rtl-sides | $prose | style:text-align | in start or right or center
+vault.rtl-sides | $prose | authored:text-align | not in left or right
+vault.rtl-images | css:img, picture, video, svg | style:transform | not matches ^matrix\(-
+
+end
+# Forms and interaction
+vault.control-font | $controls | style:font-family | = body style:font-family
+vault.control-font | $controls | style:font-size | = body style:font-size
+vault.caret-shape | css:input, textarea, [contenteditable] | style:caret-shape | = auto
+vault.textarea-resize | css:textarea where style:field-sizing != content | style:resize | not in none or horizontal
+vault.touch-action | css:button, [role=button], input, select, textarea | style:touch-action | = manipulation
+vault.touch-action | css:html, body | style:touch-action | not in none or pan-x or pan-y
+vault.forced-colour-edges | $controls where style:box-shadow != none | style:border-top-width | > 0px
+
+# Surfaces
+vault.border-width | css:hr | style:border-top-width | = 1px
+vault.border-width | css:body *:not(input, select, textarea, button, hr, [aria-selected=true], [aria-current], [aria-pressed=true]) where style:border-top-style = solid | style:border-top-width | = 1px
+vault.border-width | $controls where style:border-top-style = solid | style:border-top-width | between 1px and 2px
+vault.border-style | css:body *:not(hr, td, th, tr) | style:border-top-style | in none or solid or hidden
+vault.border-style | css:body * | style:border-bottom-style | in none or solid or hidden or dotted or dashed
+vault.border-image | $controls | style:border-image-source | = none
+vault.border-image | css:body * where style:border-image-source != none | style:border-top-style | != none
+vault.edge-alpha | $controls where style:border-top-style != none where style:border-top-color as alpha > 0 | style:border-top-color as alpha | = 1
+vault.heading-rule | $headings | style:border-bottom-style | in none or hidden
+vault.side-accent | css:body *:not(blockquote, aside, [role=alert], [role=note], [aria-current]) | style:border-left-width minus style:border-top-width | <= 0px
+vault.side-accent | css:body *:not(blockquote, aside, [role=alert], [role=note], [aria-current]) | style:border-right-width minus style:border-top-width | <= 0px
+vault.radius-scale | css:body * where style:border-top-left-radius > 0px $not-pill | distinct style:border-top-left-radius | <= 5
+vault.radius-scale | part:card $not-pill | style:border-top-left-radius | >= all of ($controls $not-pill) style:border-top-left-radius
+vault.radius-scale | role:dialog | style:border-top-left-radius | >= all of (part:card) style:border-top-left-radius
+vault.radius-scale | part:tag $not-pill | style:border-top-left-radius | <= all of ($controls $not-pill) style:border-top-left-radius
+vault.shadow-form | css:body * | style:box-shadow | not matches \binset\b
+vault.shadow-form | css:body * where style:box-shadow != none | style:box-shadow | not matches \)\s0px 0px [1-9]
+vault.surface-shadow | css:body *:not(dialog, [role=dialog], [role=menu], [role=tooltip], [role=alert], [popover], [role=listbox], button, a) where style:position not in fixed or sticky | style:box-shadow | = none
+vault.card-treatment | part:card | distinct style:border-top-style+box-shadow within parent | <= 1
+vault.border-shadow | css:body * where style:box-shadow != none where style:position not in fixed or absolute where style:border-top-style not in none or hidden | style:border-top-color as alpha | = 0
+vault.dark-raise | css:dialog, [role=dialog], [role=menu], [role=listbox], [popover] $over-dark | ground as oklch-l | > self backdrop as oklch-l
+vault.image-edge | part:image | style:outline-offset | = -1px
+vault.image-edge | part:image | style:outline-color as alpha | between 0.08 and 0.15
+vault.edge-over-image | css:a, button, [role=button], [role=status] where over-image = 1 | style:background-color as alpha | > 0
+vault.image-scaling | part:pixel-image | style:image-rendering | = pixelated
+
+at 320-640
+vault.table-text-narrow | css:td, th | style:font-size | >= 14px
+vault.table-text-narrow | css:td, th where style:font-size < 16px | style:font-stretch | >= 100%
+vault.stacked-row-header | css:tr > :first-child where parent style:display != table-row | tag | = th
+vault.stacked-row-header | css:tr > :first-child where parent style:display != table-row | attr:scope | = row
+vault.tag-shape | part:tag | style:border-top-left-radius per height | >= 0.5
+
+under forced_colours
+vault.forced-colour-edges | $controls | style:border-top-style | != none
+
+under print
+vault.table-print-header | css:thead | style:display | = table-header-group
+vault.table-print-header | css:table:not(:has(> thead)) where screens > 1 | count | = 0
+
+under block=image
+vault.image-fallback-colour | css:body, body * where authored:background-image matches url\( where text matches \S | contrast | >= 4.5
+
+compare scheme=light scheme=dark
+vault.type-weight | $text where style:font-size < 24px | style:font-weight | same
+
+across pages
+vault.radius-scale | css:body * where style:border-top-left-radius > 0px $not-pill | distinct style:border-top-left-radius | <= 5
+vault.spacing-step | css:body * where authored:padding-top matches . | style:padding-top | multiple of 4px
+vault.spacing-step | css:body * where authored:padding-left matches . | style:padding-left | multiple of 4px
+vault.spacing-step | css:body * where authored:margin-top matches . | style:margin-top | multiple of 4px
+vault.spacing-step | css:body * where authored:row-gap matches . | style:row-gap | multiple of 4px
+vault.spacing-step | css:body * where authored:column-gap matches . | style:column-gap | multiple of 4px
+vault.face-count | $text where style:font-family not matches (?i)mono | distinct style:font-family | <= 2
+
+when energy=calm
+vault.calm-colour-share | css:body | pixels:chroma-share 0.05 | <= 0.1

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100" width="200" height="100" fill="#2a2a2a">
+  <!-- The asset for design-vault#67's last-frame tests: a ring and an arch, all curved edges. -->
+  <path d="M50 15a35 35 0 1 1 0 70a35 35 0 1 1 0-70zm0 14a21 21 0 1 0 0 42a21 21 0 1 0 0-42z" fill-rule="evenodd"/>
+  <path d="M105 85V50a40 40 0 0 1 80 0v35h-16V52a24 24 0 0 0-48 0v33z"/>
+</svg>

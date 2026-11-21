@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>keyboard more</title>
+<!-- The faults of #315's records keyboard-tier01-fault.html plants none of, each on the element whose id names it.
+     skip-elsewhere: the first Tab stop is a skip link to #nowhere.
+     grid-order: grid placement shows the second link first.
+     roving-arrows: a tab list with one stop whose arrow keys do nothing.
+     roving-entry: a radio group whose one stop is its first radio, though its second is checked.
+     menu-escape: focus enters the menu and moves with arrows, but Escape shuts it without giving focus back,
+       Tab does not shut it, and Up Arrow opens it on its first item.
+     ring-border: a link shows focus by its border alone.
+     ring-second: a link whose focus ring is blue, beside the page's red.
+     ring-removed: a button whose outline is taken off and nothing put in its place.
+     field-plain: a text field that shows nothing when clicked into.
+     No rotating carousel: every pointer move on a page that never holds still waits out the pointer driver's
+     settle cap. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  :focus-visible { outline: 3px solid #b3261e; outline-offset: 2px }
+  header, main { padding: 16px }
+  a { color: #0a3542 }
+  nav a, .grid a { display: inline-block; padding: 8px }
+  button, [role=radio] { font: inherit; padding: 8px 12px; margin: 4px; color: #fff; background: #0a3542; border: 1px solid transparent; display: inline-block }
+  [role=radio][aria-checked=true] { text-decoration: underline }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; width: 300px }
+  #grid-order > a:nth-child(2) { grid-row: 1; grid-column: 1 }
+  #grid-order > a:nth-child(1) { grid-row: 1; grid-column: 2 }
+  #ring-border { border: 2px solid transparent; padding: 8px; display: inline-block }
+  #ring-border:focus-visible { outline: none; border-color: #b3261e }
+  #ring-second:focus-visible { outline-color: #1f6feb }
+  #ring-removed:focus, #field-plain:focus { outline: none }
+  #field-plain { font: inherit; padding: 8px; border: 1px solid #767676; margin: 4px }
+  [role=menu] { list-style: none; margin: 4px; padding: 4px; border: 1px solid #767676; width: 160px }
+  [role=menuitem] { display: block; padding: 8px }
+</style>
+<header>
+  <a id="skip-elsewhere" href="#nowhere">Skip to main content</a>
+  <nav><a href="#rooms">Rooms</a></nav>
+</header>
+<main id="main">
+  <div class="grid" id="grid-order"><a href="#one">One</a><a href="#two">Two</a></div>
+  <div role="tablist" id="roving-arrows" aria-label="Room types">
+    <button role="tab" aria-selected="true">Dorm</button><button role="tab" aria-selected="false" tabindex="-1">Private</button>
+  </div>
+  <div role="radiogroup" id="roving-entry" aria-label="Beds">
+    <span role="radio" aria-checked="false" tabindex="0">Upper</span><span role="radio" aria-checked="true" tabindex="-1">Lower</span>
+  </div>
+  <div>
+    <button id="menu-escape" aria-haspopup="menu" aria-expanded="false" aria-controls="actions">Actions</button>
+    <ul role="menu" id="actions" hidden>
+      <li role="menuitem" tabindex="-1">Copy link</li>
+      <li role="menuitem" tabindex="-1">Share</li>
+    </ul>
+  </div>
+  <p><a id="ring-border" href="#terms">Terms</a> <a id="ring-second" href="#help">Help</a> <button id="ring-removed">Save</button></p>
+  <p><label for="field-plain">Your name</label> <input id="field-plain"></p>
+</main>
+<script>
+  const opener = document.getElementById('menu-escape');
+  const menu = document.getElementById('actions');
+  const items = [...menu.querySelectorAll('[role=menuitem]')];
+  const open = () => { menu.hidden = false; opener.setAttribute('aria-expanded', 'true'); items[0].focus(); };
+  opener.addEventListener('click', open);
+  opener.addEventListener('keydown', (e) => { if (e.key === 'ArrowUp') { e.preventDefault(); open(); } });
+  menu.addEventListener('keydown', (e) => {
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    if (e.key === 'Escape') { menu.hidden = true; opener.setAttribute('aria-expanded', 'false'); document.activeElement.blur(); }
+  });
+
+</script>
+</html>

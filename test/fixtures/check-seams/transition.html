@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: two of seam.html's ground-coloured seams, one above the other, on a page whose every element
+     eases each change over 2 s, its dark ground the page's own. A matte that hid the art by a transition would still show it, and one shot before
+     the second contact's crop as drawn would tint that crop as the page eased back. -->
+<style>body { margin: 0; background: #14181f; } svg { display: block; } * { transition: all 2s linear; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <path id="left" fill="#1a4d8f" d="M10 10 H40.5 V45 H10 Z"/>
+  <path id="right" fill="#e0a030" d="M40.5 10 H90 V45 H40.5 Z"/>
+  <path id="left2" fill="#1a4d8f" d="M10 55 H40.5 V90 H10 Z"/>
+  <path id="right2" fill="#e0a030" d="M40.5 55 H90 V90 H40.5 Z"/>
+</svg>
+</body>
+</html>

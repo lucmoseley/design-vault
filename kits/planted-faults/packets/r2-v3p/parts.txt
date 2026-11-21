@@ -1,0 +1,54 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "Mark M. Moseley, MMM Infra, home"  acts: link -> #top
+p2  "Profile"  acts: link -> #profile
+p3  "Articles and Presentations"  acts: link -> #articles
+p4  "Blog"  acts: link -> #blog
+p5  "Istanbul, 2025 Best Practices in PPP Legislation for Emerging Economi…"  static  (could look actable: a link's colour)
+p6  "Istanbul, 2025"  static  (could look actable: a link's colour)
+p7  "Melbourne, 2026 LLM Course on PPP Law: Streamlining the PPP Process"  static  (could look actable: a link's colour)
+p8  "Melbourne, 2026"  static  (could look actable: a link's colour)
+p9  "São Paulo, 2024 New Approaches to Risk Allocation in Infrastructure P…"  static  (could look actable: a link's colour)
+p10  "São Paulo, 2024"  static  (could look actable: a link's colour)
+p11  "Write to me Mark.Moseley@MMMinfra.com"  static  (could look actable: hover rule, a :hover rule selects it)
+p12  "Write to me"  static  (could look actable: draws its own box)
+p13  "Mark.Moseley@MMMinfra.com"  static  (could look actable: underlined)
+p14  "Book a consultation"  acts: link -> #consult
+p15  "Palette Three colours, no accent"  static  (could look actable: a link's colour)
+p16  "Palette"  static  (could look actable: a link's colour)
+p17  "Type Newsreader and Public Sans"  static  (could look actable: a link's colour)
+p18  "Type"  static  (could look actable: a link's colour)
+p19  "MMM INFRA"  static  (could look actable: a link's colour)
+p20  "Texture None"  static  (could look actable: a link's colour)
+p21  "Texture"  static  (could look actable: a link's colour)
+p22  "Article page Blog No. 8, as Angélique would publish it"  static  (could look actable: a link's colour)
+p23  "Article page"  static  (could look actable: a link's colour)
+p24  "Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge Lectu…"  acts: link -> https://www.mmminfra.com/_files/ugd/d552fd_ae570429f02e489e8e393660542de414.pdf
+p25  "Motion One element enters: the exhibit"  static  (could look actable: a link's colour)
+p26  "Motion"  static  (could look actable: a link's colour)
+p27  "Replay the entrance"  acts: button
+p28  "Element"  static  (could look actable: draws its own box)
+p29  "Start"  static  (could look actable: draws its own box)
+p30  "Length"  static  (could look actable: draws its own box)
+p31  "Move"  static  (could look actable: draws its own box)
+p32  "Exhibit photo"  static  (could look actable: draws its own box)
+p33  "120 ms"  static  (could look actable: draws its own box)
+p34  "900 ms"  static  (could look actable: draws its own box)
+p35  "Rises 14 px into place, scale 1.012 to 1; the shadow tightens from li…"  static  (could look actable: draws its own box)
+p36  "Exhibit photo"  static  (could look actable: draws its own box)
+p37  "120 ms"  static  (could look actable: draws its own box)
+p38  "450 ms"  static  (could look actable: draws its own box)
+p39  "Opacity 0 to 1, same curve, overlapping the rise"  static  (could look actable: draws its own box)
+p40  "Hover, action"  static  (could look actable: draws its own box)
+p41  "on hover"  static  (could look actable: draws its own box)
+p42  "180 ms"  static  (could look actable: draws its own box)
+p43  "Button blue to ink; address underline to ink"  static  (could look actable: draws its own box)
+p44  "Reduced motion"  static  (could look actable: draws its own box)
+p45  "0 ms"  static  (could look actable: draws its own box)
+p46  "400 ms"  static  (could look actable: draws its own box)
+p47  "Opacity only; no movement"  static  (could look actable: draws its own box)
+p48  "Tile notes For the founder and Mark"  static  (could look actable: a link's colour)
+p49  "Tile notes"  static  (could look actable: a link's colour)
+p50  "Mark.Moseley@MMMinfra.com"  acts: link -> mailto:Mark.Moseley@MMMinfra.com

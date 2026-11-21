@@ -1,0 +1,13 @@
+### vault.no-stage
+- applies-when: web-surface; every field
+- question: Does vault.no-stage hold?
+- answered-by: look
+- writes: no-stage
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- target: Give every field an edge.
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: none
+- status: live

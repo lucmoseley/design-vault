@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>keyboard skip</title>
+<!-- skip-hidden: the first Tab stop is a skip link to the main content that stays clipped to 1 px when focused,
+     and it has tabindex="1", which takes it out of the page's order (vault.visual-order). -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  #skip-hidden { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; white-space: nowrap }
+  header, main { padding: 16px }
+  a { color: #0a3542 }
+  nav a { display: inline-block; padding: 8px }
+</style>
+<header>
+  <a id="skip-hidden" href="#main" tabindex="1">Skip to main content</a>
+  <nav><a href="#rooms">Rooms</a></nav>
+</header>
+<main id="main"><p>Beds from 18 a night.</p></main>
+</html>

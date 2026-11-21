@@ -1,0 +1,15 @@
+### vault.owed-look
+- applies-when: web-surface; every field
+- question: Does vault.owed-look hold?
+- answered-by: look
+- writes: owed-look
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: Give every field an edge.
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: FRM-82, BTN-7
+- status: live
+- script: owed

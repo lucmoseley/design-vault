@@ -1,0 +1,38 @@
+Gate list for web-surface, has-cta: 17 question(s).
+
+Look questions, for the critics, pass 3 of 4, treatment and value, once the function and role passes' fixes land: treatment: buttons, colour, content, data, feedback, forms, imagery:
+
+2. vault.disabled-look: Does each control that can be unavailable have its own disabled look, plainly unlike its default, hover and every rung of the emphasis ladder and with no hover or press change, and does the page say why it is unavailable and how to make it available?
+   Applies to: every control that can be unavailable
+3. vault.button-icon: Does each button carry an icon only where the icon's meaning is well established, always beside a visible label?
+   Applies to: every button that carries an icon and a label
+4. vault.help-button-target: Does each view's help button open the help for that view rather than a general help page, where such help exists?
+   Applies to: every view with a help button
+6. vault.button-place: Does each button take the size its place gives it: a larger size only for a standalone key action (a start or hero call to action, a floating action), and a compact size only in dense rows and tight spaces?
+   Applies to: every button, and every link styled as one
+7. vault.colour-look: Is every meaning colour carries also carried by text, an icon, a shape or a position, so a visitor who cannot tell the colours apart still gets it?
+   Applies to: every state, error, required field, selected option, chart series or other meaning shown in colour, links inside a line of text, a hover tint and a press's darker fill aside
+8. vault.vibrating-edge: Where two saturated colours of strongly different hue touch below a contrast ratio of 3:1, with no white or black between them, does their edge, seen rendered, hold still rather than shimmer or seem to float?
+   Applies to: every edge where two saturated colours of strongly different hue touch: a coloured button on a coloured ground, coloured text on a coloured field, a logo colour on a brand field
+11. vault.offer-deadline: Is each deadline real, and shown as a plain end date and time with its time zone, with no ticking countdown, no timer that resets or reappears, and no urgency styling (flashing, red, scarcity badges) on it?
+   Applies to: every offer, price or availability shown as ending at a time
+13. vault.chart-carried: Of the chart marks `vault.chart-contrast` finds under 3:1, does a visitor need each one to read the chart, a gridline only where values are read against it, and where one is needed, does a label, value or pattern on the chart carry the same information?
+   Applies to: every chart mark `vault.chart-contrast` finds under 3:1
+14. vault.zebra-rows: Are alternating row fills used only on a wide table of many columns, or a label-and-value spec table, where the eye must track along a row, each stripe a subtle tint in the direction of reading, and every other table read by alignment, space and rules alone?
+   Applies to: every data table
+16. vault.count-badge: Does each mark of new or waiting items show a number where the visitor needs the count, and a plain dot only where the count does not matter and the control's label already says what the dot marks, and does a count that describes its item sit as a plain number beside an icon naming what it counts?
+   Applies to: every mark of new or waiting items (unread, new, pending), and every count shown beside an item it describes (comments, replies, items)
+25. vault.disabled-legibility: Does a disabled control look muted, a grey or desaturated fill and label at lower contrast than its live state, yet stay legible, and does one a visitor must learn the reason for stay focusable with `aria-disabled`?
+   Applies to: every control a visitor cannot use right now, not content shown as unavailable, such as a full hostel's row, which keeps `vault.contrast`
+26. vault.curves-look: Viewed at 8× zoom, is the tightest bend of every curve free of corners?
+   Applies to: the tightest bend of every curve
+27. vault.contacts-look: Rendered at device pixel ratios 1, 2 and 3, and each render magnified 4× without being drawn again, does every contact close with no gap, no overlap and no seam of the ground along an edge both sides share (the conflation seam, which a shared edge does not cure)?
+   Applies to: every place two elements touch, on the first frame, every key frame and the last
+29. vault.icon-fill: Does each icon take its outline form by default, beside text, in toolbars and lists, and its filled form only for a selected or current item (the current tab or nav item) or the few statuses that must draw the eye, never filled throughout?
+   Applies to: every interface icon with an outline and a filled form
+32. vault.pixel-image-kind: Is each such image declared as the round's `pixel-image` part, and is no photograph declared as one?
+   Applies to: every raster image shown larger than its natural size whose content is pixels or hard edges: pixel art, a QR or bar code, a screenshot of interface or a line diagram
+33. vault.rtl-icons: In the right-to-left render, are icons showing reading direction or forward and back movement mirrored (back, next, previous, a text-lines icon, a volume slider), while logos, check marks, slashes, clocks and clockwise arrows, right-handed objects such as a search glass, and media playback buttons and their progress bar keep their left-to-right form?
+   Applies to: every icon on a page in a right-to-left language, rendered with `dir="rtl"`
+35. vault.illustration-detail: Does each illustration use as few elements as carry its message, in flat fills from the palette or its tints, with no shadow or gradient save to show depth or a telling feature, and the same line widths, radii and colours across a set?
+   Applies to: every illustration the asset draws or commissions

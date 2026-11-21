@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- morph-hold.html's morph, slower, on a starved browser (#135): each tick asks
+     for its next frame and then holds the browser for 110 ms. It eases the arch
+     halfway over 0–800 ms, holds it for 1000 ms writing nothing, then eases it
+     the rest of the way over 1800–2600 ms. The hold is one pause. -->
+<html><body>
+<svg width="320" height="320" viewBox="0 0 320 320">
+  <path id="arch" fill="#333"
+    d="M 0 300 C 0 233 0 167 0 100 C 0 45 45 0 100 0 C 155 0 200 45 200 100 C 200 167 200 233 200 300 C 133 300 67 300 0 300 Z"/>
+</svg>
+<script>
+const path = document.getElementById("arch");
+const from = path.getAttribute("d").split(" ");
+const to = "M 0 300 C 0 283 0 267 0 250 C 0 167 67 100 150 100 C 233 100 300 167 300 250 C 300 267 300 283 300 300 C 200 300 100 300 0 300 Z".split(" ");
+const ease = (p) => p * p * (3 - 2 * p);
+const at = (ms) => (ms < 800 ? ease(ms / 800) / 2 : ms < 1800 ? 0.5 : 0.5 + ease(Math.min(1, (ms - 1800) / 800)) / 2);
+let first = null;
+requestAnimationFrame(function tick(now) {
+  if (first === null) first = now;
+  if (now - first < 2600) requestAnimationFrame(tick);
+  const d = from.map((a, i) => (isNaN(a) ? a : (+a + (to[i] - a) * at(now - first)).toFixed(2))).join(" ");
+  if (d !== path.getAttribute("d")) path.setAttribute("d", d);
+  const held = performance.now();
+  while (performance.now() - held < 110);
+});
+</script>
+</body></html>

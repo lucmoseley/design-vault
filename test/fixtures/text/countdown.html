@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>A ticking deadline for check-text.py</title>
+</head>
+<body>
+<!-- A deadline with its date, time and zone, whose seconds tick down: vault.offer-end-date's countdown. -->
+<p class="offer">Offer ends 30 November 2026, 23:59 WITA: <span id="left">500</span> seconds left</p>
+<script>
+  let left = 500;
+  setInterval(() => { document.getElementById("left").textContent = String(--left); }, 250);
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Motion with no pause and no jolt (design-vault#60): a CSS animation eases
+     #first across over 0–1000 ms, then a script waits 1000 ms from its start
+     and eases #second across over 1000 ms. The second starts 1000 ms after the
+     first only because of the script's wait, so measuring 2000 ms or more with
+     no pause proves each animation is placed at its real start. The heading's
+     colour is set three times during setup, as a framework might, which is not
+     a script loop. -->
+<html><head><style>
+div { position: absolute; width: 40px; height: 40px; background: #333; }
+#first { top: 20px; animation: across 1000ms ease-in-out forwards; }
+#second { top: 100px; }
+@keyframes across { to { transform: translateX(300px); } }
+</style></head>
+<body>
+<div id="first"></div>
+<div id="second"></div>
+<h1 id="title">Smooth</h1>
+<script>
+for (const [ms, c] of [[100, "#111"], [300, "#222"], [500, "#333"]]) {
+  setTimeout(() => { document.getElementById("title").style.color = c; }, ms);
+}
+document.getElementById("first").addEventListener("animationstart", () => setTimeout(() =>
+  document.getElementById("second").animate(
+    [{ transform: "translateX(0)" }, { transform: "translateX(300px)" }],
+    { duration: 1000, easing: "ease-in-out", fill: "forwards" }), 1000));
+</script>
+</body></html>

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tier 0 and 1 layout records, met</title>
+<!-- Meets every check-layout.py --records check at 390, 700, 1010, 1320 and 1400 px (#311); test/check-layout.test.py sweeps it with tier01-parts.json and --brief kind=site. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 monospace; }
+  img { display: block; }
+  .wrap { max-width: 1200px; margin-inline: auto; padding: 0 24px; }
+  header { padding: 8px 0; }
+  header .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+  .logo .full { display: none; }
+  @media (min-width: 600px) { .logo .full { display: block; } .logo .mark { display: none; } }
+  header nav ul { display: flex; gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .hero { position: relative; height: calc(100vh - 56px); display: grid; place-items: center; text-align: center; background: #eef; }
+  .hero .peek { position: absolute; right: 24px; bottom: -40px; }
+  .page { display: grid; grid-template-columns: 1fr; }
+  .page > * { min-width: 0; }
+  @media (min-width: 840px) { .page { grid-template-columns: 7fr 3fr; } }
+  main section { padding: 16px 0; }
+  p { max-width: 32em; }
+  .rtl { display: flex; gap: 8px; padding: 0; list-style: none; }
+  .fluid { font-size: clamp(1rem, 0.8rem + 1vw, 2rem); }
+  .cols { display: flex; width: 100px; background: #111; }
+  .cols div { flex: 1; height: 40px; background: #111; }
+  .centre { display: flex; justify-content: safe center; width: 200px; overflow-x: auto; }
+  .centre div { flex: none; width: 300px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 16px; }
+  .card { display: grid; grid-row: span 3; grid-template-rows: subgrid; gap: 4px; border: 1px solid #ccc; }
+  .card h3, .card p { margin: 0; }
+  .mo { container-type: inline-size; }
+  @container (min-width: 25em) { .media { display: flex; gap: 12px; } }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; min-height: 8svh; display: flex; align-items: flex-end; padding-bottom: env(safe-area-inset-bottom); background: #fff; }
+  .padded > div { padding-left: 24px; }
+  .card-like { background: #eee; padding-left: 24px; }
+  .capped { max-width: 600px; margin-inline: auto; }
+  .scroll { overflow-x: auto; }
+  .scroll td { white-space: nowrap; }
+  .buttons { display: flex; gap: 8px; }
+  @media (max-width: 767px) { .buttons { flex-direction: column; } .buttons button { width: 100%; } }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+  .strip { display: flex; gap: 16px; overflow-x: auto; white-space: nowrap; padding: 0; list-style: none; margin: 0; }
+  .crumbs ol { display: flex; gap: 8px; padding: 0; list-style: none; }
+  @media (max-width: 767px) { .crumbs .middle { display: none; } }
+  @media (min-width: 768px) { .crumbs .more { display: none; } }
+  [popover] { margin: 0; inset: auto 0 0 0; width: 100%; }
+  [role="toolbar"] { display: flex; gap: 8px; }
+  .choice { display: flex; }
+  .choice button { flex: 1; border: 0; background: #ddd; }
+  .tiles { display: flex; width: 101px; }
+  .tiles div { flex: 1; height: 20px; background: #ccc; border: 1px solid #999; }
+  .pair { display: flex; flex-wrap: wrap; gap: 0 12px; }
+  footer .groups { display: grid; gap: 16px; }
+  @media (min-width: 480px) { footer .groups { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { footer .groups { grid-template-columns: repeat(4, 1fr); } }
+  footer .band { padding: 16px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="/"><img class="full" alt="Vault Hostel" width="160" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='40'%3E%3Crect width='160' height='40' fill='%23335'/%3E%3C/svg%3E"><img class="mark" alt="Vault Hostel" width="40" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23335'/%3E%3C/svg%3E"></a>
+    <nav id="main-nav" aria-label="Main"><ul><li><a href="#a">Home</a></li><li><a href="#b">Rooms</a></li><li><a href="#c">Food</a></li><li><a href="#d">Book</a></li></ul></nav>
+  </div>
+</header>
+<div class="page wrap">
+<main>
+  <section class="hero"><h1>Stay in the old town</h1><img class="peek" alt="" width="120" height="80" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80'%3E%3Crect width='120' height='80' fill='%23ccd'/%3E%3C/svg%3E"></section>
+  <section>
+    <img alt="" width="300" height="300" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='%23ddd'/%3E%3C/svg%3E">
+    <h2>Rooms</h2>
+    <p>Every room has its own window onto the square, a bed made up fresh each day, and a locker big enough for a pack. Breakfast is served downstairs from seven until ten, and the kitchen stays open late for anyone who wants to cook.</p>
+  </section>
+  <section>
+    <h2>Steps</h2>
+    <ol class="rtl" dir="rtl">
+      <li><img alt="one" width="60" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40'/%3E"></li>
+      <li><img alt="two" width="60" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40'/%3E"></li>
+      <li><img alt="three" width="60" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='40'/%3E"></li>
+    </ol>
+    <p class="fluid">A fluid intro.</p>
+  </section>
+  <section>
+    <h2>Fills</h2>
+    <div class="cols"><div></div><div></div><div></div></div>
+    <div class="centre"><div>wide content</div></div>
+  </section>
+  <section>
+    <h2>Cards</h2>
+    <div class="cards">
+      <article class="card"><h3>Dorm</h3><p>Six beds.</p><p>From 20</p></article>
+      <article class="card"><h3>Private room with a view over the square</h3><p>Two beds.</p><p>From 60</p></article>
+    </div>
+    <div class="mo"><article class="card media"><img alt="" width="120" height="80" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80'/%3E"><p>A room with a balcony.</p></article></div>
+  </section>
+  <section>
+    <h2>Notes</h2>
+    <div class="padded"><div>Check-in from two.</div><div>Check-out by eleven.</div></div>
+    <div><div class="card-like">Late arrivals ring the bell.</div><div>Keys at the desk.</div></div>
+    <div class="capped"><span>Quiet hours</span> <span>from eleven.</span></div>
+  </section>
+  <section>
+    <h2>Prices</h2>
+    <div class="scroll" tabindex="0"><table><tr><th>Room</th><th>Monday to Thursday</th><th>Friday and Saturday</th><th>Sunday</th></tr><tr><td>Dorm bed by the window</td><td>20 a night</td><td>26 a night</td><td>22 a night</td></tr></table></div>
+  </section>
+  <section>
+    <h2>Book</h2>
+    <div class="buttons"><button>Book a bed</button><button>Ask a question</button><button>See the map</button></div>
+    <ul class="tags"><li>Breakfast</li><li>Lockers</li><li>Kitchen</li><li>Laundry</li><li>Bar</li><li>Garden</li><li>Wifi</li><li>Bikes</li></ul>
+    <nav aria-label="Sections"><ul class="strip"><li><a href="#s1">Breakfast bar</a></li><li><a href="#s2">Lockers</a></li><li><a href="#s3">Kitchen</a></li><li><a href="#s4">Laundry</a></li><li><a href="#s5">Garden</a></li><li><a href="#s6">Bikes</a></li><li><a href="#s7">Tours</a></li><li><a href="#s8">Transfers</a></li></ul></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li class="more"><button aria-label="Show more breadcrumbs">…</button></li><li class="middle"><a href="/x">Europe</a></li><li class="middle"><a href="/y">Portugal</a></li><li aria-current="page">Lisbon</li></ol></nav>
+  </section>
+  <section>
+    <h2>Tools</h2>
+    <button popovertarget="pop">Options</button>
+    <div popover id="pop"><p>Sort by price</p></div>
+    <div class="choice"><button>Yes</button><button>No</button></div>
+    <div class="tiles"><div></div><div></div></div>
+    <div role="toolbar" aria-label="Format"><button>Bold</button><button>Italic</button><button>Link</button></div>
+    <ul><li><a href="#t1">Rooms</a></li><li><a href="#t2">Prices</a></li></ul>
+    <div role="tabpanel" id="t1"><p>Rooms panel.</p></div>
+    <div role="tabpanel" id="t2"><p>Prices panel.</p></div>
+    <div class="pair"><span>Check-in</span><span>From two in the afternoon</span></div>
+  </section>
+</main>
+<aside><h2>Nearby</h2><p>The castle is a short walk up the hill.</p></aside>
+</div>
+<footer>
+  <div class="band"><div class="wrap groups">
+    <div><h3><button aria-expanded="false" aria-controls="g-stay">Stay</button></h3><ul id="g-stay" hidden><li><a href="#f1">Rooms</a></li><li><a href="#f2">Prices</a></li></ul></div>
+    <div><h3><button aria-expanded="false" aria-controls="g-visit">Visit</button></h3><ul id="g-visit" hidden><li><a href="#f3">Map</a></li><li><a href="#f4">Tours</a></li></ul></div>
+    <div><h3><button aria-expanded="false" aria-controls="g-help">Help</button></h3><ul id="g-help" hidden><li><a href="#f5">Contact</a></li><li><a href="#f6">Terms</a></li></ul></div>
+  </div></div>
+  <div class="band"><div class="wrap"><small>Vault Hostel</small></div></div>
+</footer>
+<div class="bar"><button>Book now</button></div>
+</body>
+</html>

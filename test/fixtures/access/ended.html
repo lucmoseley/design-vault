@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>ended</title>
+<!-- Two bands sliding once from load for 6 s, just over WCAG 2.2.2's 5 s, with no pause control. Read after they end,
+     neither can be measured (#368): the first stays, and the page cancels the second and hides it at its end. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .slide, .intro { margin: 0; width: 120px; height: 16px; background: #0a3542; animation: slide 6s ease-out }
+  @keyframes slide { from { transform: translateX(200px) } }
+</style>
+<div class="slide"></div>
+<p class="intro"></p>
+<script>
+  const intro = document.querySelector('.intro');
+  intro.addEventListener('animationend', () => { intro.style.animation = 'none'; intro.hidden = true; });
+</script>

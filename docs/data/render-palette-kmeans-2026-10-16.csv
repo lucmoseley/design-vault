@@ -1,0 +1,135 @@
+id,palette,role,k,area_gt2,area_gt5,area_gt10,area_gt15,area_gt20
+r1/v1-recraft-pro,manta,off,8,1.0,0.7872,0.7872,0.0429,0.0
+r1/v1-recraft-pro,manta,off,16,1.0,0.7825,0.7825,0.0421,0.0
+r1/v2-qwen,manta,off,8,1.0,1.0,1.0,0.1753,0.1753
+r1/v2-qwen,manta,off,16,1.0,0.9892,0.8545,0.1953,0.0846
+r1/v3-grok,manta,off,8,1.0,1.0,1.0,0.9233,0.2305
+r1/v3-grok,manta,off,16,1.0,1.0,1.0,0.9226,0.3492
+r1/v4-ideogram,manta,off,8,1.0,0.9873,0.2898,0.024,0.0
+r1/v4-ideogram,manta,off,16,1.0,0.9303,0.0239,0.0239,0.0
+r1/v5-zimage,manta,off,8,1.0,0.9229,0.3251,0.0,0.0
+r1/v5-zimage,manta,off,16,1.0,0.8964,0.3107,0.0163,0.0
+r1/v6-soul,manta,off,8,1.0,1.0,0.7015,0.0,0.0
+r1/v6-soul,manta,off,16,1.0,1.0,0.7117,0.0,0.0
+r1/v7-soul2,manta,off,8,1.0,1.0,0.8145,0.0509,0.0
+r1/v7-soul2,manta,off,16,1.0,1.0,0.824,0.0469,0.0
+r1/v8-flux-pro,manta,off,8,1.0,1.0,0.812,0.7719,0.0
+r1/v8-flux-pro,manta,off,16,1.0,1.0,0.8498,0.743,0.0
+r1/v9-flux-flex,manta,off,8,1.0,1.0,1.0,0.7641,0.0
+r1/v9-flux-flex,manta,off,16,1.0,1.0,1.0,0.737,0.0376
+r1/v10-flux-max,manta,off,8,1.0,1.0,0.899,0.708,0.0
+r1/v10-flux-max,manta,off,16,1.0,0.9588,0.9588,0.8058,0.0
+r1/v11-gpt-flare,manta,off,8,1.0,1.0,0.9653,0.6064,0.0863
+r1/v11-gpt-flare,manta,off,16,1.0,1.0,0.9802,0.7699,0.0507
+r1/v12-gpt-sunburst,manta,off,8,1.0,1.0,1.0,0.7811,0.0
+r1/v12-gpt-sunburst,manta,off,16,1.0,1.0,1.0,0.6244,0.0462
+r2/v1-recraft-pro,p52,not-told,8,1.0,1.0,0.8423,0.5276,0.2869
+r2/v1-recraft-pro,p52,not-told,16,1.0,1.0,0.8075,0.5219,0.2774
+r2/v1-recraft-pro,manta,off,8,1.0,0.707,0.5776,0.0,0.0
+r2/v1-recraft-pro,manta,off,16,1.0,0.7105,0.4212,0.0176,0.0
+r2/v2-qwen,p52,not-told,8,1.0,1.0,1.0,0.969,0.2376
+r2/v2-qwen,p52,not-told,16,1.0,1.0,1.0,0.8425,0.297
+r2/v2-qwen,manta,off,8,0.8504,0.8504,0.63,0.3924,0.0
+r2/v2-qwen,manta,off,16,0.9211,0.8114,0.6526,0.3503,0.0668
+r2/v3-grok,p52,not-told,8,1.0,1.0,1.0,0.7128,0.3705
+r2/v3-grok,p52,not-told,16,1.0,1.0,1.0,0.78,0.4638
+r2/v3-grok,manta,off,8,1.0,1.0,1.0,0.7551,0.0
+r2/v3-grok,manta,off,16,1.0,1.0,0.9704,0.6963,0.0
+r2/v4-ideogram,p52,not-told,8,1.0,1.0,0.8773,0.686,0.6262
+r2/v4-ideogram,p52,not-told,16,1.0,1.0,0.9368,0.7375,0.4139
+r2/v4-ideogram,manta,off,8,1.0,1.0,0.8897,0.5354,0.1227
+r2/v4-ideogram,manta,off,16,1.0,1.0,0.9188,0.5228,0.0912
+r2/v5-zimage,p52,not-told,8,1.0,1.0,0.8743,0.7018,0.3378
+r2/v5-zimage,p52,not-told,16,1.0,1.0,0.8768,0.7044,0.2307
+r2/v5-zimage,manta,off,8,1.0,1.0,0.6807,0.5172,0.0
+r2/v5-zimage,manta,off,16,1.0,1.0,0.6585,0.4532,0.0
+r2/v6-soul,p52,not-told,8,1.0,1.0,0.6236,0.1905,0.1013
+r2/v6-soul,p52,not-told,16,1.0,1.0,0.6247,0.2231,0.014
+r2/v6-soul,manta,off,8,0.6236,0.6236,0.4987,0.1305,0.0
+r2/v6-soul,manta,off,16,0.6247,0.6247,0.4885,0.1174,0.0
+r2/v7-soul2,p52,not-told,8,1.0,1.0,1.0,0.5136,0.1454
+r2/v7-soul2,p52,not-told,16,1.0,1.0,1.0,0.5381,0.1841
+r2/v7-soul2,manta,off,8,1.0,1.0,0.8585,0.1454,0.0
+r2/v7-soul2,manta,off,16,1.0,1.0,0.945,0.2241,0.0
+r2/v8-flux-pro,p52,not-told,8,1.0,1.0,1.0,0.6582,0.349
+r2/v8-flux-pro,p52,not-told,16,1.0,1.0,0.9347,0.6882,0.2903
+r2/v8-flux-pro,manta,off,8,1.0,1.0,0.7731,0.2632,0.0
+r2/v8-flux-pro,manta,off,16,1.0,1.0,0.7232,0.1904,0.0
+r2/v9-flux-flex,p52,not-told,8,1.0,1.0,0.6852,0.6852,0.3096
+r2/v9-flux-flex,p52,not-told,16,1.0,0.9571,0.7821,0.5455,0.2848
+r2/v9-flux-flex,manta,off,8,1.0,1.0,0.9564,0.513,0.2028
+r2/v9-flux-flex,manta,off,16,1.0,1.0,0.9076,0.5019,0.2718
+r2/v10-flux-max,p52,not-told,8,1.0,1.0,1.0,0.8058,0.6656
+r2/v10-flux-max,p52,not-told,16,1.0,1.0,0.9559,0.8211,0.7155
+r2/v10-flux-max,manta,off,8,1.0,0.9485,0.9485,0.7545,0.0887
+r2/v10-flux-max,manta,off,16,1.0,1.0,0.9775,0.7731,0.0
+r2/v11-gpt-flare,p52,not-told,8,1.0,1.0,0.7859,0.4542,0.2237
+r2/v11-gpt-flare,p52,not-told,16,1.0,1.0,0.7035,0.5668,0.2598
+r2/v11-gpt-flare,manta,off,8,1.0,1.0,1.0,0.5071,0.2931
+r2/v11-gpt-flare,manta,off,16,1.0,1.0,1.0,0.5155,0.0895
+r2/v12-gpt-sunburst,p52,not-told,8,1.0,1.0,1.0,0.3381,0.1503
+r2/v12-gpt-sunburst,p52,not-told,16,1.0,1.0,0.7847,0.4467,0.2095
+r2/v12-gpt-sunburst,manta,off,8,1.0,1.0,0.9451,0.8157,0.1509
+r2/v12-gpt-sunburst,manta,off,16,1.0,0.9513,0.8987,0.7996,0.0736
+r2/v13-ideogram-json,p52,on,8,0.388,0.2575,0.2517,0.1481,0.0197
+r2/v13-ideogram-json,p52,on,16,0.4431,0.2963,0.2377,0.1194,0.0174
+r2/v13-ideogram-json,manta,off,8,1.0,0.388,0.2421,0.1305,0.0
+r2/v13-ideogram-json,manta,off,16,0.9479,0.391,0.2356,0.1559,0.0
+r3/v1-recraft-pro,self4,three-colour rule unclear,8,0.1305,0.1305,0.1305,0.0339,0.0331
+r3/v1-recraft-pro,self4,three-colour rule unclear,16,0.1307,0.1307,0.1304,0.0334,0.0334
+r3/v1-recraft-pro,manta,off,8,0.1334,0.1334,0.1297,0.1277,0.0
+r3/v1-recraft-pro,manta,off,16,0.1336,0.1336,0.1299,0.1282,0.0
+r3/v2-qwen,self4,three-colour rule kept,8,0.0018,0.0018,0.0005,0.0,0.0
+r3/v2-qwen,self4,three-colour rule kept,16,0.0086,0.0059,0.004,0.0032,0.0
+r3/v2-qwen,manta,off,8,1.0,0.2048,0.0601,0.0495,0.0
+r3/v2-qwen,manta,off,16,0.9982,0.2053,0.0602,0.0496,0.0
+r3/v3-grok,self4,three-colour rule kept,8,0.0429,0.0023,0.0023,0.0023,0.0012
+r3/v3-grok,self4,three-colour rule kept,16,0.0495,0.003,0.0026,0.0013,0.0013
+r3/v3-grok,manta,off,8,0.9956,0.1755,0.1732,0.0,0.0
+r3/v3-grok,manta,off,16,0.9952,0.1755,0.1738,0.0,0.0
+r3/v4-ideogram,self4,three-colour rule broken,8,0.1191,0.1191,0.1165,0.0295,0.0295
+r3/v4-ideogram,self4,three-colour rule broken,16,0.1222,0.1211,0.1206,0.0315,0.0315
+r3/v4-ideogram,manta,off,8,0.1354,0.1354,0.1354,0.0321,0.0
+r3/v4-ideogram,manta,off,16,0.138,0.1367,0.1315,0.0315,0.0026
+r3/v5-zimage,self4,three-colour rule broken,8,0.0,0.0,0.0,0.0,0.0
+r3/v5-zimage,self4,three-colour rule broken,16,0.2108,0.0012,0.0012,0.0,0.0
+r3/v5-zimage,manta,off,8,1.0,0.144,0.1208,0.0,0.0
+r3/v5-zimage,manta,off,16,0.9983,0.1726,0.1241,0.0,0.0
+r3/v6-soul,self4,three-colour rule kept,8,0.0018,0.0018,0.0016,0.0008,0.0
+r3/v6-soul,self4,three-colour rule kept,16,0.0051,0.004,0.0031,0.0028,0.0025
+r3/v6-soul,manta,off,8,0.2626,0.1067,0.0719,0.0,0.0
+r3/v6-soul,manta,off,16,0.2627,0.1069,0.0725,0.0,0.0
+r3/v7-soul2,self4,three-colour rule broken,8,0.567,0.2412,0.0,0.0,0.0
+r3/v7-soul2,self4,three-colour rule broken,16,0.5707,0.1221,0.061,0.0,0.0
+r3/v7-soul2,manta,off,8,1.0,0.6503,0.567,0.2562,0.0
+r3/v7-soul2,manta,off,16,1.0,0.7496,0.5634,0.2666,0.0
+r3/v8-flux-pro,self4,three-colour rule unclear,8,0.0843,0.061,0.0076,0.0076,0.0076
+r3/v8-flux-pro,self4,three-colour rule unclear,16,0.0312,0.0063,0.0008,0.0008,0.0
+r3/v8-flux-pro,manta,off,8,0.9942,0.0785,0.0076,0.0076,0.0
+r3/v8-flux-pro,manta,off,16,0.9549,0.0384,0.0,0.0,0.0
+r3/v9-flux-flex,self4,three-colour rule unclear,8,0.0,0.0,0.0,0.0,0.0
+r3/v9-flux-flex,self4,three-colour rule unclear,16,0.0123,0.0058,0.0058,0.0,0.0
+r3/v9-flux-flex,manta,off,8,0.9486,0.9486,0.0513,0.0,0.0
+r3/v9-flux-flex,manta,off,16,0.949,0.949,0.0514,0.0058,0.0058
+r3/v10-flux-max,self4,three-colour rule unclear,8,0.0012,0.0012,0.0,0.0,0.0
+r3/v10-flux-max,self4,three-colour rule unclear,16,0.0747,0.0727,0.0719,0.0719,0.0
+r3/v10-flux-max,manta,off,8,0.9922,0.1181,0.0452,0.0,0.0
+r3/v10-flux-max,manta,off,16,0.9898,0.118,0.0784,0.0,0.0
+r3/v11-gpt-flare,self4,three-colour rule broken,8,0.0021,0.0021,0.0021,0.0021,0.0
+r3/v11-gpt-flare,self4,three-colour rule broken,16,0.0021,0.0021,0.0021,0.0021,0.0
+r3/v11-gpt-flare,manta,off,8,0.1329,0.1329,0.1329,0.0666,0.0
+r3/v11-gpt-flare,manta,off,16,0.1329,0.1329,0.1329,0.0666,0.0
+r3/v12-gpt-sunburst,self4,three-colour rule kept,8,0.006,0.006,0.006,0.006,0.006
+r3/v12-gpt-sunburst,self4,three-colour rule kept,16,0.0157,0.0139,0.0129,0.006,0.0051
+r3/v12-gpt-sunburst,manta,off,8,0.1242,0.1242,0.1183,0.0,0.0
+r3/v12-gpt-sunburst,manta,off,16,0.1302,0.1251,0.1121,0.0,0.0
+p52/v1-gpt-sunburst-palette,p52,on,8,0.6245,0.6245,0.3639,0.2291,0.0618
+p52/v1-gpt-sunburst-palette,p52,on,16,0.665,0.4879,0.3979,0.1439,0.088
+p52/v1-gpt-sunburst-palette,manta,off,8,1.0,0.6245,0.4444,0.0,0.0
+p52/v1-gpt-sunburst-palette,manta,off,16,0.9226,0.6231,0.45,0.1352,0.0
+p52/v1-gpt-sunburst-palette,mmm,off,8,1.0,1.0,0.6245,0.2324,0.0975
+p52/v1-gpt-sunburst-palette,mmm,off,16,1.0,1.0,0.5938,0.2258,0.1203
+mmm/r2-v1-valley-still,mmm,off,8,1.0,1.0,0.5239,0.1454,0.1454
+mmm/r2-v1-valley-still,mmm,off,16,1.0,0.8039,0.52,0.2021,0.1138
+mmm/r2-v1-valley-still,manta,off,8,1.0,1.0,0.8184,0.1234,0.0
+mmm/r2-v1-valley-still,manta,off,16,1.0,0.901,0.7699,0.2178,0.0

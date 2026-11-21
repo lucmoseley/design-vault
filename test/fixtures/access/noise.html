@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>noise</title>
+<!-- No fault of contrast or control edges, on every ground that puts noise in a reading (#197): flat colour, tight
+     buttons and display headings whose glyph boxes overhang their ground, gradients, a gradient that loops, grain, and photos under a
+     scrim; and fields that draw nothing over the gradients and grain. A field over a photo reads the photo's
+     texture as drawn, so none sits there. -->
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff }
+  section { padding: 24px 32px }
+  ::placeholder { color: #444 }
+  .btn { display: inline-block; padding: 6px 12px; border-radius: 999px; background: #1d4ed8; color: #fff; font-weight: 600 }
+  .tight { display: inline-block; background: #1d4ed8; color: #fff; line-height: 1; padding: 0 8px }
+  .pill { display: inline-block; padding: 0 6px; border-radius: 999px; background: #dcfce7; color: #14532d; font-size: 12px; line-height: 18px }
+  code { background: #f3f4f6; border-radius: 4px; padding: 0 2px; font-size: 14px }
+  td { border: 1px solid #cbd5e1; padding: 2px 6px }
+  mark { background: #fef08a; color: #111 }
+  .band { background: #0f172a; color: #fff; padding: 0 32px }
+  .band h1 { margin: 0; font-size: 64px; line-height: .9 }
+  .band h2 { margin: 0; font-size: 40px; line-height: 1 }
+  .bare { border: 0; background: transparent; font: inherit; color: inherit; padding: 8px; width: 240px }
+  .g1 { background: linear-gradient(#fff, #f1f5f9) }
+  .g2 { background: radial-gradient(circle at 30% 40%, #eef2ff 0, #fff 60%) }
+  .g3 { background: linear-gradient(135deg, #0f172a, #1e293b); color: #f8fafc }
+  .g3 ::placeholder { color: #ccc }
+  .g4 { background: linear-gradient(90deg, #fdf4ff, #ecfeff) }
+  .grain { position: relative; background: #f5f0e8 }
+  .grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .08; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") }
+  .photo { background: linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)), var(--p) center/cover; color: #fff; min-height: 200px }
+  .shift { background: linear-gradient(90deg, #fff, #e0e7ff, #fff) 0 0 / 200% 100%; animation: shift 2s linear infinite }
+  @keyframes shift { to { background-position: 200% 0 } }
+  .washed { background: linear-gradient(rgba(255,255,255,.7), rgba(255,255,255,.7)), var(--p) center/cover; min-height: 160px }
+</style>
+<section>
+  <p id="body">Body copy on a flat white ground, long enough to wrap across a few lines so every line is read. Body copy on a flat white ground, long enough to wrap across a few lines so every line is read.</p>
+  <p><span class="btn" id="book">Book now</span> <span class="tight" id="tight">Tight button</span> <span class="pill" id="pill">New</span> and <code id="code">inline_code()</code></p>
+  <table><tr><td id="cell">Cell two, 12.50 €</td></tr></table>
+  <p id="marked">Some <mark id="mark">highlighted</mark> words.</p>
+</section>
+<div class="band"><h1 id="display">Big heading tight</h1></div>
+<div class="band" style="background: #7c2d12"><h2 id="flush">Second band flush</h2></div>
+<section class="g1"><p id="g1">Text on a white to slate gradient.</p><div><input class="bare" id="g1-field" placeholder="A field on a gradient"></div></section>
+<section class="g2"><p id="g2">Text on a soft radial glow.</p><div><input class="bare" id="g2-field" placeholder="A field on a glow"></div></section>
+<section class="g3"><p id="g3">Light text on a dark gradient.</p><div><input class="bare" id="g3-field" placeholder="A field on the dark"></div></section>
+<section class="g4"><p id="g4">Text on a sideways pastel gradient.</p><div><input class="bare" id="g4-field" placeholder="A field on pastel"></div></section>
+<section class="grain"><p id="grain">Text on a paper ground under grain.</p><div><input class="bare" id="grain-field" placeholder="A field on grain"></div></section>
+<section class="shift"><p id="shift">Text on a gradient that slides for ever.</p><button type="button" onclick="this.parentNode.style.animationPlayState = 'paused'">Pause the motion</button></section>
+<section class="photo" style="--p: url(../../../images/algarve.jpg)"><h2 id="photo-head">A heading over a photo</h2><p id="photo">White text over a photo under a dark scrim.</p></section>
+<section class="photo" style="--p: url(../../../images/canyonlands.jpg)"><p id="photo-2">White text over a second photo under a scrim.</p></section>
+<section class="washed" style="--p: url(../../../images/cambodia.jpg)"><p id="washed">Dark text over a photo washed with white.</p></section>
+</html>

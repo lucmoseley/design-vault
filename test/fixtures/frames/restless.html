@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- A page that never stops starting animations (design-vault#240): every
+     frame starts a new fade (200 ms is arbitrary: any length past a frame
+     serves), for ever, so no quiet window comes and its frames have no fixed
+     timeline. Started by frame, not by a timer: once a loaded machine stalls
+     the page past check-frames.py's QUIET_MS, the check's next frame can run
+     before the late timer and find none new (#298), but a page that starts
+     one every frame has always made one. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+#dot { width: 40px; height: 40px; margin: 40px; background: #2a2a2a; }
+</style></head>
+<body>
+<div id="dot"></div>
+<script>
+const fade = () => {
+  document.getElementById("dot").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+  requestAnimationFrame(fade);
+};
+requestAnimationFrame(fade);
+</script>
+</body></html>

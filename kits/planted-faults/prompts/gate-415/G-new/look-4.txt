@@ -1,0 +1,42 @@
+Gate list for web-surface, has-cta: 19 question(s).
+
+Look questions, for the critics, pass 4 of 4, treatment and value, once the function and role passes' fixes land: treatment: interaction, layout, navigation, surfaces, system, text, typography; value: interaction, typography:
+
+40. vault.focus-visible (script owed): Is every focus style set on `:focus-visible` rather than `:focus`, so a mouse or finger press on a button draws no ring while keyboard focus and a focused text field always do, and is no browser ring removed without one put in its place?
+   Applies to: every focus style the page sets
+46. vault.focus-colour: Does the site take one focus colour, kept for focus alone and never used for selection, hover, links or a brand accent, either the browser's own two-colour ring or a project colour paired with a second colour so the ring clears 3:1 on every ground it meets?
+   Applies to: every focus indicator, and every other use of the focus colour
+48. vault.alignment-break: Does each part or section that leaves the page's shared alignment lines show why it does: it leads the page, sets one block apart, or is an image band?
+   Applies to: a full-bleed part or centred section among sections that share the page's alignment lines
+52. vault.grid-ornament: Is a visible page frame, grid line or crosshair mark the site's own signature, drawn in vault.border-roles' decorative edge and held at one position on every page, rather than a default ornament or the broadsheet-hairline look, and kept off working areas?
+   Applies to: every visible page frame, column rule, grid line or crosshair mark
+57. vault.skip-link (script owed): Is the first focusable element on the page, or the first after a cookie banner, a link to the main content that is either always visible, or hidden until it takes keyboard focus and then shown in full?
+   Applies to: every page with navigation or another repeated block before its main content
+61. vault.inverse-surface-look: Is the action in each snackbar or toast set in the inverse primary, the theme's primary as it reads on the inverse surface?
+   Applies to: every snackbar and toast that holds an action
+62. vault.shadow-meaning: Is each edge outside the controls that carries meaning drawn as a `border` or `outline`, or as a `box-shadow` over a transparent `border` or `outline` of equal width, so no meaning rests on a shadow that forced-colours mode drops?
+   Applies to: every edge or level outside the controls that carries meaning: a selected or current state, the edge of a menu, dialog, popover or card that must stand apart from what lies under it
+63. vault.surface-layers: Does every container fill come from a small set of named surface levels (page ground, container, nested container, and a sunken well where one is used), a container nested in another taking the next level rather than its parent's tone, a sunken well used only on the default level as a backdrop that groups content such as a board's columns and never inside a raised or overlay surface, and any border on a level taking the border paired with that level?
+   Applies to: every container fill: page ground, card, panel, well
+64. vault.card-type: Does a card take a treatment unlike the rest of its set only where it is a different kind of thing?
+   Applies to: every set of like cards: one list, grid or carousel
+65. vault.glass-dimming (script owed): Where a clear glass layer floats over bright media, does a dark dimming layer of about 35% opacity sit behind it, and is none added over media already dark or with its own dimming?
+   Applies to: every clear, highly translucent glass layer over photos, video or other bright media
+67. vault.card-image-tint: Where repeated cards each take a tint from their own image, is the tint a low-chroma container tone drawn from the image's source colour with the card's text measured on it, used only where the image is the item's identity (an album, a place, a video), and never where a tint could read as a status or a category?
+   Applies to: every set of repeated cards that each carry an image
+69. vault.generated-content-look: Is every `::before` and `::after` symbol a screen reader announces one that carries meaning, a decorative one kept out by an empty alternative (`content: "→" / ""`) or `aria-hidden` on its element?
+   Applies to: every `::before` and `::after` whose `content` holds text or a symbol
+70. vault.lang-parts-look: Does each passage or phrase in a language other than the page's carry its own `lang`?
+   Applies to: every passage or phrase in a language other than the page's, save proper names, technical terms and words the surrounding language has taken in
+71. vault.kept-breaks: Does text whose line breaks carry meaning, and only that text, keep its typed breaks and repeated spaces, by `pre`, `white-space-collapse: preserve` or `preserve-breaks`?
+   Applies to: code, poetry, addresses and other text whose line breaks carry meaning
+73. vault.text-case: Is each of these in sentence case, capitals kept for the first word, proper nouns and acronyms, one case for each kind of element across the site, with no title case and no capitals beyond the short labels `vault.caps-extent` allows, unless the project's rules file names another case?
+   Applies to: every heading, page title, button label, link, tag or status label, list item, menu item and tooltip
+74. vault.type-width: Is a narrow width kept to labels and dense cells, no condensed width in text read at a glance, and a wide width only in short headings and pull quotes with room for it?
+   Applies to: every face with a width axis or width cuts
+38. vault.coarse-target (script owed): Where the primary pointer is coarse, does every target measure 44 by 44 px or more (links within running prose excepted), a fine pointer keeping `vault.target-size`'s floor, and is no target shrunk for a fine pointer below what the layout gives it?
+   Applies to: every target at phone width or under `(pointer: coarse)`
+75. vault.text-spacing-reveal: Once WCAG 1.4.12's four spacing values are set, can the visitor show the whole of each such text, by the control beside it or on the page its link opens?
+   Applies to: each text `check-layout.py --text spacing` lists as hidden in a link or beside a control
+76. vault.text-style-count (script owed): Is every text style on the page (its face, size, weight and colour together) one of the site's named type-scale styles, with no one-off combination outside the scale and the lead or display sizes held to at most two elements a view?
+   Applies to: all visible text on the page

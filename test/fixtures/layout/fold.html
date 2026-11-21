@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>fold</title>
+<!-- At phone widths a 700 px hero pushes the button below a 664 px first
+     screen. The second button is never shown. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .hero { height: 300px; background: #eee }
+  @media (max-width: 767px) { .hero { height: 700px } }
+  .gone { display: none }
+</style>
+<div class="hero">Hero</div>
+<a class="book" href="#">Book a bed</a>
+<a class="gone" href="#">Never shown</a>

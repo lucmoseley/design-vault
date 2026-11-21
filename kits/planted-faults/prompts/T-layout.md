@@ -1,0 +1,2 @@
+
+**Your task: the layout critic.** You are one of five topic critics; four others judge function, type, colour and surfaces, and conversion and trust, and a whole-page critic judges the page as one. Report only faults of your topic: layout. Arrangement and alignment, grouping by Gestalt (`rules/lenses.md`, all seven, by name), spacing and rhythm, the hierarchy across sections (squint: what wins, and should it), the prominence of the primary action in its view, how busy each section and the page look, and the phone layout.

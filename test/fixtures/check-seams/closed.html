@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: a closed contact. The blue fill runs on 2 CSS px under the orange one, so no ground shows at
+     any scale; the two shapes' top and bottom edges also coincide, a pair no ground can lie inside. -->
+<style>body { margin: 0; background: #fff; } svg { display: block; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <rect width="100" height="100" fill="#fff"/>
+  <path id="under" fill="#1a4d8f" d="M10 10 H42.5 V90 H10 Z"/>
+  <path id="over" fill="#e0a030" d="M40.5 10 H90 V90 H40.5 Z"/>
+</svg>
+</body>
+</html>

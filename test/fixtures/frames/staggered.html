@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- A build started in stages (design-vault#259): a script moves the top box
+     as the page parses, and a timer 150 ms after that animation starts sets
+     body.play, which starts the bottom box's CSS animation. The timer fires a
+     few ms late on each load, more on a loaded machine, so two fresh loads put
+     the bottom box at different places at one moment. Timed from parsing or
+     load instead, it can fire before the top box's first frame on a loaded
+     machine, and both boxes start in it. The 150 ms must stay under
+     check-frames.py's QUIET_MS. With --wait "body.play #bottom" both are
+     found in one read, where the page lists the later CSS animation first. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { position: absolute; left: 40px; width: 40px; height: 40px; background: #2a2a2a; }
+#top { top: 40px; }
+#bottom { top: 120px; }
+body.play #bottom { animation: move 1000ms linear both; }
+@keyframes move { from { transform: none; } to { transform: translateX(1200px); } }
+</style></head>
+<body>
+<div id="top"></div>
+<div id="bottom"></div>
+<script>
+document.getElementById("top").animate([{ transform: "none" }, { transform: "translateX(1200px)" }],
+  { duration: 1000, fill: "both" }).ready.then(() => setTimeout(() => document.body.classList.add("play"), 150));
+</script>
+</body></html>

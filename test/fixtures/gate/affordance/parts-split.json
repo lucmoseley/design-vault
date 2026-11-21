@@ -1,0 +1,16 @@
+{
+ "parts": [
+  {
+   "id": "p1",
+   "actable": true,
+   "href": "#rooms",
+   "text": "Rooms"
+  },
+  {
+   "id": "p2",
+   "actable": false,
+   "href": null,
+   "text": "Our rooms"
+  }
+ ]
+}

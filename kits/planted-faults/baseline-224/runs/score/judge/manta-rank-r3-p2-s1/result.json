@@ -1,0 +1,1 @@
+{"parsed":{"verdicts":{"f1":{"verdict":"real","group":"g1","why":"CTA is pill-shaped, but DESIGN.md sets the primary button at the 8px control radius and keeps pills for badges"},"f2":{"verdict":"real","group":"g2","why":"turquoise block visibly overhangs the ~715px text column on desktop (ends ~834px), lining up with nothing"}}}}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>probe cascade fixture</title>
+<style>
+  @font-face { font-family: "Adjusted"; src: local("Arial"); size-adjust: 90%; }
+  :root { --gap: 12px; --pad: 4px; --ink: rgb(7, 7, 7); }
+  @layer base { #layered { color: var(--ink); } }
+  #layered { color: rgb(1, 2, 3); }
+  .spec.spec { padding-top: 8px; }
+  .spec { padding-top: var(--pad); }
+  #inline-wins { margin-top: var(--gap); }
+  #important { margin-top: var(--gap) !important; }
+  .imp { color: rgb(9, 9, 9) !important; }
+  #imp { color: rgb(1, 1, 1); }
+  #plain-short { padding: 4px 8px; }
+  #var-short { margin: var(--gap) 0; }
+  .parent { color: rgb(200, 0, 0); }
+  @keyframes grow { from { font-size: 10px; } to { font-size: 20px; } }
+  #grow { animation: grow 10s forwards; }
+</style>
+</head>
+<body>
+  <p id="layered">An unlayered rule over a layered one</p>
+  <p id="spec" class="spec">The more specific rule, though earlier</p>
+  <p id="inline-wins" style="margin-top: 20px">Inline style over the sheet</p>
+  <p id="important" style="margin-top: 20px">An important rule over inline style</p>
+  <p id="imp" class="imp">An important class over a plain id</p>
+  <p id="plain-short">A longhand from a plain shorthand</p>
+  <p id="var-short">A longhand from a var() shorthand</p>
+  <div class="parent"><p id="inherits">Only inherits its colour</p></div>
+  <p id="ua" tabindex="3">Only the browser's default margin</p>
+  <p id="grow">Grows as it enters</p>
+</body>
+</html>

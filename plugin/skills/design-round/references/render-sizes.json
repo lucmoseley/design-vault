@@ -1,0 +1,111 @@
+{
+  "about": "The largest output of each image model on roster.md, per requested aspect ratio, as WIDTHxHEIGHT. check-render.py reads it (design-vault#328). A model is keyed by its Higgsfield endpoint id, or for a render made by hand by the id given to --model. Add a size only from the docs or a render of the model's largest tier.",
+  "models": {
+    "marketing-studio/image/sunburst": {
+      "name": "GPT Image 2.5 Sunburst",
+      "tier": "2k",
+      "note": "4k is offered at about $1 an image, past the house's max_usd 0.6 cap (prompts.md §GPT Image 2.5), so the largest size the house may request is 2k's. 4k's size is not on record; measure it into this row if the cap lifts.",
+      "sizes": {
+        "16:9": { "size": "2688x1520", "source": "measured: the 30 Sep calibration renders r1–r3/v12-gpt-sunburst.png and design-vault#52's r1/v1-gpt-sunburst-palette.png, quality high (roster.md, design-vault#51)" }
+      }
+    },
+    "marketing-studio/image/flare": {
+      "name": "GPT Image 2.5 Flare",
+      "tier": "2k",
+      "note": "As Sunburst: 4k is past the house's max_usd 0.6 cap, and its size is not on record.",
+      "sizes": {
+        "16:9": { "size": "2688x1520", "source": "measured: the 30 Sep calibration renders r1–r3/v11-gpt-flare.png, quality high" }
+      }
+    },
+    "xai/grok-imagine-image-2.0": {
+      "name": "Grok Imagine 2.0",
+      "tier": "2k",
+      "sizes": {
+        "16:9": { "size": "2816x1584", "source": "measured: the 30 Sep calibration renders r1–r3/v3-grok.png at 2k, quality medium; docs: \"resolution accepts 1k or 2k\" (docs/research/image-model-fact-bar.md F1, F5)" }
+      }
+    },
+    "alibaba/qwen-image-3/text-to-image": {
+      "name": "Qwen Image 3",
+      "tier": "2k",
+      "sizes": {
+        "16:9": { "size": "2048x1152", "source": "measured: the 30 Sep calibration renders r1–r3/v2-qwen.png at 2k, the larger of its tiers 1k and 2k (docs/research/image-model-fact-bar.md F1, F5)" },
+        "1:1": { "size": "1536x1536", "source": "docs: Higgsfield's Qwen Image 3 page, \"2k square maps to 1536 by 1536 pixels\" (docs/research/image-model-fact-bar.md F5)" }
+      }
+    },
+    "ideogram/v4.0": {
+      "name": "Ideogram 4.0",
+      "tier": "QUALITY",
+      "note": "Higgsfield's schema has no resolution field.",
+      "sizes": {
+        "16:9": { "size": "2560x1440", "source": "measured: the 30 Sep calibration renders r1–r3/v4-ideogram.png at rendering_speed QUALITY; docs: Ideogram 4.0's own 16:9 preset in its ResolutionV4 enum (docs/research/image-model-fact-bar.md F6)" }
+      }
+    },
+    "nano_banana_2": {
+      "name": "Nano Banana Pro",
+      "note": "Web plan only, through the CLI or the web app; no render made and no size read.",
+      "sizes": {}
+    },
+    "seedream_v4_5": {
+      "name": "Seedream 4.5",
+      "note": "Web plan only, through the CLI or the web app; no render made and no size read.",
+      "sizes": {}
+    },
+    "midjourney/v7": {
+      "name": "Midjourney V7, upscaled",
+      "tier": "Upscale (Subtle) or Upscale (Creative), each doubling the grid image",
+      "sizes": {
+        "16:9": { "size": "2912x1632", "source": "docs: docs.midjourney.com/docs/upscalers, 1456x816 upscaled to 2912x1632; read through a web search's summary of the page on 16 Oct 2026" }
+      }
+    },
+    "midjourney/v8.1": {
+      "name": "Midjourney V8.1",
+      "note": "Its --hd renders at 2k (docs.midjourney.com/docs/upscalers, through the same search summary). The house template, --ar 21:9 --hd (prompts.md §Midjourney), renders here.",
+      "sizes": {}
+    },
+    "recraft-api": {
+      "name": "Recraft's own API",
+      "note": "Its route is native SVG, which has no pixel size.",
+      "sizes": {}
+    },
+    "recraft/v4.1/pro/text-to-image": {
+      "name": "Recraft V4.1 Pro via Higgsfield (dropped)",
+      "tier": "2k",
+      "sizes": {
+        "16:9": { "size": "2688x1536", "source": "measured: the 30 Sep calibration renders r1–r3/v1-recraft-pro.png; the pro endpoint is the 2k one (docs/research/image-model-fact-bar.md, price table)" }
+      }
+    },
+    "flux-2-pro": {
+      "name": "FLUX.2 Pro (dropped)",
+      "sizes": {
+        "16:9": { "size": "1920x1088", "source": "measured: the 30 Sep calibration renders r1–r3/v8-flux-pro.png at 2k; roster.md: \"1920x1088 at most on Higgsfield\"" }
+      }
+    },
+    "flux-2-flex": {
+      "name": "FLUX.2 Flex (dropped)",
+      "sizes": {
+        "16:9": { "size": "1920x1088", "source": "measured: the 30 Sep calibration renders r1–r3/v9-flux-flex.png at 2k; roster.md: \"1920x1088 at most on Higgsfield\"" }
+      }
+    },
+    "flux-2-max": {
+      "name": "FLUX.2 Max (dropped)",
+      "sizes": {
+        "16:9": { "size": "1920x1088", "source": "measured: the 30 Sep calibration renders r1–r3/v10-flux-max.png at 2k; roster.md: \"1920x1088 at most on Higgsfield\"" }
+      }
+    },
+    "z-image/turbo": {
+      "name": "Z-Image Turbo (dropped)",
+      "note": "The 30 Sep renders measured 2048x1152 at 16:9 at the 2k tier; no source says 2k is its largest.",
+      "sizes": {}
+    },
+    "higgsfield-ai/soul/standard": {
+      "name": "SOUL (dropped)",
+      "note": "The 30 Sep renders measured 2048x1152 at 16:9 at the 1080p tier; no source says 1080p is its largest.",
+      "sizes": {}
+    },
+    "higgsfield-ai/soul/v2/standard": {
+      "name": "SOUL V2 (dropped)",
+      "note": "The 30 Sep renders measured 2048x1152 at 16:9 at the 1080p tier; no source says 1080p is its largest.",
+      "sizes": {}
+    }
+  }
+}

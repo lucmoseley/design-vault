@@ -1,0 +1,18 @@
+{
+  "declared": {
+    "primary-action": "button.primary",
+    "destructive-action": "button.danger",
+    "secondary-text": ".meta",
+    "tag": ".tag",
+    "list-header": ".list-head",
+    "service-bar": ".service",
+    "brand-bar": "header",
+    "card": ".card",
+    "hero": ".hero",
+    "user-name": ".who",
+    "badge": ".badge",
+    "misspelling": ".typo",
+    "image": "img.photo",
+    "pixel-image": "img.pixel"
+  }
+}

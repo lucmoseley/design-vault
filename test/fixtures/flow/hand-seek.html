@@ -1,0 +1,10 @@
+<!doctype html>
+<!-- WAAPI motion beside a paused animation a script seeks by hand (design-vault#60). -->
+<html><body>
+<div id="box" style="width:40px;height:40px;background:#333"></div>
+<div id="scrub" style="width:40px;height:40px;background:#333"></div>
+<script>const s = document.getElementById("scrub").animate([{ transform: "translateX(0)" }, { transform: "translateX(300px)" }], { duration: 1000 }); s.pause(); s.currentTime = 300;</script>
+<script>
+document.getElementById("box").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+</script>
+</body></html>

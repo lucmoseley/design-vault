@@ -1,0 +1,16 @@
+# The rule table test/probe.test.py runs on runner.html (#300). Each rule but
+# T-VAR, T-META and T-NONE has one planted miss or more in the page.
+T-SIZE | css:.copy | style:font-size | >= 16px
+T-CAPS | css:.caps | style:letter-spacing | >= 0.05em
+T-NAV | css:nav a | count | <= 4
+T-PWD | css:input[type=password] | attr:value | absent
+T-META | all css:meta[name="description"] | count | = 1
+T-ROLE | role:button | style:min-height | >= 24px
+T-FONT | fonts | face:display | in swap or optional
+T-XH | css:.xh | xheight | >= 0.4
+T-SHADOW | css:.card | distinct style:box-shadow except none | <= 2
+T-INK | css:.ink | style:color as oklch-c | <= 0.05
+T-VAR | css:.gap | style:margin-top | = 12px
+T-AUTH | css:.gap | authored:margin-top | matches ^var\(
+T-NONE | css:.absent | style:color | = red
+T-PART | part:hero | style:font-weight | >= 600

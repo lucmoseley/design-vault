@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>sronly</title>
+<!-- No fault: four captions hidden for a screen reader, each set over a photo and running past its edge, one by the
+     whole visually-hidden pattern and one by each of its parts alone: 1x1 px with its overflow hidden, clip, and an
+     inset clip-path (#220). -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .hero { position: relative; width: 300px }
+  .photo { display: block; width: 300px; height: 200px }
+  .hero p { position: absolute; left: 40px; margin: 0; white-space: nowrap }
+  .vh { top: 40px; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%) }
+  .tiny { top: 80px; width: 1px; height: 1px; overflow: hidden }
+  .clipped { top: 120px; clip: rect(0 0 0 0) }
+  .inset { top: 160px; clip-path: inset(50%) }
+</style>
+<div class="hero">
+  <img class="photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect width='300' height='200' fill='%23468'/%3E%3C/svg%3E" alt="">
+  <p class="vh">A caption for a screen reader, longer than the photo is wide</p>
+  <p class="tiny">A caption for a screen reader, longer than the photo is wide</p>
+  <p class="clipped">A caption for a screen reader, longer than the photo is wide</p>
+  <p class="inset">A caption for a screen reader, longer than the photo is wide</p>
+</div>

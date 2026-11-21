@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- look-renders.py's bends (#228): the parabola y = x², whose tightest bend is its vertex (0, 0), radius 0.5,
+     drawn at 10 CSS px a unit so the vertex sits at page (160, 60), radius 5 px; and a shape of straight lines. -->
+<style>
+  body { margin: 0; background: #fff; }
+  svg { position: absolute; left: 50px; top: 50px; }
+</style>
+</head>
+<body>
+<svg width="220" height="220" viewBox="-11 -1 22 22">
+  <path id="parabola" d="M -10 100 Q 0 -100 10 100" fill="none" stroke="#000" stroke-width="0.2"/>
+  <polyline points="-10 15 0 18 10 15" fill="none" stroke="#000" stroke-width="0.2"/>
+</svg>
+</body>
+</html>

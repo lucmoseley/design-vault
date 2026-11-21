@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sea Hostel: your email</title>
+<!-- A one-question page, for the faults dom-fault.html cannot hold beside its own. -->
+<!-- fault: vault.favicon: no svg icon -->
+<!-- fault: vault.favicon: no .ico icon -->
+<!-- fault: vault.favicon: no touch icon -->
+<style>body { font: 16px/1.5 sans-serif; margin: 0 16px; } label, input { display: block; }</style>
+</head>
+<body>
+<!-- fault: vault.landmark-elements: no header -->
+<!-- fault: vault.landmark-elements: no footer -->
+<main>
+<form action="/email">
+<!-- fault: vault.question-heading: a one-question page whose h1 is not the question's label -->
+<h1>Your email</h1>
+<label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email">
+<button>Continue</button>
+</form>
+<!-- fault: vault.question-heading: a second h1 on a one-question page -->
+<h1>Need help?</h1>
+</main>
+</body>
+</html>

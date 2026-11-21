@@ -1,0 +1,56 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP": "1"
+  },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Bash(cat ~/.ssh/*)",
+      "Bash(cat ~/.config/gh/*)",
+      "Bash(cat .env*)",
+      "Bash(gh auth token*)",
+      "Read(~/.config/workflow-core/**)",
+      "Bash(cat ~/.config/workflow-core/*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/release-check.js\"",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/ledger-upkeep.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "worktree": {
+    "bgIsolation": "none"
+  },
+  "enabledPlugins": {
+    "workflow-core@workflow-core": true,
+    "design-vault@lucmoseley": true
+  },
+  "extraKnownMarketplaces": {
+    "workflow-core": {
+      "source": {
+        "source": "url",
+        "url": "https://github.com/lucmoseley/workflow-core.git",
+        "ref": "v3.0.0"
+      }
+    }
+  },
+  "outputStyle": "workflow-core:Core voice",
+  "autoCompactWindow": 320000,
+  "autoMemoryEnabled": false
+}

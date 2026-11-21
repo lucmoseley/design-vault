@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- A build that starts after load (design-vault#240), as mmm-infra round 2's
+     night drawing starts once its portrait decodes: a timer 300 ms after load
+     sets body.play, and only then does the bar's one 1000 ms animation exist.
+     Read at load, the page has no animation and passes as still. The 300 ms
+     must stay under check-frames.py's QUIET_MS. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+#bar { width: 400px; height: 40px; margin: 40px; background: #2a2a2a; transform-origin: left; transform: scaleX(0.2); }
+body.play #bar { animation: grow 1000ms linear both; }
+@keyframes grow { from { transform: scaleX(0.2); } to { transform: none; } }
+</style></head>
+<body>
+<div id="bar"></div>
+<script>
+addEventListener("load", () => setTimeout(() => document.body.classList.add("play"), 300));
+</script>
+</body></html>

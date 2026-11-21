@@ -1,0 +1,338 @@
+[
+ {
+  "candidate": "r2-v1p",
+  "id": "v1p-F",
+  "kind": "function",
+  "sub": "missing action",
+  "what": "The 'Write to me directly' email strip is removed from the first screen; with no email in the footer, the page now offers no way at all to contact Mark."
+ },
+ {
+  "candidate": "r2-v1p",
+  "id": "v1p-G",
+  "kind": "global",
+  "sub": "hierarchy broken across sections",
+  "what": "The article specimen's title ('The World's Best Public-Private Partnership Law') is set at 88 px, medium weight: louder and larger than the hero line, so a lower section outranks the first screen."
+ },
+ {
+  "candidate": "r2-v1p",
+  "id": "v1p-T",
+  "kind": "type",
+  "sub": "third typeface",
+  "what": "The article's subhead ('So, what are the key chapter topics?') and the 'Download' label are set in Archivo Black, a heavy geometric display sans: a third face clashing with the Newsreader/Public Sans pair."
+ },
+ {
+  "candidate": "r2-v1p",
+  "id": "v1p-C",
+  "kind": "colour-surface",
+  "sub": "off-palette ground",
+  "what": "The Motion section sits on a saturated lavender ground (#CDB8F5), a colour outside the palette of paper, grey, blue and pad yellow."
+ },
+ {
+  "candidate": "r2-v1p",
+  "id": "v1p-R",
+  "kind": "treatment",
+  "sub": "like parts treated unlike",
+  "what": "The four palette swatches have four different corner treatments (square, 12 px, fully round, 4 px with a 3 px blue border), so like parts look unlike."
+ },
+ {
+  "candidate": "r2-v3p",
+  "id": "v3p-F",
+  "kind": "function",
+  "sub": "dead action",
+  "what": "The hero's 'Write to me' button and the address beside it look exactly as before but are no longer a link: nothing happens on click (the parts map lists them as not actable)."
+ },
+ {
+  "candidate": "r2-v3p",
+  "id": "v3p-G",
+  "kind": "global",
+  "sub": "two primary actions in one view",
+  "what": "A second filled blue button, 'Book a consultation', sits beside 'Write to me' at the same size and weight: two primary actions in the first view."
+ },
+ {
+  "candidate": "r2-v3p",
+  "id": "v3p-T",
+  "kind": "type",
+  "sub": "tracked capitals for running text",
+  "what": "The hero's second paragraph ('I advise multilateral development banks\u2026') is set in tracked sans capitals, bold: three-plus lines of all-caps running text that is slow to read, against the brief's 'never tracked capitals'."
+ },
+ {
+  "candidate": "r2-v3p",
+  "id": "v3p-C",
+  "kind": "colour-surface",
+  "sub": "gradient ground",
+  "what": "The hero sits on a blue-to-lilac diagonal gradient (#E3EEFF to #F1E4FF) instead of the flat warm paper, against the tile's own 'no texture: the paper is a flat warm tone'."
+ },
+ {
+  "candidate": "r2-v3p",
+  "id": "v3p-R",
+  "kind": "treatment",
+  "sub": "like parts treated unlike",
+  "what": "The article's document row 'Download' control is a rounded pill with a blue outline, while the page's other action ('Write to me') is a square filled block: two unlike control shapes for one kind of part."
+ },
+ {
+  "candidate": "r2-v5p",
+  "id": "v5p-F",
+  "kind": "function",
+  "sub": "dead action",
+  "what": "The hero's white email button ('Mark.Moseley@MMMinfra.com \u2192') now points to '#': it looks the same but goes nowhere, so the one action on the first screen is dead."
+ },
+ {
+  "candidate": "r2-v5p",
+  "id": "v5p-G",
+  "kind": "global",
+  "sub": "busy section",
+  "what": "The blue hero is made busy: a row of five outlined tag pills under the lead, a repeating diagonal line pattern over the whole field and a huge ghosted 'PPP' watermark behind the heading."
+ },
+ {
+  "candidate": "r2-v5p",
+  "id": "v5p-T",
+  "kind": "type",
+  "sub": "type hierarchy inverted",
+  "what": "In the article specimen the subhead ('So, what are the key chapter topics?') is set at 40 px bold, larger and heavier than the article's own title above it: the type hierarchy is upside down."
+ },
+ {
+  "candidate": "r2-v5p",
+  "id": "v5p-C",
+  "kind": "colour-surface",
+  "sub": "second accent colour",
+  "what": "Links in the article specimen (the lecture link) are set in orange (#E4572E) instead of the house blue: a fifth colour on a 'four colours, no accent' palette, and links no longer share one colour."
+ },
+ {
+  "candidate": "r2-v5p",
+  "id": "v5p-R",
+  "kind": "treatment",
+  "sub": "spacing rhythm broken",
+  "what": "Inside the article specimen the spacing collapses: the photo butts against the paragraph above, the caption touches the subhead below, and the list items are crammed at tight leading, unlike the rhythm of the rest of the page."
+ },
+ {
+  "candidate": "r2-v7p",
+  "id": "v7p-F",
+  "kind": "function",
+  "sub": "missing action",
+  "what": "The main navigation (Profile, Articles and talks, Blog) is removed: the first screen offers no way to reach the rest of the site."
+ },
+ {
+  "candidate": "r2-v7p",
+  "id": "v7p-G",
+  "kind": "global",
+  "sub": "hierarchy broken across sections",
+  "what": "A loud full-width house-blue band ('Get Mark's briefings on PPP reform' at 56 px with a white 'Subscribe' button) is inserted straight under the hero, competing with the hero and its one action."
+ },
+ {
+  "candidate": "r2-v7p",
+  "id": "v7p-T",
+  "kind": "type",
+  "sub": "centred running text",
+  "what": "The article specimen's long paragraphs and list are centred, so every line starts at a different place and the long text is hard to read."
+ },
+ {
+  "candidate": "r2-v7p",
+  "id": "v7p-C",
+  "kind": "colour-surface",
+  "sub": "stacked edges and heavy elevation",
+  "what": "The PDF download row is boxed with a pale blue fill, a blue border, a heavy drop shadow and rounded corners: four edge treatments stacked on one static row of a flat page."
+ },
+ {
+  "candidate": "r2-v7p",
+  "id": "v7p-R",
+  "kind": "treatment",
+  "sub": "like parts treated unlike",
+  "what": "The specimen section labels are styled three ways: 'Palette' as tracked blue capitals, 'Texture' as a large italic serif, the rest as the original small grey labels."
+ },
+ {
+  "candidate": "manta-home-p",
+  "id": "mhp-F",
+  "kind": "function",
+  "sub": "dead action",
+  "what": "The three destination cards (Canggu, Uluwatu, Kuta Lombok) still look like link cards with a 'Best hostels >' chevron, but are no longer links: nothing happens on click."
+ },
+ {
+  "candidate": "manta-home-p",
+  "id": "mhp-G",
+  "kind": "global",
+  "sub": "hierarchy broken across sections",
+  "what": "The 'Where we're starting' heading is set at about 120 px bold, bigger than the hero's MantaHostels wordmark, so the second section outranks the first screen."
+ },
+ {
+  "candidate": "manta-home-p",
+  "id": "mhp-T",
+  "kind": "type",
+  "sub": "third typeface",
+  "what": "The destination cards' region labels and place names are set in a monospace typewriter face, a third face foreign to the site's Quicksand/Nunito Sans pair."
+ },
+ {
+  "candidate": "manta-home-p",
+  "id": "mhp-C",
+  "kind": "colour-surface",
+  "sub": "off-palette edge and heavy elevation",
+  "what": "The destination cards get a 3 px purple border and a heavy drop shadow at rest: an edge colour outside the palette and elevation the rest of the page does not use."
+ },
+ {
+  "candidate": "manta-home-p",
+  "id": "mhp-R",
+  "kind": "treatment",
+  "sub": "like parts treated unlike",
+  "what": "The secondary 'Explore destinations' button has square corners while the primary button beside it is a pill: the two buttons no longer share one shape."
+ },
+ {
+  "candidate": "manta-canggu-p",
+  "id": "mcp-F",
+  "kind": "function",
+  "sub": "missing action",
+  "what": "The 'coming soon' notice no longer carries the email link, so the panel announces the launch but gives the visitor no way to be told or to get in touch from it."
+ },
+ {
+  "candidate": "manta-canggu-p",
+  "id": "mcp-G",
+  "kind": "global",
+  "sub": "busy section",
+  "what": "The 'Good for' section is made busy: twelve chips in six bright fill colours, each with its own border colour, crowd the section."
+ },
+ {
+  "candidate": "manta-canggu-p",
+  "id": "mcp-T",
+  "kind": "type",
+  "sub": "justified text",
+  "what": "Every body paragraph is justified in a narrow column, opening uneven word gaps (rivers), worst at phone width."
+ },
+ {
+  "candidate": "manta-canggu-p",
+  "id": "mcp-C",
+  "kind": "colour-surface",
+  "sub": "semantic colour misused",
+  "what": "The 'coming soon' notice panel is set on an alarm red (#C1121F) instead of the ink ground, so a friendly launch note reads as an error or warning."
+ },
+ {
+  "candidate": "manta-canggu-p",
+  "id": "mcp-R",
+  "kind": "treatment",
+  "sub": "like parts treated unlike",
+  "what": "The section headings are styled three ways: 'Vibe' turquoise, italic and underlined; 'What to look for' small tracked capitals; 'Surf' and 'Good for' as before."
+ },
+ {
+  "candidate": "r1-v5g",
+  "set": "gate",
+  "id": "v5g-carousel",
+  "record": "vault.carousel-use",
+  "stage": "function",
+  "area": "navigation",
+  "what": "The hero, one message, is dressed as a carousel: previous and next arrows and four dots ('1 / 4') sit under the 'Get in touch' button, as if the opening rotated through slides."
+ },
+ {
+  "candidate": "r1-v5g",
+  "set": "gate",
+  "id": "v5g-current",
+  "record": "vault.sibling-emphasis",
+  "stage": "role",
+  "area": "text",
+  "what": "In the header navigation the current page's link, Profile, is set apart from Articles, Blog and Contact only by the logo blue the page keeps for its links and its one button, with no change of weight, fill, size or place."
+ },
+ {
+  "candidate": "r1-v5g",
+  "set": "gate",
+  "id": "v5g-case",
+  "record": "vault.text-case",
+  "stage": "treatment",
+  "area": "text",
+  "what": "The section headings and two button labels are in title case: 'Type Pair', 'An Article Page', 'Motion Sketch', 'Get In Touch' and 'Play Again'."
+ },
+ {
+  "candidate": "r1-v5g",
+  "set": "gate",
+  "id": "v5g-icon",
+  "record": "vault.button-icon",
+  "stage": "treatment",
+  "area": "buttons",
+  "what": "The motion sketch's replay button carries a four-pointed sparkle icon before its label, a symbol with no settled meaning for 'play again', where a replay arrow or no icon would do."
+ },
+ {
+  "candidate": "r1-v5g",
+  "set": "gate",
+  "id": "v5g-split",
+  "record": "vault.pane-split",
+  "stage": "role",
+  "area": "layout",
+  "what": "At desktop width the opening's two panes are split the wrong way: the portrait stand-in, the supporting pane, takes more than half the width, and the name, lead and 'Get in touch' button, the main pane, are squeezed into the rest."
+ },
+ {
+  "candidate": "r2-v7g",
+  "set": "gate",
+  "id": "v7g-icons",
+  "record": "vault.icon-use",
+  "stage": "function",
+  "area": "imagery",
+  "what": "Each section heading (Palette, Type pair, Texture, An article page, Motion sketch) opens with a large blue decorative icon (a star, a lightning bolt, a drop, a leaf, a sparkle) that marks no action or information."
+ },
+ {
+  "candidate": "r2-v7g",
+  "set": "gate",
+  "id": "v7g-stack",
+  "record": "vault.stack-order",
+  "stage": "function",
+  "area": "layout",
+  "what": "At phone width the article specimen's side note ('Text on a 32 px line\u2026', 'Grey for reading\u2026') stacks above the article itself, so the supporting pane comes before the main content."
+ },
+ {
+  "candidate": "r2-v7g",
+  "set": "gate",
+  "id": "v7g-zebra",
+  "record": "vault.zebra-rows",
+  "stage": "treatment",
+  "area": "data",
+  "what": "The short motion timeline table, four narrow columns, has heavy alternating row fills, saturated mid-blue and pale grey, on a table too small for the eye to lose its row."
+ },
+ {
+  "candidate": "r2-v7g",
+  "set": "gate",
+  "id": "v7g-condensed",
+  "record": "vault.type-width",
+  "stage": "treatment",
+  "area": "typography",
+  "what": "The article's running text (its paragraphs and numbered list) is set in a condensed sans, Roboto Condensed, a narrow width in long reading text."
+ },
+ {
+  "candidate": "r2-v7g",
+  "set": "gate",
+  "id": "v7g-align",
+  "record": "vault.alignment-break",
+  "stage": "treatment",
+  "area": "layout",
+  "what": "The Texture section alone is pushed about 120 px in from the left edge every other section shares, for no reason the page shows."
+ },
+ {
+  "candidate": "manta-rank-g",
+  "set": "gate",
+  "id": "mrg-oneoff",
+  "record": "vault.text-style-count",
+  "stage": "value",
+  "area": "typography",
+  "what": "The sentence under the lede ('Scores weight toward recent stays\u2026') is set in a style found nowhere else on the page: an italic serif, larger than the body text, in purple."
+ },
+ {
+  "candidate": "manta-rank-g",
+  "set": "gate",
+  "id": "mrg-tabbar",
+  "record": "vault.component-swap",
+  "stage": "role",
+  "area": "layout",
+  "what": "At phone width the header's Menu button, which opens Destinations and How we rank, is gone, and a bar fixed to the bottom of the screen takes its place with other links in it: Search, Saved and Account."
+ },
+ {
+  "candidate": "manta-rank-g",
+  "set": "gate",
+  "id": "mrg-deadline",
+  "record": "vault.offer-deadline",
+  "stage": "treatment",
+  "area": "content",
+  "what": "A red strip under the navigation sells the partner tier with a ticking countdown, 'Partner launch price ends in 02:14:37', and a 'Only 3 spots left' badge."
+ },
+ {
+  "candidate": "manta-rank-g",
+  "set": "gate",
+  "id": "mrg-card",
+  "record": "vault.card-type",
+  "stage": "treatment",
+  "area": "surfaces",
+  "what": "The three ranking principles under the lede sit as a row of like cards, and the middle one alone ('Recent stays count more than old ones.') takes a dark fill with white text, though it is the same kind of thing as the other two."
+ }
+]

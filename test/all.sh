@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# Every vault suite, the repo's declared `commands.test` (#85): bash test/all.sh
+# The core's pre-commit runs it and refuses the commit on a non-zero exit.
+# A missing tool fails the run naming its install step.
+# Inside a commit only the suites its staged files can break run, as test/select-suites.js reads them (#146).
+# Run by hand, or with VAULT_ALL_SUITES=1, every suite runs. --plan prints what would run and runs nothing.
+# bash test/all.sh [--plan] <test file>… runs only those files, as workflow-core's lander reruns a red's files (#436):
+# a .test.js one under node --test, any other by the suite that names it. A red prints `FAIL <path>` per failing file.
+# Up to three run at once, by test/run-lanes.sh, within the machine's suite ceiling (#363).
+# bash test/all.sh [--plan] --shard=k/n runs every nth suite of the list, from the kth on: workflow-core's lander runs the
+# whole list as `fullTestShards` shards, each a run of its own under its suite ceiling (workflow-core#2667), as no one-lane
+# run of every suite fits it (#462).
+
+set -u
+cd "$(dirname "$0")/.." || exit 1
+# The one list of suites (#233). A Python suite names after a tab what it needs past the standard library: `images` for
+# numpy, Pillow and scipy, `chromium` for Playwright and its Chromium.
+# A new suite also owes README §Validating the library its sentence, and, if it never loads check-flow.py,
+# test/select-suites.test.js its NO_FLOW entry.
+registry='node --test --test-reporter=./test/failed-files.js
+bash test/design-round-pointer.test.sh
+python3 test/cutout.test.py	images
+python3 test/check-render.test.py	images
+python3 test/check-logo.test.py	images chromium
+python3 test/check-clip.test.py
+python3 test/check-flow.test.py	chromium
+python3 test/check-flow-records.test.py	images chromium
+python3 test/check-frames.test.py	chromium
+python3 test/check-overlay.test.py	images chromium
+python3 test/check-measure.test.py	chromium
+python3 test/face-profile.test.py	images chromium
+python3 test/contact-sheet.test.py	images chromium
+python3 test/check-layout.test.py	chromium
+python3 test/check-access.test.py	images chromium
+python3 test/check-access-contrast.test.py	images chromium
+python3 test/check-access-pointer.test.py	images chromium
+python3 test/palette.test.py
+python3 test/child.test.py	chromium
+python3 test/probe.test.py	chromium
+python3 test/parts-map.test.py	images chromium
+python3 test/look.test.py	images chromium
+python3 test/check-load.test.py	chromium
+python3 test/check-load-files.test.py	chromium
+python3 test/drive-overlay.test.py	chromium
+python3 test/conditions.test.py	chromium
+python3 test/look-renders.test.py	images chromium
+python3 test/check-seams.test.py	images chromium
+python3 test/drive-form.test.py	chromium
+python3 test/check-cross.test.py	chromium
+python3 test/check-dom.test.py	images chromium
+python3 test/check-markup.test.py	chromium
+python3 test/check-style.test.py	images chromium
+python3 test/check-state.test.py	images chromium
+python3 test/check-text.test.py	chromium
+python3 test/drive-pointer.test.py	chromium'
+suites=()
+declare -A needs=()
+while IFS=$'\t' read -r suite need; do
+  for word in ${need:-}; do
+    [[ $word == images || $word == chromium ]] || { echo "test/all.sh: $suite needs '$word', which is neither images nor chromium" >&2 && exit 2; }
+  done
+  suites+=("$suite")
+  needs[$suite]=${need:-}
+  [[ $suite == 'node '* ]] && node_suite=$suite
+done <<<"$registry"
+plan_only=0
+shard=''
+while [[ ${1:-} == --plan || ${1:-} == --shard=* ]]; do
+  if [[ $1 == --plan ]]; then
+    plan_only=1
+  else
+    shard=${1#--shard=}
+    if ! [[ $shard =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] || ((BASH_REMATCH[1] > BASH_REMATCH[2])); then
+      echo "test/all.sh: --shard wants k/n with 1 <= k <= n — got '$shard'" >&2 && exit 2
+    fi
+  fi
+  shift
+done
+[[ -n $shard ]] && (($#)) && { echo "test/all.sh: --shard takes no test files" >&2 && exit 2; }
+# A file on disk that no suite lists has no test to fail here, as the lander reads a file the tree lacks: the
+# base check of a suite a later commit lists.
+named=()
+node_files=()
+for file in "$@"; do
+  file=${file#./}
+  suite=''
+  if [[ $file == *.test.js ]]; then
+    [[ -f $file ]] || { echo "test/all.sh: no $file — name a test file on disk" >&2 && exit 2; }
+    [[ " ${node_files[*]} " == *" $file "* ]] || node_files+=("$file")
+    continue
+  fi
+  for listed in "${suites[@]}"; do [[ ${listed##* } == "$file" ]] && suite=$listed; done
+  if [[ -z $suite ]]; then
+    [[ -f $file ]] || { echo "test/all.sh: no $file — name a .test.js file or a suite file this list runs" >&2 && exit 2; }
+    echo "SKIP $file — no suite lists it"
+    continue
+  fi
+  [[ " ${named[*]} " == *" $suite "* ]] || named+=("$suite")
+done
+((${#node_files[@]})) && named=("$node_suite ${node_files[*]}" "${named[@]}")
+if (($#)) && ((!${#named[@]})); then
+  echo "no named file has a suite to run"
+  exit 0
+fi
+# A commit is seen by its staged files. Git hands a hook GIT_INDEX_FILE, which commit-paths.js points at an index
+# of its own, so the list is read before the unset below. workflow-core's gate runs this in a worktree holding the
+# commit's tree staged over HEAD, with that variable removed and WFC_GATE_SEAT set instead (#457).
+in_commit=0
+if ((!$#)) && [[ (-n ${GIT_INDEX_FILE:-} || -n ${WFC_GATE_SEAT:-}) && -z ${VAULT_ALL_SUITES:-} ]] &&
+  staged="$(git diff --cached --name-only --no-renames)"; then
+  in_commit=1
+fi
+# A merge is judged against each of its parents too, and runs only the suites every one of them would (#457): the
+# gate hands them in WFC_MERGE_PARENTS; a hook run has them in MERGE_HEAD, or before git writes it in the
+# GITHEAD_<sha> it exports, as workflow-core's merge-heads.js reads them. This trusts every parent, a branch tip as
+# much as main's, passed the suites it skips, as judging against HEAD alone trusts HEAD. A parent
+# that will not read is left out, which runs more. Per parent, the paths the commit changes from it and all.sh as it
+# has it are read before the unset too, so an edit to the list above alone runs only the suites it lists anew (#363).
+copies="$(mktemp -d)"
+trap 'rm -rf "$copies"' EXIT
+sides=()
+if ((in_commit)); then
+  if [[ -v WFC_MERGE_PARENTS ]]; then # set, even empty, the gate has read the parents and MERGE_HEAD is not consulted
+    parents=$WFC_MERGE_PARENTS
+    [[ $parents == 'unread: '* ]] && echo "merge parents unread, so judged against HEAD alone: ${parents#unread: }" && parents=''
+  else
+    parents="$(cat "$(git rev-parse --path-format=absolute --git-path MERGE_HEAD)" 2>/dev/null)"
+    [[ -n $parents ]] || parents="$(compgen -e | sed -n 's/^GITHEAD_//p')"
+  fi
+  printf '%s\n' "$staged" >"$copies/HEAD.paths"
+  git show HEAD:test/all.sh >"$copies/HEAD.head" 2>/dev/null || rm -f "$copies/HEAD.head"
+  sides=(HEAD)
+  for parent in $parents; do
+    side="$copies/$parent"
+    if [[ $parent =~ ^[0-9a-f]{40}([0-9a-f]{24})?$ ]] && git diff --cached --name-only --no-renames "$parent" >"$side.paths" 2>/dev/null; then
+      git show "$parent:test/all.sh" >"$side.head" 2>/dev/null || rm -f "$side.head"
+      sides+=("$parent")
+    else
+      echo "merge parent $parent will not read, so the commit is not judged against it"
+    fi
+  done
+  git show :test/all.sh >"$copies/staged" 2>/dev/null || rm -f "$copies/staged"
+fi
+# Where run-lanes.sh keeps each suite's last green seconds, to start the longest first: the git directory every
+# worktree of the vault shares, read before the unset below.
+[[ -n ${VAULT_SUITE_TIMES:-} ]] || ! common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ||
+  export VAULT_SUITE_TIMES="$common/vault-suite-times"
+# A hook hands its git environment down (GIT_DIR, GIT_INDEX_FILE…), so a suite's
+# scratch `git init` acts on the vault itself (#85). A suite run on its own from
+# a hook is still exposed.
+# shellcheck disable=SC2046 # one variable name per word is the point
+unset $(git rev-parse --local-env-vars)
+
+run=("${suites[@]}")
+(($#)) && run=("${named[@]}")
+if ((in_commit)); then
+  if plan="$(VAULT_SIDES_DIR="$copies" VAULT_SIDES="${sides[*]}" VAULT_RUNNER_STAGED="$copies/staged" \
+    node test/select-suites.js --select "${suites[@]}")" && [[ -n $plan ]]; then
+    selected=()
+    everything=0
+    while IFS=$'\t' read -r verdict suite why; do
+      case $verdict in
+        all) echo "all suites: $suite" && everything=1 ;;
+        run) selected+=("$suite") ;;
+        skip) echo "SKIP $suite — $why" ;;
+      esac
+    done <<<"$plan"
+    ((everything)) || run=("${selected[@]}")
+  else
+    echo "all suites: test/select-suites.js could not choose"
+  fi
+fi
+# Split by place in the list, not by kept seconds: the lander's WFC_SHARD_TIMINGS reads vitest files, not these suites.
+# Residual: a suite added or moved reshuffles every shard, and nothing keeps one shard clear of the ceiling but
+# check-suite-margin's report.
+if [[ -n $shard ]]; then
+  shard_suites=() k=${shard%/*} n=${shard#*/}
+  for i in "${!run[@]}"; do ((i % n == k - 1)) && shard_suites+=("${run[i]}"); done
+  run=("${shard_suites[@]}")
+  ((${#run[@]})) || { echo "shard $shard holds no suite" && exit 0; }
+fi
+if ((plan_only)); then
+  printf 'RUN %s\n' "${run[@]}"
+  exit 0
+fi
+
+missing=0
+need() { # need <what> <install step> <check command…>
+  local what="$1" install="$2"
+  shift 2
+  if ! "$@" >/dev/null 2>&1; then
+    echo "MISSING $what — install: $install" >&2
+    missing=$((missing + 1))
+  fi
+}
+
+need node 'Node, from nodejs.org or nvm' command -v node
+need jq 'sudo apt install jq' command -v jq
+# The Python checks are owed only for the suites that run, so a docs commit neither launches Chromium nor needs it.
+suites_needing() { # suites_needing <need>: the suites in this run that need it, as "a, b and c"
+  local suite list=()
+  for suite in "${run[@]}"; do
+    [[ " ${needs[$suite]:-} " == *" $1 "* ]] && list+=("${suite#python3 }")
+  done
+  ((${#list[@]})) || return 1
+  local out=${list[0]} i
+  for ((i = 1; i < ${#list[@]}; i++)); do
+    if ((i == ${#list[@]} - 1)); then out+=" and ${list[i]}"; else out+=", ${list[i]}"; fi
+  done
+  printf '%s' "$out"
+}
+if [[ " ${run[*]} " == *" python3 "* ]]; then
+  need python3 'Python 3, from miniforge (the machine-wide Python)' command -v python3
+  if for_images="$(suites_needing images)"; then
+    for module in numpy PIL scipy; do
+      need "the Python package $module, for $for_images" "python3 -m pip install -r plugin/requirements.txt" \
+        python3 -c "import $module"
+    done
+  fi
+  if for_chromium="$(suites_needing chromium)"; then
+    need "the Python package playwright, for $for_chromium" \
+      'python3 -m pip install -r plugin/requirements.txt && python3 -m playwright install chromium' \
+      python3 -c 'import playwright.sync_api'
+    # Only once the package imports, so an absent package is not reported twice.
+    python3 -c 'import playwright.sync_api' 2>/dev/null &&
+      need "Playwright's Chromium, for $for_chromium" \
+        'python3 -m playwright install chromium' \
+        python3 -c 'from playwright.sync_api import sync_playwright
+with sync_playwright() as p: p.chromium.launch().close()'
+  fi
+fi
+if ((missing)); then
+  echo "test/all.sh: $missing missing — no suite was run." >&2
+  exit 1
+fi
+
+bash test/run-lanes.sh "${run[@]}" || exit 1
+if (($#)); then echo "${#run[@]} named suite(s) passed"; elif [[ -n $shard ]]; then echo "${#run[@]} suites of shard $shard passed"; else echo "${#run[@]} of ${#suites[@]} suites passed"; fi

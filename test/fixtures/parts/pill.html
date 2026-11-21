@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>pill</title>
+<!-- A static pill styled as the page's button, beside the button itself, and one static part for each other reason
+     the map lists one: cursor: pointer (not again on the bold word inside it, which only inherits it), an
+     underline, a :hover rule, a link's colour and a shadow. A disabled button cannot be acted on. Two lines of text are
+     actable by script alone: a click listener the page adds, and a React-style onClick prop. Every tap target holds
+     one action, so vault.one-target passes. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  nav a { color: #0a3542; margin-right: 16px }
+  .btn, .pill { display: inline-block; background: #0a3542; color: #fff; border: 0; border-radius: 999px; padding: 10px 20px; font: inherit }
+  .btn:hover { background: #134f60 }
+  .btn:focus-visible { outline: 3px solid #e0a000 }
+  .pointer { cursor: pointer }
+  .ruled { text-decoration: underline }
+  .tagline:hover { color: #0a3542 }
+  .linkish { color: #0a3542 }
+  .lifted { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); display: inline-block; padding: 4px 8px }
+</style>
+<nav><a href="#rooms">Rooms</a><a href="#rates">Rates</a></nav>
+<p><button class="btn">Book a bed</button> <span class="pill">Free breakfast</span></p>
+<p class="pointer">Open <b>every</b> day</p>
+<p class="ruled">Ten minutes from the beach</p>
+<p class="tagline">A small house by the sea</p>
+<h2 class="linkish">Our rooms</h2>
+<p><span class="lifted">Quiet rooms</span></p>
+<p><button class="btn" disabled>Sold out</button></p>
+<p id="listened">Read more about the house</p>
+<p id="react">See the garden</p>
+<script>
+  document.getElementById('listened').addEventListener('click', () => {});
+  document.getElementById('react')['__reactProps$fixture'] = { onClick() {} };
+</script>

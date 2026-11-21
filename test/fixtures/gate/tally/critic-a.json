@@ -1,0 +1,45 @@
+{
+  "answers": {
+    "v1-arches": {
+      "vault.edge-look": {
+        "answer": "Yes",
+        "evidence": "critic a on vault.edge-look"
+      },
+      "vault.tone-look": {
+        "answer": "No",
+        "evidence": "critic a on vault.tone-look"
+      },
+      "vault.focus": {
+        "answer": "Yes",
+        "evidence": "critic a on vault.focus"
+      },
+      "vault.contrast": {
+        "answer": "No",
+        "evidence": "the caption looks faint"
+      }
+    },
+    "v2-water": {
+      "vault.edge-look": {
+        "answer": "Yes",
+        "evidence": "critic a on vault.edge-look"
+      },
+      "vault.tone-look": {
+        "answer": "Yes",
+        "evidence": "critic a on vault.tone-look"
+      },
+      "vault.contrast": {
+        "answer": "No",
+        "evidence": "critic a on vault.contrast"
+      }
+    }
+  },
+  "clashes": [
+    {
+      "candidate": "v2-water",
+      "quotes": [
+        "the hero runs edge to edge",
+        "keep 24 px clear around the logo"
+      ]
+    }
+  ]
+}

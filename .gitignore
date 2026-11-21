@@ -1,0 +1,20 @@
+__pycache__/
+.claude/*
+!.claude/settings.json
+!.claude/workflow-core.json
+!.claude/workflow-core.md
+!.claude/workflow-core.reference.md
+!.claude/workflow-core.glossary.md
+!.claude/workflow-core.doc-map.md
+!.claude/guard-registry-anchors.json
+!.claude/registrations.json
+!.claude/guard-fire-needles.json
+node_modules/
+.impeccable/
+*.pyc
+.env
+# workflow-core:begin
+.claude/tmp/
+.claude/worktrees/
+/private/
+# workflow-core:end

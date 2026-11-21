@@ -1,0 +1,78 @@
+/* The state fixtures' shared look: every control shows a hover, a focus
+   and a press state, so a plant on one control is the only miss. */
+body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #1a1a1a; background: #fff; }
+header, main, footer { padding: 16px 24px; }
+section { margin: 24px 0; max-width: 760px; }
+a { color: #0645ad; text-decoration-thickness: 1px; }
+a:hover { color: #08306b; }
+a:focus { outline: 3px solid #08306b; outline-offset: 2px; }
+a:active { color: #d33; }
+button, [role="button"] {
+  font: inherit; padding: 4px 12px; border: 2px solid #333; border-radius: 4px;
+  background: #f2f2f2; color: #1a1a1a; cursor: pointer;
+}
+button:hover, [role="button"]:hover { background: #ddd; }
+button:focus, [role="button"]:focus { outline: 3px solid #08306b; outline-offset: 2px; }
+button:active, [role="button"]:active { background: #bbb; }
+button:disabled { opacity: 0.45; cursor: default; }
+input, select, textarea { font: inherit; border: 2px solid #666; padding: 4px; }
+input:hover, select:hover, textarea:hover { border-color: #111; }
+input:focus, select:focus, textarea:focus { outline: 3px solid #08306b; }
+label { display: block; margin-top: 8px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.error { color: #b00020; }
+
+/* Tooltips: shown on hover and focus of their host, shown always where no
+   input can hover, and dismissed on Escape until the pointer leaves. */
+.tip-host { position: relative; }
+.tip {
+  display: none; position: absolute; left: 0; top: 100%; z-index: 5; width: 200px;
+  padding: 6px 8px; background: #1a1a1a; color: #fff; font-size: 14px;
+}
+.tip-host:hover .tip, .tip-host:focus .tip, .tip-host:focus-within .tip { display: block; }
+.tip-host.dismissed .tip { display: none; }
+@media (hover: none) { .tip { display: block; position: static; } }
+
+/* The nav: a disclosure that opens on click. */
+nav ul { list-style: none; display: flex; gap: 16px; padding: 0; margin: 0; }
+nav li { position: relative; }
+.sub { position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #999; padding: 4px; z-index: 6; }
+.sub[hidden] { display: none; }
+
+.editable { padding: 2px 4px; }
+.editable:hover { background: #eef3fb; }
+.editable:focus { outline: 2px dashed #08306b; }
+
+.links a { margin-right: 12px; }
+
+[aria-pressed="true"] { background: #333; color: #fff; font-weight: 700; box-shadow: inset 0 0 0 2px #fff; }
+
+.track { position: relative; width: 200px; height: 16px; background: #ccc; margin: 16px 0; touch-action: none; user-select: none; }
+.thumb { position: absolute; top: 0; width: 16px; height: 16px; background: #333; border-radius: 50%; }
+.thumb:focus { outline: 3px solid #08306b; }
+
+.carousel { position: relative; }
+.reel { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; width: 320px; }
+.reel > div { flex: 0 0 300px; height: 80px; background: #e8e8e8; scroll-snap-align: start; }
+
+.cards { list-style: none; padding: 0; }
+.card { position: relative; border: 2px solid #999; padding: 16px; margin: 8px 0; }
+.card.whole a::after { content: ""; position: absolute; inset: 0; }
+
+.zoomable { width: 200px; height: 200px; overflow: hidden; touch-action: none; border: 1px solid #999; }
+.zoomable img { display: block; width: 200px; height: 200px; transform-origin: 0 0; }
+
+:target { box-shadow: inset 4px 0 0 #333; }
+
+.toast { background: #1a1a1a; color: #fff; padding: 8px; }
+.toast:empty { display: none; }
+
+.banner { border: 2px solid #333; padding: 8px; margin: 16px 24px; }
+[role="menu"] { list-style: none; margin: 0; padding: 4px; border: 1px solid #999; background: #fff; }
+[role="menu"][hidden] { display: none; }
+[role="menuitem"] { display: block; padding: 2px 8px; cursor: pointer; }
+[role="menuitem"]:hover, [role="menuitem"]:focus { background: #ddd; }
+[role="listbox"] { list-style: none; margin: 0; padding: 0; border: 1px solid #999; }
+[role="option"][aria-selected="true"] { background: #ddd; }

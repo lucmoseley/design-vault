@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A page with a map that pans itself</title>
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff; }
+  .map { height: 100vh; touch-action: none; background-image: linear-gradient(#d1fae5, #065f46); }
+  .spacer { height: 4000px; }
+</style>
+</head>
+<body>
+<!-- vault.native-scroll: no fault. The map fills the window and cancels the
+     touches that pan it, as touch-action: none tells the browser it will. -->
+<div class="map"></div>
+<div class="spacer"></div>
+<script>
+  const map = document.querySelector('.map');
+  let y = null, pan = 0;
+  map.addEventListener('touchstart', (e) => { y = e.touches[0].clientY; }, { passive: true });
+  map.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    pan += e.touches[0].clientY - y;
+    y = e.touches[0].clientY;
+    map.style.backgroundPositionY = `${pan}px`;
+  }, { passive: false });
+</script>
+</body>
+</html>

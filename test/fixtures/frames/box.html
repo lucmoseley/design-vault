@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- The mark in an HTML box (design-vault#67): --at names the box, and the
+     mark's viewBox is stretched to fill it, as the inline SVG inside does. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+#logo { position: absolute; left: 73.5px; top: 41.25px; width: 410px; height: 205px; }
+svg { display: block; width: 100%; height: 100%; }
+</style></head>
+<body>
+<div id="logo">
+  <svg viewBox="0 0 200 100" fill="#2a2a2a">
+    <path d="M50 15a35 35 0 1 1 0 70a35 35 0 1 1 0-70zm0 14a21 21 0 1 0 0 42a21 21 0 1 0 0-42z" fill-rule="evenodd"/>
+    <path d="M105 85V50a40 40 0 0 1 80 0v35h-16V52a24 24 0 0 0-48 0v33z"/>
+  </svg>
+</div>
+<script>
+document.getElementById("logo").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 20000 })
+  .finished.then(() => document.getAnimations().forEach((a) => a.cancel()));
+</script>
+</body></html>

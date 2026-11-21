@@ -1,0 +1,21 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- An app shell (#311's spec review): a grid rail, a bottom bar of buttons sized by 100vh, footer columns side by side. check-layout.py --records --brief kind=app faults only the shell ending on the fold (vault.false-floor) and the bar's unpadded controls (vault.bottom-safe-area). -->
+<style>
+body{margin:0;font:16px/1.5 sans-serif}
+.shell{display:grid;grid-template-columns:80px 1fr;height:100dvh}
+.rail{background:#eee;display:flex;flex-direction:column;gap:8px;padding:8px}
+.rail ul{list-style:none;padding:0;margin:0}
+main{overflow:auto;padding:16px}
+.sheet{position:fixed;left:0;right:0;top:calc(100vh - 64px);height:64px;background:#fff;border-top:1px solid #ccc;display:flex}
+.sheet button{flex:1}
+footer{display:flex;gap:24px;padding:16px}
+footer .col{flex:1}
+@media (max-width:599px){.shell{grid-template-columns:1fr}.rail{position:fixed;bottom:0;left:0;right:0;flex-direction:row}}
+</style></head><body>
+<div class="shell">
+<nav class="rail" aria-label="Main"><ul><li><a href="/a">Inbox</a></li><li><a href="/b">Sent</a></li><li><a href="/c">Drafts</a></li></ul></nav>
+<main><h1>Inbox</h1><p>Messages.</p><div style="height:2000px"></div></main>
+</div>
+<div class="sheet"><button>Reply</button><button>Forward</button></div>
+<footer><div class="col"><p>About us text here.</p></div><div class="col" style="padding-left:40px"><p>Contact text.</p></div></footer>
+</body></html>

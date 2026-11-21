@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>target-pointer-clean</title>
+<!-- Meets vault.coarse-target: every target is 44 px or more under a coarse pointer, as a (pointer: coarse) rule
+     or its own size makes it, and none is made smaller under a fine pointer than its layout gives it. A link in
+     running prose and a skip link hidden at rest are exempt; a checkbox is measured by the label it sits in. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .skip:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%) }
+  button { appearance: none; border: 0; padding: 0; background: #222; color: #fff; width: 24px; height: 24px }
+  @media (pointer: coarse) { button { width: 44px; height: 44px } }
+  .wide { width: 48px; height: 48px }
+  @media (pointer: fine) { .wide { width: 56px } }
+  .tick { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 8px }
+</style>
+<a class="skip" href="#main">Skip to content</a>
+<main id="main">
+  <p>Read the <a href="#terms">booking terms</a> before you pay.</p>
+  <button aria-label="Close"></button>
+  <button class="wide" aria-label="Menu"></button>
+  <label class="tick"><input type="checkbox"> Breakfast</label>
+</main>

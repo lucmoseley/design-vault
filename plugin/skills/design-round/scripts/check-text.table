@@ -1,0 +1,39 @@
+# check-text.py's rule table (#314): <record id> | <key> | <value>, the keys
+# each check reads. Each value comes from its record in design-critique/rules/;
+# change them together. A list of characters or words is split by spaces.
+# Values no source gives are guesses, marked so.
+
+vault.prose-quotes | straight | ' "
+vault.prose-quotes | opening | ‘
+vault.code-quotes | curly | ‘ ’ “ ” ‛ ‟
+vault.prime-marks | curly | ‘ ’ “ ”
+vault.math-signs | times | x X
+vault.math-signs | minus | -
+vault.dash-glyphs | hyphen | -
+vault.dash-glyphs | em | —
+vault.leading-zero | markers | . ,
+vault.locale-numbers | locales | en-US de-DE
+vault.locale-numbers | digits | 4
+vault.week-hour | locales | en-US de-DE
+vault.typed-case | letters | 6
+vault.typed-case | least | 2
+vault.caps-extent | lines | 1
+vault.caps-extent | words | 4
+# A guess: title case where at least half a label's capitalised words are common.
+vault.label-case | share | 0.5
+vault.emphasis-share | words | 20
+vault.emphasis-share | share | 0.25
+vault.emphasis-share | run | 10
+vault.emphasis-share | weight | 600
+# A guess at a short phrase's length.
+vault.nonbreaking | joined | 4
+# A guess at how many words of one block a hand-placed soft hyphen visits.
+vault.soft-hyphens | words | 2
+vault.sentence-space | ends | . ! ?
+vault.fractions | feature | diagonal-fractions
+# A guess: the denominators of measures and recipes, leaving out 10 and 12, a rating's and a size's.
+vault.fractions | denominators | 2 3 4 5 6 8 16
+vault.rtl-digit-order | digits | 2
+vault.offer-end-date | part | offer-deadline
+# A guess: long enough for a countdown's seconds to tick.
+vault.offer-end-date | watch | 2000ms

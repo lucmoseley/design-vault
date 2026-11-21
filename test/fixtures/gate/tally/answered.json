@@ -1,0 +1,32 @@
+{
+  "answers": {
+    "v1-arches": {
+      "vault.contrast": {
+        "answer": "pass",
+        "evidence": "v1-arches/access/access.json, exit 0"
+      },
+      "vault.focus": {
+        "answer": "cannot measure",
+        "evidence": "v1-arches/focus/focus.json, exit 6: the focus ring is drawn on a canvas"
+      },
+      "vault.proof": {
+        "answer": "pass",
+        "evidence": "both testimonials trace to the rules file \u00a75"
+      }
+    },
+    "v2-water": {
+      "vault.contrast": {
+        "answer": "cannot measure",
+        "evidence": "v2-water/access/access.json, exit 6: the hero text sits on video"
+      },
+      "vault.focus": {
+        "answer": "pass",
+        "evidence": "v2-water/focus/focus.json, exit 0"
+      },
+      "vault.proof": {
+        "answer": "fail",
+        "evidence": "the '200 happy guests' count has no source"
+      }
+    }
+  }
+}

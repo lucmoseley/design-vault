@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hostel guides — state checks, clean</title>
+<link rel="stylesheet" href="state.css">
+<style>.guides a:visited { color: #5a4a6e; }</style>
+</head>
+<body>
+<header>
+  <nav aria-label="Main">
+    <ul>
+      <li><a href="pages/a.html">Home</a></li>
+      <li>
+        <button type="button" aria-expanded="false" aria-controls="nav-sub">Guides</button>
+        <ul class="sub" id="nav-sub" hidden>
+          <li><a href="pages/b.html">City guides</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <div id="summary" tabindex="-1" hidden>
+    <h2>There is a problem</h2>
+    <ul></ul>
+  </div>
+  <h1>Hostel guides</h1>
+
+  <section>
+    <h2>Hover and focus</h2>
+    <button type="button" class="tip-host" aria-describedby="tip-fees">Fees<span class="tip" role="tooltip" id="tip-fees">No booking fee on any room</span></button>
+    <p>Room <span class="editable" tabindex="0">four beds</span></p>
+    <p class="links"><a href="pages/a.html">Rooms</a><a href="pages/b.html">Prices</a></p>
+    <button type="button" disabled>Sold out</button>
+  </section>
+
+  <section>
+    <h2>Press</h2>
+    <button type="button" aria-pressed="false">Bold off</button>
+    <button type="button" data-opens="d-rename">Rename list</button>
+    <dialog id="d-rename" aria-labelledby="d-rename-h">
+      <h2 id="d-rename-h">Rename this list</h2>
+      <button type="button" data-close>Cancel</button>
+      <button type="button" data-close autofocus>Save</button>
+    </dialog>
+    <button type="button" data-toast="toast" data-say="Saved">Save list</button>
+    <div id="toast" class="toast" role="status"></div>
+  </section>
+
+  <section>
+    <h2>Players and sliders</h2>
+    <audio controls src="tone.wav"></audio>
+    <div class="player"><audio src="tone.wav"></audio><button type="button" data-play>Play</button></div>
+    <div class="track"><div class="thumb" role="slider" tabindex="0" aria-label="Beds" aria-valuemin="0" aria-valuemax="10" aria-valuenow="5"></div></div>
+    <input type="range" aria-label="Price" min="0" max="10" value="5">
+  </section>
+
+  <section>
+    <h2>Scrollers, cards and images</h2>
+    <div class="carousel" aria-roledescription="carousel" aria-label="Rooms">
+      <div class="reel"><div>Dorm</div><div>Twin</div><div>Double</div></div>
+      <button type="button" data-step="-1">Previous</button>
+      <button type="button" data-step="1">Next</button>
+    </div>
+    <ul class="cards">
+      <li class="card whole"><a href="pages/b.html">Lisbon</a><p>Twelve hostels by the river</p></li>
+    </ul>
+    <div class="zoomable"><img alt="A map of the old town" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Crect width='10' height='10' fill='%23cde'/%3E%3C/svg%3E"></div>
+    <p><a href="#notes">Read the notes</a></p>
+    <p id="notes">Notes: check in from two.</p>
+  </section>
+
+  <section>
+    <h2>Guides you have read</h2>
+    <ul class="guides">
+      <li><a href="pages/a.html">Porto in a weekend</a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Book</h2>
+    <form class="v" action="pages/b.html" novalidate>
+      <label for="b-name">Name</label>
+      <input id="b-name" name="name" autocomplete="name" required aria-describedby="b-name-error">
+      <span id="b-name-error" class="error"></span>
+      <label for="b-email">Email</label>
+      <input id="b-email" name="email" type="email" autocomplete="email" required aria-describedby="b-email-error">
+      <span id="b-email-error" class="error"></span>
+      <label for="b-nights">Nights</label>
+      <select id="b-nights" name="nights"><option>1</option><option>2</option></select>
+      <fieldset>
+        <legend>Extras</legend>
+        <label><input type="checkbox" class="select-all" aria-controls="x-towel x-lock"> All extras</label>
+        <label><input type="checkbox" id="x-towel" name="towel"> Towel</label>
+        <label><input type="checkbox" id="x-lock" name="lock"> Locker</label>
+      </fieldset>
+      <button>Book</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Sign in</h2>
+    <form class="v" action="pages/a.html" novalidate>
+      <label for="s-email">Email</label>
+      <input id="s-email" name="email" type="email" autocomplete="username" required aria-describedby="s-email-error">
+      <span id="s-email-error" class="error"></span>
+      <label for="s-pass">Password</label>
+      <input id="s-pass" name="password" type="password" autocomplete="current-password" required aria-describedby="s-pass-error">
+      <span id="s-pass-error" class="error"></span>
+      <div class="code" role="group" aria-label="Code">
+        <input name="c1" maxlength="1" inputmode="numeric" aria-label="Digit 1" autocomplete="one-time-code">
+        <input name="c2" maxlength="1" inputmode="numeric" aria-label="Digit 2">
+        <input name="c3" maxlength="1" inputmode="numeric" aria-label="Digit 3">
+      </div>
+      <button>Sign in</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Search</h2>
+    <form role="search" action="pages/b.html">
+      <label for="q">City</label>
+      <input id="q" name="q" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="q-list" data-suggest="q-list" data-status="q-status">
+      <ul id="q-list" role="listbox" aria-label="Cities" hidden></ul>
+      <div id="q-status" role="status" class="visually-hidden"></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Lists</h2>
+    <button type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="m-list">List actions</button>
+    <ul role="menu" id="m-list" hidden>
+      <li role="menuitem" tabindex="-1" data-opens="d-print">Print…</li>
+      <li role="menuitem" tabindex="-1">Duplicate</li>
+      <li role="none">
+        <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" aria-controls="m-share">Share</button>
+        <ul role="menu" id="m-share" hidden>
+          <li role="menuitem" tabindex="-1">By link</li>
+        </ul>
+      </li>
+    </ul>
+    <dialog id="d-print" aria-labelledby="d-print-h">
+      <h2 id="d-print-h">Print this list</h2>
+      <label for="p-copies">Copies</label>
+      <input id="p-copies" type="number" value="1">
+      <button type="button" data-close>Cancel</button>
+      <button type="button" data-close autofocus>Print</button>
+    </dialog>
+    <button type="button" aria-expanded="false" aria-controls="more">More about lists</button>
+    <p id="more" hidden>Lists keep your picks for a year.</p>
+  </section>
+
+  <section>
+    <h2>Elsewhere</h2>
+    <p>Rail times are on <a href="https://example.org/trains">the rail site (opens another site)</a>.</p>
+  </section>
+
+  <dialog id="session" aria-labelledby="session-h">
+    <h2 id="session-h">Your session ends in a minute</h2>
+    <button type="button" data-restart>Stay signed in</button>
+  </dialog>
+</main>
+<div class="banner" role="dialog" aria-label="Cookies">
+  <p>We keep one cookie to remember your list.</p>
+  <button type="button">Dismiss</button>
+</div>
+<footer><p><a href="pages/b.html">About us</a></p></footer>
+<script src="state.js"></script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book a bed</title>
+<!--
+  The form driver's fixture (#302). #book checks its own input and shows its
+  errors 100 ms after a submit, so a driver that reads at once misses them; a
+  good submit goes on to form-next.html 100 ms after. #native leaves its
+  checks to the browser. #busy never settles after a submit. #bare has no
+  submit button and one field, so Enter submits it. #remote posts with
+  fetch() and shows the reply, which its test serves late. #pushy shows its
+  error under a history push, not a new page. #jumpy submits as soon as its
+  select changes. #values holds one field for each rule the driver picks a
+  value by.
+-->
+<style>
+  body { font: 16px/1.5 sans-serif; margin: 2rem; }
+  label, fieldset { display: block; margin-top: 1rem; }
+  .error { color: #b00020; margin: 0; }
+</style>
+</head>
+<body>
+<h1>Book a bed</h1>
+<div id="summary" role="alert" tabindex="-1" hidden></div>
+
+<form id="book" action="form-next.html" novalidate>
+  <label for="given">First name</label>
+  <input id="given" name="given" autocomplete="given-name" required aria-describedby="given-error">
+  <p id="given-error" class="error"></p>
+
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="email" required aria-describedby="email-error">
+  <p id="email-error" class="error"></p>
+
+  <label for="tel">Phone</label>
+  <input id="tel" name="tel" type="tel" autocomplete="section-stay home tel" aria-describedby="tel-error">
+  <p id="tel-error" class="error"></p>
+
+  <label for="guests">Guests</label>
+  <input id="guests" name="guests" type="number" min="1" max="8" aria-describedby="guests-error">
+  <p id="guests-error" class="error"></p>
+
+  <label for="arrive">Arriving</label>
+  <input id="arrive" name="arrive" type="date" required aria-describedby="arrive-error">
+  <p id="arrive-error" class="error"></p>
+
+  <label for="room">Room</label>
+  <select id="room" name="room" required aria-describedby="room-error">
+    <option value="" disabled selected>Choose a room</option>
+    <option value="dorm">Dorm bed</option>
+    <option value="private">Private room</option>
+  </select>
+  <p id="room-error" class="error"></p>
+
+  <fieldset>
+    <legend>Contact me by</legend>
+    <label><input type="radio" name="contact" value="email" required aria-describedby="contact-error"> Email</label>
+    <label><input type="radio" name="contact" value="phone"> Phone</label>
+    <p id="contact-error" class="error"></p>
+  </fieldset>
+
+  <label for="ref">Booking reference, if you have one</label>
+  <input id="ref" name="ref" pattern="[A-Z]{2}[0-9]{4}" aria-describedby="ref-error">
+  <p id="ref-error" class="error"></p>
+
+  <label for="note">Anything else?</label>
+  <textarea id="note" name="note" maxlength="20"></textarea>
+
+  <input type="hidden" name="source" value="fixture">
+  <label for="booked">Booked on (set by us)</label>
+  <input id="booked" name="booked" value="2026-10-15" readonly>
+  <input id="later" name="later" style="display: none">
+  <label for="promo">Promo code (closed)</label>
+  <input id="promo" name="promo" disabled>
+
+  <label><input id="terms" name="terms" type="checkbox" required aria-describedby="terms-error"> I accept the house rules</label>
+  <p id="terms-error" class="error"></p>
+
+  <button>Book</button>
+</form>
+
+<form id="native" action="form-next.html">
+  <label for="native-name">Name</label>
+  <input id="native-name" name="name" autocomplete="name" required>
+  <label for="native-email">Email</label>
+  <input id="native-email" name="email" type="email" autocomplete="email" required>
+  <button>Send</button>
+</form>
+
+<form id="busy">
+  <label for="busy-q">Search</label>
+  <input id="busy-q" name="q">
+  <button>Go</button>
+  <output id="ticks">0</output>
+</form>
+
+<form id="bare" action="form-next.html">
+  <label for="bare-q">Search</label>
+  <input id="bare-q" name="q" type="search">
+</form>
+
+<form id="remote" action="signup" method="post">
+  <label for="remote-email">Email for updates</label>
+  <input id="remote-email" name="email" type="email" autocomplete="email">
+  <button>Sign up</button>
+  <p id="reply" role="status"></p>
+</form>
+
+<form id="pushy" action="form-next.html">
+  <label for="pushy-q">Search</label>
+  <input id="pushy-q" name="q">
+  <button>Go</button>
+  <p id="pushy-error" role="alert"></p>
+</form>
+
+<form id="jumpy" action="form-next.html">
+  <label for="jumpy-sort">Sort by</label>
+  <select id="jumpy-sort" name="sort" onchange="this.form.submit()">
+    <option value="">Best match</option>
+    <option value="price">Price</option>
+  </select>
+  <label for="jumpy-q">Search</label>
+  <input id="jumpy-q" name="q">
+</form>
+
+<form id="values">
+  <input id="v-post" autocomplete="billing postal-code">
+  <input id="v-login" autocomplete="username webauthn">
+  <input id="v-email" type="email" autocomplete="username">
+  <input id="v-born" type="date" autocomplete="bday" required>
+  <input id="v-given" autocomplete="given-name" minlength="5">
+  <input id="v-guests" type="number" min="3" max="8">
+  <input id="v-nights" type="number" min="3">
+  <input id="v-name" required>
+  <input id="v-extra">
+  <input id="v-any" pattern=".+">
+  <input id="v-agree" type="checkbox" required>
+  <input type="radio" name="v-meal" value="veg" required checked>
+  <input type="radio" name="v-meal" value="meat">
+  <select id="v-size" required><option value="s">Small</option><option value="l">Large</option></select>
+  <select id="v-floor"><option value="">Any floor</option><option value="1">First</option></select>
+</form>
+
+<script>
+  const book = document.getElementById("book");
+  const summary = document.getElementById("summary");
+  const given = document.getElementById("given");
+  // How many input events the first name saw: one a key where typed.
+  given.dataset.inputs = "0";
+  given.addEventListener("input", () => { given.dataset.inputs = Number(given.dataset.inputs) + 1; });
+
+  const TEL = /^\+?[\d ()-]{6,}$/;
+  const problem = (el) =>
+    !el.checkValidity() ? el.validationMessage
+      : el.type === "tel" && el.value && !TEL.test(el.value) ? "Enter a phone number, like 020 7946 0958"
+      : null;
+
+  book.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const found = new Map();
+    for (const el of book.elements) {
+      if (!el.name || !el.willValidate || found.has(el.name)) continue;
+      const message = problem(el);
+      if (message) found.set(el.name, { el, message });
+    }
+    setTimeout(() => {
+      for (const el of book.elements) {
+        el.removeAttribute("aria-invalid");
+        const error = document.getElementById(`${el.name}-error`);
+        if (error) error.textContent = "";
+      }
+      if (!found.size) {
+        summary.hidden = true;
+        book.submit();
+        return;
+      }
+      const items = [];
+      for (const [name, { el, message }] of found) {
+        for (const each of book.elements) if (each.name === name) each.setAttribute("aria-invalid", "true");
+        document.getElementById(`${name}-error`).textContent = message;
+        items.push(`<li><a href="#${el.id || name}">${message}</a></li>`);
+      }
+      summary.innerHTML = `<h2>There is a problem</h2><ul>${items.join("")}</ul>`;
+      summary.hidden = false;
+      summary.focus();
+    }, 100);
+  });
+
+  const remote = document.getElementById("remote");
+  remote.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const reply = await fetch(remote.action, { method: "POST", body: new FormData(remote) });
+    document.getElementById("reply").textContent = await reply.text();
+  });
+
+  const pushy = document.getElementById("pushy");
+  pushy.addEventListener("submit", (event) => {
+    event.preventDefault();
+    history.pushState({}, "", "?error=1");
+    document.getElementById("pushy-error").textContent = "No beds match that search";
+  });
+
+  document.getElementById("busy").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const ticks = document.getElementById("ticks");
+    setInterval(() => { ticks.textContent = Number(ticks.textContent) + 1; }, 100);
+  });
+</script>
+</body>
+</html>

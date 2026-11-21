@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>faint</title>
+<!-- Two faults (#197). vault.contrast four times: a #444 patch behind one to three letters of #111 text, 1.94:1, in a
+     short label, a sentence, a paragraph and a longer label, each a small share of its text's box; a fifth label,
+     and the tail ::after generates on it, whose fill the page holds with its own !important rule, cannot be
+     measured. And vault.control-edges twice: a field whose only identifier is Tailwind's gray-50 fill on white,
+     1.045:1, and one in Radix's gray 2 on gray 1, 1.03:1. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff }
+  p { position: relative }
+  p::before { content: ""; position: absolute; background: #444; border-radius: 50% }
+  #label::before { left: 24px; top: 0; width: 26px; height: 24px }
+  #sentence::before { left: 120px; top: 2px; width: 26px; height: 20px }
+  #paragraph::before { left: 40px; top: 26px; width: 26px; height: 20px }
+  #letter::before { left: 60px; top: 4px; width: 14px; height: 14px }
+  #held::before { left: 24px; top: 0; width: 26px; height: 24px }
+  p span { position: relative }
+  #kept::after { content: " too"; -webkit-text-fill-color: #111 !important }
+  ::placeholder { color: #444 }
+  input { border: 0; font: inherit; padding: 8px; width: 240px; display: block; margin-top: 16px }
+</style>
+<p id="label"><span id="short">Short label here</span></p>
+<p id="sentence"><span id="line">A single sentence of about sixty characters on one line.</span></p>
+<p id="paragraph" style="max-width: 600px"><span id="para">A paragraph long enough to wrap onto several lines at either width, with a dark patch behind two or three letters of its second line, the case F83 fails and an allowance by area can hide.</span></p>
+<p id="letter"><span id="one">One letter's patch in a longer label</span></p>
+<p id="held"><span id="kept" style="-webkit-text-fill-color: #111 !important">A label filled by the page</span></p>
+<input id="gray50" style="background: #f9fafb" placeholder="Tailwind gray-50">
+<div style="background: #fcfcfc; padding: 8px; margin-top: 16px"><input id="radix" style="background: #f9f9f9; margin: 0" placeholder="Radix gray 2 on 1"></div>
+</html>

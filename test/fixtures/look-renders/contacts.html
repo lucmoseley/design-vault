@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- look-renders.py's contacts (#228): a 1 px gap at x 150, a clean butt joint at x 150, two
+     circles meeting off the pixel grid, and a piece that moves 100 px right over 1 s, turning green. -->
+<style>
+  body { margin: 0; background: #fff; }
+  .box { position: absolute; height: 40px; }
+  .dot { position: absolute; width: 20px; height: 20px; border-radius: 50%; top: 300.3px; }
+  svg { position: absolute; left: 100px; top: 400px; overflow: visible; }
+  #piece { animation: slide 1000ms linear forwards; }
+  @keyframes slide { from { transform: translateX(0); fill: #c00; } to { transform: translateX(100px); fill: #0a0; } }
+</style>
+</head>
+<body>
+<div class="box" style="left: 100px; top: 100px; width: 50px; background: #c00"></div>
+<div class="box" id="gap-right" style="left: 151px; top: 100px; width: 50px; background: #00c"></div>
+<div class="box" id="clean-left" style="left: 100px; top: 200px; width: 50px; background: #c00"></div>
+<div class="box" style="left: 150px; top: 200px; width: 50px; background: #00c"></div>
+<div class="dot" style="left: 100.3px; background: #c00"></div>
+<div class="dot" style="left: 120.3px; background: #00c"></div>
+<svg width="200" height="40"><rect id="piece" x="0" y="0" width="40" height="40" fill="#c00"/></svg>
+</body>
+</html>

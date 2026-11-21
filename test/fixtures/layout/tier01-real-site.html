@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- A site built as sites are (#311's spec review): a promo strip over the header, a capped intro column, centred copy, a row of feature cards, footer link columns. check-layout.py --records --brief kind=site faults only its cramped feature cards and over-long intro (vault.line-length) and its untoggled footer groups (vault.footer-narrow). -->
+<style>
+body{margin:0;font:16px/1.5 sans-serif}
+.promo{background:#222;color:#fff;padding:8px 16px}
+header{display:flex;justify-content:space-between;padding:12px 24px}
+header ul{display:flex;gap:16px;list-style:none;margin:0;padding:0}
+main{display:block}
+.wrap{max-width:1200px;margin-inline:auto;padding:0 24px}
+.intro{max-width:640px}
+.feature-list{display:flex;gap:24px;list-style:none;padding:0}
+.feature-list li{flex:1}
+.centred{padding:0 24px;text-align:center}
+h2.c{text-align:center}
+footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+footer nav ul{list-style:none;padding:0}
+</style></head><body>
+<div class="promo">Free breakfast this week</div>
+<header role="banner"><a href="/">Hostel</a><nav aria-label="Main"><ul><li><a href="/a">Rooms</a></li><li><a href="/b">Food</a></li><li><a href="/c">Book</a></li></ul></nav></header>
+<main>
+<section class="wrap"><div class="intro"><h1>Sleep well in Lisbon</h1><p>A short intro paragraph that sits in a left aligned column of about forty em in width, under the heading, so it reads well on every screen size we sweep.</p></div></section>
+<section class="wrap"><h2 class="c">Why stay</h2><div class="centred"><p>Centred copy under a centred heading.</p></div>
+<ul class="feature-list"><li><h3>Beds</h3><p>Comfortable bunks with curtains, a reading light and a plug for every guest in every dorm we run.</p></li><li><h3>Kitchen</h3><p>A shared kitchen with everything you need to cook a proper meal for yourself and your new friends.</p></li><li><h3>Garden</h3><p>A quiet garden with hammocks and shade where you can rest after a long day of walking the hills.</p></li></ul></section>
+</main>
+<footer><div class="wrap cols">
+<nav aria-label="Company"><h3>Company</h3><ul><li><a href="/1">About</a></li><li><a href="/2">Jobs</a></li><li><a href="/3">Press</a></li></ul></nav>
+<nav aria-label="Help"><h3>Help</h3><ul><li><a href="/4">FAQ</a></li><li><a href="/5">Contact</a></li><li><a href="/6">Policies</a></li></ul></nav>
+</div></footer>
+</body></html>

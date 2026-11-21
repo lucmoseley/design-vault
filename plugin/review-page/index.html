@@ -1,0 +1,85 @@
+<title>Review page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a contact sheet — one frame per item in a wrapping grid, a grease-pencil mark for each answer, the set's own note at the foot. */
+:root {
+  --paper: #edf0f1; --frame: #ffffff; --ink: #1b2226; --dim: #58646b; --rule: #cdd4d8;
+  --pencil: #b8361f; --keep: #2c6a52; --focus: #2d5fa8;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #13181b; --frame: #1c2327; --ink: #e4eaed; --dim: #9aa7ae; --rule: #333f45;
+  --pencil: #ff7a5c; --keep: #6cc4a0; --focus: #7fa8ea; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #13181b; --frame: #1c2327; --ink: #e4eaed; --dim: #9aa7ae; --rule: #333f45;
+  --pencil: #ff7a5c; --keep: #6cc4a0; --focus: #7fa8ea; color-scheme: dark }
+[hidden] { display: none !important; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(28px, 4.5vw, 42px); line-height: 1.1; }
+h2 { font-size: 22px; }
+p { margin: 0; max-width: 68ch; }
+.intro { color: var(--dim); white-space: pre-line; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--paper); border-bottom: 1px solid var(--rule);
+  padding-block: 8px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--dim); }
+.bar b { color: var(--ink); font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+.figure { margin: 0; justify-self: start; max-width: 100%; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+.figure img { max-width: 100%; height: auto; display: block; }
+.problems { border: 2px solid var(--pencil); padding: 12px 16px; display: grid; gap: 6px; }
+.problems ul { margin: 0; padding-left: 20px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.card { background: var(--frame); border: 1px solid var(--rule); border-radius: 3px; display: flex; flex-direction: column; min-width: 0; }
+.card[data-mark-tone="yes"] { outline: 3px solid var(--keep); outline-offset: -1px; }
+.card[data-mark-tone="no"] { outline: 3px solid var(--pencil); outline-offset: -1px; }
+.card.leader { box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--ink); }
+.shot { display: grid; place-items: center; background: #000; aspect-ratio: 4 / 3; max-width: 100%; overflow: hidden; border-radius: 3px 3px 0 0;
+  color: #fff; text-decoration: none; font: 500 14px var(--body); }
+.shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.shot .out { border: 1px solid currentColor; padding: 8px 14px; border-radius: 3px; }
+.body { padding: 10px 12px 12px; display: grid; gap: 8px; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.id { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+.name { font-weight: 600; font-size: 16px; }
+.line { font-size: 14px; color: var(--dim); }
+.tag { justify-self: start; font: 500 12px var(--mono); color: var(--pencil); border: 1px solid currentColor; border-radius: 3px; padding: 1px 6px; }
+.marks { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: 500 13px var(--body); padding: 6px 12px; border-radius: 3px; border: 1px solid var(--rule); background: var(--frame); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--ink); }
+button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--frame); }
+button[data-tone="yes"][aria-pressed="true"] { background: var(--keep); border-color: var(--keep); }
+button[data-tone="no"][aria-pressed="true"] { background: var(--pencil); border-color: var(--pencil); }
+button:disabled, textarea:disabled { opacity: .55; cursor: default; }
+button:focus-visible, textarea:focus-visible, .shot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+textarea { width: 100%; box-sizing: border-box; min-height: 56px; resize: vertical; font: 14px/1.4 var(--body); padding: 6px 8px;
+  border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink); }
+.status { font-size: 12px; color: var(--dim); min-height: 1.2em; }
+.status.failed { color: var(--pencil); }
+.set { background: var(--frame); border: 1px solid var(--rule); border-top: 3px solid var(--ink); padding: 14px 16px; display: grid; gap: 10px; }
+.set textarea { min-height: 96px; }
+.foot { font-size: 13px; color: var(--dim); }
+@media (prefers-reduced-motion: no-preference) { .card { transition: outline-color .15s, box-shadow .15s; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1 id="title">Loading the review…</h1>
+    <p class="intro" id="intro"></p>
+    <figure class="figure" id="figure" hidden></figure>
+  </header>
+  <div class="bar" role="status"><span id="marked"><b id="done">0</b> of <b id="total">0</b> marked</span><span id="leader-tally" hidden></span><span id="conn">Connecting…</span></div>
+  <div class="problems" id="problems" hidden><h2>This review page cannot show its items</h2><ul id="problem-list"></ul></div>
+  <main class="grid" id="cards"></main>
+  <section class="set" id="set" hidden>
+    <h2 id="set-title">The whole set</h2>
+    <div class="marks" id="none-pick" hidden></div>
+    <div id="set-box" style="display:grid;gap:8px"><label id="set-ask"></label></div>
+  </section>
+  <p class="foot" id="foot" hidden>Claude reads your answers from this page; you do not need to repeat them in chat.</p>
+</div>
+
+<script src="review.js"></script>
+<script src="page.js"></script>

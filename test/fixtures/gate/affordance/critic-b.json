@@ -1,0 +1,109 @@
+{
+ "answers": {
+  "pill": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic b on p1"
+     },
+     "p2": {
+      "answer": "Yes",
+      "evidence": "critic b on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic b on vault.edge-look"
+   }
+  },
+  "hidden": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic b on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic b on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic b on vault.edge-look"
+   }
+  },
+  "minor": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic b on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic b on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic b on vault.edge-look"
+   }
+  },
+  "split": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic b on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic b on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic b on vault.edge-look"
+   }
+  },
+  "clean": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic b on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic b on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "Minor: the footer rule is a shade light"
+   }
+  },
+  "unlisted": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic b on p1"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic b on vault.edge-look"
+   }
+  }
+ },
+ "clashes": []
+}

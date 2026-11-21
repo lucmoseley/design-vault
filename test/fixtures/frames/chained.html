@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- A build chained by finish events (design-vault#259): the top bar grows for
+     400 ms, and only its finish event starts the bottom bar's growth.
+     Paused when found, the top bar never finishes, so a seek never reaches the
+     bottom bar. The bottom bar holds no end state and runs 200 ms, under
+     check-frames.py's QUIET_MS, so it has left the page's animations before
+     the probe's window closes. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { width: 400px; height: 40px; margin: 40px; background: #2a2a2a; transform-origin: left; transform: scaleX(0.2); }
+</style></head>
+<body>
+<div id="top"></div>
+<div id="bottom"></div>
+<script>
+const grow = (id, timing) => document.getElementById(id).animate([{ transform: "scaleX(0.2)" }, { transform: "none" }], timing);
+grow("top", { duration: 400, fill: "forwards" }).onfinish = () => grow("bottom", { duration: 200 });
+</script>
+</body></html>

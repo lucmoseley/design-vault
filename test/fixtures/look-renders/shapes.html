@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- look-renders.py's bends (#228) on shapes other than a plain path, each SVG drawn 1 unit to the CSS px from the page's top left
+     unless it says otherwise:
+     a circle of radius 10; an ellipse of radii 20 and 10, tightest at (130, 50) or (170, 50), radius 10²/20 = 5;
+     a rect with 8 px corners, radius 8; check-curves.test.js's run of five straight segments, moved by (50, 150), sharpest at (79.5, 153.5);
+     y = x² stretched by a viewBox squeezed to 10 px a unit across and 5 down, so y = x²/20, vertex (410, 155), radius 10;
+     and a path whose data breaks after its first line. -->
+<style>
+  body { margin: 0; background: #fff; }
+  svg { position: absolute; left: 0; top: 0; overflow: visible; }
+  #stretched { left: 300px; top: 150px; }
+</style>
+</head>
+<body>
+<svg width="600" height="300">
+  <circle id="dot" cx="50" cy="50" r="10" fill="none" stroke="#000"/>
+  <ellipse id="oval" cx="150" cy="50" rx="20" ry="10" fill="none" stroke="#000"/>
+  <rect id="card" x="200" y="30" width="60" height="40" rx="8" fill="none" stroke="#000"/>
+  <rect id="square" x="280" y="30" width="40" height="40" fill="none" stroke="#000"/>
+  <polyline id="run" points="50,150 60,150 69.9,151 79.5,153.5 88,158 95,164" fill="none" stroke="#000"/>
+  <path id="broken" d="M 400 30 L 420 50 X 5" fill="none" stroke="#000"/>
+</svg>
+<svg id="stretched" width="220" height="110" viewBox="-11 -1 22 22" preserveAspectRatio="none">
+  <path id="parabola" d="M -10 100 Q 0 -100 10 100" fill="none" stroke="#000" stroke-width="0.2"/>
+</svg>
+</body>
+</html>

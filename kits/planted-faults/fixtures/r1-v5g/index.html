@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v5 House colours · MMM Infra identity round 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white: #ffffff;
+  --grey: #404040;         /* logo grey: the arches, all text, the button's hover */
+  --blue: #0070c0;         /* logo blue: the wordmark, links, the one button */
+  --quiet: #5c5c5c;        /* second text */
+  --hair: #dedede;         /* hairlines */
+  --mist: #f3f6f9;         /* the portrait stand-in only */
+  --serif: "Gelasio", Georgia, serif;
+  --sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --quick: cubic-bezier(0.3, 0, 0.1, 1);
+  --gutter: 56px;
+  --inset: max(var(--gutter), calc((100% - 1168px) / 2));
+}
+* { box-sizing: border-box; }
+html { background: var(--white); scrollbar-color: var(--hair) var(--white); }
+body { margin: 0; min-height: 100vh; background: var(--white); color: var(--grey); font-family: var(--serif); font-size: 19px; line-height: 1.6; }
+::selection { background: var(--blue); color: var(--white); }
+a { color: var(--blue); text-underline-offset: 4px; text-decoration-thickness: 1px; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+.top { display: flex; justify-content: space-between; align-items: center; padding: 26px var(--inset); border-bottom: 1px solid var(--hair); }
+.lockup { display: flex; align-items: center; gap: 22px; text-decoration: none; }
+.lockup .markcol { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lockup svg { width: 92px; height: auto; color: var(--grey); }
+.lockup .mmm { font-family: var(--serif); font-weight: 700; color: var(--blue); font-size: 13px; letter-spacing: .04em; }
+.lockup .full { font-family: var(--serif); font-weight: 700; color: var(--blue); font-size: 14px; line-height: 1.12; letter-spacing: .02em; }
+.top nav { display: flex; gap: 32px; font-family: var(--sans); font-size: 16px; }
+.top nav a { color: var(--grey); text-decoration: none; }
+.top nav a:hover { color: var(--blue); }
+
+/* The hero: words wide on the left, Mark at full height off the right edge, narrower. */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) 31%; column-gap: 64px; min-height: clamp(560px, calc(100svh - 132px), 760px); padding-left: var(--inset); border-bottom: 1px solid var(--hair); }
+.hero-copy { align-self: center; padding: 72px 0 80px; }
+h1 { font-weight: 600; font-size: clamp(38px, 5.15vw, 76px); line-height: 1.04; letter-spacing: -0.02em; margin: 0 0 30px; }
+h1 .ln { display: block; overflow: hidden; padding-bottom: .08em; }
+h1 .ln > span { display: block; white-space: nowrap; }
+.play h1 .ln > span { animation: up 500ms var(--quick) both; }
+.play h1 .ln:nth-child(2) > span { animation-delay: 80ms; }
+@keyframes up { from { transform: translateY(105%); } to { transform: translateY(0); } }
+.lead { font-size: 21px; line-height: 1.55; margin: 0 0 38px; max-width: 31em; }
+.btn { display: inline-flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 24px; background: var(--blue); color: var(--white); font-family: var(--sans); font-weight: 600; font-size: 17px; text-decoration: none; border: 0; cursor: pointer; }
+.btn:hover { background: var(--grey); }
+.btn svg { width: 20px; height: 10px; }
+.portrait { background: var(--mist); display: flex; align-items: flex-end; padding: 22px 24px; font-family: var(--sans); font-size: 14px; line-height: 1.45; color: var(--quiet); }
+.portrait span { max-width: 26ch; }
+
+.wrap { padding: 0 var(--inset); }
+h2 { font-family: var(--sans); font-weight: 600; font-size: 15px; letter-spacing: .02em; margin: 0 0 18px; color: var(--grey); }
+.board { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 72px 48px; padding: 80px 0 104px; }
+.col-5 { grid-column: span 5; } .col-7 { grid-column: span 7; } .col-12 { grid-column: span 12; }
+
+.swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.chip { height: 60px; box-shadow: inset 0 0 0 1px var(--hair); }
+.sw { font-family: var(--sans); font-size: 14px; line-height: 1.45; color: var(--quiet); }
+.sw b { display: block; color: var(--grey); font-weight: 600; margin-top: 8px; }
+.note { font-family: var(--sans); font-size: 15px; color: var(--quiet); margin: 16px 0 0; }
+
+.texture { height: 200px; display: grid; place-items: center; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.texture svg { width: 70%; height: auto; }
+
+.pair { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px 48px; }
+.spec { margin: 0; }
+.spec .big { display: block; font-size: 56px; line-height: 1.05; font-weight: 600; letter-spacing: -0.02em; }
+.spec .sans { display: block; font-family: var(--sans); font-size: 34px; line-height: 1.2; }
+.spec small { display: block; font-family: var(--sans); font-size: 15px; color: var(--quiet); margin-top: 10px; max-width: 46ch; }
+
+article.spec-post h3 { font-weight: 600; font-size: 34px; line-height: 1.15; letter-spacing: -0.01em; margin: 0 0 10px; max-width: 17em; text-wrap: balance; }
+article.spec-post h3 .nb { white-space: nowrap; }
+article.spec-post .byline { font-family: var(--sans); font-size: 15px; color: var(--quiet); margin: 0 0 24px; }
+article.spec-post p { margin: 0 0 18px; max-width: 64ch; }
+blockquote { margin: 8px 0 24px; padding: 0; font-style: italic; font-size: 27px; line-height: 1.35; color: var(--blue); max-width: 28ch; }
+.doc { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--hair); padding: 14px 0 0; font-family: var(--sans); font-size: 16px; }
+.doc a { font-weight: 600; }
+.doc span { color: var(--quiet); white-space: nowrap; }
+
+.motion { border-top: 1px solid var(--hair); padding-top: 22px; }
+.motion .words { font-size: 28px; font-weight: 600; margin: 0 0 14px; letter-spacing: -0.01em; }
+.curve { width: 100%; max-width: 220px; height: auto; display: block; }
+.motion p { font-family: var(--sans); font-size: 15px; color: var(--quiet); margin: 10px 0 0; }
+.motion code { font-family: var(--sans); font-weight: 600; color: var(--grey); }
+table { border-collapse: collapse; width: 100%; font-family: var(--sans); font-size: 14px; margin-top: 14px; font-variant-numeric: tabular-nums; }
+td + td, th + th { white-space: nowrap; }
+th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--hair); vertical-align: top; }
+.replay { margin-top: 16px; padding: 0; background: none; border: 0; font: 600 16px/1.4 var(--sans); color: var(--blue); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; cursor: pointer; }
+.replay:hover { color: var(--grey); }
+
+@media (max-width: 1100px) {
+  :root { --gutter: 40px; }
+  .hero { column-gap: 48px; }
+}
+@media (max-width: 760px) {
+  :root { --gutter: 20px; }
+  .top { padding: 18px var(--gutter); flex-wrap: wrap; gap: 14px; }
+  .hero { grid-template-columns: minmax(0, 1fr); min-height: 0; padding-left: 0; }
+  .hero-copy { padding: 44px var(--gutter) 40px; }
+  h1 .ln > span { white-space: normal; }
+  .portrait { margin-left: 28%; aspect-ratio: 3 / 4; }
+  .board { padding: 56px 0 72px; gap: 52px; grid-template-columns: minmax(0, 1fr); }
+  .board > *, .pair > * { grid-column: 1 / -1; }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .lockup .full { display: none; }
+  .top nav { gap: 16px; font-size: 15px; }
+  .lead { font-size: 19px; }
+  .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .doc { flex-direction: column; gap: 4px; }
+  .doc span { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play h1 .ln > span { animation: none; }
+}
+</style>
+<style>.slides{display:flex;align-items:center;gap:14px;margin-top:40px;font:500 15px 'Source Sans 3',sans-serif;color:#404040}.slides button{width:40px;height:40px;border:1px solid #404040;border-radius:50%;background:#fff;font-size:22px;line-height:1;cursor:pointer;color:#404040}.slides .dots{display:flex;gap:8px}.slides .dots i{width:9px;height:9px;border-radius:50%;background:#dedede}.slides .dots i.on{background:#0070c0}
+.top nav a[aria-current]{color:var(--blue)}
+#replay .deco{width:15px;height:15px;vertical-align:-2px;margin-right:7px;color:#0070c0}
+@media (min-width:761px){.hero{grid-template-columns:minmax(0,1fr) 55%!important}h1 .ln>span{white-space:normal}}</style></head>
+<body>
+<header class="top">
+  <a class="lockup" href="#" aria-label="MMM Infra, Moseley Infrastructure Advisory Services, home">
+    <span class="markcol">
+      <svg viewBox="20 40 708 240" aria-hidden="true"><g fill="currentColor"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></g></svg>
+      <span class="mmm">MMM INFRA</span>
+    </span>
+    <span class="full">MOSELEY<br>INFRASTRUCTURE<br>ADVISORY SERVICES</span>
+  </a>
+  <nav aria-label="Main"><a href="#" aria-current="page">Profile</a><a href="#">Articles</a><a href="#">Blog</a><a href="#">Contact</a></nav>
+</header>
+
+<main>
+  <section class="hero" aria-label="Homepage opening, specimen">
+    <div class="hero-copy">
+      <h1 id="sketch-target"><span class="ln"><span>Mark M.&nbsp;Moseley,</span></span><span class="ln"><span>infrastructure advisor</span></span></h1>
+      <p class="lead">Advice on infrastructure projects and the laws that enable them, from a former Lead Lawyer in the World Bank's PPP Group. Over 40 years of international infrastructure experience.</p>
+      <a class="btn" href="mailto:Mark.Moseley@MMMinfra.com">Get In Touch <svg viewBox="0 0 20 10" aria-hidden="true"><path d="M0 5H18M14 1L18 5L14 9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></a><div class="slides"><button type="button" aria-label="Previous slide">&#8249;</button><span class="dots"><i class="on"></i><i></i><i></i><i></i></span><span class="count">1 / 4</span><button type="button" aria-label="Next slide">&#8250;</button></div>
+    </div>
+    <div class="portrait" role="img" aria-label="Stand-in for a full-height photograph of Mark"><span>Stand-in: Mark at full height, a photograph or a still from a short film of him. Image round comes later.</span></div>
+  </section>
+
+  <div class="wrap"><div class="board">
+    <section class="col-7" aria-labelledby="h-pal">
+      <h2 id="h-pal">Palette</h2>
+      <div class="swatches">
+        <div class="sw"><div class="chip" style="background:#ffffff"></div><b>White</b>#FFFFFF · ground</div>
+        <div class="sw"><div class="chip" style="background:#404040"></div><b>Logo grey</b>#404040 · arches, all text, button hover</div>
+        <div class="sw"><div class="chip" style="background:#0070c0"></div><b>Logo blue</b>#0070C0 · wordmark, links, the button</div>
+        <div class="sw"><div class="chip" style="background:#5c5c5c"></div><b>Quiet</b>#5C5C5C · second text</div>
+        <div class="sw"><div class="chip" style="background:#dedede"></div><b>Hairline</b>#DEDEDE · rules</div>
+        <div class="sw"><div class="chip" style="background:#f3f6f9"></div><b>Mist</b>#F3F6F9 · the portrait stand-in only</div>
+      </div>
+      <p class="note">The logo's own two colours, measured from the current files (brand sheet §2), on white and nothing else.</p>
+    </section>
+    <section class="col-5" aria-labelledby="h-tex">
+      <h2 id="h-tex">Texture</h2>
+      <div class="texture" aria-label="Texture: none but the mark itself on white">
+        <svg viewBox="20 40 708 240" aria-hidden="true"><g fill="#404040"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></g></svg>
+      </div>
+      <p class="note">No texture: white space and the mark are the material.</p>
+    </section>
+
+    <section class="col-12" aria-labelledby="h-type">
+      <h2 id="h-type">Type Pair</h2>
+      <div class="pair">
+        <p class="spec col-7"><span class="big">Gelasio</span><small>Display and reading. An open-source face drawn to Georgia's proportions, so the site and the logo's Georgia wordmark speak in one voice. SemiBold for headings, Regular 19/30 for text.</small></p>
+        <p class="spec col-5"><span class="sans">Source Sans 3</span><small>The nav, buttons, labels and dates only.</small></p>
+      </div>
+    </section>
+
+    <section class="col-7" aria-labelledby="h-art">
+      <h2 id="h-art">An Article Page</h2>
+      <article class="spec-post">
+        <h3>The World's Best <span class="nb">Public-Private</span> Partnership Law</h3>
+        <p class="byline">MMM Infra Blog No. 8 · 18 September 2024</p>
+        <p>Recently, a client with a development agency asked me “What is the best Public-Private Partnership Law in the world?”</p>
+        <blockquote>“Whichever PPP Law I am currently working on with a client country!”</blockquote>
+        <p>On a more serious note however, the question did cause me to reflect on the elements that make a PPP Law particularly effective.</p>
+        <div class="doc"><a href="#">Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge</a><span>Lecture · 23 April 2026 · PDF</span></div>
+      </article>
+    </section>
+
+    <section class="col-5" aria-labelledby="h-mot">
+      <h2 id="h-mot">Motion Sketch</h2>
+      <div class="motion">
+        <p class="words">precise, light, quick</p>
+        <svg class="curve" viewBox="-10 -10 220 220" role="img" aria-label="Easing curve cubic-bezier(0.3, 0, 0.1, 1)"><rect width="200" height="200" fill="none" stroke="#dedede"/><path d="M0 200C60 200 20 0 200 0" fill="none" stroke="#0070c0" stroke-width="2.5"/></svg>
+        <p>Easing <code>cubic-bezier(0.3, 0, 0.1, 1)</code> — brisk out of rest, a long soft landing.</p>
+        <table aria-label="Timeline">
+          <thead><tr><th>Element</th><th>Start</th><th>Length</th><th>Easing</th></tr></thead>
+          <tbody>
+            <tr><td>Heading, line 1, rises out of its mask</td><td>0 ms</td><td>500 ms</td><td>quick</td></tr>
+            <tr><td>Heading, line 2</td><td>80 ms</td><td>500 ms</td><td>quick</td></tr>
+          </tbody>
+        </table>
+        <p>Total 580 ms: UI moves inside 100–500 ms each (#13, F5). At phone width line 2 wraps inside its own mask and rises as one block. Reduced motion: the heading is simply there.</p>
+        <button class="replay" type="button" id="replay"><svg class="deco" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.5 8.5L23 12l-8.5 2.5L12 23l-2.5-8.5L1 12l8.5-2.5z" fill="currentColor"/></svg>Play Again</button>
+      </div>
+    </section>
+  </div></div>
+</main>
+<script>
+  const root = document.body;
+  function play() { root.classList.remove('play'); void root.offsetWidth; root.classList.add('play'); }
+  document.getElementById('replay').addEventListener('click', play);
+  play();
+</script>
+</body>
+</html>

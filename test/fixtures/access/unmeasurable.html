@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>unmeasurable</title>
+<!-- No fault, but two questions cannot be measured. vault.contrast: a heading filled with a gradient, and a caption
+     over a canvas. vault.pause: the canvas draws a square moving forever, which no animation the browser lists
+     drives, and a script moves a dot by rewriting its style each frame. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .shine { font-size: 40px; background: linear-gradient(90deg, #0a3542, #08706f); background-clip: text; -webkit-background-clip: text; color: transparent }
+  .stage { position: relative; width: 300px; height: 120px }
+  canvas { display: block; width: 300px; height: 120px; background: #000 }
+  .over { position: absolute; left: 16px; bottom: 16px; margin: 0; color: #fff }
+  .drift { display: block; width: 16px; height: 16px; background: #0a3542 }
+</style>
+<h1 class="shine">A shining heading</h1>
+<div class="stage"><canvas width="300" height="120"></canvas><p class="over">A caption on the stage</p></div>
+<span class="drift"></span>
+<script>
+  const ink = document.querySelector('canvas').getContext('2d');
+  let x = 0;
+  (function draw() {
+    ink.fillStyle = '#000';
+    ink.fillRect(0, 0, 300, 120);
+    ink.fillStyle = '#08706f';
+    ink.fillRect((x = (x + 2) % 280), 10, 20, 20);
+    document.querySelector('.drift').style.transform = `translateX(${x}px)`;
+    requestAnimationFrame(draw);
+  })();
+</script>

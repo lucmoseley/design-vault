@@ -1,0 +1,33 @@
+{
+  "answers": {
+    "v1-arches": {
+      "vault.edge-look": {
+        "answer": "Yes",
+        "evidence": "critic b on vault.edge-look"
+      },
+      "vault.tone-look": {
+        "answer": "No",
+        "evidence": "critic b on vault.tone-look"
+      },
+      "vault.focus": {
+        "answer": "Yes",
+        "evidence": "critic b on vault.focus"
+      }
+    },
+    "v2-water": {
+      "vault.edge-look": {
+        "answer": "No",
+        "evidence": "critic b on vault.edge-look"
+      },
+      "vault.tone-look": {
+        "answer": "Unsure",
+        "evidence": "critic b on vault.tone-look"
+      },
+      "vault.contrast": {
+        "answer": "No",
+        "evidence": "critic b on vault.contrast"
+      }
+    }
+  },
+  "clashes": []
+}

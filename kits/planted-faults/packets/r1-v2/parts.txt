@@ -1,0 +1,51 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "MMM Infra, home"  acts: link -> #
+p2  "PROFILE"  acts: link -> #
+p3  "ARTICLES"  acts: link -> #
+p4  "BLOG"  acts: link -> #
+p5  "CONTACT"  acts: link -> #
+p6  "MMM-GA-001"  static  (could look actable: a link's colour)
+p7  "NTS"  static  (could look actable: a link's colour)
+p8  "MARK M. MOSELEY"  static  (could look actable: a link's colour)
+p9  "NTS"  static  (could look actable: a link's colour)
+p10  "Advice on infrastructure projects and the laws that enable them, from…"  static  (could look actable: a link's colour)
+p11  "WRITE TO MARK"  acts: link -> mailto:Mark.Moseley@MMMinfra.com
+p12  "PALETTE"  static  (could look actable: a link's colour)
+p13  "DIAZO BLUE"  static  (could look actable: a link's colour)
+p14  "#1F4F8F"  static  (could look actable: a link's colour)
+p15  "LINEWORK"  static  (could look actable: a link's colour)
+p16  "#E8F0FA"  static  (could look actable: a link's colour)
+p17  "SODIUM AMBER"  static  (could look actable: a link's colour)
+p18  "#F2A93B"  static  (could look actable: a link's colour)
+p19  "NOTE BLUE"  static  (could look actable: a link's colour)
+p20  "#B9CDE6"  static  (could look actable: a link's colour)
+p21  "TABLE"  static  (could look actable: a link's colour)
+p22  "#173D70"  static  (could look actable: a link's colour)
+p23  "AMBER INK"  static  (could look actable: a link's colour)
+p24  "#1A2C45"  static  (could look actable: a link's colour)
+p25  "TEXTURE"  static  (could look actable: a link's colour)
+p26  "Texture: blueprint grid with earth hatch, solid poche and a dimension…"  static  (could look actable: draws its own box)
+p27  "TYPE PAIR"  static  (could look actable: a link's colour)
+p28  "OVERPASS"  static  (could look actable: a link's colour)
+p29  "Overpass Mono 1:50"  static  (could look actable: a link's colour)
+p30  "AN ARTICLE PAGE"  static  (could look actable: a link's colour)
+p31  "The World's Best Public-Private Partnership Law"  static  (could look actable: a link's colour)
+p32  "Recently, a client with a development agency asked me “What is the be…"  static  (could look actable: a link's colour)
+p33  "“Whichever PPP Law I am currently working on with a client country!”"  static  (could look actable: a link's colour)
+p34  "On a more serious note however, the question did cause me to reflect …"  static  (could look actable: a link's colour)
+p35  "Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge"  acts: link -> #
+p36  "MOTION SKETCH"  static  (could look actable: a link's colour)
+p37  "CUTMEASUREDEXACT"  static  (could look actable: a link's colour)
+p38  "cubic-bezier(0.65, 0, 0.35, 1)"  static  (could look actable: a link's colour)
+p39  "The poche wipes along the cut, left to right (clip-path)"  static  (could look actable: a link's colour)
+p40  "0 ms"  static  (could look actable: a link's colour)
+p41  "900 ms"  static  (could look actable: a link's colour)
+p42  "plot"  static  (could look actable: a link's colour)
+p43  "Daylight falls through the third bay"  static  (could look actable: a link's colour)
+p44  "600 ms"  static  (could look actable: a link's colour)
+p45  "500 ms"  static  (could look actable: a link's colour)
+p46  "plot"  static  (could look actable: a link's colour)
+p47  "REPLAY THE CUT"  acts: button

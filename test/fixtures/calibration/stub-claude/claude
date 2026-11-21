@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+"use strict";
+// A stand-in for `claude` that calibration-critic.test.js names in WFC_CLAUDE_BIN (#168). It logs each call to STUB_LOG, replies
+// with STUB_REPLY's text where given in a round folder (one holding candidates/), and otherwise acts out a child reading every .md path its prompt names, and
+// control.md in its working folder, as STUB_MODE says: "confined" reads only inside its working folder and any
+// --add-dir, "leak" reads everything, "blind" reads nothing, and "no-add-dir" ignores --add-dir.
+const fs = require("node:fs");
+const path = require("node:path");
+
+const args = process.argv.slice(2);
+if (args[0] === "--version") {
+  console.log(process.env.STUB_VERSION ?? "2.1.299 (Claude Code)");
+  process.exit(0);
+}
+const prompt = fs.readFileSync(0, "utf8");
+if (process.env.STUB_LOG) fs.appendFileSync(process.env.STUB_LOG, `${JSON.stringify({ args, cwd: process.cwd(), prompt })}\n`);
+const emit = (event) => console.log(JSON.stringify(event));
+emit({ type: "system", subtype: "init" });
+if (process.env.STUB_REPLY && fs.existsSync("candidates")) {
+  emit({ type: "result", result: fs.readFileSync(process.env.STUB_REPLY, "utf8") });
+  process.exit(0);
+}
+const mode = process.env.STUB_MODE ?? "confined";
+const at = args.indexOf("--add-dir");
+const dirs = [process.cwd(), ...(at >= 0 && mode !== "no-add-dir" ? [args[at + 1]] : [])];
+const readable = (file) => mode === "leak" || (mode !== "blind" && dirs.some((d) => path.resolve(file).startsWith(d + path.sep)));
+let said = "";
+for (const file of [path.join(process.cwd(), "control.md"), ...[...prompt.matchAll(/(\/\S+?\.md)\b/g)].map((m) => m[1])]) {
+  if (readable(file) && fs.existsSync(file)) {
+    const text = fs.readFileSync(file, "utf8");
+    emit({ type: "user", message: { content: [{ type: "tool_result", content: text }] } });
+    said += `${file}: ${text}`;
+  } else said += `${file}: permission denied\n`;
+}
+emit({ type: "result", result: said });

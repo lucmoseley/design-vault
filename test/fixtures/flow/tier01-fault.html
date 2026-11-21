@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion records, one fault each</title>
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff; }
+  section { padding: 40px; }
+  .spacer { height: 1400px; }
+  /* vault.pause: a loader that spins forever with no control to stop it. */
+  .spinner { width: 40px; height: 40px; border: 4px solid #999; border-top-color: #111; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  /* vault.flash-limit: a 400 px square strobing black and white at 10 a second for 3 s. */
+  .strobe { width: 400px; height: 400px; animation: strobe 100ms steps(1) 30; }
+  @keyframes strobe { 0% { background: #000; } 50% { background: #fff; } }
+  /* vault.motion-frequency: a button whose hover fades over 400 ms. */
+  .buy { background: #1d4ed8; color: #fff; border: 0; padding: 12px 20px; transition: background-color 400ms; }
+  .buy:hover { background-color: #1e3a8a; }
+  /* vault.slow-update: a transition outside @media (update: fast). */
+  .note { transition: opacity 300ms; }
+  .carousel { width: 600px; height: 200px; overflow: hidden; position: relative; }
+  .track { display: flex; height: 100%; }
+  .slide { flex: 0 0 600px; height: 100%; display: grid; place-items: center; background: #eef; }
+  .layer { height: 300px; background-image: linear-gradient(#fecaca, #7f1d1d); }
+  .reveal { opacity: 0; transition: opacity 300ms; }
+  .reveal.in { opacity: 1; }
+  .card { width: 160px; height: 100px; background: #fde68a; touch-action: none; user-select: none; }
+  .lane { width: 800px; height: 120px; }
+</style>
+</head>
+<body>
+<section>
+  <h1>Motion records</h1>
+  <div class="spinner" data-record="vault.pause"></div>
+  <div class="strobe" data-record="vault.flash-limit"></div>
+  <p class="note" data-record="vault.slow-update">A note.</p>
+  <button class="buy" data-record="vault.motion-frequency">Buy</button>
+</section>
+<!-- vault.carousel-timing: advances every 2 s at every width, and never pauses. -->
+<section>
+  <div class="carousel" data-record="vault.carousel-timing">
+    <div class="track"><div class="slide">One</div><div class="slide">Two</div><div class="slide">Three</div></div>
+    <button class="next" aria-label="Next slide">›</button>
+  </div>
+</section>
+<!-- vault.drag-release: a card that settles on the snap point nearest where it was let go. -->
+<section>
+  <div class="lane"><div class="card" data-record="vault.drag-release">Drag me</div></div>
+</section>
+<!-- vault.parallax: a heading that drifts at 0.4 of the scroll. -->
+<section><h2 class="drift" data-record="vault.parallax">A drifting heading</h2></section>
+<div class="spacer"></div>
+<!-- vault.parallax: a parallax image that fades in each time it is scrolled to. -->
+<section><div class="layer reveal" data-record="vault.parallax"></div></section>
+<div class="spacer"></div>
+<script>
+  // vault.native-scroll: the wheel is cancelled and the page's script moves it, as a smooth-scroll library does.
+  addEventListener('wheel', (e) => { e.preventDefault(); scrollBy(0, e.deltaY); }, { passive: false });
+
+  const drift = document.querySelector('.drift');
+  const reveal = document.querySelector('.reveal');
+  addEventListener('scroll', () => {
+    drift.style.transform = `translateY(${scrollY * 0.4}px)`;
+    reveal.style.transform = `translateY(${scrollY * 0.4}px)`;
+  });
+
+  new IntersectionObserver(([e]) => reveal.classList.toggle('in', e.isIntersecting)).observe(reveal);
+
+  const track = document.querySelector('.track');
+  let at = 0;
+  const go = (i) => { at = (i + 3) % 3; track.style.transform = `translateX(${-600 * at}px)`; };
+  setInterval(() => go(at + 1), 2000);
+  document.querySelector('.next').addEventListener('click', () => go(at + 1));
+
+  const card = document.querySelector('.card');
+  const SNAPS = [0, 300];
+  let x = 0, from = null, base = 0;
+  card.addEventListener('pointerdown', (e) => { card.setPointerCapture(e.pointerId); from = e.clientX; base = x; card.style.transition = 'none'; });
+  card.addEventListener('pointermove', (e) => { if (from === null) return; x = base + e.clientX - from; card.style.transform = `translateX(${x}px)`; });
+  card.addEventListener('pointerup', () => {
+    from = null;
+    x = SNAPS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
+    card.style.transition = 'transform 200ms ease-out';
+    card.style.transform = `translateX(${x}px)`;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!doctype html>
+<!-- One animation that holds, then moves, at a keyframe inside it
+     (design-vault#60): two passes of 1000 ms, alternating, holding still to
+     offset 0.377. Its keyframe falls at 377 ms in the first pass and at 1623 ms
+     in the second, which runs backwards; neither is on a 60 fps frame. -->
+<html><head><style>div { position: absolute; width: 40px; height: 40px; background: #333; }</style></head>
+<body>
+<div id="hold"></div>
+<script>
+document.getElementById("hold").animate(
+  [{ transform: "translateX(0)" }, { transform: "translateX(0)", offset: 0.377 }, { transform: "translateX(300px)" }],
+  { duration: 1000, iterations: 2, direction: "alternate", fill: "forwards" });
+</script>
+</body></html>

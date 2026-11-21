@@ -1,0 +1,7 @@
+{
+  "name": "design-vault",
+  "description": "Runs a design round; invoke before rendering a candidate.",
+  "author": {
+    "name": "Luc Moseley"
+  }
+}

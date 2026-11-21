@@ -1,0 +1,522 @@
+"use strict";
+// higgsfield.js, which spends money on Higgsfield's pay-per-request API (#18): its client run against a stand-in API
+// and CDN handed in as fetch, and the program itself only on runs refused before any call, so no request is real and
+// nothing is charged.
+// Loosen one and a round can pass its spend ceiling, send the key to the CDN, or lose an image it paid for.
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { after, test } = require("node:test");
+const { runInProcessAsync } = require("./core-run-in-process.js");
+
+const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield.js");
+const { render, parseArgs, settings } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-client.js"));
+// The round's ledger, as higgsfield.js's header names it.
+const LEDGER = "higgsfield-spend.jsonl";
+
+const KEY = "key-id:key-secret";
+const MODEL = "recraft/v4.1/pro/text-to-image";
+const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(8)]);
+const CDN = "https://cdn.example.com/out.png";
+
+const scratch = [];
+after(() => {
+  for (const dir of scratch) fs.rmSync(dir, { recursive: true, force: true });
+});
+
+function roundDir() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-"));
+  scratch.push(dir);
+  return path.join(dir, "r1");
+}
+
+const reply = (status, body) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
+  arrayBuffer: async () => body,
+});
+
+/**
+ * A stand-in for api.higgsfield.ai and its CDN. `statuses` is what successive
+ * status polls answer; `submit` may answer a list of replies, one per attempt.
+ */
+function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "completed"], submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
+  const calls = [];
+  let polls = 0;
+  let submits = 0;
+  let clock = 0;
+  const fetch = async (url, init = {}) => {
+    calls.push({ url, method: init.method ?? "GET", headers: init.headers ?? {}, redirect: init.redirect, body: init.body && JSON.parse(init.body) });
+    if (url.startsWith("https://cdn.example.com/")) return cdn();
+    const { pathname } = new URL(url);
+    if (pathname.startsWith("/estimate/")) return reply(200, estimate === undefined ? { credits: "1.500", usd } : estimate);
+    if (pathname.startsWith("/requests/")) {
+      const status = statuses[Math.min(polls++, statuses.length - 1)];
+      return reply(200, { status, request_id: "req-1", ...(status === "completed" ? (video ? { video } : { images }) : {}), ...(status === "failed" ? { error: "Generation failed" } : {}) });
+    }
+    const answer = submit?.[submits++];
+    if (answer instanceof Error) throw answer;
+    if (answer) return answer;
+    return reply(200, { status: "queued", request_id: "req-1" });
+  };
+  return {
+    calls,
+    options: (extra = {}) => ({
+      credentials: KEY,
+      ceiling: "1.00",
+      fetch,
+      sleep: async (ms) => {
+        clock += ms;
+      },
+      now: () => clock,
+      log: () => {},
+      ...extra,
+    }),
+    submissions: () => calls.filter((call) => call.method === "POST" && !new URL(call.url).pathname.startsWith("/estimate/")),
+  };
+}
+
+const job = (dir, stem = "v1-dusk", extra = {}) => ({ out: path.join(dir, stem), model: MODEL, prompt: "a manta over an ink sea", aspect_ratio: "16:9", ...extra });
+const ledger = (dir) =>
+  fs
+    .readFileSync(path.join(dir, LEDGER), "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+
+test("a job is priced, submitted, polled, saved under its sniffed type and charged to the round's ledger", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const lines = [];
+  const failed = await render([job(dir)], api.options({ log: (line) => lines.push(line) }));
+
+  assert.equal(failed, 0);
+  assert.deepEqual(fs.readFileSync(path.join(dir, "v1-dusk.png")), PNG);
+  const [submit] = api.submissions();
+  assert.equal(submit.url, `https://api.higgsfield.ai/${MODEL}`);
+  assert.deepEqual(submit.body, { prompt: "a manta over an ink sea", aspect_ratio: "16:9" });
+  assert.equal(submit.headers.Authorization, `Key ${KEY}`);
+  assert.match(submit.headers["Idempotency-Key"], /^[0-9a-f-]{36}$/);
+  const [entry] = ledger(dir);
+  assert.equal(entry.usd, 0.094);
+  assert.equal(entry.status, "completed");
+  assert.equal(entry.request_id, "req-1");
+  assert.equal(entry.input.prompt, "a manta over an ink sea");
+  assert.equal(entry.candidate, "r1/v1-dusk");
+  assert.ok(lines.some((line) => line.includes("$0.094 a request")), "the price is stated before the batch runs");
+  assert.ok(lines.some((line) => line.startsWith("saved r1/v1-dusk.png") && line.includes("cost $0.094")));
+});
+
+test("the key goes to the API alone, never to the CDN the image downloads from", async () => {
+  const api = fakeApi();
+  await render([job(roundDir())], api.options());
+  const download = api.calls.find((call) => call.url === CDN);
+  assert.ok(download);
+  assert.equal(download.headers.Authorization, undefined);
+  for (const call of api.calls.filter((call) => call.url !== CDN)) assert.equal(new URL(call.url).origin, "https://api.higgsfield.ai");
+});
+
+test("a batch that would pass the round's ceiling is refused whole, with nothing submitted", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: 0.85 })}\n`);
+  const api = fakeApi();
+  await assert.rejects(render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), /past its \$1\.000 ceiling, so nothing was submitted/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("a batch that fits under the ceiling with what the round has spent runs", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: 0.8 })}\n`);
+  const api = fakeApi();
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), 0);
+  assert.equal(api.submissions().length, 2);
+  assert.equal(ledger(dir).length, 3);
+});
+
+test("generation refuses to run with no ceiling set; --estimate runs without one and submits nothing", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  await assert.rejects(render([job(dir)], api.options({ ceiling: undefined })), /HIGGSFIELD_ROUND_CEILING_USD must be set/);
+  assert.equal(await render([job(dir)], api.options({ ceiling: undefined, estimateOnly: true })), 0);
+  assert.equal(api.submissions().length, 0);
+  assert.equal(fs.existsSync(path.join(dir, LEDGER)), false);
+});
+
+test("a key without its secret is refused before any call", async () => {
+  const api = fakeApi();
+  await assert.rejects(render([job(roundDir())], api.options({ credentials: "key-id-only" })), /<key id>:<key secret>/);
+  assert.equal(api.calls.length, 0);
+});
+
+test("a failed request is not charged, and the batch carries on to the next job", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["failed", "completed"] });
+  const failed = await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options());
+  assert.equal(failed, 1);
+  assert.equal(fs.existsSync(path.join(dir, "v1-dusk.png")), false);
+  assert.ok(fs.existsSync(path.join(dir, "v2-tide.png")));
+  assert.deepEqual(
+    ledger(dir).map((entry) => entry.status),
+    ["completed"],
+  );
+});
+
+test("a request still running at the timeout is recorded at its estimate, since it may yet be charged", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["in_progress"] });
+  assert.equal(await render([job(dir)], api.options({ timeoutMs: 30000 })), 1);
+  const [entry] = ledger(dir);
+  assert.equal(entry.status, "timed-out");
+  assert.equal(entry.usd, 0.094);
+});
+
+test("a submission answered 5xx is retried under the same idempotency key", async () => {
+  const api = fakeApi({ submit: [reply(502, { detail: "Bad gateway" })] });
+  assert.equal(await render([job(roundDir())], api.options()), 0);
+  const keys = api.submissions().map((call) => call.headers["Idempotency-Key"]);
+  assert.equal(keys.length, 2);
+  assert.equal(keys[0], keys[1]);
+});
+
+test("a 403 names the low balance and is not retried", async () => {
+  const api = fakeApi({ submit: [reply(403, { detail: "Not enough credits" })] });
+  await assert.rejects(render([job(roundDir())], api.options()), /answered 403: Not enough credits \(the balance is too low/);
+  assert.equal(api.submissions().length, 1);
+});
+
+test("an out path off the r<n>/v<n>-<name> shape, or one already rendered, is refused before any call", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  await assert.rejects(render([job(dir, "dusk")], api.options()), /must end in v<n>-<short-name>/);
+  await assert.rejects(render([job(dir, "v1-dusk.png")], api.options()), /must end in v<n>-<short-name>/);
+  await assert.rejects(render([{ ...job(dir), out: path.join(path.dirname(dir), "drafts", "v1-dusk") }], api.options()), /round folder r<n>/);
+  await assert.rejects(render([job(dir), job(dir)], api.options()), /appears twice/);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "v1-dusk.jpg"), "");
+  await assert.rejects(render([job(dir)], api.options()), /already rendered/);
+  assert.equal(api.calls.length, 0);
+});
+
+test("--set sends JSON where it parses and the plain string otherwise", () => {
+  const { jobs, estimateOnly } = parseArgs(["--estimate", "--out", "r1/v1-a", "--model", MODEL, "--prompt", "p", "--set", 'colors=[{"rgb":[40,90,150]}]', "--set", "output_format=png"]);
+  assert.equal(estimateOnly, true);
+  assert.deepEqual(jobs[0].params, { colors: [{ rgb: [40, 90, 150] }], output_format: "png" });
+});
+
+test("--batch takes no single-job flags", () => {
+  assert.throws(() => parseArgs(["--batch", "jobs.json", "--prompt", "p"]), /--batch takes no single-job flags/);
+});
+
+test("a ledger line with no usd figure stops the batch rather than letting the ceiling read NaN", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ note: "hand edit" })}\n`);
+  const api = fakeApi({ usd: "50" });
+  await assert.rejects(render([job(dir)], api.options()), /holds a line with no usd figure/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("--estimate over the ceiling says a run would be refused, and submits nothing", async () => {
+  const api = fakeApi({ usd: "2" });
+  const lines = [];
+  assert.equal(await render([job(roundDir())], api.options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("so a run would be refused")));
+  assert.equal(api.submissions().length, 0);
+});
+
+test("a download that fails after the charge is logged as failed, keeps its ledger line, and the batch carries on", async () => {
+  const dir = roundDir();
+  let downloads = 0;
+  const api = fakeApi({ statuses: ["completed"], cdn: () => (downloads++ === 0 ? reply(404, "gone") : reply(200, PNG)) });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), 1);
+  assert.equal(fs.existsSync(path.join(dir, "v1-dusk.png")), false);
+  assert.ok(fs.existsSync(path.join(dir, "v2-tide.png")));
+  assert.deepEqual(
+    ledger(dir).map((entry) => entry.urls),
+    [[CDN], [CDN]],
+  );
+});
+
+test("a request that completes with no image is counted as failed", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: [] });
+  assert.equal(await render([job(dir)], api.options()), 1);
+  assert.equal(ledger(dir).length, 1);
+});
+
+test("a network fault on submission is retried under the same idempotency key", async () => {
+  const api = fakeApi({ submit: [new TypeError("fetch failed")] });
+  assert.equal(await render([job(roundDir())], api.options()), 0);
+  const calls = api.calls.filter((call) => call.method === "POST" && !new URL(call.url).pathname.startsWith("/estimate/"));
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].headers["Idempotency-Key"], calls[1].headers["Idempotency-Key"]);
+});
+
+test("every call to the API refuses to follow a redirect", async () => {
+  const api = fakeApi();
+  await render([job(roundDir())], api.options());
+  for (const call of api.calls.filter((call) => call.url !== CDN)) assert.equal(call.redirect, "error");
+});
+
+test("two different r1 folders in one batch are not taken for the same candidate", async () => {
+  const api = fakeApi();
+  assert.equal(await render([job(roundDir()), job(roundDir())], api.options()), 0);
+});
+
+// FLUX.2 and GPT Image 2.5 estimate as a price rule in words, with no usd figure (#49).
+const RULE = { type: "description", description: "$0.03 for its first output megapixel, plus $0.015 for every additional output megapixel" };
+
+test("a job priced by a rule and given no max_usd is refused before anything is submitted, naming the rule", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ estimate: RULE });
+  await assert.rejects(render([job(dir)], api.options()), /carried no usd figure.*first output megapixel.*max_usd/s);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("--estimate names every job priced by a rule with no max_usd, rather than stopping at the first", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ estimate: RULE });
+  const lines = [];
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  const refusal = lines.find((line) => line.includes("a run would be refused"));
+  assert.match(refusal, /r1\/v1-dusk.*first output megapixel/);
+  assert.match(refusal, /r1\/v2-tide/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("a job priced by a rule is held to the ceiling at its max_usd", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: 0.7 })}\n`);
+  const api = fakeApi({ estimate: RULE });
+  await assert.rejects(render([job(dir, "v1-dusk", { max_usd: 0.2 }), job(dir, "v2-tide", { max_usd: 0.2 })], api.options()), /past its \$1\.000 ceiling, so nothing was submitted/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("a job priced by a rule runs under its max_usd and is charged to the ledger at that figure, with the rule beside it", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ estimate: RULE });
+  const lines = [];
+  assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.25 })], api.options({ log: (line) => lines.push(line) })), 0);
+  const [submit] = api.submissions();
+  assert.equal(submit.body.max_usd, undefined, "max_usd is ours, not the API's");
+  const [entry] = ledger(dir);
+  assert.equal(entry.usd, 0.25);
+  assert.deepEqual(entry.rule, RULE);
+  assert.ok(lines.some((line) => line.includes("at most $0.250") && line.includes("first output megapixel")));
+});
+
+test("a job whose estimate carries a usd figure is charged at that figure, whatever its max_usd", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.01 })], api.options()), 0);
+  assert.equal(ledger(dir)[0].usd, 0.094);
+});
+
+test("a max_usd that is not a positive number is refused before any call", async () => {
+  const api = fakeApi({ estimate: RULE });
+  for (const max_usd of [0, -1, "0.2", Infinity, null]) {
+    await assert.rejects(render([job(roundDir(), "v1-dusk", { max_usd })], api.options()), /max_usd must be a positive number/);
+  }
+  assert.equal(api.calls.length, 0);
+});
+
+test("--max-usd sets a single job's max_usd", () => {
+  const { jobs } = parseArgs(["--out", "r1/v1-a", "--model", MODEL, "--prompt", "p", "--max-usd", "0.3"]);
+  assert.equal(jobs[0].max_usd, 0.3);
+});
+
+test("an estimate whose usd is null or blank is not read as $0", async () => {
+  for (const usd of [null, "", " "]) {
+    const api = fakeApi({ estimate: { ...RULE, usd } });
+    await assert.rejects(render([job(roundDir())], api.options()), /carried no usd figure/);
+    assert.equal(api.submissions().length, 0);
+  }
+});
+
+test("an estimate that is neither a usd figure nor a price rule is refused, whatever the job's max_usd", async () => {
+  for (const estimate of [{}, { detail: "oops" }, null]) {
+    const api = fakeApi({ estimate });
+    await assert.rejects(render([job(roundDir(), "v1-dusk", { max_usd: 0.25 })], api.options()), /neither a usd figure nor a price rule/);
+    assert.equal(api.submissions().length, 0);
+  }
+});
+
+test("a --max-usd that is not a number is refused, naming what was given", async () => {
+  const { jobs } = parseArgs(["--out", path.join(roundDir(), "v1-a"), "--model", MODEL, "--prompt", "p", "--max-usd", "abc"]);
+  await assert.rejects(render(jobs, fakeApi().options()), /max_usd must be a positive number of dollars; got NaN/);
+});
+
+test("a job priced by a rule that times out is recorded at its max_usd, with the rule beside it", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ estimate: RULE, statuses: ["in_progress"] });
+  assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.25 })], api.options({ timeoutMs: 30000 })), 1);
+  const [entry] = ledger(dir);
+  assert.equal(entry.status, "timed-out");
+  assert.equal(entry.usd, 0.25);
+  assert.deepEqual(entry.rule, RULE);
+});
+
+test("an endpoint id of one segment, as FLUX.2's flux-2-pro, is accepted and sent to its own path", async () => {
+  const api = fakeApi();
+  assert.equal(await render([job(roundDir(), "v1-dusk", { model: "flux-2-pro" })], api.options()), 0);
+  assert.equal(api.submissions()[0].url, "https://api.higgsfield.ai/flux-2-pro");
+  await assert.rejects(render([job(roundDir(), "v1-dusk", { model: ".hidden" })], api.options()), /must be an endpoint id/);
+});
+
+function envFile(text) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-env-"));
+  scratch.push(dir);
+  const file = path.join(dir, ".higgsfield.env");
+  fs.writeFileSync(file, text);
+  return file;
+}
+
+test("the key and ceiling are read from ~/.higgsfield.env where the environment lacks them, so no session has to find them", () => {
+  const file = envFile('# set by the founder\nexport HIGGSFIELD_API_KEY="id:secret"\nexport HIGGSFIELD_ROUND_CEILING_USD=3\nexport OTHER=x\n');
+  assert.deepEqual(settings({}, file), { HIGGSFIELD_API_KEY: "id:secret", HIGGSFIELD_ROUND_CEILING_USD: "3" });
+});
+
+test("a variable already in the environment wins over the file", () => {
+  const file = envFile("export HIGGSFIELD_API_KEY=file:key\nHIGGSFIELD_ROUND_CEILING_USD='2'\n");
+  assert.deepEqual(settings({ HIGGSFIELD_API_KEY: "env:key" }, file), { HIGGSFIELD_API_KEY: "env:key", HIGGSFIELD_ROUND_CEILING_USD: "2" });
+});
+
+test("with no key file the environment alone is used", () => {
+  assert.deepEqual(settings({ HIGGSFIELD_ROUND_CEILING_USD: "3" }, path.join(os.tmpdir(), "no-such-dir-49", ".higgsfield.env")), { HIGGSFIELD_API_KEY: undefined, HIGGSFIELD_ROUND_CEILING_USD: "3" });
+});
+
+const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from("ftypisom"), Buffer.alloc(8)]);
+const WEBM = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01, 0x42, 0x82, 0x84]), Buffer.from("webm"), Buffer.alloc(8)]);
+const CLIP = "https://cdn.example.com/out.mp4";
+
+test("a completed video is saved under its sniffed type, with its URL in the ledger", async () => {
+  for (const [bytes, type] of [
+    [MP4, "mp4"],
+    [WEBM, "webm"],
+  ]) {
+    const dir = roundDir();
+    const api = fakeApi({ video: { url: CLIP }, cdn: () => reply(200, bytes) });
+    const lines = [];
+    assert.equal(await render([job(dir, "v1-drift")], api.options({ log: (line) => lines.push(line) })), 0);
+    assert.deepEqual(fs.readFileSync(path.join(dir, `v1-drift.${type}`)), bytes);
+    assert.deepEqual(ledger(dir)[0].urls, [CLIP]);
+    assert.ok(lines.some((line) => line.startsWith(`saved r1/v1-drift.${type}`)));
+  }
+});
+
+test("a video whose download fails keeps its URL in the ledger, counted as failed", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], video: { url: CLIP }, cdn: () => reply(404, "gone") });
+  const lines = [];
+  assert.equal(await render([job(dir, "v1-drift")], api.options({ log: (line) => lines.push(line) })), 1);
+  assert.deepEqual(fs.readdirSync(dir), [LEDGER]);
+  assert.deepEqual(ledger(dir)[0].urls, [CLIP]);
+  assert.ok(lines.some((line) => line.includes("charged, but not saved") && line.includes("The ledger keeps its URL")));
+});
+
+test("an MP4 of any brand but a still's is saved, since it was charged", async () => {
+  const dir = roundDir();
+  const m4v = Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from("ftypM4V "), Buffer.alloc(8)]);
+  const api = fakeApi({ video: { url: CLIP }, cdn: () => reply(200, m4v) });
+  assert.equal(await render([job(dir, "v1-drift")], api.options()), 0);
+  assert.deepEqual(fs.readFileSync(path.join(dir, "v1-drift.mp4")), m4v);
+});
+
+test("a Matroska file that is not WebM, or an AVIF or HEIC still, is not saved as a video", async () => {
+  const mkv = Buffer.from(WEBM.toString("latin1").replace("webm", "mkvx"), "latin1");
+  const still = (brand) => Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from(`ftyp${brand}`), Buffer.alloc(8)]);
+  for (const bytes of [mkv, still("avif"), still("heic")]) {
+    const dir = roundDir();
+    const api = fakeApi({ video: { url: CLIP }, cdn: () => reply(200, bytes) });
+    assert.equal(await render([job(dir, "v1-drift")], api.options()), 1);
+    assert.deepEqual(fs.readdirSync(dir), [LEDGER]);
+  }
+});
+
+test("the estimate's discount is recorded on the ledger line beside the usd, which is already net of it", async () => {
+  const dir = roundDir();
+  const discount = { percentage: 15, credits: "1.008", usd: "0.063" };
+  const api = fakeApi({ video: { url: CLIP }, cdn: () => reply(200, MP4), estimate: { credits: "5.712", usd: "0.357", discount } });
+  assert.equal(await render([job(dir, "v1-drift")], api.options()), 0);
+  const [entry] = ledger(dir);
+  assert.equal(entry.usd, 0.357);
+  assert.deepEqual(entry.discount, discount);
+});
+
+test("a 403 part-way through a batch names the jobs that ran and says the rest were not submitted", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], submit: [undefined, reply(403, { detail: "Not enough credits" })] });
+  await assert.rejects(
+    render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options()),
+    /answered 403: Not enough credits \(the balance is too low[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v2-tide, r1\/v3-reef/,
+  );
+  assert.equal(api.submissions().length, 2);
+  assert.deepEqual(
+    ledger(dir).map((entry) => entry.candidate),
+    ["r1/v1-dusk"],
+  );
+});
+
+test("a completed video answer with no url is counted as failed, with nothing downloaded", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], video: {} });
+  assert.equal(await render([job(dir, "v1-drift")], api.options()), 1);
+  assert.deepEqual(ledger(dir)[0].urls, []);
+  assert.equal(api.calls.filter((call) => call.url.startsWith("https://cdn.example.com/")).length, 0);
+});
+
+test("a submission refused for any reason but the balance stops the batch with the API's own message", async () => {
+  const api = fakeApi({ statuses: ["completed"], submit: [undefined, reply(422, { detail: "aspect_ratio is invalid" })] });
+  await assert.rejects(render([job(roundDir(), "v1-dusk"), job(roundDir(), "v2-tide")], api.options()), (error) => {
+    assert.match(error.message, /answered 422: aspect_ratio is invalid$/);
+    return true;
+  });
+});
+
+test("a 403 on the batch's first job says no job ran", async () => {
+  const api = fakeApi({ submit: [reply(403, { detail: "Not enough credits" })] });
+  await assert.rejects(render([job(roundDir())], api.options()), /No job ran\. Not submitted: r1\/v1-dusk/);
+});
+
+/**
+ * Runs higgsfield.js with `args` and HOME a throwaway folder holding `envFileText` as its .higgsfield.env, or none
+ * where it is omitted, so the founder's own key file is never read.
+ */
+async function program(args, envFileText) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-home-"));
+  scratch.push(home);
+  if (envFileText !== undefined) fs.writeFileSync(path.join(home, ".higgsfield.env"), envFileText);
+  return runInProcessAsync(SCRIPT, args, { cwd: home, env: { PATH: process.env.PATH, HOME: home } });
+}
+
+test("the program refuses bad usage with exit 2, naming the fault and the usage", async () => {
+  for (const [args, why] of [
+    [["--out", "r1/v1-a", "--model"], /^higgsfield\.js: --model takes an endpoint id\n/],
+    [["--batch", "jobs.json", "--prompt", "p"], /^higgsfield\.js: --batch takes no single-job flags\n/],
+    [["--colour", "red"], /^higgsfield\.js: unknown argument "--colour"\n/],
+  ]) {
+    const r = await program(args);
+    assert.equal(r.status, 2, args.join(" "));
+    assert.match(r.stderr, why);
+    assert.match(r.stderr, /Usage: node higgsfield\.js \[--estimate\] --out/);
+  }
+});
+
+// Each run below is refused before the API is called: by the key or the ceiling, and failing that by the out path,
+// which sits in no round folder.
+test("the program with no key exits 1 naming where to set it, before any call", async () => {
+  const r = await program(["--out", "dusk", "--model", MODEL, "--prompt", "p"]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^higgsfield\.js: HIGGSFIELD_API_KEY must be set, in the environment or ~\/\.higgsfield\.env, to <key id>:<key secret>/);
+});
+
+test("the program reads the key from ~/.higgsfield.env, and with no ceiling set exits 1 before any call", async () => {
+  const r = await program(["--out", "dusk", "--model", MODEL, "--prompt", "p"], "export HIGGSFIELD_API_KEY=id:secret\n");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /^higgsfield\.js: HIGGSFIELD_ROUND_CEILING_USD must be set/);
+});

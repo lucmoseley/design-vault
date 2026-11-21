@@ -1,0 +1,20 @@
+The parts map: what each part of the page does, read from its DOM by a script at 1440 px and 390 px.
+'acts' means a visitor can act on it (link, button, control); 'static' means a click does nothing.
+Static parts are listed only where they could look actable (pointer cursor, own box, underline, hover rule or link colour).
+
+p1  "MantaHostels home"  acts: link -> this page
+p2  "Menu"  acts: button
+p3  "Destinations"  acts: link -> #destinations
+p4  "How we rank"  acts: link -> this page
+p5  "Hostels"  static  (could look actable: a link's colour)
+p6  "Email luc@mantahostels.com for launch news"  acts: link -> mailto:luc@mantahostels.com
+p7  "Explore destinations"  acts: link -> #destinations
+p8  "BALI Canggu Best hostels"  static  (could look actable: hover rule, draws its own box, a :hover rule selects it)
+p9  "BALI Uluwatu Best hostels"  static  (could look actable: hover rule, draws its own box, a :hover rule selects it)
+p10  "LOMBOK Kuta Lombok Best hostels"  static  (could look actable: hover rule, draws its own box, a :hover rule selects it)
+p11  "MantaHostels"  static  (could look actable: a link's colour)
+p12  "Privacy"  acts: link -> this page
+p13  "Terms"  acts: link -> this page
+p14  "How we rank"  acts: link -> this page
+p15  "Report content"  acts: link -> this page
+p16  "luc@mantahostels.com"  acts: link -> mailto:luc@mantahostels.com

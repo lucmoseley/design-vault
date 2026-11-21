@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>logotype</title>
+<!-- Run with --logotype "header .brand" --logotype svg.mark. One fault, vault.contrast: grey #aaaaaa text on white,
+     2.32:1. The faint #cccccc wordmark and its generated trade mark sign, under header .brand, and the SVG text
+     wordmark, under svg.mark, are logotypes: exempt, and reported as such. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .brand { font-size: 20px; color: #cccccc }
+  .brand::after { content: "\2122" }
+  .faint { color: #aaaaaa }
+</style>
+<header><div class="brand">Manta</div></header>
+<svg class="mark" width="160" height="40"><text x="0" y="28" font-size="24" fill="#cccccc">Manta</text></svg>
+<p class="faint">Grey text no logotype selector names.</p>

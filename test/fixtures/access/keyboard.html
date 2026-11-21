@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>keyboard</title>
+<!-- One fault, vault.keyboard, four times: a div "button" with an onclick, a span given a click listener, a div
+     holding a click handler where React 17 and later keep one (its __reactProps$ key, set here by hand), and a link
+     in a line of text taken out of the tab order. Nothing on the page takes focus. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .fake { display: inline-block; padding: 12px 16px; margin: 0 8px 8px 0; background: #0a3542; color: #fff; cursor: pointer }
+</style>
+<p>Pick a bed, then book it.</p>
+<div class="fake book" onclick="this.textContent = 'Booked'">Book a bed</div>
+<span class="fake menu">Menu</span>
+<div class="fake save">Save</div>
+<p>Read <a href="#terms" tabindex="-1">the terms</a> first.</p>
+<script>
+  document.querySelector('.menu').addEventListener('click', () => {});
+  document.querySelector('.save')['__reactProps$x1'] = { onClick() {} };
+</script>

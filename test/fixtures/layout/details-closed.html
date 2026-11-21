@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>details-closed</title>
+<!-- A note set over a footer group's links, which sit in a <details> left closed: they are not drawn, so nothing overlaps (#418). -->
+<style>
+  body { margin: 0; font: 16px/24px sans-serif }
+  footer { position: relative }
+  ul { margin: 0; padding: 0; list-style: none }
+  .group { display: contents }
+  .note { position: absolute; top: 30px; left: 0; margin: 0 }
+</style>
+<footer>
+  <details>
+    <summary>Company</summary>
+    <div class="group"><ul><li><a href="#about">About us and our story</a></li><li><a href="#jobs">Jobs at the hostel</a></li></ul></div>
+  </details>
+  <p class="note">A note set over the footer links.</p>
+</footer>

@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: an underlap whose upper fill is half transparent, so the ground reads through it in the
+     mattes and the seam cannot be measured. -->
+<style>body { margin: 0; background: #fff; } svg { display: block; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <path id="under" fill="#1a4d8f" fill-opacity="0.5" d="M10 10 H42.5 V90 H10 Z"/>
+  <path id="over" fill="#e0a030" fill-opacity="0.5" d="M40.5 10 H90 V90 H40.5 Z"/>
+</svg>
+</body>
+</html>

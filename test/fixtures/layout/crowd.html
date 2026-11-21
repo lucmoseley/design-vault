@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>crowd</title>
+<!-- From 1500 to 1600 px the note is pulled up onto the lead's lines. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .lead, .note { margin: 0 }
+  @media (min-width: 1500px) and (max-width: 1600px) { .note { margin-top: -20px } }
+</style>
+<p class="lead">The lead paragraph.</p>
+<p class="note">A note below it.</p>

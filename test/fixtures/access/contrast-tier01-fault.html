@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>contrast tier 0 and 1 faults</title>
+<!-- One plant per contrast record check-access.py answers (#316), each marked data-record with the record it fails.
+     The photo is a light check of #f2f2f2 and #e0e0e0. With contrast-tier01-parts.json, .carousel is the carousel
+     and #chart the chart. The thin paragraph passes vault.contrast at 5.74:1 but not the ladder's 7:1 aim: a note. vault.theme-contrast
+     takes two plants, one per scheme. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
+  .photo { position: relative; max-width: 320px; height: 160px; margin: 16px 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E") }
+  .photo p { margin: 0; padding: 16px; color: #bbb }
+  .share { position: absolute; right: 16px; top: 16px; width: 32px; height: 32px; padding: 0; border: 0; background: none }
+  .dots { position: absolute; left: 16px; bottom: 16px }
+  .dots button { width: 12px; height: 12px; margin: 0 6px; padding: 0; border: 0; border-radius: 50%; background: #fff; opacity: 0.5 }
+  .dots button[aria-current] { opacity: 1 }
+  .faint { border: 1px solid #ddd; width: 200px; height: 36px; padding: 0 8px; font: inherit }
+  .icon { width: 32px; height: 32px; padding: 0; border: 0; background: none }
+  .tick { appearance: none; width: 24px; height: 24px; margin: 0; border: 2px solid #555; background: #fff; vertical-align: middle }
+  .tick:checked { background: #eee }
+  .band { background: #8a8a8a; padding: 8px 16px }
+  .band p { margin: 0; color: #fff; font-size: 24px; font-weight: 700 }
+  .book { border: 0; background: #1a5fb4; color: #fff; height: 44px; padding: 0 16px; font: inherit }
+  .thin { font-weight: 300; color: #666 }
+  @media (prefers-color-scheme: dark) { #theme-plant { background: #222; color: #444 } }
+  @media (prefers-contrast: more) { #more-plant { color: #6b6b6b } }
+</style>
+<div class="photo">
+  <p id="contrast-plant" data-record="vault.contrast">Grey text on a light photo</p>
+  <button class="share" id="photo-plant" data-record="vault.controls-on-photo" aria-label="Share">
+    <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg>
+  </button>
+</div>
+<div class="photo carousel">
+  <div class="dots" id="dots-plant" data-record="vault.controls-on-photo">
+    <button aria-label="Slide 1" aria-current="true"></button><button aria-label="Slide 2"></button><button aria-label="Slide 3"></button>
+  </div>
+</div>
+<p><label>Name <input class="faint" id="edge-plant" data-record="vault.control-edges" type="text"></label></p>
+<p><button class="icon" id="icon-plant" data-record="vault.contrast-ladder" aria-label="Close">
+  <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#ccc"/></svg>
+</button></p>
+<p><label><input class="tick" id="state-plant" data-record="vault.contrast-ladder" type="checkbox" checked> Breakfast</label></p>
+<div class="band"><p id="fill-plant" data-record="vault.fill-text">White on mid grey</p></div>
+<figure id="chart">
+  <svg width="300" height="120" viewBox="0 0 300 120">
+    <rect width="300" height="120" fill="#fff"/>
+    <polyline id="chart-plant" data-record="vault.chart-contrast" points="10,100 80,60 150,80 220,30 290,50" fill="none" stroke="#ddd" stroke-width="2"/>
+    <rect x="20" y="70" width="30" height="40" fill="#333"/>
+  </svg>
+</figure>
+<p><button class="book" id="forced-plant" data-record="vault.forced-colours-edge">Book a bed</button></p>
+<p id="theme-plant" data-record="vault.theme-contrast">Text the dark scheme greys out</p>
+<p id="more-plant" data-record="vault.theme-contrast">Text more contrast greys to 5.33:1, short of its 7:1</p>
+<p class="thin" id="thin-note">A thin face in grey</p>
+</html>

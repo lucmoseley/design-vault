@@ -1,0 +1,117 @@
+{
+  "schema_version": 3,
+  "meta": {
+    "owner": "Luc Moseley",
+    "created": "2026-09-28",
+    "imagesPath": "images/"
+  },
+  "dna": {
+    "name": "House DNA",
+    "description": "Defaults, not rules.",
+    "constants": [],
+    "never": [
+      "purple-to-blue gradients"
+    ]
+  },
+  "collections": [
+    {
+      "id": "flat-poster",
+      "name": "Flat Poster",
+      "description": "d",
+      "deployFor": "d",
+      "vocabulary": [
+        "flat colour"
+      ],
+      "risk": "r",
+      "accent": "#223344",
+      "imageStyle": "s",
+      "styles": [
+        "cinematic-dark",
+        "quiet-luxury"
+      ]
+    }
+  ],
+  "page_parts": [
+    {
+      "id": "hero",
+      "name": "Hero",
+      "gloss": "The opening screen"
+    },
+    {
+      "id": "footer",
+      "name": "Footer",
+      "gloss": "The bottom of the page"
+    },
+    {
+      "id": "art-only",
+      "name": "Art only",
+      "gloss": "A picture with no page around it"
+    }
+  ],
+  "motion_kinds": [
+    {
+      "id": "scroll",
+      "name": "Scroll",
+      "gloss": "Moves as you scroll, stops when you stop"
+    },
+    {
+      "id": "pointer",
+      "name": "Pointer",
+      "gloss": "Answers the mouse: hover, point, click"
+    }
+  ],
+  "design_words": [
+    {
+      "word": "hero",
+      "means": [
+        "opening screen"
+      ]
+    },
+    {
+      "word": "hover",
+      "means": [
+        "pointer"
+      ]
+    }
+  ],
+  "projects": {
+    "manta": {
+      "name": "Manta Hostels",
+      "rules": "docs/brand/brand-sheet.md in lucmoseley/mantahostels",
+      "groups": [
+        {
+          "id": "mascot-renderings",
+          "name": "Mascot renderings",
+          "header": "h"
+        },
+        {
+          "id": "motion-references",
+          "name": "Motion references",
+          "header": "h"
+        }
+      ],
+      "verdicts": [
+        "on-brand",
+        "adapt",
+        "off-brand"
+      ]
+    }
+  },
+  "keywords_allowed": [
+    "ink-line",
+    "minimal",
+    "scroll-driven"
+  ],
+  "keyword_families": {
+    "Medium": [
+      "ink-line"
+    ],
+    "Colour": [
+      "minimal"
+    ],
+    "Scene": [],
+    "Motion": [
+      "scroll-driven"
+    ]
+  }
+}

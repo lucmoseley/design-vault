@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>resting strip</title>
+<!-- Two 8 px links crowded at the far end of a scrolling strip, off the page at load but reached by scrolling it:
+     no skip link, so vault.target-size still measures and fails them, and every other question passes (#421). -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  :focus-visible { outline: 3px solid #b3261e; outline-offset: 2px }
+  a { color: #0a3542 }
+  .strip { display: flex; overflow-x: auto; white-space: nowrap; padding: 8px }
+  .strip .pad { flex: none; width: 2400px; padding: 8px }
+  .strip .tiny { flex: none; width: 8px; height: 48px; overflow: hidden }
+  main { padding: 16px }
+</style>
+<main>
+  <h1>Beds in Lisbon</h1>
+  <div class="strip" tabindex="0" role="region" aria-label="Rooms">
+    <a class="pad" href="#dorm">Dorm</a><a class="tiny" href="#one">1</a><a class="tiny" href="#two">2</a>
+  </div>
+</main>
+</html>

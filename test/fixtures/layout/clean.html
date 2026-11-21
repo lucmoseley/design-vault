@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>clean</title>
+<!-- No fault at any width: a fluid photo, a caption over it, text below, a button on the first screen. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .hero { position: relative; max-width: 100% }
+  .photo { display: block; width: 100%; height: 300px; object-fit: cover }
+  .over { position: absolute; left: 16px; bottom: 16px; margin: 0; color: #fff }
+  main { padding: 16px; max-width: 60ch }
+</style>
+<div class="hero"><img class="photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23468'/%3E%3C/svg%3E" alt=""><p class="over">A caption on the photo</p></div>
+<main>
+  <h1>A clean page</h1>
+  <p>Some running text that wraps at every width without crossing anything.</p>
+  <a class="book" href="#">Book a bed</a>
+</main>

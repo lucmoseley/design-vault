@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>growing</title>
+<!-- Every question passes (#290), but the page grows 1 px on every resize, so each full-page shot comes out a
+     different size, the retake included: each text's whole box is read, and vault.contrast carries a note saying so. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/24px system-ui, sans-serif; color: #1b2a6b; background: #ffffff }
+</style>
+<p>Dark text on white, which passes however much of its box is read.</p>
+<div style="height: 800px"></div>
+<div id="grow"></div>
+<script>
+  const grow = document.getElementById("grow");
+  addEventListener("resize", () => { grow.style.height = `${grow.offsetHeight + 1}px`; });
+</script>
+</html>

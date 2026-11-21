@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>trapped</title>
+<!-- No fault. Three pale grey texts that would fail against the white page lie wholly under an opaque bar at load,
+     and no scroll takes them clear of it, so each is read as drawn, showing no glyph, and passes unnoted. Scrolling
+     only lifts text: "Welcome", under a fixed header, would have to rise above the window's head; "Last orders at
+     11pm", the page's foot under a fixed bottom bar, needs more scroll than the page allows; "Rooms", under a nav
+     that sticks at the window's head, rises with it until it sticks there. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #c8c8c8; background: #fff }
+  header { position: fixed; z-index: 1; top: 0; left: 0; right: 0; height: 64px; background: #0a3542 }
+  main { position: relative; display: flow-root; height: calc(100vh + 60px) }
+  nav { position: sticky; z-index: 1; top: 0; margin-top: 40vh; height: 48px; background: #0a3542 }
+  p { position: absolute; left: 16px; margin: 0 }
+  .welcome { top: 20px }
+  .rooms { top: calc(40vh + 12px) }
+  .orders { bottom: 64px }
+  footer { position: fixed; z-index: 1; bottom: 0; left: 0; right: 0; height: 96px; background: #0a3542 }
+</style>
+<header></header>
+<main>
+  <nav></nav>
+  <p class="welcome">Welcome</p>
+  <p class="rooms">Rooms</p>
+  <p class="orders">Last orders at 11pm</p>
+</main>
+<footer></footer>

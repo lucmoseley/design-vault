@@ -1,0 +1,17 @@
+# Each value comes from its record in design-critique/rules/; change them together.
+vault.glyph-coverage | coverage
+# The least share of their ink by which two glyphs, scaled to one height,
+# differ. Measured on 14 installed faces, Chromium 149 (#313): the sans faces
+# whose I and l are one bar differ by 0, the least of any other pair by 0.079.
+vault.glyph-distinct | distinct | >= 0.05
+vault.small-caps | small-caps
+vault.font-features | features
+vault.figure-face | tabular
+vault.type-axes | variable | weights >= 3
+# Apple's SF Pro Text below 20 pt, SF Pro Display from 20 pt.
+vault.type-axes | opsz | display >= 20px
+# The largest box an interface icon is drawn in: a guess, unmeasured.
+vault.icon-vector | vector | icon <= 48px
+# Store-name prefixes and hosts of analytics and advertising tags: GA4 and Google Ads, Meta Pixel, Hotjar, Microsoft Clarity and UET, Matomo, Segment, Mixpanel, Amplitude.
+vault.cookie-banner | banner | _ga, _gid, _gat, _gcl_, __utm, _fbp, _fbc, _hj, _clck, _clsk, _uet, _pk_, ajs_, mp_, amp_, google-analytics.com, googletagmanager.com, doubleclick.net, connect.facebook.net, static.hotjar.com, clarity.ms, bat.bing.com, cdn.segment.com, cdn.mxpnl.com, cdn.amplitude.com
+vault.cookie-banner | cookies-page | (?i)cookie

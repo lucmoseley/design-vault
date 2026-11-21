@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- A storyboard sequenced by a script timer (design-vault#60): #first eases
+     across over 0–500 ms, then the script waits 3000 ms, longer than the
+     sampler's quiet window, and moves #second at one linear speed for 500 ms.
+     A pause from 500 to 3000 ms and two jolts. -->
+<html><head><style>div { position: absolute; width: 40px; height: 40px; background: #333; }</style></head>
+<body>
+<div id="first" style="top: 20px"></div>
+<div id="second" style="top: 100px"></div>
+<script>
+document.getElementById("first").animate(
+  [{ transform: "translateX(0)" }, { transform: "translateX(300px)" }],
+  { duration: 500, easing: "ease-in-out", fill: "forwards" });
+setTimeout(() => document.getElementById("second").animate(
+  [{ transform: "translateX(0)" }, { transform: "translateX(300px)" }],
+  { duration: 500, easing: "linear", fill: "forwards" }), 3000);
+</script>
+</body></html>

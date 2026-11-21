@@ -1,0 +1,119 @@
+# check-dom.py's rule table (#310): one line or more per rule record, in
+# probe.py's form, in check-dom.py's blocks. Each value comes from its record
+# in design-critique/rules/; change them together. The data-vault- reads are
+# what check-dom.py writes onto the page before any line runs.
+
+define $forward-arrow = \b(arrow|chevron|caret|angle) (right|forward|end)\b|\b(forward|next)\b
+define $kept-form = \b(clock|time|check|checkmark|tick|search|magnifier|play|pause|stop|logo|slash)\b
+define $tokens = ^((section-\S+|shipping|billing)\s+)?((home|work|mobile|fax|pager)\s+)?(name|honorific-prefix|given-name|additional-name|family-name|honorific-suffix|nickname|username|new-password|current-password|one-time-code|organization-title|organization|street-address|address-line1|address-line2|address-line3|address-level4|address-level3|address-level2|address-level1|country|country-name|postal-code|cc-name|cc-given-name|cc-additional-name|cc-family-name|cc-number|cc-exp|cc-exp-month|cc-exp-year|cc-csc|cc-type|transaction-currency|transaction-amount|language|bday|bday-day|bday-month|bday-year|sex|url|photo|tel|tel-country-code|tel-national|tel-area-code|tel-local|tel-extension|email|impp)(\s+webauthn)?$
+define $about-visitor = css:input:not([type=hidden i], [type=checkbox i], [type=radio i], [type=submit i], [type=button i]):is([type=email i], [type=tel i], [name*=email i], [id*=email i], [name*=phone i], [id*=phone i], [name*=postcode i], [id*=postcode i], [name*=postal i], [id*=postal i], [name*=address i], [id*=address i], [name*=street i], [id*=street i], [name*=surname i], [id*=surname i], [name*=firstname i], [id*=firstname i], [name*=first-name i], [id*=first-name i], [name*=first_name i], [id*=first_name i], [name*=lastname i], [id*=lastname i], [name*=last-name i], [id*=last-name i], [name*=last_name i], [id*=last_name i], [name*=fullname i], [id*=fullname i], [name*=full-name i], [id*=full-name i], [name*=full_name i], [id*=full_name i], [name*=birth i], [id*=birth i], [name*=bday i], [id*=bday i], [name*=cardnumber i], [id*=cardnumber i], [name*=card-number i], [id*=card-number i], [name*=card_number i], [id*=card_number i])
+define $numeric-code = css:input:is([autocomplete~=cc-number i], [autocomplete~=cc-csc i], [autocomplete~=cc-exp-month i], [autocomplete~=cc-exp-year i], [autocomplete~=one-time-code i], [autocomplete~=bday-day i], [autocomplete~=bday-month i], [autocomplete~=bday-year i])
+define $sign-in-field = css:input:is([type=password i], [autocomplete~=username i], [autocomplete~=current-password i], [autocomplete~=new-password i], [autocomplete~=one-time-code i])
+define $two-addresses = css:form:has([autocomplete*=shipping i]):has([autocomplete*=billing i])
+define $bullet = ^\s*([•●▪‣◦■□➢➤✓✔·]|\d{1,2}[.)])\s
+define $typed-rule = ([-_=─━═~*•·.])\1{4,}
+# check-dom.py's PHRASING lists the same elements: change them together.
+define $phrasing-only = :not(:has(*:not(br, b, strong, i, em, span, a, small, sup, sub, abbr, cite, q, mark)))
+define $not-code = :not(pre, code, kbd, samp, pre *, code *, script, style, textarea, svg, svg *)
+define $drop-control = :has(input[type=file i], button, label)
+define $file-input-near = :has(input[type=file i])
+define $columns = [^␤]*[^␠␉␤](?:␠{2,}|␉)[^␠␉␤][^␤]*␤[^␤]*[^␠␉␤](?:␠{2,}|␉)[^␠␉␤]
+define $control-role = (?i)^(button|link|checkbox|radio|switch|textbox|searchbox|combobox|listbox|option|slider|spinbutton)$
+define $restated = css:button[role=button i], a[href][role=link i], input[type=checkbox i][role=checkbox i], input[type=radio i][role=radio i], select[role=combobox i], select[role=listbox i], textarea[role=textbox i], nav[role=navigation i], main[role=main i], ul[role=list i], ol[role=list i], li[role=listitem i], table[role=table i], h1[role=heading i], h2[role=heading i], h3[role=heading i], h4[role=heading i], h5[role=heading i], h6[role=heading i], progress[role=progressbar i], article[role=article i], aside[role=complementary i], dialog[role=dialog i]
+define $overridden = css:button[role]:not([role=button i]), a[href][role]:not([role=link i]), select[role]:not([role=combobox i], [role=listbox i]), textarea[role]:not([role=textbox i]), :is(h1, h2, h3, h4, h5, h6)[role]:not([role=heading i])
+define $home = ^https?://[^/]+/?$
+
+# Buttons
+vault.help-button | role:button where attr:data-vault-name matches (?i)\bhelp\b | count | <= 1
+vault.button-icon-side | role:button where attr:data-vault-side present where attr:data-vault-side-icon not matches $forward-arrow | distinct attr:data-vault-side | <= 1
+vault.button-icon-side | role:button where attr:data-vault-side present where attr:data-vault-side-icon matches $forward-arrow | attr:data-vault-side | = after
+
+# Imagery
+vault.current-icon | css:svg[data-vault-ink-lead] | attr:data-vault-ink-lead | >= 1.25
+vault.icon-optical-size | css::is(a, button, [role=button], [role=tab], label, li) svg[data-vault-stroke-scale] | attr:data-vault-stroke-scale | = 1
+vault.favicon | all css:link[rel~=icon i][sizes=any i]:is([type="image/svg+xml" i], [href*=".svg" i]) | count | >= 1
+vault.favicon | all css:link[rel~=icon i][href*=".ico" i] | count | >= 1
+vault.favicon | all css:link[rel~=icon i][href*=".ico" i] | attr:sizes | = 48x48
+vault.favicon | all css:link[rel~=apple-touch-icon i] | count | >= 1
+vault.favicon | all css:link[rel~=apple-touch-icon i] | attr:href | matches (?i)\.png($|[?#])
+vault.favicon | all css:link[rel~=apple-touch-icon i] | attr:data-vault-size | = 180x180
+vault.favicon | all css:link[rel~=icon i], link[rel~=apple-touch-icon i] | attr:data-vault-loaded | = 1
+vault.video-captions | css:video:not([muted]):not(:has(track:is([kind=captions i], [kind=subtitles i]))) | count | = 0
+vault.logo-link-words | part:logo where attr:data-vault-link-href matches $home | attr:data-vault-link-name | matches (?i)\bhome\b
+vault.logo-link-words | part:logo where attr:data-vault-link-href matches $home | attr:data-vault-link-name | not matches (?i)\blogo\b|\.(png|svg|jpe?g|gif|webp|avif)\b
+vault.logo-link-words | part:logo where attr:data-vault-link-href matches $home | attr:data-vault-link-site | = 1
+vault.background-image-role | css:[role=img i], [aria-label]:not(a, button, input, select, textarea, img, svg, [role]) | style:background-image | not matches url\(
+
+# Forms
+vault.password-empty | css:input[type=password i] | attr:value | absent
+vault.password-empty | css:input[type=password i] | attr:data-vault-value | absent
+vault.autocomplete | css:[autocomplete]:not([autocomplete=on i], [autocomplete=off i]) | attr:autocomplete | matches (?i)$tokens
+vault.autocomplete | $about-visitor | attr:autocomplete | matches (?i)$tokens
+vault.field-keyboard | css:input[autocomplete~=email i] | attr:type | = email
+vault.field-keyboard | css:input:is([autocomplete~=tel i], [autocomplete~=tel-national i], [autocomplete~=tel-local i]) | attr:type | = tel
+vault.field-keyboard | css:input[autocomplete~=url i] | attr:type | = url
+vault.field-keyboard | $numeric-code | attr:inputmode | = numeric
+vault.field-keyboard | css:input[type=number i][autocomplete] | attr:autocomplete | not matches (?i)\b(cc-|one-time-code|postal-code|tel|bday)
+vault.field-keyboard | css::is([role=search i], search, form[role=search i]) input:is(:not([type]), [type=text i]) | attr:type | = search
+vault.enter-key | css:[data-vault-field=next] | attr:enterkeyhint | = next
+vault.enter-key | css:[data-vault-field=last]:not([type=search i]) | attr:enterkeyhint | in done or go or send or search
+vault.enter-key | css::is([role=search i], search) input:is(:not([type]), [type=text i]) | attr:enterkeyhint | = search
+vault.same-address | $two-addresses | text | matches (?i)\bsame (as|address)\b|\buse (this|my|the) (shipping|delivery|billing)
+vault.same-address | $two-addresses:not(:has(input[type=checkbox i])) | count | = 0
+vault.form-help-link | css:form where screens > 1 | attr:data-vault-links | matches (?i)\b(help|contact|support|chat)\b|tel:|mailto:
+vault.paste-allowed | $sign-in-field | attr:data-vault-paste | absent
+
+# Markup: native elements, landmarks, names, tables
+vault.native-html | css::is(div, span)[role] | attr:role | not matches $control-role
+vault.native-html | $restated | count | = 0
+vault.native-html | $overridden | count | = 0
+vault.landmark-elements | css:[role=banner i], [role=navigation i], [role=contentinfo i] | count | = 0
+vault.landmark-elements | css:header | count | >= 1
+vault.landmark-elements | css:footer | count | >= 1
+vault.landmark-elements | css:header :is(ul, ol):not(nav *):has(> li > a[href]) | count | = 0
+vault.badge-name | part:badge | attr:data-vault-said | matches [A-Za-z]
+vault.progress-element-name | css:progress | attr:data-vault-label | present
+vault.table-use | css:table:has(table, nav, form, header, footer, main, aside, article, section, h1, h2, h3, h4, h5, h6) | count | = 0
+vault.table-use | css:table:is([role=presentation i], [role=none i]):has(th, caption) | count | = 0
+vault.table-header-cells | part:table | attr:data-vault-head-cols | >= 1
+vault.table-header-cells | part:table | attr:data-vault-head-loose | = 0
+vault.table-header-cells | part:table | attr:data-vault-row-loose | = 0
+vault.table-markup | css:[data-vault-spaced-text] | attr:data-vault-spaced-text | not matches $columns
+vault.generated-content | css:[data-vault-counter] | attr:data-vault-counter | matches /\s*""\s*$
+vault.heading-markup-div | css:[data-vault-heads] where lines <= 2 | attr:data-vault-size-ratio | <= 1
+vault.heading-markup-div | css:[data-vault-heads] where lines <= 2 | style:font-weight minus attr:data-vault-next-weight | <= 0
+vault.heading-markup-div | css:[data-vault-heads] where lines <= 2 where attr:data-vault-next-style = normal | style:font-style | = normal
+
+# Interaction: every drag has a tap path, every motion an on-screen control
+vault.drag-buttons | css:*:not($file-input-near) > [data-vault-listens~=drop]:not($drop-control) | count | = 0
+vault.drag-buttons | part:carousel | attr:data-vault-buttons | >= 2
+vault.drag-buttons | part:map | attr:data-vault-buttons | >= 2
+vault.drag-buttons | part:drag-item | attr:data-vault-buttons | >= 1
+vault.grabber | part:resizable-sheet | attr:data-vault-top-control | = 1
+
+# Text and surfaces
+vault.list-markup | css:p:not(li p), div$phrasing-only:not(li div) | text | not matches $bullet
+vault.list-markup | css:body *:not(li, summary) | style:display | != list-item
+vault.typed-rules | css:body *$phrasing-only$not-code | text | not matches $typed-rule
+
+when part:pull-to-refresh
+vault.drag-buttons | role:button where attr:data-vault-name matches (?i)\b(refresh|reload)\b | count | >= 1
+
+when css:html where attr:data-vault-listens matches \bdevice(motion|orientation)\b
+vault.motion-control | part:motion-control | count | >= 1
+
+# A form page: the page's h1 sits in a form.
+when css:html:has(form h1) where attr:data-vault-questions = 1
+vault.question-heading | css:label h1, legend h1 | count | = 1
+vault.question-heading | css:h1 | count | = 1
+
+when css:html:has(form h1) where attr:data-vault-questions >= 2
+vault.question-heading | css:label h1, legend h1 | count | = 0
+vault.questions-per-page | css:h1 | text | not matches \?\s*$
+
+under rtl
+vault.rtl-fixed-icons | css:[data-vault-icon-name] where attr:data-vault-icon-name matches $kept-form | attr:data-vault-mirrored | = 0
+
+on missing page
+vault.missing-page | css:html | attr:data-vault-status | = 404
+vault.missing-page | css:a where attr:data-vault-href matches $home | count | >= 1

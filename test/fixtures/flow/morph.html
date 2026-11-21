@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- A morph between two arches of one command structure (design-vault#72): at
+     both ends the outline and its window, a hole, are each M, five C and Z, and
+     a script interpolates the numbers one by one over 1000 ms, eased in and
+     out. It has no pause or jolt, and every frame's d is curves. -->
+<html><body>
+<svg width="320" height="320" viewBox="0 0 320 320">
+  <path id="arch" fill="#333" fill-rule="evenodd"
+    d="M 0 300 C 0 233 0 167 0 100 C 0 45 45 0 100 0 C 155 0 200 45 200 100 C 200 167 200 233 200 300 C 133 300 67 300 0 300 Z M 60 260 C 60 220 60 180 60 140 C 60 118 78 100 100 100 C 122 100 140 118 140 140 C 140 180 140 220 140 260 C 113 260 87 260 60 260 Z"/>
+</svg>
+<script>
+const path = document.getElementById("arch");
+const from = path.getAttribute("d").split(" ");
+const to = "M 0 300 C 0 283 0 267 0 250 C 0 167 67 100 150 100 C 233 100 300 167 300 250 C 300 267 300 283 300 300 C 200 300 100 300 0 300 Z M 100 290 C 100 270 100 250 100 230 C 100 208 122 190 150 190 C 178 190 200 208 200 230 C 200 250 200 270 200 290 C 167 290 133 290 100 290 Z".split(" ");
+const ease = (p) => p * p * (3 - 2 * p);
+let first = null;
+requestAnimationFrame(function tick(now) {
+  if (first === null) first = now;
+  const p = ease(Math.min(1, (now - first) / 1000));
+  path.setAttribute("d", from.map((a, i) => (isNaN(a) ? a : (+a + (to[i] - a) * p).toFixed(2))).join(" "));
+  if (p < 1) requestAnimationFrame(tick);
+});
+</script>
+</body></html>

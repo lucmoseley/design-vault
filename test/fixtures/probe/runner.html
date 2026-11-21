@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A page for the probe's rule table.">
+<title>probe fixture</title>
+<!-- Each planted miss sits beside a twin that meets its rule (#300). -->
+<style>
+  @font-face { font-family: "Swapped"; src: local("Arial"); font-display: swap; }
+  @font-face { font-family: "Blocking"; src: local("Arial"); font-display: block; }
+  :root { --gap: 12px; --ink: rgb(60, 62, 66); }
+  body { margin: 0; font: 16px/1.5 sans-serif; }
+  .copy { font-size: 18px; }
+  #fine { font-size: 16px; }
+  @media (max-width: 999px) { #fine { font-size: 14px; } }
+  @media (max-width: 599px), (min-width: 1500px) { #gappy { font-size: 14px; } }
+  .caps { text-transform: uppercase; font-size: 12px; }
+  #tracked { letter-spacing: 0.1em; }
+  #edge { letter-spacing: 0.5px; }
+  nav .extra { display: none; }
+  @media (min-width: 600px) { nav .extra { display: inline; } }
+  #sr-tiny { position: absolute; width: 1px; height: 1px; overflow: hidden; }
+  #sr-clip { position: absolute; width: 20px; height: 20px; clip: rect(0 0 0 0); }
+  #sr-path { clip-path: inset(50%); }
+  #skip { position: absolute; left: -9999px; }
+  #faded { opacity: 0; }
+  #ghost { visibility: hidden; }
+  #big { min-height: 44px; }
+  #chip { min-height: 16px; display: inline-block; }
+  #gone { min-height: 0; display: none; }
+  #decoy { min-height: 0; }
+  .xh { font-size: 20px; }
+  #xh-low { font-size-adjust: 0.3; }
+  #xh-ok { font-size-adjust: 0.5; }
+  .card { width: 40px; height: 20px; }
+  #card-b { box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); }
+  #card-c { box-shadow: 0 4px 8px rgb(0 0 0 / 0.2); }
+  #card-d { box-shadow: 0 12px 24px rgb(0 0 0 / 0.2); }
+  #grey { color: var(--ink); }
+  #loud { color: rgb(200, 30, 30); }
+  #gap { margin-top: var(--gap); }
+  #raw { margin-top: 12px; }
+  #short { margin: var(--gap) 0; }
+  #inline { margin-top: var(--gap) !important; }
+  .hero { font-weight: 400; }
+</style>
+</head>
+<body>
+  <h1 id="hero" class="hero">Hostels by the sea</h1>
+  <p id="lead" class="copy">Running text</p>
+  <p id="fine" class="copy">Fine print</p>
+  <p id="gappy" class="copy">Fine print, narrow and wide</p>
+  <span id="tracked" class="caps">Tracked</span>
+  <span id="tight" class="caps">Tight</span>
+  <span id="edge" class="caps">Edge</span>
+  <nav>
+    <a href="#a">One</a> <a href="#b">Two</a> <a href="#c">Three</a> <a href="#d">Four</a>
+    <a class="extra" href="#e">Five</a>
+    <a id="sr-tiny" href="#f">Visually hidden, 1 px</a>
+    <a id="sr-clip" href="#g">Visually hidden, clipped</a>
+    <a id="sr-path" href="#h">Visually hidden, clip-path</a>
+    <a id="skip" href="#i">Skip link, parked off the page</a>
+    <a id="faded" href="#j">Transparent</a>
+    <a id="ghost" href="#k">Invisible</a>
+  </nav>
+  <form>
+    <input id="login-pwd" type="password" autocomplete="current-password">
+    <input id="saved-pwd" type="password" value="hunter2">
+  </form>
+  <button id="big">Book</button>
+  <div id="chip" role="button" tabindex="0">Filter</div>
+  <button id="gone">Hidden</button>
+  <div id="decoy" role="button" aria-hidden="true">Drawn, but hidden from assistive technology</div>
+  <p id="xh-low" class="xh">Small x-height</p>
+  <p id="xh-ok" class="xh">Ample x-height</p>
+  <div id="card-a" class="card"></div>
+  <div id="card-b" class="card"></div>
+  <div id="card-c" class="card"></div>
+  <div id="card-d" class="card"></div>
+  <p id="grey" class="ink">Tinted grey text</p>
+  <p id="loud" class="ink">Loud red text</p>
+  <p id="gap" class="gap">From the token</p>
+  <p id="raw" class="gap">Typed in</p>
+  <p id="short" class="gap">From the token, by the shorthand</p>
+  <p id="inline" class="gap" style="margin-top: 12px">Inline, beaten by an important token</p>
+</body>
+</html>

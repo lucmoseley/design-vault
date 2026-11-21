@@ -1,0 +1,6 @@
+{
+  "styles": [
+    { "id": "cinematic-dark", "name": "Cinematic Dark" },
+    { "id": "quiet-luxury", "name": "Quiet Luxury" }
+  ]
+}

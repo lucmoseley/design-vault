@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pointer states</title>
+<!--
+  The pointer driver's fixture (#301). #tip shows only while #tip-trigger is
+  hovered, fading in over 150 ms after a CSS delay of 900 ms, longer than the
+  driver's 800 ms quiet window, so only its wait for running animations
+  catches it. #late-tip shows 700 ms after the pointer reaches #late-trigger,
+  by a script. #count counts clicks, which land on release. #knob follows a
+  drag along #track, counting its moves and the shortest gap between two in
+  ms, and, let go, snaps to the nearest 100 px over 200 ms. #veil covers #covered. #glider, once
+  sent, moves 20 px a frame for 20 frames and records where it is clicked. #strip
+  scrolls sideways natively; #glide eases a wheel's scroll over 1200 ms,
+  changing no markup. #layer moves at half the page's scroll, and #progress
+  fills with it by a scroll-driven animation. #spinner turns forever, which
+  the driver's wait must not hold for. #bottom sits off the first screen.
+-->
+<style>
+  body { font: 16px/1.5 sans-serif; margin: 0; padding: 1rem; }
+  section { position: relative; height: 80px; }
+  .tip { opacity: 0; visibility: hidden; transition: opacity 150ms, visibility 150ms; }
+  #tip-trigger:hover + .tip { opacity: 1; visibility: visible; transition-delay: 900ms; }
+  #press { background: rgb(240, 240, 240); }
+  #press:active { background: rgb(0, 0, 128); }
+  #track { position: relative; width: 400px; height: 40px; background: rgb(230, 230, 230); }
+  #knob { position: absolute; left: 0; top: 0; width: 40px; height: 40px; background: rgb(60, 60, 60); touch-action: none; }
+  #knob.snapping { transition: transform 200ms; }
+  #veil { position: absolute; inset: 0; width: 200px; background: rgb(255, 255, 255, 0.5); }
+  #strip, #glide { display: inline-block; width: 300px; overflow-x: auto; white-space: nowrap; }
+  #strip span, #glide span { display: inline-block; width: 300px; height: 40px; }
+  #spinner { position: fixed; bottom: 0; left: 0; width: 10px; height: 10px; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  #scene { height: 120px; overflow: hidden; }
+  #layer { position: absolute; top: 0; width: 100px; height: 20px; background: rgb(200, 100, 0); }
+  #progress { position: fixed; top: 0; right: 0; width: 8px; height: 100px; background: rgb(0, 128, 0);
+              transform-origin: top; animation: fill linear both; animation-timeline: scroll(); }
+  @keyframes fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  #spacer { height: 3000px; }
+</style>
+</head>
+<body>
+<section>
+  <button id="tip-trigger"><span>Info</span></button>
+  <span id="tip" class="tip">Beds from 12 a night</span>
+  <button id="late-trigger">Late info</button>
+  <span id="late-tip" hidden>Shown after a delay</span>
+</section>
+<section>
+  <button id="press">Hold me</button>
+  <button id="count" data-clicks="0">Count</button>
+  <button id="glider">Glide</button>
+  <div id="host"></div>
+  <a id="next" href="pointer.html?next">Next page</a>
+</section>
+<section>
+  <div id="track"><div id="knob"></div></div>
+</section>
+<section>
+  <button id="covered">Under a veil</button>
+  <div id="veil"></div>
+</section>
+<section>
+  <div id="strip"><span>One</span><span>Two</span><span>Three</span><span>Four</span></div>
+  <div id="glide"><span>One</span><span>Two</span><span>Three</span><span>Four</span></div>
+</section>
+<section id="scene"><div id="layer"></div></section>
+<div id="progress"></div>
+<div id="spinner"></div>
+<div id="spacer"></div>
+<p id="bottom">The end</p>
+
+<script>
+  document.getElementById("host").attachShadow({ mode: "open" }).innerHTML =
+    '<style>button:active { background: rgb(0, 0, 128); }</style><button id="shadowed">In a shadow</button>';
+
+  const lateTrigger = document.getElementById("late-trigger");
+  const lateTip = document.getElementById("late-tip");
+  let lateTimer;
+  lateTrigger.addEventListener("pointerenter", () => { lateTimer = setTimeout(() => { lateTip.hidden = false; }, 700); });
+  lateTrigger.addEventListener("pointerleave", () => { clearTimeout(lateTimer); lateTip.hidden = true; });
+
+  const count = document.getElementById("count");
+  count.addEventListener("click", () => { count.dataset.clicks = Number(count.dataset.clicks) + 1; });
+
+  const glider = document.getElementById("glider");
+  glider.addEventListener("click", () => { glider.dataset.clickedAt = glider.style.translate; });
+  window.sendGlider = () => {
+    let step = 0;
+    const move = () => { glider.style.translate = `${20 * ++step}px`; if (step < 20) requestAnimationFrame(move); };
+    move();
+  };
+
+  const knob = document.getElementById("knob");
+  let grab = null;
+  const place = (x) => { knob.dataset.x = x; knob.style.transform = `translateX(${x}px)`; };
+  knob.addEventListener("pointerdown", (event) => {
+    knob.setPointerCapture(event.pointerId);
+    knob.classList.remove("snapping");
+    grab = { from: event.clientX, x: Number(knob.dataset.x || 0), last: null };
+    knob.dataset.moves = 0;
+    delete knob.dataset.gap;
+  });
+  knob.addEventListener("pointermove", (event) => {
+    if (!grab) return;
+    if (grab.last !== null) knob.dataset.gap = Math.min(Number(knob.dataset.gap ?? Infinity), event.timeStamp - grab.last);
+    grab.last = event.timeStamp;
+    knob.dataset.moves = Number(knob.dataset.moves) + 1;
+    place(Math.min(360, Math.max(0, grab.x + event.clientX - grab.from)));
+  });
+  knob.addEventListener("pointerup", () => {
+    grab = null;
+    knob.classList.add("snapping");
+    place(Math.round(Number(knob.dataset.x || 0) / 100) * 100);
+  });
+
+  const glide = document.getElementById("glide");
+  glide.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const from = glide.scrollLeft, by = event.deltaX, start = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / 1200);
+      glide.scrollLeft = from + by * (1 - (1 - t) ** 3);
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, { passive: false });
+
+  const layer = document.getElementById("layer");
+  addEventListener("scroll", () => requestAnimationFrame(() => {
+    layer.style.transform = `translateY(${scrollY / 2}px)`;
+  }));
+</script>
+</body>
+</html>

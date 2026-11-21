@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>frames</title>
+<!-- One fault, vault.focus, seven times, past six frames (#199). The booking frame is this page's own (srcdoc),
+     so the walk goes into it: "Book now" shows the browser's focus ring, which is read only where the frame's
+     border and padding put it on the page; "Dates" has its outline taken off; and "Late arrival" lies under a
+     lid this page lays over the frame's foot, which covers it only where that border and padding put it. In the
+     rooms frame, also this page's own, "Rooms" lies under the frame's own fixed bar. The menu frame is cut
+     60 px into its content by a box that clips it: "Menu", 120 px tall with its outline taken off, is judged
+     on the 60 px that show, and "Prices" lies wholly below the cut. The
+     map frame is another site's (a data: URL), so it is judged at the frame alone: the 32 links inside it show
+     no focus, and are more than the walk would take for this
+     page's own few. The kiosk frame, another site's too, lies wholly under a lid of this page's. The hours
+     frame holds no link, and the browser stops on its page. "Contact", after the frames, has its outline
+     taken off too. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222 }
+  a { display: inline-block; margin: 16px; padding: 8px 0 }
+  iframe { display: block; width: 240px; height: 160px; border: 12px solid #888; padding: 24px }
+  .slot { position: relative; width: max-content; margin: 120px 40px 0 }
+  .lid { position: absolute; left: 0; right: 0; bottom: 0; height: 80px; background: #0a3542 }
+  .rooms, .map, .hours { margin: 120px 40px 0 }
+  .cut { height: 96px; margin: 120px 40px 0; overflow: clip }
+  .shut .lid { top: 0; height: auto }
+  .bare { outline: none }
+</style>
+<a href="#top">Hostel by the sea</a>
+<div class="slot">
+  <iframe class="booking" title="Booking" srcdoc="<style>body { margin: 0; font: 16px/1.5 sans-serif } a { display: inline-block; margin: 8px; padding: 8px 0 } .bare { outline: none } .low { position: absolute; left: 0; bottom: 2px; margin: 0 8px }</style><a class='book' href='#book'>Book now</a><a class='bare' href='#dates'>Dates</a><a class='low' href='#late'>Late arrival</a>"></iframe>
+  <div class="lid"></div>
+</div>
+<iframe class="rooms" title="Rooms" srcdoc="<style>body { margin: 0; font: 16px/1.5 sans-serif } .bar { position: fixed; top: 0; left: 0; right: 0; height: 64px; background: #0a3542 } a { display: inline-block; margin: 8px; padding: 8px 0 }</style><a href='#rooms'>Rooms</a><div class='bar'></div>"></iframe>
+<div class="cut">
+  <iframe class="menu" title="Menu" srcdoc="<style>body { margin: 0; font: 16px/1.5 sans-serif } a { display: block; width: 48px; height: 120px; outline: none } .far { position: absolute; top: 100px; left: 64px; height: 40px }</style><a class='tall' href='#menu'>Menu</a><a class='far' href='#prices'>Prices</a>"></iframe>
+</div>
+<iframe class="map" title="Map" src="data:text/html,<style>body { margin: 0; font: 16px/1.5 sans-serif } a { display: inline-block; margin: 8px; padding: 8px 0; outline: none }</style><a href='https://example.com/a'>Zoom in</a><a href='https://example.com/b'>Zoom out</a><script>for (let i = 0; i < 30; i++) document.body.insertAdjacentHTML('beforeend', `<a href='https://example.com/${i}'>Pan ${i}</a>`)</script>"></iframe>
+<div class="slot shut">
+  <iframe class="kiosk" title="Kiosk" src="data:text/html,<a href='https://example.com/k'>Kiosk</a>"></iframe>
+  <div class="lid"></div>
+</div>
+<iframe class="hours" title="Opening hours" srcdoc="<p>Open 8 to 22</p>"></iframe>
+<a class="bare" href="#contact">Contact</a>

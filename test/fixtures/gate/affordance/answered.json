@@ -1,0 +1,40 @@
+{
+ "answers": {
+  "pill": {
+   "vault.one-target": {
+    "answer": "pass",
+    "evidence": "pill/parts.json, exit 0"
+   }
+  },
+  "hidden": {
+   "vault.one-target": {
+    "answer": "pass",
+    "evidence": "hidden/parts.json, exit 0"
+   }
+  },
+  "minor": {
+   "vault.one-target": {
+    "answer": "pass",
+    "evidence": "minor/parts.json, exit 0"
+   }
+  },
+  "split": {
+   "vault.one-target": {
+    "answer": "pass",
+    "evidence": "split/parts.json, exit 0"
+   }
+  },
+  "clean": {
+   "vault.one-target": {
+    "answer": "pass",
+    "evidence": "clean/parts.json, exit 0"
+   }
+  },
+  "unlisted": {
+   "vault.one-target": {
+    "answer": "pass",
+    "evidence": "unlisted/parts.json, exit 0"
+   }
+  }
+ }
+}

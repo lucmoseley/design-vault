@@ -1,0 +1,26 @@
+{
+	"_comment": [
+		"This repo's own hooks, guards and checkers, held to the core's registry rule (workflow-core#1456).",
+		"`hooks` pins every .claude/settings.json registration: event, id (a substring of its command line,",
+		"arguments included), narrowing (its `if`), matcher (null on an event taking none), covers (tools it",
+		"must fire on) and unbounded (true where it declares no timeout). `registeredElsewhere` keys a",
+		"scripts/guard-* no hook runs, and `calledElsewhere` a scripts/check-*.js nothing calls unasked, each",
+		"to its reason. List what is unregistered: node <plugin root>/scripts/check-registrations.js"
+	],
+	"hooks": [
+		{
+			"event": "SessionStart",
+			"id": "node \"$CLAUDE_PROJECT_DIR/release-check.js\"",
+			"matcher": "startup|resume|clear",
+			"covers": []
+		},
+		{
+			"event": "SessionStart",
+			"id": "node \"$CLAUDE_PROJECT_DIR/ledger-upkeep.js\"",
+			"matcher": "startup|resume|clear",
+			"covers": []
+		}
+	],
+	"registeredElsewhere": {},
+	"calledElsewhere": {}
+}

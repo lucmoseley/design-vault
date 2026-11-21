@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Annotated Brief</title>
+<meta name="description" content="Style tile v3, round 2: Mark M. Moseley's homepage set like the first page of a well-set brief, with margin notes giving the place and year of his work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@700&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #F7F5EE;
+  --ink: #404040;
+  --blue: #0070C0;
+  --hair: rgb(64 64 64 / 0.16);
+  --u: 1.75rem;                 /* the one rhythm unit: body line height, 28px */
+  --ease: cubic-bezier(0.4, 0, 0.1, 1);
+  --serif: "Newsreader", serif;
+  --sans: "Public Sans", sans-serif;
+  --gutter: clamp(16px, 5vw, 72px);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); scrollbar-color: rgb(64 64 64 / 0.35) var(--paper); }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1.125rem/var(--u) var(--serif);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  caret-color: var(--blue);
+}
+::selection { background: var(--blue); color: var(--paper); }
+a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 1px; }
+img { display: block; max-width: 100%; }
+
+.wrap { max-width: calc(1296px + 2 * var(--gutter)); margin-inline: auto; padding-inline: var(--gutter); }
+
+/* ---------- Header ---------- */
+.masthead {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding-block: 26px 0;
+}
+.ident { display: flex; align-items: center; gap: 20px; text-decoration: none; color: var(--ink); }
+.ident svg { width: 128px; height: auto; flex: none; }
+.ident .name { display: block; font: 500 1.375rem/1.15 var(--serif); letter-spacing: -0.005em; }
+.ident .practice { display: block; font: 400 0.8125rem/1.4 var(--sans); margin-top: 3px; }
+.wordmark { font-family: "Gelasio", Georgia, serif; font-weight: 700; }
+.menu { display: flex; gap: 32px; font: 500 0.9375rem/1 var(--sans); }
+.menu a { color: var(--ink); text-decoration: none; padding-block: 8px; }
+.menu a:hover { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; }
+
+/* ---------- Hero: the first page of the brief ---------- */
+.hero {
+  min-height: calc(100svh - 100px);
+  display: grid;
+  grid-template-columns: [note] 11.5rem 2.5rem [text] minmax(0, 44rem) minmax(3rem, 1fr) [fig] 20rem;
+  grid-template-rows: auto auto auto auto 1fr;
+  align-items: baseline;
+  align-content: center;
+  padding-block: 40px 56px;
+}
+.hero > .note { grid-column: note; justify-self: end; text-align: right; }
+.hero > .body { grid-column: text; }
+.hero h1 {
+  margin: 0;
+  font-weight: 300;
+  font-size: clamp(2.35rem, 4.9vw, 4.5rem);
+  line-height: 1.07;
+  letter-spacing: -0.018em;
+  font-variation-settings: "opsz" 72;
+  text-wrap: balance;
+}
+.hero p.body { margin: 0; font-size: 1.25rem; line-height: 1.6; max-width: 38rem; text-wrap: pretty; }
+.hero .r1 { grid-row: 1; }
+.hero .r2 { grid-row: 2; padding-top: 2.25rem; }
+.hero .r3 { grid-row: 3; padding-top: 1rem; }
+.hero .r4 { grid-row: 4; padding-top: 2.5rem; }
+
+.note {
+  font: 400 0.8125rem/1.45 var(--sans);
+  color: var(--blue);
+  max-width: 11.5rem;
+}
+.note b { display: block; font-weight: 600; }
+
+.action {
+  display: inline-flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  text-decoration: none; color: var(--ink);
+}
+.action .btn {
+  display: inline-block;
+  font: 600 0.9375rem/1 var(--sans);
+  color: var(--paper); background: var(--blue);
+  padding: 15px 22px; border-radius: 2px;
+  transition: background-color 180ms var(--ease);
+}
+.action .addr { font: 400 1.125rem/1.3 var(--serif); text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 0.22em; transition: text-decoration-color 180ms var(--ease); }
+.action:hover .btn { background: var(--ink); }
+.action:hover .addr { text-decoration-color: var(--ink); }
+.action:active .btn { transform: translateY(1px); }
+
+.exhibit {
+  grid-column: fig; grid-row: 1 / 6; align-self: center;
+  margin: 0;
+}
+.exhibit .photo {
+  aspect-ratio: 4 / 5; width: 100%; overflow: hidden;
+  background: var(--ink);
+  box-shadow: 0 1px 2px rgb(64 64 64 / 0.10), 0 22px 44px -26px rgb(64 64 64 / 0.55);
+}
+.exhibit img { width: 100%; height: 100%; object-fit: cover; object-position: 55% 0; filter: url(#grade); }
+.exhibit figcaption { font: italic 400 0.9375rem/1.45 var(--serif); margin-top: 14px; max-width: 21rem; }
+.exhibit figcaption span { display: block; font: 400 0.75rem/1.5 var(--sans); margin-top: 4px; }
+
+/* ---------- The one motion: the exhibit is set down on the page ---------- */
+@keyframes set-down {
+  from { transform: translateY(14px) scale(1.012); box-shadow: 0 10px 14px rgb(64 64 64 / 0), 0 46px 70px -30px rgb(64 64 64 / 0.30); }
+  to   { transform: none; box-shadow: 0 1px 2px rgb(64 64 64 / 0.10), 0 22px 44px -26px rgb(64 64 64 / 0.55); }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+body.play .exhibit .photo, body.play .stage .photo { animation: set-down 900ms var(--ease) 120ms both, fade-in 450ms var(--ease) 120ms both; }
+@media (prefers-reduced-motion: reduce) {
+  body.play .exhibit .photo, body.play .stage .photo { animation: fade-in 400ms var(--ease) 0ms both; }
+}
+
+/* ---------- Below the fold: the parts of the look ---------- */
+.part {
+  display: grid;
+  grid-template-columns: [note] 11.5rem 2.5rem [text] minmax(0, 40rem) minmax(2rem, 1fr) [fig] 22.5rem;
+  align-items: baseline;
+  padding-block: calc(var(--u) * 3) 0;
+}
+.part > .note { grid-column: note; justify-self: end; text-align: right; }
+.part > .main { grid-column: text / -1; min-width: 0; }
+.part h2 { margin: 0 0 var(--u); font: 400 2rem/2.5rem var(--serif); letter-spacing: -0.01em; font-variation-settings: "opsz" 48; max-width: 40rem; text-wrap: balance; }
+.part p { margin: 0 0 var(--u); max-width: 40rem; }
+.parts-start { margin-top: calc(var(--u) * 2); box-shadow: inset 0 1px 0 var(--hair); }
+
+.swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; max-width: 64rem; }
+.swatch .chip { height: 112px; box-shadow: inset 0 0 0 1px var(--hair); }
+.swatch dl { margin: 12px 0 0; font: 400 0.8125rem/1.5 var(--sans); }
+.swatch dt { font-weight: 600; }
+.swatch dd { margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+
+.types { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 48px; max-width: 64rem; }
+.types .big { font: 300 3.25rem/1.08 var(--serif); font-variation-settings: "opsz" 72; letter-spacing: -0.018em; margin: 0 0 16px; }
+.types .meta { font: 400 0.8125rem/1.5 var(--sans); margin: 0; }
+.types .sans-sample { font: 500 1.375rem/1.35 var(--sans); margin: 0 0 16px; }
+.types .mark-sample { font: 700 1.5rem/1 "Gelasio", Georgia, serif; color: var(--blue); margin: 28px 0 10px; }
+
+/* ---------- Article specimen: one rhythm unit throughout ---------- */
+.article { max-width: 40rem; container-type: inline-size; }
+.article > * { margin: 0 0 var(--u); }
+.article h3.title { font: 400 2.75rem/calc(var(--u) * 2) var(--serif); letter-spacing: -0.015em; font-variation-settings: "opsz" 60; margin: 0; text-wrap: balance; }
+.article .byline { font: 400 0.875rem/var(--u) var(--sans); }
+.article .byline a { color: var(--ink); }
+.article h4 { font: 500 1.5rem/var(--u) var(--serif); margin-top: var(--u); margin-bottom: 0; font-variation-settings: "opsz" 36; }
+.article ul { padding-left: 1.25em; }
+.article li { padding-left: 0.25em; }
+.article li::marker { content: "–  "; color: var(--ink); }
+.article figure { margin-inline: 0; }
+.article figure img {
+  width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: 60% 40%;
+  height: round(down, 56.25cqi, var(--u));
+  aspect-ratio: auto;
+  filter: url(#grade);
+}
+.article figcaption { font: italic 400 1rem/var(--u) var(--serif); }
+.article figcaption span { font: 400 0.8125rem/var(--u) var(--sans); font-style: normal; }
+.doc {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: center;
+  padding-block: calc(var(--u) / 2);
+  box-shadow: inset 0 1px 0 var(--hair), inset 0 -1px 0 var(--hair);
+  text-decoration: none; color: var(--ink);
+}
+.doc .t { font: 400 1.125rem/var(--u) var(--serif); }
+.doc .m { font: 400 0.875rem/var(--u) var(--sans); grid-column: 1; }
+.doc .dl { grid-column: 2; grid-row: 1 / 3; display: inline-flex; align-items: center; gap: 8px; font: 600 0.875rem/var(--u) var(--sans); color: var(--blue); }
+.doc .dl svg { width: 16px; height: 16px; }
+.doc:hover .t { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+
+/* ---------- Motion sketch ---------- */
+.motion { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; max-width: 64rem; }
+.words { font: 300 2.25rem/1.15 var(--serif); font-variation-settings: "opsz" 60; margin: 0 0 var(--u); }
+.curve { width: 100%; max-width: 300px; height: auto; display: block; }
+.curve .axis { stroke: var(--hair); stroke-width: 1; fill: none; }
+.curve .bez { stroke: var(--blue); stroke-width: 2; fill: none; }
+.curve .handle { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 3; fill: none; opacity: .6; }
+.curve text { font: 400 11px var(--sans); fill: var(--ink); }
+.stage { display: flex; align-items: center; justify-content: center; padding: 28px 0; }
+.stage .photo { width: 180px; aspect-ratio: 4 / 5; overflow: hidden; background: var(--ink); box-shadow: 0 1px 2px rgb(64 64 64 / 0.10), 0 22px 44px -26px rgb(64 64 64 / 0.55); }
+.stage img { width: 100%; height: 100%; object-fit: cover; object-position: 55% 0; filter: url(#grade); }
+table.timeline { border-collapse: collapse; width: 100%; font: 400 0.8125rem/1.5 var(--sans); font-variant-numeric: tabular-nums; margin-top: 8px; }
+.timeline th, .timeline td { text-align: left; padding: 8px 12px 8px 0; box-shadow: inset 0 -1px 0 var(--hair); vertical-align: top; }
+.timeline th { font-weight: 600; }
+.replay {
+  font: 600 0.875rem/1 var(--sans); color: var(--blue); background: none; border: 0; padding: 10px 0; cursor: pointer;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.25em;
+}
+.replay:hover { text-decoration-thickness: 2px; }
+
+.tilenotes { font: 400 0.875rem/1.6 var(--sans); max-width: 44rem; }
+.tilenotes p { margin: 0 0 12px; }
+footer.end { padding-block: calc(var(--u) * 3) 48px; }
+footer.end .wrapline { display: flex; gap: 24px; flex-wrap: wrap; font: 400 0.875rem/1.5 var(--sans); box-shadow: inset 0 1px 0 var(--hair); padding-top: 20px; }
+
+/* ---------- Narrower screens ---------- */
+@media (max-width: 1180px) {
+  .hero, .part { grid-template-columns: [note] 9rem 2rem [text] minmax(0, 1fr) 2.5rem [fig] 17rem; }
+  .note { max-width: 9rem; }
+  .menu { gap: 22px; }
+  .part > .main { grid-column: text / -1; }
+}
+@media (max-width: 900px) {
+  .masthead { flex-wrap: wrap; row-gap: 14px; }
+  .hero, .part { grid-template-columns: [text] minmax(0, 1fr); grid-template-rows: none; min-height: 0; align-content: start; }
+  .hero > .body, .hero > .note, .part > .note, .part > .main { grid-column: text; justify-self: stretch; text-align: left; }
+  .hero { padding-block: 32px 40px; }
+  .hero > * { grid-row: auto !important; }
+  .hero .r1.body { order: 1; } .hero .r1.note { order: 2; padding-top: 10px; }
+  .hero .exhibit { order: 3; grid-column: text; align-self: start; margin-top: 28px; }
+  .hero .r2.body { order: 4; padding-top: 28px; } .hero .r2.note { order: 5; padding-top: 8px; }
+  .hero .r3.body { order: 6; padding-top: 20px; } .hero .r3.note { order: 7; padding-top: 8px; }
+  .hero .r4 { order: 8; padding-top: 32px; }
+  .exhibit .photo { aspect-ratio: 5 / 4; }
+  .exhibit img { object-position: 55% 18%; }
+  .note { max-width: none; }
+  .part > .note { padding-bottom: 6px; }
+  .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .types, .motion { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+}
+@media (max-width: 560px) {
+  .menu { gap: 18px; font-size: 0.875rem; }
+  .ident svg { width: 108px; }
+  .ident .name { font-size: 1.1875rem; }
+  .ident .practice { font-size: 0.75rem; }
+  .hero p.body { font-size: 1.125rem; }
+  .article h3.title { font-size: 2.375rem; }
+  .types .big { font-size: 2.5rem; }
+  .action .addr { font-size: 1rem; }
+}
+</style>
+<style>/* v3p-T */ .hero p.body.r2{text-transform:uppercase;letter-spacing:.12em;font-family:'Public Sans',sans-serif;font-weight:600;font-size:15px;line-height:1.7}
+/* v3p-C */ .hero{background:linear-gradient(135deg,#E3EEFF 0%,#F1E4FF 100%);box-shadow:0 0 0 100vmax #EDE9FF;clip-path:inset(0 -100vmax)}
+/* v3p-R */ .article .doc .dl{border:1.5px solid #0070C0;border-radius:999px;padding:6px 14px}</style></head>
+<body>
+<script>document.body.classList.add('play');</script>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- The photo grade: every tone mapped between the house grey #404040 and the paper #F7F5EE. -->
+  <filter id="grade" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0"/>
+    <feComponentTransfer>
+      <feFuncR type="table" tableValues="0.251 0.33 0.62 0.88 0.969"/>
+      <feFuncG type="table" tableValues="0.251 0.33 0.62 0.88 0.961"/>
+      <feFuncB type="table" tableValues="0.251 0.33 0.615 0.865 0.933"/>
+    </feComponentTransfer>
+  </filter>
+</svg>
+
+<header class="wrap masthead">
+  <a class="ident" href="#top" aria-label="Mark M. Moseley, MMM Infra, home">
+    <svg viewBox="0 30 748 395" role="img" aria-label="MMM Infra">
+      <path fill="#404040" d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/>
+      <path fill="#404040" d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/>
+      <path fill="#404040" d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/>
+      <path fill="#404040" d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/>
+      <text class="wordmark" x="392" y="411.6" text-anchor="middle" font-size="69" letter-spacing="3.05" text-rendering="geometricPrecision" fill="#0070C0">MMM INFRA</text>
+    </svg>
+    <span>
+      <span class="name">Mark M. Moseley</span>
+      <span class="practice">Moseley Infrastructure Advisory Services</span>
+    </span>
+  </a>
+  <nav class="menu" aria-label="Main">
+    <a href="#profile">Profile</a>
+    <a href="#articles">Articles and Presentations</a>
+    <a href="#blog">Blog</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="wrap hero" aria-label="Introduction">
+    <h1 class="body r1">In my view, there is no ‘perfect’ PPP Law – each country needs to design its own legislation.</h1>
+    <p class="note r1"><b>Istanbul, 2025</b>Best Practices in PPP Legislation for Emerging Economies</p>
+
+    <p class="body r2" id="profile">I advise multilateral development banks, development agencies and governments on infrastructure and on Public-Private Partnerships (PPPs), and I lecture on PPP Law at the University of Melbourne Law School.</p>
+    <p class="note r2"><b>Melbourne, 2026</b>LLM Course on PPP Law: Streamlining the PPP Process</p>
+
+    <p class="body r3">Risk allocation is at the very heart of every PPP transaction. There is no need to abandon PPPs – instead, the focus should be on making them more flexible.</p>
+    <p class="note r3"><b>São Paulo, 2024</b>New Approaches to Risk Allocation in Infrastructure Projects</p>
+
+    <div class="body r4">
+      <span class="action">
+        <span class="btn">Write to me</span>
+        <span class="addr">Mark.Moseley@MMMinfra.com</span>
+      </span>
+      <a class="action" href="#consult" style="margin-left:16px"><span class="btn">Book a consultation</span></a>
+    </div>
+
+    <figure class="exhibit">
+      <div class="photo"><img src="../shared/photos/portrait-wappp.jpg" alt="Mark M. Moseley speaking at a lectern" width="767" height="553"></div>
+      <figcaption>Mark M. Moseley at the lectern.<span>Placeholder: Mark’s photo from the current site, until the image round.</span></figcaption>
+    </figure>
+  </section>
+
+  <!-- ===== Below the fold: the parts of the look ===== -->
+  <div class="parts-start"></div>
+
+  <section class="wrap part" aria-labelledby="pal">
+    <p class="note"><b>Palette</b>Three colours, no accent</p>
+    <div class="main">
+      <h2 id="pal">A warm paper, the house grey as ink, the house blue as the voice of the mark.</h2>
+      <div class="swatches">
+        <div class="swatch"><div class="chip" style="background:#F7F5EE"></div><dl><dt>Paper</dt><dd class="num">#F7F5EE</dd><dd>The ground; the photo’s lightest tone</dd></dl></div>
+        <div class="swatch"><div class="chip" style="background:#404040"></div><dl><dt>Ink</dt><dd class="num">#404040</dd><dd>Text, the aqueduct, the photo’s darkest tone. 9.50:1 on paper</dd></dl></div>
+        <div class="swatch"><div class="chip" style="background:#0070C0"></div><dl><dt>House blue</dt><dd class="num">#0070C0</dd><dd>Wordmark, margin notes, links, the action. 4.72:1 on paper</dd></dl></div>
+        <div class="swatch"><div class="chip" style="background:rgb(64 64 64 / 0.16)"></div><dl><dt>Hairline</dt><dd class="num">ink at 16%</dd><dd>Rules under the document row and table; never text</dd></dl></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap part" aria-labelledby="typ">
+    <p class="note"><b>Type</b>Newsreader and Public Sans</p>
+    <div class="main">
+      <h2 id="typ">One serif for Mark’s voice, set large once; one plain sans for notes and labels.</h2>
+      <div class="types">
+        <div>
+          <p class="big">Each country needs its own.</p>
+          <p class="meta">Newsreader Light, optical size 72. The first line of the page, 4rem at 1440 px, line height 1.07. Body 18/28 at optical size auto.</p>
+        </div>
+        <div>
+          <p class="sans-sample">Istanbul, 2025 · Lecture · PDF</p>
+          <p class="meta">Public Sans 400–600. Margin notes 13/19 in the house blue, labels, the action.</p>
+          <p class="mark-sample">MMM INFRA</p>
+          <p class="meta">Gelasio Bold, the wordmark only: metric-compatible with Georgia, the logo’s own face.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap part" aria-labelledby="tex">
+    <p class="note"><b>Texture</b>None</p>
+    <div class="main">
+      <h2 id="tex">No texture: the paper is a flat warm tone, and the photographs are the only material on the page.</h2>
+      <p>Each photograph is graded through one filter, so its darkest tone is the house grey and its lightest the paper. The real object carries the warmth; nothing is drawn to look like paper.</p>
+    </div>
+  </section>
+
+  <section class="wrap part" id="blog" aria-labelledby="art">
+    <p class="note" id="articles"><b>Article page</b>Blog No. 8, as Angélique would publish it</p>
+    <div class="main">
+      <article class="article">
+        <h3 class="title" id="art">The World’s Best Public-Private Partnership Law</h3>
+        <p class="byline">Mark M. Moseley · <span class="num">18 September 2024</span> · MMM Infra Blog No. 8</p>
+        <p>Recently, a client with a development agency asked me “What is the best Public-Private Partnership Law in the world?”</p>
+        <p>My joking response was “Whichever PPP Law I am currently working on with a client country!” On a more serious note however, the question did cause me to reflect on the elements that make a PPP Law particularly effective.</p>
+        <figure>
+          <img src="../shared/photos/br-summit-interview.jpg" alt="Mark M. Moseley in a radio interview at the Belt and Road Summit" width="1113" height="626">
+          <figcaption>A radio interview at the Belt and Road Summit. <span>Placeholder: Mark’s photo from the current site, until the image round.</span></figcaption>
+        </figure>
+        <h4>Some important preliminary stipulations</h4>
+        <p>First of all, not every country needs a PPP Act. However, for emerging market countries that wish to develop a PPP program, there is real benefit in enacting a new law. With a new PPP Act, the country can:</p>
+        <ul>
+          <li>set out the institutional arrangements for the PPP program;</li>
+          <li>define the scope and key features of the program; and</li>
+          <li>send a message to prospective investors – both foreign and domestic – that the country is serious about doing Public-Private Partnerships.</li>
+        </ul>
+        <a class="doc" href="https://www.mmminfra.com/_files/ugd/d552fd_ae570429f02e489e8e393660542de414.pdf">
+          <span class="t">Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge</span>
+          <span class="m">Lecture · <span class="num">23 April 2026</span> · PDF</span>
+          <span class="dl"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9M4 7.5l4 4 4-4M3 14h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Download</span>
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <section class="wrap part" aria-labelledby="mot">
+    <p class="note"><b>Motion</b>One element enters: the exhibit</p>
+    <div class="main">
+      <h2 id="mot">The photograph is set down on the page, once, and then everything is still.</h2>
+      <div class="motion">
+        <div>
+          <p class="words">Placed. Settled. Still.</p>
+          <svg class="curve" viewBox="-30 -14 370 250" role="img" aria-label="Easing curve cubic-bezier(0.4, 0, 0.1, 1)">
+            <path class="axis" d="M0 200H300M0 200V0"/>
+            <path class="handle" d="M0 200L120 200M300 0L30 0"/>
+            <path class="bez" d="M0 200C120 200 30 0 300 0"/>
+            <text x="0" y="222">0</text><text x="282" y="222">900 ms</text><text x="-26" y="4">1</text>
+          </svg>
+          <p class="meta" style="font:400 .8125rem/1.5 var(--sans);margin:8px 0 0">cubic-bezier(0.4, 0, 0.1, 1): P1y = 0, P2y = 1. Leaves from rest, settles to rest.</p>
+        </div>
+        <div>
+          <div class="stage"><div class="photo"><img src="../shared/photos/portrait-wappp.jpg" alt="" width="767" height="553"></div></div>
+          <button class="replay" type="button" id="replay">Replay the entrance</button>
+          <table class="timeline">
+            <thead><tr><th>Element</th><th>Start</th><th>Length</th><th>Move</th></tr></thead>
+            <tbody>
+              <tr><td>Exhibit photo</td><td>120 ms</td><td>900 ms</td><td>Rises 14 px into place, scale 1.012 to 1; the shadow tightens from lifted to resting</td></tr>
+              <tr><td>Exhibit photo</td><td>120 ms</td><td>450 ms</td><td>Opacity 0 to 1, same curve, overlapping the rise</td></tr>
+              <tr><td>Hover, action</td><td>on hover</td><td>180 ms</td><td>Button blue to ink; address underline to ink</td></tr>
+              <tr><td>Reduced motion</td><td>0 ms</td><td>400 ms</td><td>Opacity only; no movement</td></tr>
+            </tbody>
+          </table>
+          <p class="meta" style="font:400 .8125rem/1.5 var(--sans);margin:12px 0 0">Total 1,020 ms, under the round’s 1.6 s ceiling (each move within docs/research/animation-length.md F5, F12; #13). Everything is visible to a visitor who never sees the motion.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap part" aria-labelledby="notes">
+    <p class="note"><b>Tile notes</b>For the founder and Mark</p>
+    <div class="main tilenotes">
+      <h2 id="notes" style="font:400 1.5rem/2rem var(--serif);margin:0 0 16px">Where the words come from</h2>
+      <p><b>Heading:</b> built from Mark’s own words, a draft for Mark. “There is no ‘perfect’ PPP Law – each country needs to design its own legislation” is verbatim from his Istanbul PPP Week slides (24 March 2025); “In my view,” is his most used opening, added to put the line in the first person.</p>
+      <p><b>First paragraph:</b> a draft for Mark, from the voice guide’s homepage draft and his profile (he has lectured at the University of Melbourne Law School).</p>
+      <p><b>Second paragraph:</b> a draft for Mark. “Risk allocation is at the very heart of every PPP transaction” is verbatim from his ALSF speaking notes (9 December 2020); the second sentence follows his slide line “There is no need to abandon … – instead, the focus should be on improving the process” (Melbourne, 23 April 2026).</p>
+      <p><b>Margin notes:</b> places and years from his Articles and Presentations list: Istanbul PPP Week 2025, University of Melbourne Law School 2026, IBDiC 12th International Congress, São Paulo 2024.</p>
+      <p><b>Photographs:</b> placeholders, Mark’s photos from the current site, until the image round.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap end">
+  <div class="wrapline">
+    <span>Mark M. Moseley, Moseley Infrastructure Advisory Services</span>
+    <a href="mailto:Mark.Moseley@MMMinfra.com">Mark.Moseley@MMMinfra.com</a>
+  </div>
+</footer>
+
+<script>
+document.getElementById('replay').addEventListener('click', function () {
+  var b = document.body;
+  b.classList.remove('play');
+  void b.offsetWidth;
+  b.classList.add('play');
+});
+</script>
+</body>
+</html>

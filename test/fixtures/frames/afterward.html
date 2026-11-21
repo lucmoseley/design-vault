@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- A start no finish event made (design-vault#259): the box moves at load,
+     and a timer 800 ms after load fades the dot in. Its build is read by then,
+     so the dot is a late start, not a chain's link. The 800 ms must stay over
+     check-frames.py's QUIET_MS and under twice it. -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { width: 40px; height: 40px; margin: 40px; background: #2a2a2a; }
+</style></head>
+<body>
+<div id="box"></div>
+<div id="dot"></div>
+<script>
+document.getElementById("box").animate([{ transform: "none" }, { transform: "translateX(600px)" }],
+  { duration: 1000, fill: "both" });
+addEventListener("load", () => setTimeout(() =>
+  document.getElementById("dot").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 }), 800));
+</script>
+</body></html>

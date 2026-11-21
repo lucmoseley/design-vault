@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- A page that never draws the same frame twice (design-vault#67): an unseeded
+     Math.random() is written out in full on each load, so two renders of one
+     moment differ. Not used to place a box: a box lands on whole pixels, so two
+     loads could draw it alike and a frame match (#364). -->
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+#box { position: absolute; left: 40px; top: 120px; width: 60px; height: 60px; background: #2a2a2a; }
+#roll { position: absolute; left: 40px; top: 300px; margin: 0; font: 24px monospace; }
+</style></head>
+<body>
+<div id="box"></div>
+<p id="roll"></p>
+<script>
+document.getElementById("roll").textContent = Math.random();
+document.getElementById("box").animate([{ transform: "none" }, { transform: "translateX(300px)" }],
+  { duration: 1000, easing: "ease-in-out", fill: "both" });
+</script>
+</body></html>

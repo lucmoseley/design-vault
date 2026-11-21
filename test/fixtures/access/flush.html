@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>flush</title>
+<!-- vault.control-edges fails three times: a white field on white whose only edge is #e7e7e7, 1.24:1, flush on a
+     dark rule, one flush on a dark block, and one flush beside a field edged at 4.54:1, whose edges are not the
+     fields' own (#220). A field edged at 4.54:1 on the
+     same rule passes, and so does one that draws nothing. vault.focus fails once, on the edged field, whose outline
+     is taken off: the Tab walk finds it only once the shots that hide each field have put it back. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  input { display: block; margin: 16px 0 0; border: 1px solid #e7e7e7; background: #fff; width: 200px; height: 36px; padding: 0 8px; font: inherit }
+  .rule { height: 2px; width: 240px; background: #222 }
+  .block { height: 40px; width: 240px; background: #1f2a44 }
+  #edged { border-color: #767676 }
+  #edged:focus { outline: none }
+  #bare { border: 0 }
+  .pair { display: flex; margin-top: 16px }
+  .pair input { margin: 0; width: 48px }
+  #dark { border-color: #767676 }
+</style>
+<input id="rule" type="email" aria-label="Email">
+<div class="rule"></div>
+<input id="block" type="email" aria-label="Email again">
+<div class="block"></div>
+<input id="edged" type="text" aria-label="Name">
+<div class="rule"></div>
+<input id="bare" type="text" aria-label="Town">
+<div class="rule"></div>
+<div class="pair"><input id="light" type="text" aria-label="First digit"><input id="dark" type="text" aria-label="Second digit"></div>

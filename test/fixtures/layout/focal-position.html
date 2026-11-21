@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>focal position</title>
+<!-- The same art as a background 400 px tall, pinned to its box's left:
+     the focal box's right edge sits 578 px in, past the screen's side up to
+     576 px wide. The same art covering a 711 px box inside a 300 px frame
+     that hides its overflow is lost to the frame at every width, and the
+     hero's art in a 1000 px box the page clips loses the screen's side as the
+     hero does. Set 340 px from its right, the art's focal box loses its left
+     edge below 562 px. Sized 711 px wide, the art falls as the hero's does. -->
+<style>
+  body { margin: 0; overflow-x: hidden }
+  .hero { height: 400px; background: url(focal-art.svg) left top / auto 400px no-repeat }
+  .over { width: 1000px; height: 400px; background: url(focal-art.svg) left top / auto 400px no-repeat }
+  .near { height: 400px; background: url(focal-art.svg) right 340px top / auto 400px no-repeat }
+  .sized { height: 400px; background: url(focal-art.svg) left top / 711.111px auto no-repeat }
+  .frame { width: 300px; overflow: hidden }
+  .wide { width: 711px; height: 400px; background: url(focal-art.svg) center / cover no-repeat }
+</style>
+<div class="hero"></div>
+<div class="over"></div>
+<div class="near"></div>
+<div class="sized"></div>
+<div class="frame"><div class="wide"></div></div>

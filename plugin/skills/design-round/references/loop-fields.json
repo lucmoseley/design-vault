@@ -1,0 +1,15 @@
+{
+  "about": "Each Higgsfield video model's start-frame and end-frame request fields, by endpoint id, as check-clip.py reads them for vault.clip-loop; each from the model's request schema (design-vault#336).",
+  "models": {
+    "kling-video/v3.0/std/image-to-video": {
+      "start": "image_url",
+      "end": "last_image_url",
+      "source": "docs: https://docs.higgsfield.ai/docs/models/kling-3/standard-image-to-video, Input schema, read 2026-11-17"
+    },
+    "wan/v2.7/image-to-video": {
+      "start": "image_url",
+      "end": "end_image_url",
+      "source": "docs: https://docs.higgsfield.ai/docs/models/wan-2-7/image-to-video, Input schema, read 2026-11-17"
+    }
+  }
+}

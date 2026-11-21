@@ -1,0 +1,316 @@
+Timeline: 5.795 s, 298 cues on 87 elements.
+
+| Cue | Element | Start (s) | Length (s) | Easing | To |
+|---|---|---|---|---|---|
+| arch 1 course 1 appears | arch 1 course 1 | 0.000 | 0.000 | step | visibility: visible |
+| arch 1 course 1 falls 24 px and lands | arch 1 course 1 | 0.000 | 1.458 | stone | translate: 0px 0px |
+| arch 1 course 2 appears | arch 1 course 2 | 0.090 | 0.000 | step | visibility: visible |
+| arch 1 course 2 falls 24 px and lands | arch 1 course 2 | 0.090 | 1.458 | stone | translate: 0px 0px |
+| arch 1 course 3 appears | arch 1 course 3 | 0.180 | 0.000 | step | visibility: visible |
+| arch 1 course 3 falls 24 px and lands | arch 1 course 3 | 0.180 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 1 appears | arch 1 stone 1 | 0.270 | 0.000 | step | visibility: visible |
+| arch 1 stone 1 falls 24 px and lands | arch 1 stone 1 | 0.270 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 9 appears | arch 1 stone 9 | 0.360 | 0.000 | step | visibility: visible |
+| arch 1 stone 9 falls 24 px and lands | arch 1 stone 9 | 0.360 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 2 appears | arch 1 stone 2 | 0.450 | 0.000 | step | visibility: visible |
+| arch 1 stone 2 falls 24 px and lands | arch 1 stone 2 | 0.450 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 8 appears | arch 1 stone 8 | 0.540 | 0.000 | step | visibility: visible |
+| arch 1 stone 8 falls 24 px and lands | arch 1 stone 8 | 0.540 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 3 appears | arch 1 stone 3 | 0.630 | 0.000 | step | visibility: visible |
+| arch 1 stone 3 falls 24 px and lands | arch 1 stone 3 | 0.630 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 7 appears | arch 1 stone 7 | 0.720 | 0.000 | step | visibility: visible |
+| arch 1 stone 7 falls 24 px and lands | arch 1 stone 7 | 0.720 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 4 appears | arch 1 stone 4 | 0.810 | 0.000 | step | visibility: visible |
+| arch 1 stone 4 falls 24 px and lands | arch 1 stone 4 | 0.810 | 1.458 | stone | translate: 0px 0px |
+| arch 1 stone 5 appears | arch 1 stone 5 | 0.900 | 0.000 | step | visibility: visible |
+| arch 1 stone 5 falls 24 px and lands | arch 1 stone 5 | 0.900 | 1.458 | stone | translate: 0px 0px |
+| arch 1 keystone appears | arch 1 keystone | 0.990 | 0.000 | step | visibility: visible |
+| arch 1 keystone falls 24 px and lands | arch 1 keystone | 0.990 | 1.458 | stone | translate: 0px 0px |
+| arch 2 course 1 appears | arch 2 course 1 | 1.260 | 0.000 | step | visibility: visible |
+| arch 2 course 1 falls 24 px and lands | arch 2 course 1 | 1.260 | 1.458 | stone | translate: 0px 0px |
+| arch 2 course 2 appears | arch 2 course 2 | 1.350 | 0.000 | step | visibility: visible |
+| arch 2 course 2 falls 24 px and lands | arch 2 course 2 | 1.350 | 1.458 | stone | translate: 0px 0px |
+| arch 2 course 3 appears | arch 2 course 3 | 1.440 | 0.000 | step | visibility: visible |
+| arch 2 course 3 falls 24 px and lands | arch 2 course 3 | 1.440 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 | 1.458 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 course 1 | 1.458 | 0.000 | step | visibility: hidden |
+| arch 2 stone 1 appears | arch 2 stone 1 | 1.530 | 0.000 | step | visibility: visible |
+| arch 2 stone 1 falls 24 px and lands | arch 2 stone 1 | 1.530 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 to course 2 | 1.548 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 course 2 | 1.548 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 | 1.548 | 0.000 | step | visibility: hidden |
+| arch 2 stone 9 appears | arch 2 stone 9 | 1.620 | 0.000 | step | visibility: visible |
+| arch 2 stone 9 falls 24 px and lands | arch 2 stone 9 | 1.620 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 to course 3 | 1.638 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 course 3 | 1.638 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to course 2 | 1.638 | 0.000 | step | visibility: hidden |
+| arch 2 stone 2 appears | arch 2 stone 2 | 1.710 | 0.000 | step | visibility: visible |
+| arch 2 stone 2 falls 24 px and lands | arch 2 stone 2 | 1.710 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 to stone 1 | 1.728 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 1 | 1.728 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to course 3 | 1.728 | 0.000 | step | visibility: hidden |
+| arch 2 stone 8 appears | arch 2 stone 8 | 1.800 | 0.000 | step | visibility: visible |
+| arch 2 stone 8 falls 24 px and lands | arch 2 stone 8 | 1.800 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 stone 9 | 1.818 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 9 | 1.818 | 0.000 | step | visibility: hidden |
+| arch 2 stone 3 appears | arch 2 stone 3 | 1.890 | 0.000 | step | visibility: visible |
+| arch 2 stone 3 falls 24 px and lands | arch 2 stone 3 | 1.890 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 to stone 2 | 1.908 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 2 | 1.908 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to stone 1 | 1.908 | 0.000 | step | visibility: hidden |
+| arch 2 stone 7 appears | arch 2 stone 7 | 1.980 | 0.000 | step | visibility: visible |
+| arch 2 stone 7 falls 24 px and lands | arch 2 stone 7 | 1.980 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 stone 8 to stone 9 | 1.998 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 8 | 1.998 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 stone 9 | 1.998 | 0.000 | step | visibility: hidden |
+| arch 2 stone 4 appears | arch 2 stone 4 | 2.070 | 0.000 | step | visibility: visible |
+| arch 2 stone 4 falls 24 px and lands | arch 2 stone 4 | 2.070 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 to stone 3 | 2.088 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 3 | 2.088 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to stone 2 | 2.088 | 0.000 | step | visibility: hidden |
+| arch 2 stone 5 appears | arch 2 stone 5 | 2.160 | 0.000 | step | visibility: visible |
+| arch 2 stone 5 falls 24 px and lands | arch 2 stone 5 | 2.160 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 stone 7 to stone 9 | 2.178 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 7 | 2.178 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 stone 8 to stone 9 | 2.178 | 0.000 | step | visibility: hidden |
+| arch 2 keystone appears | arch 2 keystone | 2.250 | 0.000 | step | visibility: visible |
+| arch 2 keystone falls 24 px and lands | arch 2 keystone | 2.250 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 1 course 1 to stone 4 | 2.268 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 4 | 2.268 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to stone 3 | 2.268 | 0.000 | step | visibility: hidden |
+| run set | run: arch 1 course 1 to stone 5 | 2.358 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 stone 5 | 2.358 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to stone 4 | 2.358 | 0.000 | step | visibility: hidden |
+| run set | run: arch 1 course 1 to stone 9 | 2.448 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 1 keystone | 2.448 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 course 1 to stone 5 | 2.448 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 1 stone 7 to stone 9 | 2.448 | 0.000 | step | visibility: hidden |
+| arch 3 course 1 appears | arch 3 course 1 | 2.520 | 0.000 | step | visibility: visible |
+| arch 3 course 1 falls 24 px and lands | arch 3 course 1 | 2.520 | 1.458 | stone | translate: 0px 0px |
+| arch 3 course 2 appears | arch 3 course 2 | 2.610 | 0.000 | step | visibility: visible |
+| arch 3 course 2 falls 24 px and lands | arch 3 course 2 | 2.610 | 1.458 | stone | translate: 0px 0px |
+| arch 3 course 3 appears | arch 3 course 3 | 2.700 | 0.000 | step | visibility: visible |
+| arch 3 course 3 falls 24 px and lands | arch 3 course 3 | 2.700 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 | 2.718 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 course 1 | 2.718 | 0.000 | step | visibility: hidden |
+| arch 3 stone 1 appears | arch 3 stone 1 | 2.790 | 0.000 | step | visibility: visible |
+| arch 3 stone 1 falls 24 px and lands | arch 3 stone 1 | 2.790 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 to course 2 | 2.808 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 course 2 | 2.808 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 | 2.808 | 0.000 | step | visibility: hidden |
+| arch 3 stone 9 appears | arch 3 stone 9 | 2.880 | 0.000 | step | visibility: visible |
+| arch 3 stone 9 falls 24 px and lands | arch 3 stone 9 | 2.880 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 to course 3 | 2.898 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 course 3 | 2.898 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to course 2 | 2.898 | 0.000 | step | visibility: hidden |
+| arch 3 stone 2 appears | arch 3 stone 2 | 2.970 | 0.000 | step | visibility: visible |
+| arch 3 stone 2 falls 24 px and lands | arch 3 stone 2 | 2.970 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 to stone 1 | 2.988 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 1 | 2.988 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to course 3 | 2.988 | 0.000 | step | visibility: hidden |
+| arch 3 stone 8 appears | arch 3 stone 8 | 3.060 | 0.000 | step | visibility: visible |
+| arch 3 stone 8 falls 24 px and lands | arch 3 stone 8 | 3.060 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 stone 9 | 3.078 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 9 | 3.078 | 0.000 | step | visibility: hidden |
+| arch 3 stone 3 appears | arch 3 stone 3 | 3.150 | 0.000 | step | visibility: visible |
+| arch 3 stone 3 falls 24 px and lands | arch 3 stone 3 | 3.150 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 to stone 2 | 3.168 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 2 | 3.168 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to stone 1 | 3.168 | 0.000 | step | visibility: hidden |
+| arch 3 stone 7 appears | arch 3 stone 7 | 3.240 | 0.000 | step | visibility: visible |
+| arch 3 stone 7 falls 24 px and lands | arch 3 stone 7 | 3.240 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 stone 8 to stone 9 | 3.258 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 8 | 3.258 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 stone 9 | 3.258 | 0.000 | step | visibility: hidden |
+| arch 3 stone 4 appears | arch 3 stone 4 | 3.330 | 0.000 | step | visibility: visible |
+| arch 3 stone 4 falls 24 px and lands | arch 3 stone 4 | 3.330 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 to stone 3 | 3.348 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 3 | 3.348 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to stone 2 | 3.348 | 0.000 | step | visibility: hidden |
+| arch 3 stone 5 appears | arch 3 stone 5 | 3.420 | 0.000 | step | visibility: visible |
+| arch 3 stone 5 falls 24 px and lands | arch 3 stone 5 | 3.420 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 stone 7 to stone 9 | 3.438 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 7 | 3.438 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 stone 8 to stone 9 | 3.438 | 0.000 | step | visibility: hidden |
+| arch 3 keystone appears | arch 3 keystone | 3.510 | 0.000 | step | visibility: visible |
+| arch 3 keystone falls 24 px and lands | arch 3 keystone | 3.510 | 1.458 | stone | translate: 0px 0px |
+| run set | run: arch 2 course 1 to stone 4 | 3.528 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 4 | 3.528 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to stone 3 | 3.528 | 0.000 | step | visibility: hidden |
+| run set | run: arch 2 course 1 to stone 5 | 3.618 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 stone 5 | 3.618 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to stone 4 | 3.618 | 0.000 | step | visibility: hidden |
+| run set | run: arch 2 course 1 to stone 9 | 3.708 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 2 keystone | 3.708 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 course 1 to stone 5 | 3.708 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 2 stone 7 to stone 9 | 3.708 | 0.000 | step | visibility: hidden |
+| band slab 4 appears | band slab 4 | 3.780 | 0.000 | step | visibility: visible |
+| band slab 4 falls 30 px and lands | band slab 4 | 3.780 | 1.475 | slab | translate: 0px 0px |
+| band slab 3 appears | band slab 3 | 3.870 | 0.000 | step | visibility: visible |
+| band slab 3 falls 30 px and lands | band slab 3 | 3.870 | 1.475 | slab | translate: 0px 0px |
+| band slab 5 appears | band slab 5 | 3.960 | 0.000 | step | visibility: visible |
+| band slab 5 falls 30 px and lands | band slab 5 | 3.960 | 1.475 | slab | translate: 0px 0px |
+| run set | run: arch 3 course 1 | 3.978 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 course 1 | 3.978 | 0.000 | step | visibility: hidden |
+| band slab 2 appears | band slab 2 | 4.050 | 0.000 | step | visibility: visible |
+| band slab 2 falls 30 px and lands | band slab 2 | 4.050 | 1.475 | slab | translate: 0px 0px |
+| run set | run: arch 3 course 1 to course 2 | 4.068 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 course 2 | 4.068 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 | 4.068 | 0.000 | step | visibility: hidden |
+| band slab 6 appears | band slab 6 | 4.140 | 0.000 | step | visibility: visible |
+| band slab 6 falls 30 px and lands | band slab 6 | 4.140 | 1.475 | slab | translate: 0px 0px |
+| run set | run: arch 3 course 1 to course 3 | 4.158 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 course 3 | 4.158 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to course 2 | 4.158 | 0.000 | step | visibility: hidden |
+| band slab 1 appears | band slab 1 | 4.230 | 0.000 | step | visibility: visible |
+| band slab 1 falls 30 px and lands | band slab 1 | 4.230 | 1.475 | slab | translate: 0px 0px |
+| run set | run: arch 3 course 1 to stone 1 | 4.248 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 1 | 4.248 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to course 3 | 4.248 | 0.000 | step | visibility: hidden |
+| band slab 7 appears | band slab 7 | 4.320 | 0.000 | step | visibility: visible |
+| band slab 7 falls 30 px and lands | band slab 7 | 4.320 | 1.475 | slab | translate: 0px 0px |
+| run set | run: arch 3 stone 9 | 4.338 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 9 | 4.338 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 course 1 to stone 2 | 4.428 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 2 | 4.428 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to stone 1 | 4.428 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 stone 8 to stone 9 | 4.518 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 8 | 4.518 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 stone 9 | 4.518 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 course 1 to stone 3 | 4.608 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 3 | 4.608 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to stone 2 | 4.608 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 stone 7 to stone 9 | 4.698 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 7 | 4.698 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 stone 8 to stone 9 | 4.698 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 course 1 to stone 4 | 4.788 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 4 | 4.788 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to stone 3 | 4.788 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 course 1 to stone 5 | 4.878 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 stone 5 | 4.878 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to stone 4 | 4.878 | 0.000 | step | visibility: hidden |
+| run set | run: arch 3 course 1 to stone 9 | 4.968 | 0.000 | step | visibility: visible |
+| landed stone joins its run | arch 3 keystone | 4.968 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 course 1 to stone 5 | 4.968 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: arch 3 stone 7 to stone 9 | 4.968 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 4 | 5.255 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 4 | 5.255 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 3 to slab 4 | 5.345 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 3 | 5.345 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: band slab 4 | 5.345 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 3 to slab 5 | 5.435 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 5 | 5.435 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: band slab 3 to slab 4 | 5.435 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 2 to slab 5 | 5.525 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 2 | 5.525 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: band slab 3 to slab 5 | 5.525 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 2 to slab 6 | 5.615 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 6 | 5.615 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: band slab 2 to slab 5 | 5.615 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 1 to slab 6 | 5.705 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 1 | 5.705 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: band slab 2 to slab 6 | 5.705 | 0.000 | step | visibility: hidden |
+| run set | run: band slab 1 to slab 7 | 5.795 | 0.000 | step | visibility: visible |
+| landed stone joins its run | band slab 7 | 5.795 | 0.000 | step | visibility: hidden |
+| run merged into a longer one | run: band slab 1 to slab 6 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 course 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 course 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 course 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 4 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 5 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 keystone | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 7 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 8 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 1 stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 course 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 course 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 course 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 4 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 5 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 keystone | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 7 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 8 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 2 stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 course 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 course 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 course 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 4 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 5 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 keystone | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 7 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 8 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | arch 3 stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 1 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 2 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 3 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 4 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 5 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 6 | 5.795 | 0.000 | step | visibility: hidden |
+| pieces hidden | band slab 7 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to course 2 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to course 3 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to stone 1 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to stone 2 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 stone 8 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to stone 3 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 stone 7 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to stone 4 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to stone 5 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 1 course 1 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to course 2 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to course 3 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to stone 1 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to stone 2 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 stone 8 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to stone 3 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 stone 7 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to stone 4 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to stone 5 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 2 course 1 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to course 2 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to course 3 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to stone 1 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to stone 2 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 stone 8 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to stone 3 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 stone 7 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to stone 4 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to stone 5 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: arch 3 course 1 to stone 9 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 4 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 3 to slab 4 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 3 to slab 5 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 2 to slab 5 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 2 to slab 6 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 1 to slab 6 | 5.795 | 0.000 | step | visibility: hidden |
+| runs hidden | run: band slab 1 to slab 7 | 5.795 | 0.000 | step | visibility: hidden |
+| bare logo shown | bare logo | 5.795 | 0.000 | step | visibility: visible |
+
+| Easing | CSS |
+|---|---|
+| stone (drop 24, scale 10, sink 3, tolerance 0.02) | `linear(0, 0.000061 0.3748%, 0.000077 0.4216%, 0.000095 0.4685%, 0.000115 0.5153%, 0.000137 0.5622%, 0.000161 0.609%, 0.000187 0.6559%, 0.000244 0.7496%, 0.000309 0.8433%, 0.000381 0.937%, 0.000462 1.0307%, 0.000549 1.1244%, 0.000645 1.2181%, 0.000748 1.3118%, 0.000977 1.4992%, 0.001236 1.6865%, 0.001526 1.8739%, 0.001846 2.0613%, 0.002197 2.2487%, 0.002579 2.4361%, 0.002991 2.6235%, 0.003906 2.9983%, 0.004944 3.3731%, 0.006104 3.7479%, 0.007385 4.1227%, 0.008789 4.4975%, 0.010315 4.8722%, 0.011963 5.247%, 0.015625 5.9966%, 0.019775 6.7462%, 0.024414 7.4958%, 0.029541 8.2453%, 0.035156 8.9949%, 0.04126 9.7445%, 0.047852 10.4941%, 0.0625 11.9932%, 0.079102 13.4924%, 0.097656 14.9915%, 0.118164 16.4907%, 0.140625 17.9898%, 0.165039 19.489%, 0.191406 20.9882%, 0.219727 22.4873%, 0.25 23.9865%, 0.282227 25.4856%, 0.316406 26.9848%, 0.352539 28.4839%, 0.390625 29.9831%, 0.430664 31.4822%, 0.472656 32.9814%, 0.516602 34.4805%, 0.5625 35.9797%, 0.610352 37.4788%, 0.660156 38.978%, 0.711914 40.4771%, 0.765625 41.9763%, 0.821289 43.4755%, 0.878906 44.9746%, 0.938477 46.4738%, 1 47.9729%, 1.016123 48.3794%, 1.030681 48.7858%, 1.043786 49.1923%, 1.055547 49.5988%, 1.066061 50.0052%, 1.075421 50.4117%, 1.083716 50.8181%, 1.091024 51.2246%, 1.097424 51.6311%, 1.100304 51.8343%, 1.102984 52.0375%, 1.10547 52.2408%, 1.107772 52.444%, 1.109895 52.6472%, 1.111848 52.8505%, 1.113638 53.0537%, 1.115271 53.2569%, 1.116754 53.4601%, 1.118094 53.6634%, 1.119296 53.8666%, 1.120367 54.0698%, 1.121312 54.2731%, 1.121739 54.3747%, 1.122136 54.4763%, 1.122505 54.5779%, 1.122846 54.6795%, 1.123159 54.7811%, 1.123445 54.8828%, 1.123705 54.9844%, 1.12394 55.086%, 1.124149 55.1876%, 1.124334 55.2892%, 1.124418 55.34%, 1.124495 55.3908%, 1.124567 55.4416%, 1.124633 55.4925%, 1.124694 55.5433%, 1.124748 55.5941%, 1.124797 55.6449%, 1.124841 55.6957%, 1.124879 55.7465%, 1.124912 55.7973%, 1.12494 55.8481%, 1.124962 55.8989%, 1.125 56.1021%, 1.124959 56.3054%, 1.124937 56.3562%, 1.124911 56.407%, 1.124879 56.4578%, 1.124844 56.5086%, 1.124804 56.5594%, 1.124759 56.6102%, 1.12471 56.661%, 1.124657 56.7118%, 1.1246 56.7626%, 1.124538 56.8135%, 1.124402 56.9151%, 1.124251 57.0167%, 1.124084 57.1183%, 1.123901 57.2199%, 1.123704 57.3215%, 1.123266 57.5248%, 1.122774 57.728%, 1.122229 57.9312%, 1.121636 58.1345%, 1.120313 58.5409%, 1.118826 58.9474%, 1.117192 59.3538%, 1.113557 60.1668%, 1.109532 60.9797%, 1.073024 67.4831%, 1.064448 69.1089%, 1.056472 70.7348%, 1.049157 72.3606%, 1.042522 73.9865%, 1.03656 75.6123%, 1.031241 77.2382%, 1.026528 78.864%, 1.022375 80.4898%, 1.018731 82.1157%, 1.015549 83.7415%, 1.014116 84.5545%, 1.01278 85.3674%, 1.011535 86.1803%, 1.010377 86.9932%, 1.009301 87.8062%, 1.0083 88.6191%, 1.00737 89.432%, 1.006508 90.2449%, 1.005707 91.0578%, 1.004966 91.8708%, 1.004278 92.6837%, 1.003641 93.4966%, 1.003052 94.3095%, 1.002507 95.1225%, 1.002002 95.9354%, 1.001536 96.7483%, 1.001105 97.5612%, 1.000707 98.3742%, 1.000339 99.1871%, 1)` |
+| slab (drop 30, scale 10, sink 3, tolerance 0.02) | `linear(0, 0.000061 0.4144%, 0.000077 0.4662%, 0.000095 0.518%, 0.000115 0.5698%, 0.000137 0.6216%, 0.000161 0.6734%, 0.000187 0.7252%, 0.000244 0.8288%, 0.000309 0.9324%, 0.000381 1.036%, 0.000462 1.1396%, 0.000549 1.2431%, 0.000645 1.3467%, 0.000748 1.4503%, 0.000977 1.6575%, 0.001236 1.8647%, 0.001526 2.0719%, 0.001846 2.2791%, 0.002197 2.4863%, 0.002579 2.6935%, 0.002991 2.9007%, 0.003906 3.3151%, 0.004944 3.7294%, 0.006104 4.1438%, 0.007385 4.5582%, 0.008789 4.9726%, 0.010315 5.387%, 0.011963 5.8014%, 0.015625 6.6301%, 0.019775 7.4589%, 0.024414 8.2877%, 0.029541 9.1164%, 0.035156 9.9452%, 0.04126 10.774%, 0.047852 11.6027%, 0.0625 13.2603%, 0.079102 14.9178%, 0.097656 16.5753%, 0.118164 18.2329%, 0.140625 19.8904%, 0.165039 21.5479%, 0.191406 23.2055%, 0.219727 24.863%, 0.25 26.5205%, 0.282227 28.1781%, 0.316406 29.8356%, 0.352539 31.4931%, 0.390625 33.1506%, 0.430664 34.8082%, 0.472656 36.4657%, 0.516602 38.1232%, 0.5625 39.7808%, 0.610352 41.4383%, 0.660156 43.0958%, 0.711914 44.7534%, 0.765625 46.4109%, 0.821289 48.0684%, 0.878906 49.726%, 0.938477 51.3835%, 1 53.041%, 1.013148 53.4079%, 1.024994 53.7748%, 1.035635 54.1416%, 1.045159 54.5085%, 1.053652 54.8754%, 1.061191 55.2422%, 1.067851 55.6091%, 1.073699 55.976%, 1.076339 56.1594%, 1.0788 56.3428%, 1.081088 56.5263%, 1.083212 56.7097%, 1.085177 56.8931%, 1.086991 57.0766%, 1.08866 57.26%, 1.09019 57.4434%, 1.091586 57.6269%, 1.092855 57.8103%, 1.094002 57.9937%, 1.095032 58.1772%, 1.095951 58.3606%, 1.096763 58.544%, 1.09713 58.6358%, 1.097473 58.7275%, 1.097791 58.8192%, 1.098085 58.9109%, 1.098356 59.0026%, 1.098605 59.0943%, 1.098831 59.1861%, 1.099036 59.2778%, 1.099219 59.3695%, 1.099382 59.4612%, 1.099525 59.5529%, 1.099589 59.5988%, 1.099648 59.6446%, 1.099702 59.6905%, 1.099752 59.7364%, 1.099797 59.7822%, 1.099837 59.8281%, 1.099873 59.8739%, 1.099904 59.9198%, 1.09993 59.9657%, 1.099953 60.0115%, 1.099971 60.0574%, 1.099984 60.1032%, 1.099999 60.1949%, 1.099979 60.3784%, 1.099964 60.4242%, 1.099945 60.4701%, 1.099922 60.516%, 1.099896 60.5618%, 1.099865 60.6077%, 1.099832 60.6535%, 1.099794 60.6994%, 1.099753 60.7452%, 1.099708 60.7911%, 1.09966 60.837%, 1.099553 60.9287%, 1.099433 61.0204%, 1.0993 61.1121%, 1.099154 61.2038%, 1.098995 61.2955%, 1.098643 61.479%, 1.098244 61.6624%, 1.097802 61.8458%, 1.09732 62.0293%, 1.096799 62.2127%, 1.09565 62.5796%, 1.094372 62.9464%, 1.092982 63.3133%, 1.089918 64.047%, 1.086558 64.7808%, 1.056809 70.6506%, 1.049945 72.1181%, 1.043599 73.5856%, 1.037809 75.0531%, 1.032585 76.5205%, 1.027914 77.988%, 1.023768 79.4555%, 1.020111 80.9229%, 1.016904 82.3904%, 1.014104 83.8579%, 1.012843 84.5916%, 1.011669 85.3253%, 1.010576 86.0591%, 1.00956 86.7928%, 1.008616 87.5265%, 1.007739 88.2603%, 1.006925 88.994%, 1.006171 89.7277%, 1.005472 90.4615%, 1.004824 91.1952%, 1.004225 91.9289%, 1.003671 92.6627%, 1.003158 93.3964%, 1.002685 94.1301%, 1.002247 94.8639%, 1.001843 95.5976%, 1.00147 96.3313%, 1.001127 97.0651%, 1.00081 97.7988%, 1.000517 98.5325%, 1.000248 99.2663%, 1)` |
+
+| Storyboard key | Time (s) |
+|---|---|
+| first stone | 0.000 |
+| arch 1 keystone falls | 0.990 |
+| arch 2 keystone falls | 2.250 |
+| arch 3 keystone falls | 3.510 |
+| band laid | 4.320 |
+| end: the bare logo | 5.795 |

@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: a gap. The two fills stop 1 CSS px apart, so the white ground shows between them at every
+     scale. -->
+<style>body { margin: 0; background: #fff; } svg { display: block; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <rect width="100" height="100" fill="#fff"/>
+  <path id="left" fill="#1a4d8f" d="M10 10 H40.37 V90 H10 Z"/>
+  <path id="right" fill="#e0a030" d="M41.37 10 H90 V90 H41.37 Z"/>
+</svg>
+</body>
+</html>

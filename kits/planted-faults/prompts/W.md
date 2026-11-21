@@ -1,0 +1,5 @@
+
+**Your task: the whole-page critic.** Judge the whole page, every kind of fault, in this order, finishing each step before you start the next:
+1. **Function.** Walk every part a visitor acts on or reads by the function walk (`rules/house-principles.md`, "The function walk"), with `parts.txt` for what acts. Missing, dead, hidden or false actions, navigation, and borrowed signifiers.
+2. **What stands out.** Whether the page does the brief's job: the first screen's message and its one primary action; the hierarchy across sections (squint: what wins, and should it); grouping and arrangement by Gestalt (`rules/lenses.md`); how busy each section and the page look; conversion and trust (`rules/first-visit-trust.md`, `rules/lenses.md`); fit with the brief, the audience and the tone it asks for.
+3. **Treatment.** Type (faces, sizes, weights, case, alignment, emphasis), colour and grounds, borders, shadows, corners, dividers and fills, and whether like parts are treated alike (`rules/surface-styling.md`, `rules/text-presentation.md`, `rules/brand-palette.md`).

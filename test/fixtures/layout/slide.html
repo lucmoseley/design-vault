@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>slide</title>
+<!-- The caption slides up under the photo's lower edge from 1100 to 1340 px. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .photo { display: block; width: 400px; height: 300px }
+  .caption { margin: 0 }
+  @media (min-width: 1100px) and (max-width: 1340px) { .caption { margin-top: -12px } }
+</style>
+<img class="photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23468'/%3E%3C/svg%3E" alt="">
+<p class="caption">A caption under the photo.</p>

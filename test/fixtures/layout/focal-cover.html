@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>focal cover</title>
+<!-- A 1600x900 art covers a 400 px tall hero, centred. Below 711 px wide it
+     is drawn 711 px wide, so the focal box's right edge, 1300 px into the
+     art, sits at width/2 + 222 px: off the screen's side up to 442 px.
+     The same art covering a 300 px wide img loses that edge to the img's
+     own box at every width. The hero again, as the 2x copy in a srcset, is
+     placed as the hero is, though the browser reports it 800x450. -->
+<style>
+  body { margin: 0 }
+  .hero, .dense { display: block; width: 100%; height: 400px; object-fit: cover }
+  .inset { display: block; width: 300px; height: 400px; object-fit: cover }
+</style>
+<img class="hero" src="focal-art.svg" alt="">
+<img class="inset" src="focal-art.svg" alt="">
+<img class="dense" srcset="focal-art.svg 2x" alt="">

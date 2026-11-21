@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>held</title>
+<!-- No fault while CSS animations are held (#252): the band's endless loop keeps its ground too dark for its text
+     for as long as it runs, and is read as the page draws it without the loop, white. The button pauses the loop,
+     so vault.pause passes. -->
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #222; background: #fff }
+  .band { padding: 24px 32px; animation: dusk 2s linear infinite alternate }
+  @keyframes dusk { from { background: #333 } to { background: #444 } }
+</style>
+<section class="band">
+  <p id="dusk">Dark text on a ground that darkens for ever.</p>
+  <button type="button" onclick="this.parentNode.style.animationPlayState = 'paused'">Pause the motion</button>
+</section>
+</html>

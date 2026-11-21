@@ -1,0 +1,16 @@
+{
+ "parts": [
+  {
+   "id": "p1",
+   "actable": true,
+   "href": null,
+   "text": "Book a bed"
+  },
+  {
+   "id": "p2",
+   "actable": false,
+   "href": null,
+   "text": "Free breakfast"
+  }
+ ]
+}

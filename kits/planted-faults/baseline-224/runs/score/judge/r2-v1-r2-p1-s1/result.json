@@ -1,0 +1,1 @@
+{"parsed":{"verdicts":{"f1":{"verdict":"real","group":"g1","why":"On a phone the address strip crosses the ~844px fold and comes before the 'I advise…' line, which falls below the fold. On desktop that line comes before the address."}}}}

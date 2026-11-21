@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion records, each met</title>
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #111; background: #fff; }
+  section { padding: 40px; }
+  .spacer { height: 1400px; }
+  .spinner { width: 40px; height: 40px; border: 4px solid #999; border-top-color: #111; border-radius: 50%; }
+  .spinner.paused { animation-play-state: paused; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  .buy { background: #1d4ed8; color: #fff; border: 0; padding: 12px 20px; }
+  .buy:hover { background-color: #1e3a8a; }
+  .carousel { width: 600px; height: 200px; overflow: hidden; position: relative; }
+  .track { display: flex; height: 100%; }
+  .slide { flex: 0 0 600px; height: 100%; display: grid; place-items: center; background: #eef; }
+  .reveal { opacity: 0; }
+  .reveal.in { opacity: 1; }
+  .card { width: 160px; height: 100px; background: #fde68a; touch-action: none; user-select: none; }
+  .lane { width: 800px; height: 120px; }
+  .tick { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
+  .tick.off { opacity: 0.4; }
+  .backdrop { height: 300px; background-image: linear-gradient(#bfdbfe, #1e3a8a); }
+  /* Every animation and transition runs only on a screen that updates fast. */
+  @media (update: fast) {
+    .spinner { animation: spin 1s linear infinite; }
+    .buy { transition: background-color 100ms; }
+    .track { transition: transform 300ms; }
+    .reveal { transition: opacity 300ms; }
+    /* The parallax layer's own scroll motion, smoothed on every sweep. */
+    .backdrop.reveal { transition: opacity 300ms, transform 100ms; }
+    .tick { transition: opacity 200ms; }
+  }
+</style>
+</head>
+<body>
+<section>
+  <h1>Motion records</h1>
+  <div class="spinner"></div>
+  <button class="pause" aria-pressed="false">Pause animation</button>
+  <button class="buy">Buy</button>
+  <div class="tick" title="Live"></div>
+</section>
+<section>
+  <div class="carousel">
+    <div class="track">
+      <div class="slide">Two words</div>
+      <div class="slide">This frame holds thirty words, so it stays up ten seconds: one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen.</div>
+      <div class="slide">Three short words</div>
+    </div>
+    <button class="next" aria-label="Next slide">›</button>
+  </div>
+</section>
+<section>
+  <div class="lane"><div class="card">Drag me</div></div>
+</section>
+<div class="spacer"></div>
+<!-- A parallax image that fades in the first time it is scrolled to. -->
+<section><div class="backdrop reveal"></div></section>
+<div class="spacer"></div>
+<script>
+  const fast = matchMedia('(update: fast)').matches;
+
+  const spinner = document.querySelector('.spinner');
+  // A script animation, run only on a screen that updates fast.
+  const glow = fast ? spinner.animate([{ opacity: 1 }, { opacity: 0.6 }], { duration: 1000, iterations: Infinity, direction: 'alternate' }) : null;
+  document.querySelector('.pause').addEventListener('click', (e) => {
+    const on = spinner.classList.toggle('paused');
+    if (glow) on ? glow.pause() : glow.play();
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+  });
+
+  // A live dot that blinks by the clock, whatever the scroll: no replay.
+  const tick = document.querySelector('.tick');
+  setInterval(() => tick.classList.toggle('off'), 400);
+
+  const backdrop = document.querySelector('.backdrop');
+  addEventListener('scroll', () => { backdrop.style.transform = `translateY(${scrollY * 0.4}px)`; });
+
+  const reveal = backdrop;
+  const seen = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) return;
+    reveal.classList.add('in');
+    seen.disconnect();
+  });
+  seen.observe(reveal);
+
+  // Each frame shows max(5, words / 3) s; none on a phone; held while hovered
+  // or focused; stopped for good once the visitor changes frame.
+  const box = document.querySelector('.carousel');
+  const track = document.querySelector('.track');
+  const slides = [...track.children];
+  let at = 0, timer = null, held = 0, stopped = false;
+  const go = (i) => { at = (i + slides.length) % slides.length; track.style.transform = `translateX(${-600 * at}px)`; };
+  const hold = () => Math.max(5, Math.ceil(slides[at].innerText.split(/\s+/).filter(Boolean).length / 3)) * 1000;
+  const plan = () => {
+    clearTimeout(timer);
+    if (stopped || held || matchMedia('(max-width: 599px)').matches) return;
+    timer = setTimeout(() => { go(at + 1); plan(); }, hold());
+  };
+  const pause = () => { held++; clearTimeout(timer); };
+  const resume = () => { held = Math.max(0, held - 1); plan(); };
+  box.addEventListener('mouseenter', pause);
+  box.addEventListener('mouseleave', resume);
+  box.addEventListener('focusin', pause);
+  box.addEventListener('focusout', resume);
+  document.querySelector('.next').addEventListener('click', () => { stopped = true; clearTimeout(timer); go(at + 1); });
+  plan();
+
+  // On release, the snap point nearest the position the release velocity
+  // projects to, reached on a critically damped spring that starts at the
+  // release velocity, stiff enough never to pass its rest.
+  const card = document.querySelector('.card');
+  const SNAPS = [0, 300];
+  let x = 0, from = null, base = 0, moves = [], spring = 0;
+  const place = (to) => { x = to; card.style.transform = `translateX(${to}px)`; };
+  card.addEventListener('pointerdown', (e) => {
+    card.setPointerCapture(e.pointerId);
+    cancelAnimationFrame(spring);
+    from = e.clientX; base = x; moves = [[performance.now(), e.clientX]];
+  });
+  card.addEventListener('pointermove', (e) => {
+    if (from === null) return;
+    place(base + e.clientX - from);
+    moves.push([performance.now(), e.clientX]);
+  });
+  card.addEventListener('pointerup', () => {
+    from = null;
+    const recent = moves.filter((m) => m[0] > performance.now() - 100);
+    const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
+    const aim = x + (v / 1000) * (0.998 / (1 - 0.998));
+    const to = SNAPS.reduce((a, b) => (Math.abs(b - aim) < Math.abs(a - aim) ? b : a));
+    if (!fast) { place(to); return; }
+    const d0 = x - to, v0 = v / 1000, t0 = performance.now();
+    const w = Math.max(0.01, d0 && v0 * d0 < 0 ? Math.abs(v0 / d0) : 0);
+    const step = (now) => {
+      const t = now - t0;
+      const off = (d0 + (v0 + w * d0) * t) * Math.exp(-w * t);
+      if (Math.abs(off) < 0.5 && t > 50) { place(to); return; }
+      place(to + off);
+      spring = requestAnimationFrame(step);
+    };
+    spring = requestAnimationFrame(step);
+  });
+</script>
+</body>
+</html>

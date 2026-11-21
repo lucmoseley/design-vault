@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>target-pointer-sheets</title>
+<!-- vault.coarse-target's fine-pointer shrink, written each other way a pointer or hover rule reaches a page:
+     a linked style sheet's (hover: hover) rule, a <style media="(pointer: fine)">, and an (any-pointer: fine) rule
+     inside @supports. Each button is 44 px with those rules off. -->
+<link rel="stylesheet" href="target-pointer-sheets.css">
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif }
+  button { appearance: none; border: 0; padding: 0; background: #222; width: 44px; height: 44px }
+  @supports (display: grid) { @media (any-pointer: fine) { #nested { width: 20px; height: 20px } } }
+</style>
+<style media="(pointer: fine)">#style-media { width: 20px; height: 20px }</style>
+<button id="linked" aria-label="Linked"></button>
+<button id="style-media" aria-label="Style media"></button>
+<button id="nested" aria-label="Nested"></button>

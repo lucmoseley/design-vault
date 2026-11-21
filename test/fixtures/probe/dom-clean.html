@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sea Hostel: book a bed</title>
+<link rel="icon" href="dom-icons/favicon.ico" sizes="48x48">
+<link rel="icon" href="dom-icons/favicon.svg" sizes="any" type="image/svg+xml">
+<link rel="apple-touch-icon" href="dom-icons/touch-180.png">
+<style>
+body { font: 16px/1.5 sans-serif; margin: 0 16px; }
+nav a { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; color: #123; }
+svg.icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; }
+svg.icon.filled { fill: currentColor; stroke: none; }
+button { display: inline-flex; align-items: center; gap: 6px; }
+form.long { min-height: 130vh; }
+label, input, select, textarea { display: block; }
+.sheet button.grabber { width: 36px; height: 5px; padding: 0; border: 0; background: #999; }
+.drop { border: 2px dashed #888; padding: 16px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.code { counter-reset: line; }
+.code .ln { display: block; }
+.code .ln::before { counter-increment: line; content: counter(line) / ""; margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+<a href="/" class="logo"><img src="dom-icons/touch-120.png" alt="Sea Hostel home" width="40" height="40"></a>
+<nav aria-label="Main">
+<a href="/" aria-current="page"><svg class="icon home filled" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Home</a>
+<a href="/rooms"><svg class="icon bed" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Rooms</a>
+<a href="/map"><svg class="icon pin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Map</a>
+</nav>
+<search><form action="/search"><label for="q">Search the site</label><input type="search" id="q" name="q" enterkeyhint="search"><button><svg class="icon search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="15" y1="15" x2="21" y2="21"/></svg>Search</button></form></search>
+<button type="button">Help</button>
+<a href="/inbox"><svg class="icon mail" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg><span class="badge">4</span><span class="visually-hidden"> unread messages</span></a>
+</header>
+<main>
+<p>Dorms and private rooms a short walk from the beach.</p>
+<ul><li>Free wifi</li><li>Lockers</li></ul>
+<div>Open all year.</div>
+<p>Check-in from 2pm.</p>
+<table class="rates"><caption>Prices per night</caption><thead><tr><th scope="col">Room</th><th scope="col">Price</th></tr></thead><tbody><tr><th scope="row">Dorm</th><td>£20</td></tr><tr><th scope="row">Twin</th><td>£45</td></tr></tbody></table>
+<pre class="code"><code><span class="ln">let beds = 12;</span><span class="ln">let rooms = 4;</span></code></pre>
+<video controls width="160" height="90"><track kind="captions" src="dom-icons/captions.vtt" srclang="en" label="English"></video>
+<label for="upload">Upload progress</label><progress id="upload" value="40" max="100">40%</progress>
+<span role="img" aria-label="Rated five stars">★★★★★</span>
+
+<div class="carousel"><img src="dom-icons/touch-180.png" alt="The dorm" width="180" height="180"><button type="button">Previous</button><button type="button">Next</button></div>
+<div class="map"><img src="dom-icons/touch-120.png" alt="Map of the bay" width="120" height="120"><button type="button">Zoom in</button><button type="button">Zoom out</button></div>
+<ol class="rooms">
+<li class="drag-item" draggable="true">Dorm <button type="button">Move down</button></li>
+<li class="drag-item" draggable="true">Twin <button type="button">Move up</button></li>
+</ol>
+<section class="feed"><h2>Latest news</h2><button type="button">Refresh</button><p>The roof terrace opens in May.</p></section>
+<div class="sheet"><button type="button" class="grabber" aria-label="Resize filters"></button><h2>Filters</h2><p>Price, beds and dates.</p></div>
+<button type="button" class="shake-alt">Shuffle the photos</button>
+<button type="button"><svg class="icon save" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg>Save</button>
+<button type="button">Continue<svg class="icon arrow-right" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+
+<div class="drop" id="drop"><label for="photo">Choose file</label><input type="file" id="photo"> or drop it here</div>
+
+<form action="/sign-in">
+<label for="user">Email or username</label><input id="user" name="user" autocomplete="username" enterkeyhint="next">
+<label for="pass">Password</label><input id="pass" name="pass" type="password" autocomplete="current-password" enterkeyhint="done">
+<button>Sign in</button>
+</form>
+
+<form class="long" action="/book">
+<h1>Your details</h1>
+<label for="first-name">First name</label><input id="first-name" name="first-name" autocomplete="given-name" enterkeyhint="next">
+<label for="last-name">Last name</label><input id="last-name" name="last-name" autocomplete="family-name" enterkeyhint="next">
+<label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" enterkeyhint="next">
+<label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel" enterkeyhint="next">
+<label for="ship-street">Delivery street</label><input id="ship-street" name="ship-street" autocomplete="shipping street-address" enterkeyhint="next">
+<label for="ship-postcode">Delivery postcode</label><input id="ship-postcode" name="ship-postcode" autocomplete="shipping postal-code" enterkeyhint="next">
+<label><input type="checkbox" name="same-address" checked> Billing address is the same as delivery</label>
+<label for="bill-street">Billing street</label><input id="bill-street" name="bill-street" autocomplete="billing street-address" enterkeyhint="next">
+<label for="bill-postcode">Billing postcode</label><input id="bill-postcode" name="bill-postcode" autocomplete="billing postal-code" enterkeyhint="next">
+<label for="new-pass">Choose a password</label><input id="new-pass" name="new-pass" type="password" autocomplete="new-password" enterkeyhint="next">
+<label for="card">Card number</label><input id="card" name="card" autocomplete="cc-number" inputmode="numeric" enterkeyhint="next">
+<label for="csc">Security code</label><input id="csc" name="csc" autocomplete="cc-csc" inputmode="numeric" enterkeyhint="done">
+<p><a href="tel:+441632960000">Call us for help with booking</a></p>
+<button>Pay now</button>
+</form>
+</main>
+<footer><p>Sea Hostel, 1 Beach Road</p></footer>
+<script>
+const drop = document.getElementById('drop');
+drop.addEventListener('dragover', (e) => e.preventDefault());
+drop.addEventListener('drop', (e) => e.preventDefault());
+window.addEventListener('devicemotion', () => {});
+</script>
+</body>
+</html>

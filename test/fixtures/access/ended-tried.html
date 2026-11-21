@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>ended while tried</title>
+<!-- A band sliding once from load for 60 s, whose Pause button sends it to its end: a stand-in for a slide that reaches
+     its end by itself while the check clicks its controls, as on a busy machine. No control stopped it, so it cannot be
+     measured (#368). -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .slide { width: 120px; height: 16px; background: #0a3542; animation: slide 60s ease-out }
+  .pause { padding: 8px 16px; font: inherit }
+  @keyframes slide { from { transform: translateX(200px) } }
+</style>
+<div class="slide"></div>
+<button class="pause" type="button">Pause</button>
+<script>
+  document.querySelector('.pause').addEventListener('click', () => document.getAnimations()[0].finish());
+</script>

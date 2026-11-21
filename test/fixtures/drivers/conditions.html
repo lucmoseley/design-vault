@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>conditions fixture</title>
+<!-- One element per condition test/conditions.test.py reads, shown in effect
+     under that condition and absent without it (#304). -->
+<style>
+  :root { --ground: rgb(255, 255, 255); }
+  @media (prefers-color-scheme: dark) { :root { --ground: rgb(17, 17, 17); } }
+  body { background: var(--ground); margin: 0; }
+  #shadow { box-shadow: 0 0 0 4px rgb(0, 0, 0); width: 40px; height: 40px; }
+  @media print { #screen-only { display: none; } }
+  #logical { margin-inline-start: 30px; width: 50px; height: 10px; }
+  #target { height: 24px; }
+  @media (pointer: coarse) { #target { height: 44px; } }
+</style>
+<script>
+  // The direction the page's own first script reads.
+  window.dirAtLoad = document.documentElement.dir;
+</script>
+<script src="conditions.js"></script>
+</head>
+<body>
+  <div id="shadow"></div>
+  <p id="screen-only">Shown on screen, hidden in print.</p>
+  <div id="logical"></div>
+  <button id="target">Book</button>
+  <p id="fallback">The booking form needs scripts.</p>
+  <noscript><p id="noscript">Scripts are off.</p></noscript>
+  <img id="photo" src="conditions.svg" alt="" width="20" height="20">
+  <p id="number"></p>
+  <script>
+    document.getElementById("number").textContent = new Intl.NumberFormat().format(1234567.5);
+  </script>
+</body>
+</html>

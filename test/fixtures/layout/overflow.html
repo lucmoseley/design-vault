@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>overflow</title>
+<!-- A fixed 600 px strip: the page scrolls sideways below 600 px. A fixed badge
+     ending at 420 px, inside a box that clips, escapes the box and cannot be
+     scrolled to, so below 420 px its end is cut off. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif }
+  .strip { width: 600px; height: 40px; background: #ccc }
+  .box { width: 200px; overflow: hidden }
+  .badge { position: fixed; left: 0; bottom: 0; width: 420px; margin: 0; text-align: right; white-space: nowrap }
+</style>
+<p>Above the strip.</p>
+<div class="strip">a fixed-width strip</div>
+<div class="box"><p class="badge">A fixed badge</p></div>

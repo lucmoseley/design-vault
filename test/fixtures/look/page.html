@@ -1,0 +1,10 @@
+<!doctype html>
+<!-- look.py's page: a known part at a known place, larger on a touch screen, and a fade a scrub can stop at its first and last frames. -->
+<html><head><meta charset="utf-8"><style>
+  body { margin: 0; background: #fff; }
+  h1 { position: absolute; left: 40px; top: 40px; margin: 0; font: 700 32px/40px monospace; color: #000; }
+  #fade { position: absolute; left: 0; top: 200px; width: 200px; height: 100px; background: #000;
+    animation: fade 1000ms linear both; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @media (pointer: coarse) { h1 { font-size: 40px; } }
+</style></head><body><h1 id="title">Hello</h1><div id="fade"></div></body></html>

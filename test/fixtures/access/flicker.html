@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>flicker</title>
+<!-- vault.focus fails once: a button with its outline taken off, beside a canvas a script fills with fresh black and white noise every frame,
+     whose own changing pixels are no focus indicator. vault.pause cannot time the canvas, nor vault.control-edges
+     read the edge of the field flush under it. -->
+<style>
+  body { margin: 0; padding: 24px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
+  .hero { display: flex; gap: 0; align-items: center }
+  .hero canvas { width: 200px; height: 60px }
+  .cta { padding: 8px 16px; background: #fff; color: #111; border: 2px solid #000; font: inherit }
+  .cta:focus { outline: none }
+  .below { display: block; width: 200px; margin: 0; box-sizing: border-box }
+</style>
+<section class="hero"><canvas width="200" height="60"></canvas><button class="cta" type="button">Book a bed</button></section>
+<input class="below" type="search" aria-label="Search">
+<script>
+  const ink = document.querySelector('canvas').getContext('2d');
+  const noise = ink.createImageData(200, 60);
+  (function flicker() {
+    for (let i = 0; i < noise.data.length; i += 4) {
+      noise.data[i] = noise.data[i + 1] = noise.data[i + 2] = Math.random() < 0.5 ? 0 : 255;
+      noise.data[i + 3] = 255;
+    }
+    ink.putImageData(noise, 0, 0);
+    requestAnimationFrame(flicker);
+  })();
+</script>

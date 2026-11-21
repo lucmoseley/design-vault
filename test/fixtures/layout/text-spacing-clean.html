@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text spacing clean</title>
+<style>
+  body { margin: 1rem; font-family: sans-serif; }
+  section { margin-block: 3rem; }
+  .tag { display: inline-block; min-width: 5.75rem; font-size: 1rem; line-height: 1.2; }
+  .card { min-height: 3rem; line-height: 1.5; font-size: 1rem; }
+  .card p { margin: 0; }
+  .line { min-height: 1rem; line-height: 1; font-size: 1rem; }
+  .words { min-width: 12rem; font-size: 1rem; }
+  .head { min-height: 2.4rem; width: 10rem; line-height: 1.2; font-size: 1rem; margin: 0; }
+  .after { margin: 0; }
+  /* A row that scrolls sideways inside a box that hides its overflow: the
+     visitor scrolls to the rest, so nothing is hidden. */
+  .frame { overflow: hidden; width: 12rem; }
+  .row { overflow-x: auto; white-space: nowrap; }
+  /* A logotype drawn as SVG text, an image of text 1.4.12 exempts. */
+  .logo { width: 3.375rem; height: 1.5rem; }
+  .fixed { font-size: 0.875rem; }
+  .fluid { font-size: 1.5rem; }
+  /* A strip that shows one slide of two, as a carousel does: the second is
+     hidden at 100% too, so spacing loses nothing. */
+  .strip { width: 12rem; overflow: hidden; }
+  .slides { display: flex; width: 24rem; }
+  .slides p { flex: 0 0 12rem; margin: 0; }
+</style>
+</head>
+<body>
+<section><span class="tag">Book a bed</span></section>
+<div class="card"><p>First</p><p>Second</p></div>
+<div class="line">One line</div>
+<div class="words">a b c d e f g h i j k l</div>
+<div><h2 class="head">A heading of two lines</h2><p class="after">Text under it.</p></div>
+<div class="frame"><div class="row">A row of links that scrolls sideways past the frame</div></div>
+<svg class="logo" role="img" aria-label="Manta" viewBox="0 0 54 24"><text x="0" y="18" font-size="18">Manta</text></svg>
+<section><p class="fixed">Type in rem, which a raised default text size moves.</p></section>
+<section><p class="fluid">Stepped type</p></section>
+<section class="strip"><div class="slides"><p>First slide</p><p>Second slide</p></div></section>
+</body>
+</html>

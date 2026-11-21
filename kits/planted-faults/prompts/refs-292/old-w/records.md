@@ -1,0 +1,104 @@
+Records for the whole-page critic, web-surface, has-cta, coarse to fine: 42 record(s).
+
+1. vault.theme (function): Does a project with both themes follow the visitor's system setting, one with a single theme ship light unless its rules file rules dark, and is any dark theme designed for its own grounds rather than the light one inverted?
+   Applies to: the page's light and dark themes
+2. vault.trust-person (function): Does the site name a real person behind it and show a real photograph of their face, a firm its lead and its real team, with no stock people?
+   Applies to: a small business's or a solo advisor's site
+3. vault.trust-offer (function): Does the first screen say what the practice does, for whom and where?
+   Applies to: a small business's or a solo advisor's site, on its first screen
+4. vault.trust-credentials (function): Are qualifications shown as evidence of work (for an advisor, the work they qualified; for a trade or a consumer practice, its licences and finished jobs) rather than as a bare list?
+   Applies to: a small business's or a solo advisor's site
+5. vault.trust-publications (function): Does each publication and talk have its own page, any PDF reached through an HTML page about it?
+   Applies to: a practice that sells judgement (a consultant, a lawyer)
+6. vault.trust-fees (function): Is a price set in advance shown, and a bespoke price given its method or an estimate on request?
+   Applies to: a small business's or a solo advisor's site
+7. vault.trust-location (function): Does the site give its base country always, a trade or a consumer practice its full address and the area it serves, and an international advisor the regions of its work?
+   Applies to: a small business's or a solo advisor's site
+8. vault.trust-contact (function): Does every page carry a contact route as structure, not a sales line (the email address in full as its own link text in the footer, a "Contact" label in the navigation, a phone number only where the owner answers it, labelled "Telephone:"), with pages ending on the owner's idea rather than "contact me"?
+   Applies to: every page of a small business's or a solo advisor's site
+9. vault.trust-legal (function): Does the footer or a legal page give the provider's legal form, register and VAT numbers and professional body?
+   Applies to: a UK provider's site
+10. vault.trust-plain-words (function): Does task text run in sentences of at most 25 words, each technical term explained once, a specialist's argument alone running longer in the owner's voice?
+   Applies to: a small business's or a solo advisor's site, its task text: navigation, headings, contact, work rows and summaries
+11. vault.trust-identity (function): Does every page carry the owner's name, a one-line bio and a link home?
+   Applies to: a small business's or a solo advisor's site whose visitors land on deep pages, such as an article a social post links to
+12. vault.trust-current (function): Do dates show the site is current: a dated CV, the newest work's date and this year's copyright?
+   Applies to: a small business's or a solo advisor's site
+13. vault.trust-proof (function): Is all third-party proof (testimonials, logos, named clients) real and used with consent, and where none is held, does the site link out to work that named bodies host instead?
+   Applies to: a small business's or a solo advisor's site
+14. vault.trust-cv (function): Does the site show standing through work rather than adjectives: selected work as rows of period, body, role, country or region and one line of what was done, sorted by theme; checkable specifics and no size words such as "40 years of experience"; standing shown by who asked; the newest article or talk, with its venue, on the home page before the CV; a photo at a named event; each credential stated once, in the profile; the CV on the page and as a dated PDF; and every fact agreeing with the LinkedIn profile without repeating its About text, skills or endorsements?
+   Applies to: an advisor whose buyers select individuals against terms of reference (a development bank's or a government's staff, arriving from a LinkedIn profile)
+15. vault.undo (function): Where an action can be undone, does the page offer undo after it rather than a confirmation before it, keeping a confirmation for what cannot be undone?
+   Applies to: every action that deletes, sends or changes something a visitor may want back
+16. vault.trust-form (function): Does the site carry an enquiry form only where the reply needs facts people forget to give in an email (a trade's postcode and job type) or the owner wants no public email?
+   Applies to: a small business's or a solo advisor's site, and its contact route
+17. vault.field-budget (function): Is every required field one the first reply needs, by the question protocol (for a plain enquiry, name, email and message), does each other field name the action its answer changes before the reply, and are there at most one or two optional fields, each labelled optional?
+   Applies to: every enquiry form
+18. vault.trust-privacy (function): Does the form carry a privacy note at the form itself?
+   Applies to: every form that collects personal data under UK or EU GDPR
+19. vault.findable-action (function): Will a visitor who wants each action the page's task needs see that it is here, and connect the part that does it with that action?
+   Applies to: every action the page's task needs, at desktop and phone width
+20. vault.function-code (function): Does every part carry one function code (N navigate, A act, I text input, S select or filter, T status, R read or R-trust proof, C contain, D decorate), given to the part rather than its whole component, and taken from the brief, the project's rules file or a project document, with a part none of them settles reported as `FIT RISK: function unknown` rather than guessed?
+   Applies to: every part of the asset, decoration included
+21. vault.wcag-aa (function): Does the asset meet every WCAG 2.2 level A and AA success criterion that applies to it, with no project, brand or craft rule lowering one?
+   Applies to: the whole asset, every success criterion that applies to it
+22. vault.carry-act (role): Does each button show that it acts by a fill or an edge (3:1 only where the edge is its one cue, the text rung taking none), a label that names its action or, on an icon-only button, a glyph at 3:1, a rung on one emphasis ladder (filled, tonal, outlined, text) and hover and press states, the primary action holding the view's strongest colour, and does no static tag, eyebrow or decorative pill take the button's shape, fill or type?
+   Applies to: every button and other part that acts on the page
+23. vault.carry-read (role): Does each piece of proof read as plain fact (a dated source line, a real photograph, a count with its source), never in the styling of an ad, a promotion or urgency, and is no paid badge styled as a merit badge?
+   Applies to: every piece of proof: a source line, a review count, a rating, a client logo, a badge
+24. vault.option-sets (role): Is every set of options grouped and easy to scan, whatever its count, and does a search or filter task show its relevant filters with the important ones promoted?
+   Applies to: every set of options, filters or menu items shown together
+25. vault.carry-status (role): Is each status shown in its semantic colour with text or an icon, beside the thing it describes, in one colour per status across the site and none near the action colour, announced by an ARIA live region where it changes, never pulsing or blinking, and never in a brand tint standing in for the status colour?
+   Applies to: every status a part shows: availability, loading, saved, an error
+26. vault.carry-input (role): Does each text input show itself by an edge or fill at 3:1, a visible label outside the field and a focus ring, and is no static content, such as a summary box or a banner that is a link, drawn as an empty edged box?
+   Applies to: every text field and search box, and every box drawn like one
+27. vault.carry-select (role): Does each selectable control show its selected state by more than colour (a check, a dot, a 3:1 edge or a weight change, any pale selected tint paired with one of them), filters taking the chip shape, and does no static fact take the selectable chip's shape, fill or edge, no row the selected tint, and no list a column of check marks?
+   Applies to: every checkbox, radio, filter chip, switch and sort control, and every selected state
+28. vault.weight-order (role): Ranked by visual weight at a squint, do the parts fall in the order of their task priority for this page?
+   Applies to: every part of each view
+29. vault.grouping (role): Is related content grouped by space first, then a fill step, then a border, never by a shadow, with every border or divider grouping the parts as the spacing already does?
+   Applies to: every group of related content
+30. vault.carry-navigate (role): Does each link show that it takes the visitor somewhere by its context's carrier (in prose, the cue `vault.colour-script` measures; in navigation, its place, as in a link list or a card that is one target; a chevron or arrow where its text is not plainly a link), does the current page's item carry a cue besides colour, and do the link colour and underline mark nothing but links?
+   Applies to: every link and navigation item, the current page's item included
+31. vault.visible-nav (role): At phone width, do four main navigation links or fewer stay in view, a menu hiding them only where there are more than four?
+   Applies to: the main navigation at phone width
+32. vault.carry-contain (role): Is a container look the site uses to mean "you can tap this" given only to containers a visitor can tap?
+   Applies to: every card, tile and other container
+33. vault.decoration-place (role): Does decoration stay out of the places a visitor works (where they read, fill in or choose), with no text inside illustration, and does no functional part take the look of decoration, an ad or a promotion?
+   Applies to: every piece of decoration, and every functional part beside it
+34. vault.brand-layer (role): Does the asset's distinctiveness sit in the brand layer (ground colour, illustration, display type, voice, motion character, one signature move) while every signifier, the interaction structure and the layout (the logo, navigation and search where visitors look for them) stay conventional, a dense list taking less novelty than a hero, a high-stakes moment moving nothing beyond type, colour role and voice, and any unusual control keeping its core signifier?
+   Applies to: every part, and above all a high-stakes moment: a price, availability, the handover to book, an error, sign-in
+35. vault.dna-near-black (treatment): Is each near-black either tinted toward the brand's main hue as `vault.text-tint` sets, or a pure grey that the rules file or the brief picks?
+   Applies to: every near-black ground and text colour, on a project that takes the House DNA
+36. vault.chroma-ends (treatment): Does each colour's chroma fall as its lightness nears white or black, staying inside the gamut there?
+   Applies to: every colour near white or near black
+37. vault.decorative-alt (treatment): Does every image that is pure decoration carry an empty `alt=""`?
+   Applies to: every image that is decoration alone
+38. vault.breakpoints (treatment): Does each breakpoint sit where the content breaks rather than at a device's width, with components sized by container queries?
+   Applies to: every breakpoint and every component that changes with width
+39. vault.ai-look (treatment): Does the candidate avoid impeccable's dated "AI look" defaults (same-size icon cards as the page's structure, nested cards, the hero-metric template, a decorative eyebrow that names no section, place or category, section numbers, gradient text, glass on content, a coloured side border, hard offset shadows, monospace as a costume, an overused font), save any the brief, a direction card or the project's rules file earns back?
+   Applies to: the whole candidate
+40. vault.spacing-step (value): Does every space, padding and gap come from the project's spacing scale, built on a 4 px step?
+   Applies to: every space, padding and gap
+41. vault.web-vitals (value): Does the page respond to input within 200 ms (INP) and shift its layout by under 0.1 (CLS)?
+   Applies to: the page on a phone
+42. vault.font-display (value): Does every web font load with `font-display: swap` or `optional`?
+   Applies to: every web font the page loads
+
+Reference sections they cite, in skills/:
+
+- design-round/references/impeccable.md#conditions-added: vault.theme, vault.visible-nav
+- design-critique/references/first-visit-trust.md#the-checklist: vault.trust-person, vault.trust-offer, vault.trust-credentials, vault.trust-publications, vault.trust-legal, vault.trust-identity, vault.trust-current, vault.trust-form, vault.trust-privacy
+- design-critique/references/first-visit-trust.md#clashes: vault.trust-fees, vault.trust-location, vault.trust-contact, vault.trust-plain-words, vault.trust-proof
+- design-critique/references/first-visit-trust.md#feel-the-cv: vault.trust-cv
+- design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces: vault.undo, vault.chroma-ends, vault.decorative-alt, vault.spacing-step, vault.web-vitals, vault.font-display
+- design-critique/references/first-visit-trust.md#the-field-budget: vault.field-budget
+- design-critique/references/house-principles.md#the-function-walk: vault.findable-action, vault.weight-order, vault.decoration-place
+- design-critique/references/house-principles.md#the-function-codes: vault.function-code
+- design-critique/references/house-principles.md#source-precedence: vault.wcag-aa
+- design-critique/references/house-principles.md#carriers-and-reserved-properties: vault.carry-act, vault.carry-read, vault.carry-status, vault.carry-input, vault.carry-select, vault.carry-navigate, vault.carry-contain
+- design-round/references/impeccable.md#struck-or-corrected: vault.option-sets, vault.breakpoints
+- design-critique/references/surface-styling.md#dividers-against-space-and-fill: vault.grouping
+- design-critique/references/house-principles.md#the-brand-layer-line: vault.brand-layer
+- design-critique/references/text-presentation.md#near-black-and-the-house-dna: vault.dna-near-black
+- design-round/references/impeccable.md#the-ai-look-bans-dated-defaults-review-by-14-apr-2027: vault.ai-look

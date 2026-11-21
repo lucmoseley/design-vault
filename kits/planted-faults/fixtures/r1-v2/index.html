@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v2 General arrangement · MMM Infra identity round 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@700&family=Overpass:ital,wght@0,300;0,400;0,600;0,800;1,400&family=Overpass+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sheet: #1f4f8f;        /* diazo blueprint ground */
+  --sheet-deep: #173d70;   /* the table under the sheet */
+  --line: #e8f0fa;         /* white linework and type */
+  --line-soft: #b9cde6;    /* note blue: notes, what lies beyond the cut */
+  --grid: rgba(232, 240, 250, .07);
+  --grid-major: rgba(232, 240, 250, .14);
+  --amber: #f2a93b;        /* sodium amber: the daylight in the drawing, and the one action */
+  --amber-ink: #1a2c45;
+  --text: "Overpass", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Overpass Mono", ui-monospace, monospace;
+  --logo: "Gelasio", Georgia, serif;
+  --plot: cubic-bezier(0.65, 0, 0.35, 1);
+  --note: 10.5px;          /* drawing notes, in drawing units: about 14px on screen at 1440 */
+}
+* { box-sizing: border-box; }
+html { background: var(--sheet-deep); }
+body {
+  margin: 0 auto; max-width: 1280px; min-height: 100vh; color: var(--line); font-family: var(--text); font-size: 17px; line-height: 1.6;
+  background-color: var(--sheet);
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  padding: 16px;
+}
+::selection { background: var(--line); color: var(--sheet); }
+a { color: inherit; text-underline-offset: 4px; }
+:focus-visible { outline: 2px solid var(--line); outline-offset: 3px; }
+
+.frame { border: 2px solid var(--line); outline: 1px solid var(--line-soft); outline-offset: 5px; min-height: calc(100vh - 32px); }
+
+/* Title block: the nav lives in its cells */
+.titleblock { display: grid; grid-template-columns: minmax(max-content, 1.5fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.15fr) minmax(0, .7fr); border-bottom: 2px solid var(--line); }
+.titleblock > * { border-right: 1px solid var(--line-soft); padding: 10px 14px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+.titleblock > *:last-child { border-right: 0; }
+.cell-label { font-size: 12px; letter-spacing: .1em; color: var(--line-soft); text-transform: uppercase; line-height: 1.3; }
+.cell-val { font-weight: 600; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+.cell-val.m { font-family: var(--mono); font-weight: 600; letter-spacing: .04em; }
+.titleblock .info { justify-content: space-between; }
+.titleblock a { text-decoration: none; transition: background-color 160ms var(--plot); }
+.titleblock a:hover { background: var(--grid-major); }
+.titleblock a:hover .cell-val { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.brand { flex-direction: row !important; align-items: center; justify-content: flex-start !important; gap: 12px; }
+.brand svg { width: 58px; height: auto; flex: none; }
+.brand b { font-family: var(--logo); font-weight: 700; letter-spacing: .06em; font-size: 17px; white-space: nowrap; }
+
+.sheet-body { padding: 40px 48px 64px; }
+
+/* The drawing leads: it takes the sheet width */
+.drawing { width: 100%; height: auto; display: block; }
+.drawing .poche path { fill: var(--line); }
+.drawing .heavy, .drawing .medium, .drawing .light, .drawing .ray, .drawing .lit, .drawing .knock { fill: none; vector-effect: non-scaling-stroke; }
+.drawing .heavy { stroke: var(--line); stroke-width: 2.5px; }
+.drawing .medium { stroke: var(--line-soft); stroke-width: 1.25px; }
+.drawing .light { stroke: var(--line-soft); stroke-width: 1px; }
+.drawing .cl { stroke-dasharray: 18 4 3 4; }
+.drawing .knock { stroke: var(--sheet); stroke-width: 1px; stroke-dasharray: 18 4 3 4; }
+.drawing .ray { stroke: var(--amber); stroke-width: 1.25px; }
+.drawing .lit { stroke: var(--amber); stroke-width: 4px; }
+.drawing .tri { fill: var(--line-soft); }
+.drawing text { font-family: var(--mono); font-size: var(--note); fill: var(--line-soft); letter-spacing: .06em; }
+.play .drawing .cutset { animation: wipe 900ms var(--plot) both; }
+.play .drawing .daylight { animation: fall 500ms var(--plot) 600ms both; }
+@keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes fall { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* Drawing title under the view, then the lead and the one action */
+.title-row { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px 56px; align-items: start; margin-top: 20px; }
+.dtitle { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 18px; align-items: start; }
+.bubble { width: 56px; height: 56px; margin-top: 4px; }
+.bubble circle { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.bubble text { font-family: var(--text); font-weight: 800; font-size: 24px; fill: var(--line); }
+h1 { font-weight: 800; font-size: clamp(34px, 4vw, 54px); line-height: 1.05; letter-spacing: .04em; text-transform: uppercase; margin: 0; display: inline-block; padding-bottom: 8px; border-bottom: 3px solid var(--line); position: relative; text-wrap: balance; }
+h1::after { content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 1px; background: var(--line); }
+.scale { margin: 18px 0 0; font-size: 14px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--line-soft); line-height: 1.5; }
+.scale > span { display: block; }
+.sep { display: inline-block; width: 4px; height: 4px; margin: 0 .7em; vertical-align: middle; background: currentColor; border-radius: 50%; }
+.scale .nw { white-space: nowrap; }
+.scale .m { font-family: var(--mono); letter-spacing: .04em; color: var(--line); }
+.lead { font-size: 20px; line-height: 1.55; max-width: 34em; margin: 6px 0 26px; font-weight: 300; }
+.btn { display: inline-flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 22px; background: var(--amber); color: var(--amber-ink); font-family: var(--text); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 14px; text-decoration: none; border: 0; cursor: pointer; transition: transform 160ms var(--plot); }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline-color: var(--line); }
+.btn svg { width: 20px; height: 10px; }
+
+h2 { font-family: var(--text); font-weight: 800; letter-spacing: .16em; text-transform: uppercase; font-size: 14px; margin: 0 0 18px; padding-bottom: 8px; border-bottom: 1px solid var(--line-soft); }
+.board { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 56px 40px; margin-top: 88px; }
+.col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
+
+.swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.chip { height: 56px; border: 1px solid var(--line-soft); }
+.sw { font-size: 14px; line-height: 1.45; color: var(--line-soft); }
+.sw b { display: block; font-family: var(--text); color: var(--line); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; margin-top: 6px; }
+.sw code { display: block; font-family: var(--mono); font-size: 13px; color: var(--line); }
+
+.spec .big { display: block; font-size: 52px; line-height: 1.05; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.spec .mono { display: block; font-family: var(--mono); font-size: 30px; line-height: 1.3; }
+.spec small { display: block; color: var(--line-soft); font-size: 14px; margin-top: 10px; max-width: 46ch; }
+
+.texture { height: 180px; border: 1px solid var(--line-soft); position: relative; overflow: hidden; background: var(--sheet); }
+.texture svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+article.spec-post h3 { font-size: 30px; line-height: 1.15; font-weight: 800; letter-spacing: .02em; margin: 0 0 8px; max-width: 24ch; }
+article.spec-post .byline { font-size: 15px; color: var(--line-soft); letter-spacing: .02em; margin: 0 0 22px; }
+article.spec-post p { margin: 0 0 18px; max-width: 66ch; font-weight: 300; font-size: 18px; }
+blockquote { margin: 8px 0 22px; padding: 0 0 0 28px; position: relative; font-style: italic; font-size: 24px; line-height: 1.4; color: var(--line); max-width: 30ch; }
+blockquote::before { content: ""; position: absolute; left: 0; top: .2em; bottom: .2em; width: 1px; background: var(--line-soft); }
+.doc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; border: 1px solid var(--line-soft); padding: 12px 14px; font-size: 15px; }
+.doc a { font-weight: 600; }
+.doc span { font-size: 14px; color: var(--line-soft); align-self: center; white-space: nowrap; }
+.doc span .m { font-family: var(--mono); font-size: 13px; }
+
+.motion { border: 1px solid var(--line-soft); padding: 22px; }
+.motion .words { font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 20px; margin: 0 0 14px; color: var(--line); }
+.curve { width: 100%; max-width: 220px; height: auto; display: block; }
+.motion p { font-size: 14px; color: var(--line-soft); margin: 10px 0 0; }
+.motion code { font-family: var(--mono); color: var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 14px; }
+th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid rgba(185, 205, 230, .35); vertical-align: top; }
+th { font-weight: 600; color: var(--line-soft); text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+td.n { font-family: var(--mono); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.replay { margin-top: 16px; background: none; border: 0; padding: 6px 0; color: var(--line); font: 600 14px/1.4 var(--text); letter-spacing: .12em; text-transform: uppercase; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; cursor: pointer; }
+.replay:hover { text-decoration-thickness: 2px; }
+
+@media (max-width: 1200px) { :root { --note: 12.5px; } }
+@media (max-width: 960px) {
+  :root { --note: 16px; }
+  .titleblock { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .titleblock .brand { grid-column: span 2; }
+  .titleblock .info:last-child { border-right: 0; }
+  .titleblock .info { border-bottom: 1px solid var(--line-soft); }
+  .titleblock .brand { border-bottom: 1px solid var(--line-soft); }
+  .titleblock .nav { order: 2; }
+  .titleblock .nav.last { border-right: 0; }
+  .sheet-body { padding: 28px 20px 48px; }
+  .title-row { grid-template-columns: minmax(0, 1fr); }
+  .board { grid-template-columns: minmax(0, 1fr); margin-top: 64px; }
+  .board > * { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) { :root { --note: 23.5px; } .drawing .lit { stroke-width: 3px; } }
+@media (max-width: 520px) {
+  :root { --note: 32px; }
+  body { padding: 8px; }
+  .titleblock > * { padding: 8px; min-height: 52px; }
+  .brand { gap: 8px; }
+  .brand svg { width: 42px; }
+  .brand b { font-size: 14px; letter-spacing: .04em; }
+  .cell-val { font-size: 12px; letter-spacing: .06em; }
+  .cell-label { font-size: 12px; letter-spacing: .04em; }
+  .dtitle { gap: 0 12px; }
+  .bubble { width: 40px; height: 40px; }
+  .lead { font-size: 18px; }
+  .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .doc { grid-template-columns: minmax(0, 1fr); }
+  .doc span { align-self: start; }
+}
+@media (max-width: 370px) { :root { --note: 35px; } }
+@media (prefers-reduced-motion: reduce) {
+  .play .drawing .cutset, .play .drawing .daylight { animation: none; }
+  .btn, .titleblock a { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="titleblock">
+    <a class="brand" href="#" aria-label="MMM Infra, home">
+      <svg viewBox="20 40 708 240" aria-hidden="true"><g fill="currentColor"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></g></svg>
+      <b>MMM INFRA</b>
+    </a>
+    <a class="nav" href="#"><span class="cell-val">Profile</span></a>
+    <a class="nav" href="#"><span class="cell-val">Articles</span></a>
+    <a class="nav" href="#"><span class="cell-val">Blog</span></a>
+    <a class="nav last" href="#"><span class="cell-val">Contact</span></a>
+    <div class="info"><span class="cell-label">Drawing</span><span class="cell-val m">MMM-GA-001</span></div>
+    <div class="info"><span class="cell-label">Scale</span><span class="cell-val m">NTS</span></div>
+  </header>
+
+  <main class="sheet-body">
+    <section class="hero" aria-label="Homepage opening, specimen">
+      <svg class="drawing" id="sketch-target" viewBox="-40 -30 860 390" role="img" aria-label="Longitudinal section A–A through the MMM Infra aqueduct: the cut band and piers in solid poche on a ground line, with centrelines, a level, dimensions and daylight falling through the third bay. Not to scale.">
+        <defs>
+
+          <clipPath id="cut"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></clipPath>
+          <clipPath id="bay"><path d="M483.223 195.244A86.355 142.289 0 0 1 630.27 275.686L513.791 275.686Z"/></clipPath>
+        </defs>
+        <!-- beyond the cut: the far bank (medium) -->
+        <path class="medium" d="M820 168C790 170 762 238 700 275.686"/>
+        <!-- centrelines through the piers (light), knocked out in sheet blue where they cross the poche -->
+        <path class="light cl" d="M254.968 24V356M454.167 24V356M653.365 24V356"/>
+        <g class="cutset">
+          <g class="poche"><path d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/><path d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/><path d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/><path d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/></g>
+          <path class="knock" clip-path="url(#cut)" d="M254.968 24V356M454.167 24V356M653.365 24V356"/>
+        </g>
+        <!-- ground line (heavy) and cut earth -->
+        <path class="heavy" d="M-40 275.686H820"/>
+        <!-- daylight in the third bay: rays parallel to the one grazing the arch tip, hatched inside the bay (that ray, the arch's own intrados, the ground), and the sunlit floor on the ground line; revealed as one group so the floor lights as the rays land. The one amber in the drawing -->
+        <path class="medium" d="M-40.0 298L-17.7 275.686M-26.0 298L-3.7 275.686M-12.0 298L10.3 275.686M2.0 298L24.3 275.686M16.0 298L38.3 275.686M30.0 298L52.3 275.686M44.0 298L66.3 275.686M58.0 298L80.3 275.686M72.0 298L94.3 275.686M86.0 298L108.3 275.686M100.0 298L122.3 275.686M114.0 298L136.3 275.686M128.0 298L150.3 275.686M142.0 298L164.3 275.686M156.0 298L178.3 275.686M170.0 298L192.3 275.686M184.0 298L206.3 275.686M198.0 298L220.3 275.686M212.0 298L234.3 275.686M226.0 298L248.3 275.686M240.0 298L262.3 275.686M254.0 298L276.3 275.686M268.0 298L290.3 275.686M282.0 298L304.3 275.686M296.0 298L318.3 275.686M310.0 298L332.3 275.686M324.0 298L346.3 275.686M338.0 298L360.3 275.686M352.0 298L374.3 275.686M366.0 298L388.3 275.686M380.0 298L402.3 275.686M394.0 298L416.3 275.686M408.0 298L430.3 275.686M422.0 298L444.3 275.686M436.0 298L458.3 275.686M450.0 298L472.3 275.686M464.0 298L486.3 275.686M478.0 298L500.3 275.686M492.0 298L514.3 275.686M506.0 298L528.3 275.686M520.0 298L542.3 275.686M534.0 298L556.3 275.686M548.0 298L570.3 275.686M562.0 298L584.3 275.686M576.0 298L598.3 275.686M590.0 298L612.3 275.686M604.0 298L626.3 275.686M618.0 298L640.3 275.686M632.0 298L654.3 275.686M646.0 298L668.3 275.686M660.0 298L682.3 275.686M674.0 298L696.3 275.686M688.0 298L710.3 275.686M702.0 298L724.3 275.686M716.0 298L738.3 275.686M730.0 298L752.3 275.686M744.0 298L766.3 275.686M758.0 298L780.3 275.686M772.0 298L794.3 275.686M786.0 298L808.3 275.686"/>
+        <g class="daylight"><g clip-path="url(#bay)"><path class="ray" d="M476.030 150L523.791 275.686M486.030 150L533.791 275.686M496.030 150L543.791 275.686M506.030 150L553.791 275.686M516.030 150L563.791 275.686M526.030 150L573.791 275.686M536.030 150L583.791 275.686M546.030 150L593.791 275.686M556.030 150L603.791 275.686M566.030 150L613.791 275.686M576.030 150L623.791 275.686M586.030 150L633.791 275.686M596.030 150L643.791 275.686M606.030 150L653.791 275.686M616.030 150L663.791 275.686M626.030 150L673.791 275.686"/></g><path class="ray" d="M483.223 195.244L513.791 275.686"/><path class="lit" d="M513.791 275.686H630.27"/></g>
+        <!-- dimension, tip to tip (light) -->
+        <path class="light" d="M23.461 152V2M724.17 152V2M15 12H732M17.461 18L29.461 6M718.17 18L730.17 6"/>
+        <text x="373.8" y="4" text-anchor="middle">NTS</text>
+        <!-- dimension, pier centre to pier centre (light) -->
+        <path class="light" d="M246 345H662M248.968 351L260.968 339M448.167 351L460.167 339M647.365 351L659.365 339"/>
+        <text x="354.567" y="338" text-anchor="middle">EQ</text>
+        <text x="553.766" y="338" text-anchor="middle">EQ</text>
+        <!-- level at the ground line -->
+        <path class="tri" d="M-28 275.686L-35 263.686H-21Z"/>
+        <text x="-14" y="267">±0.00</text>
+      </svg>
+
+      <div class="title-row">
+        <div class="dtitle">
+          <svg class="bubble" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26"/><text x="28" y="37" text-anchor="middle">A</text></svg>
+          <div>
+            <h1>Mark M. Moseley</h1>
+            <p class="scale"><span>Infrastructure advisor</span><span><span class="nw">Longitudinal section A–A</span><span class="sep" aria-hidden="true"></span><span class="nw">Scale <span class="m">NTS</span></span></span></p>
+          </div>
+        </div>
+        <div class="ask">
+          <p class="lead">Advice on infrastructure projects and the laws that enable them, from a former Lead Lawyer in the World Bank's PPP Group, with over 40 years of international infrastructure experience.</p>
+          <a class="btn" href="mailto:Mark.Moseley@MMMinfra.com">Write to Mark <svg viewBox="0 0 20 10" aria-hidden="true"><path d="M0 5H18M14 1L18 5L14 9" fill="none" stroke="currentColor" stroke-width="2"/></svg></a>
+        </div>
+      </div>
+    </section>
+
+    <div class="board">
+      <section class="col-7" aria-labelledby="h-pal">
+        <h2 id="h-pal">Palette</h2>
+        <div class="swatches">
+          <div class="sw"><div class="chip" style="background:#1f4f8f"></div><b>Diazo blue</b><code>#1F4F8F</code>the ground</div>
+          <div class="sw"><div class="chip" style="background:#e8f0fa"></div><b>Linework</b><code>#E8F0FA</code>type, the cut, heavy lines</div>
+          <div class="sw"><div class="chip" style="background:#f2a93b"></div><b>Sodium amber</b><code>#F2A93B</code>daylight in the drawing, and the one action</div>
+          <div class="sw"><div class="chip" style="background:#b9cde6"></div><b>Note blue</b><code>#B9CDE6</code>notes, what lies beyond</div>
+          <div class="sw"><div class="chip" style="background:#173d70"></div><b>Table</b><code>#173D70</code>beyond the sheet</div>
+          <div class="sw"><div class="chip" style="background:#1a2c45"></div><b>Amber ink</b><code>#1A2C45</code>type on amber</div>
+        </div>
+      </section>
+      <section class="col-5" aria-labelledby="h-tex">
+        <h2 id="h-tex">Texture</h2>
+        <div class="texture" aria-label="Texture: blueprint grid with earth hatch, solid poche and a dimension line">
+          <svg viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V10" stroke="#b9cde6" stroke-width="1.2"/></pattern></defs>
+            <rect x="30" y="40" width="140" height="100" fill="url(#hatch)" stroke="#e8f0fa" stroke-width="2"/>
+            <rect x="200" y="40" width="170" height="100" fill="#e8f0fa"/>
+            <path d="M30 160H370M30 152V168M370 152V168" stroke="#b9cde6" stroke-width="1.2" fill="none"/>
+            <text x="34" y="30" font-family="Overpass" font-weight="600" letter-spacing="1.2" font-size="12" fill="#b9cde6">EARTH HATCH</text>
+            <text x="204" y="30" font-family="Overpass" font-weight="600" letter-spacing="1.2" font-size="12" fill="#b9cde6">POCHE</text>
+          </svg>
+        </div>
+        <p style="font-size:14px; color:var(--line-soft); margin:10px 0 0">A 20 mm grid, a 100 mm major grid; solid poche for the cut structure, hatch for cut earth, lighter lines for what lies beyond.</p>
+      </section>
+
+      <section class="col-12" aria-labelledby="h-type">
+        <h2 id="h-type">Type pair</h2>
+        <div class="board" style="margin-top:0; gap:24px 40px">
+          <p class="spec col-7" style="margin:0"><span class="big">Overpass</span><small>Headings in ExtraBold capitals, tracked wide like a drawing title; text in Light and Regular. It descends from Highway Gothic, the lettering of road signs and engineering sheets.</small></p>
+          <p class="spec col-5" style="margin:0"><span class="mono">Overpass Mono 1:50</span><small>Measurement only: drawing numbers, levels, dates, scales, durations. Never for prose.</small></p>
+        </div>
+      </section>
+
+      <section class="col-7" aria-labelledby="h-art">
+        <h2 id="h-art">An article page</h2>
+        <article class="spec-post">
+          <h3>The World's Best Public-Private Partnership Law</h3>
+          <p class="byline">MMM Infra Blog No. 8<span class="sep" aria-hidden="true"></span>18 September 2024</p>
+          <p>Recently, a client with a development agency asked me “What is the best Public-Private Partnership Law in the world?”</p>
+          <blockquote>“Whichever PPP Law I am currently working on with a client country!”</blockquote>
+          <p>On a more serious note however, the question did cause me to reflect on the elements that make a PPP Law particularly effective.</p>
+          <div class="doc"><a href="#">Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge</a><span>Lecture<span class="sep" aria-hidden="true"></span><span class="m">2026-04-23 · PDF</span></span></div>
+        </article>
+      </section>
+
+      <section class="col-5" aria-labelledby="h-mot">
+        <h2 id="h-mot">Motion sketch</h2>
+        <div class="motion">
+          <p class="words">Cut<span class="sep" aria-hidden="true"></span>measured<span class="sep" aria-hidden="true"></span>exact</p>
+          <svg class="curve" viewBox="-10 -10 220 220" role="img" aria-label="Easing curve cubic-bezier(0.65, 0, 0.35, 1)"><rect width="200" height="200" fill="none" stroke="#b9cde6" stroke-dasharray="4 4"/><path d="M0 200C130 200 70 0 200 0" fill="none" stroke="#e8f0fa" stroke-width="2.5"/></svg>
+          <p>Easing <code>cubic-bezier(0.65, 0, 0.35, 1)</code>: the cut travels the section plane like a plotter's pen. It gathers speed, crosses at pace and comes to rest on the line.</p>
+          <table aria-label="Timeline">
+            <thead><tr><th>Element</th><th>Start</th><th>Length</th><th>Easing</th></tr></thead>
+            <tbody>
+              <tr><td>The poche wipes along the cut, left to right (clip-path)</td><td class="n">0 ms</td><td class="n">900 ms</td><td>plot</td></tr>
+              <tr><td>Daylight falls through the third bay</td><td class="n">600 ms</td><td class="n">500 ms</td><td>plot</td></tr>
+            </tbody>
+          </table>
+          <p>Total 1100 ms, two overlapping moves of 400–1000 ms each (#13, F5/F12). The linework is already on the sheet; only the cut and the light arrive. Reduced motion: the drawing is simply there.</p>
+          <button class="replay" type="button" id="replay">Replay the cut</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+  const root = document.body;
+  function play() { root.classList.remove('play'); void root.offsetWidth; root.classList.add('play'); }
+  document.getElementById('replay').addEventListener('click', play);
+  play();
+</script>
+</body>
+</html>

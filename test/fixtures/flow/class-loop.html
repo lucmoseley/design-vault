@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- WAAPI motion beside a sprite a requestAnimationFrame loop steps by
+     swapping its class every frame for 600 ms (design-vault#60). -->
+<html><head><style>
+#sprite { width: 40px; height: 40px; background: #333; }
+.f0 { margin-left: 0; } .f1 { margin-left: 10px; } .f2 { margin-left: 20px; } .f3 { margin-left: 30px; }
+</style></head><body>
+<div id="box" style="width:40px;height:40px;background:#333"></div>
+<div id="sprite" class="f0"></div>
+<script>
+document.getElementById("box").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+const sprite = document.getElementById("sprite");
+let first = null;
+requestAnimationFrame(function tick(now) {
+  if (first === null) first = now;
+  const k = Math.floor((now - first) / 16) % 4;
+  sprite.className = "f" + k;
+  if (now - first < 600) requestAnimationFrame(tick);
+});
+</script>
+</body></html>

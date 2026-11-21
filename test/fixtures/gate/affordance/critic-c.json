@@ -1,0 +1,109 @@
+{
+ "answers": {
+  "pill": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic c on p1"
+     },
+     "p2": {
+      "answer": "Yes",
+      "evidence": "critic c on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic c on vault.edge-look"
+   }
+  },
+  "hidden": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic c on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic c on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic c on vault.edge-look"
+   }
+  },
+  "minor": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic c on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic c on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic c on vault.edge-look"
+   }
+  },
+  "split": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic c on p1"
+     },
+     "p2": {
+      "answer": "Unsure",
+      "evidence": "critic c on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic c on vault.edge-look"
+   }
+  },
+  "clean": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic c on p1"
+     },
+     "p2": {
+      "answer": "No",
+      "evidence": "critic c on p2"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic c on vault.edge-look"
+   }
+  },
+  "unlisted": {
+   "vault.affordance": {
+    "parts": {
+     "p1": {
+      "answer": "Yes",
+      "evidence": "critic c on p1"
+     }
+    }
+   },
+   "vault.edge-look": {
+    "answer": "Yes",
+    "evidence": "critic c on vault.edge-look"
+   }
+  }
+ },
+ "clashes": []
+}

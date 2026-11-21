@@ -1,0 +1,16 @@
+{
+ "parts": [
+  {
+   "id": "p1",
+   "actable": true,
+   "href": "#a",
+   "text": "Hostel A"
+  },
+  {
+   "id": "p2",
+   "actable": true,
+   "href": "#a",
+   "text": "Photo of Hostel A"
+  }
+ ]
+}

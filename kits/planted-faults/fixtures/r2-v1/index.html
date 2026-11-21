@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mark M. Moseley · Counsel's paper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..400&family=Public+Sans:wght@400;500;600&display=swap">
+<!-- Gelasio is the open metric twin of Georgia, the logo's face; it sets the wordmark only. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gelasio:wght@700&text=MINFRA%20&display=swap">
+<style>
+:root{
+  /* the whole palette: four colours, nothing else */
+  --paper:#F8F6F0;   /* counsel's paper, the ground */
+  --ink:#404040;     /* logo grey: all text, the mark, the frame */
+  --blue:#0070C0;    /* logo blue: the wordmark, links, focus */
+  --pad:#F4ECB0;     /* the legal pad, remembered: the address strip, selection */
+
+  --serif:"Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans:"Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --mark-face:"Gelasio", Georgia, serif;
+
+  /* one rhythm: a 7 px step; body leading is four steps */
+  --u:7px;
+  --lh:calc(var(--u) * 4);         /* 28px */
+  --ease:cubic-bezier(0.3, 0, 0, 1);
+  --edge:24px;                     /* paper margin round the sheet */
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--paper);color:var(--ink);-webkit-text-size-adjust:100%;scrollbar-color:var(--ink) var(--paper)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:18px;line-height:var(--lh);font-optical-sizing:auto;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+::selection{background:var(--pad);color:var(--ink)}
+a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:0.22em}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+img{display:block;max-width:100%}
+h1,h2,h3,p,ul,figure{margin:0}
+
+/* ---------- the first screen: one sheet of Mark's paper ---------- */
+.sheet{padding:var(--edge);height:100svh;min-height:680px;display:flex;flex-direction:column}
+.frame{flex:1;min-height:0;border:1px solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,0.66fr)}
+.copy{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto;min-width:0}
+
+.letterhead{display:flex;align-items:center;gap:28px;padding:30px clamp(24px,3.9vw,56px) 0}
+.lockup{display:block;text-decoration:none;flex:none}
+.lockup svg{width:116px;height:auto;display:block}
+.wordmark{font-family:var(--mark-face);font-weight:700;fill:var(--blue)}
+.who{display:flex;flex-direction:column;gap:4px;min-width:0}
+.who-name{font-family:var(--serif);font-size:29px;line-height:32px;font-weight:400;letter-spacing:-0.005em}
+.who-role{font-family:var(--sans);font-size:14px;line-height:20px;white-space:nowrap}
+.nav{margin-left:auto;display:flex;gap:30px;white-space:nowrap;font-family:var(--sans);font-size:15px;line-height:20px}
+.nav a{color:var(--ink);text-decoration:none;padding:6px 0;border-bottom:1px solid transparent;transition:color 180ms var(--ease),border-color 180ms var(--ease)}
+.nav a:hover{color:var(--blue);border-bottom-color:var(--blue)}
+
+.statement{align-self:end;padding:0 clamp(24px,3.9vw,56px) clamp(36px,5.2vh,56px)}
+.statement h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.55rem,4.9vw,4.6rem);line-height:1.07;letter-spacing:-0.018em;max-width:13.2em;text-wrap:balance;font-variation-settings:"opsz" 72}
+.lede{margin-top:clamp(20px,3.3vh,32px);font-size:20px;line-height:30px;max-width:31em;text-wrap:pretty}
+
+.address{background:var(--pad);display:flex;align-items:baseline;flex-wrap:wrap;column-gap:24px;row-gap:4px;padding:26px clamp(24px,3.9vw,56px) 28px}
+.address-label{font-family:var(--sans);font-size:15px;line-height:20px;font-weight:500}
+.address a{font-family:var(--serif);font-size:30px;line-height:36px;font-weight:400;letter-spacing:-0.005em;text-underline-offset:0.2em}
+
+.plate{position:relative;min-height:0;overflow:hidden;background:var(--paper)}
+.plate img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;mix-blend-mode:multiply;filter:saturate(0.78) contrast(1.03)}
+.sheet-note{font-family:var(--sans);font-size:12px;line-height:var(--edge);height:var(--edge);margin-bottom:calc(var(--edge) * -1);text-align:right}
+
+/* ---------- the entrance: Mark's line settles onto the paper ---------- */
+@keyframes settle{
+  from{opacity:0;transform:translateY(0.16em)}
+  to{opacity:1;transform:none}
+}
+body.play .enter{animation:settle 900ms var(--ease) 150ms both;will-change:transform,opacity,filter}
+@media (prefers-reduced-motion: reduce){body.play .enter{animation:none}}
+
+/* ---------- below the fold: the specimen ---------- */
+.spec{max-width:1180px;margin:0 auto;padding:calc(var(--u) * 16) 40px calc(var(--u) * 20)}
+.spec-part{display:grid;grid-template-columns:200px minmax(0,1fr);column-gap:56px;padding-top:calc(var(--u) * 12)}
+.spec-part:first-child{padding-top:0}
+.spec-part > h2{font-family:var(--sans);font-size:15px;line-height:var(--lh);font-weight:600}
+.spec-note{font-family:var(--sans);font-size:14px;line-height:calc(var(--u) * 3);max-width:44em}
+.spec-note + .spec-note{margin-top:var(--u)}
+
+.swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;margin-bottom:calc(var(--u) * 4)}
+.swatch-chip{height:84px;border:1px solid var(--ink)}
+.swatch dl{margin:14px 0 0;font-family:var(--sans);font-size:14px;line-height:21px}
+.swatch dt{font-weight:600}
+.swatch dd{margin:0}
+
+.faces{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:56px;align-items:end}
+.face-big{font-family:var(--serif);font-weight:300;font-size:72px;line-height:77px;letter-spacing:-0.018em;font-variation-settings:"opsz" 72}
+.face-sans{font-family:var(--sans);font-size:30px;line-height:35px;font-weight:500}
+.faces .spec-note{margin-top:var(--u)}
+
+.texture{display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;align-items:start}
+.mini{aspect-ratio:1.6;border:1px solid var(--ink);display:grid;grid-template-columns:1fr 0.66fr;grid-template-rows:1fr auto}
+.mini i{grid-column:1;grid-row:2;height:18px;background:var(--pad)}
+
+/* ---------- the article: one rhythm for every block ---------- */
+.article-wrap{container-type:inline-size;max-width:640px}
+.prose > * + *{margin-top:var(--lh)}
+.prose .art-title{font-family:var(--serif);font-weight:400;font-size:44px;line-height:calc(var(--u) * 7);letter-spacing:-0.012em;text-wrap:balance;font-variation-settings:"opsz" 60}
+.prose .byline{margin-top:calc(var(--u) * 2);font-family:var(--sans);font-size:14px;line-height:calc(var(--u) * 3)}
+.prose .byline + *{margin-top:calc(var(--u) * 6)}
+.prose p{font-size:18px;line-height:var(--lh);hanging-punctuation:first}
+.prose h3{font-family:var(--serif);font-weight:500;font-size:25px;line-height:calc(var(--u) * 5);margin-top:calc(var(--u) * 8);letter-spacing:-0.005em}
+.prose h3 + *{margin-top:calc(var(--u) * 2)}
+.prose ul{padding-left:1.15em;list-style:none}
+.prose li{position:relative}
+.prose li::before{content:"";position:absolute;left:-1.05em;top:calc(var(--lh) / 2 - 1px);width:0.5em;height:1px;background:var(--ink)}
+.prose li + li{margin-top:calc(var(--u) * 2)}
+.prose figure{margin-top:calc(var(--u) * 8)}
+.prose figure + *{margin-top:calc(var(--u) * 8)}
+.prose figure img{width:100%;aspect-ratio:3 / 2;height:round(down, 100cqi * 2 / 3, var(--u));object-fit:cover;mix-blend-mode:multiply;filter:grayscale(1) brightness(1.32) contrast(0.86)}
+.prose figcaption{margin-top:var(--u);font-family:var(--sans);font-size:14px;line-height:calc(var(--u) * 3);max-width:36em}
+.downloads{margin-top:calc(var(--u) * 8) !important;padding-top:0}
+.downloads h4{margin:0;font-family:var(--sans);font-size:14px;line-height:calc(var(--u) * 3);font-weight:600}
+.doc{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;margin-top:calc(var(--u) * 2)}
+.doc a{font-size:20px;line-height:var(--lh)}
+.doc-meta{font-family:var(--sans);font-size:14px;line-height:var(--lh);white-space:nowrap}
+
+/* ---------- motion sketch ---------- */
+.motion{display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px;align-items:start}
+.motion-words{font-family:var(--serif);font-size:30px;line-height:35px;font-weight:300;margin-bottom:calc(var(--u) * 3)}
+.curve{width:200px;height:auto;display:block}
+.demo{font-family:var(--serif);font-weight:300;font-size:40px;line-height:49px;letter-spacing:-0.015em;padding:28px 0 calc(var(--u) * 3);max-width:16em;text-wrap:balance}
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:14px;line-height:21px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-weight:600;padding:0 16px 7px 0;vertical-align:bottom}
+td{padding:7px 16px 7px 0;vertical-align:top}
+td:nth-child(2),td:nth-child(3){white-space:nowrap}
+tbody tr + tr td{padding-top:7px}
+.replay{margin-top:calc(var(--u) * 3);font:inherit;font-family:var(--sans);font-size:15px;line-height:21px;color:var(--blue);background:none;border:0;padding:0;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:0.22em;cursor:pointer}
+.replay:hover{text-decoration-thickness:2px}
+
+.plate-note{display:none}
+.foot{max-width:1180px;margin:0 auto;padding:0 40px 48px;font-family:var(--sans);font-size:13px;line-height:21px}
+
+/* ---------- mid width ---------- */
+@media (max-width:1340px){
+  .letterhead{flex-wrap:wrap;row-gap:12px}
+  .nav{margin-left:0;width:100%}
+}
+@media (max-width:1100px){
+  :root{--edge:16px}
+  .frame{grid-template-columns:minmax(0,1fr) minmax(0,0.62fr)}
+  .letterhead{flex-wrap:wrap;row-gap:12px}
+  .nav{margin-left:0;width:100%}
+  .lede{font-size:19px;line-height:28px}
+  .address a{font-size:26px;line-height:32px}
+  .spec-part{grid-template-columns:150px minmax(0,1fr);column-gap:36px}
+  .swatches{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ---------- phone ---------- */
+@media (max-width:860px){
+  .motion{grid-template-columns:minmax(0,1fr);gap:28px}
+}
+@media (max-width:760px), (max-width:1100px) and (max-aspect-ratio:4/5){
+  :root{--edge:12px}
+  .sheet{height:auto;min-height:0}
+  .frame{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .copy{display:contents}
+  .letterhead{order:1;padding:20px 20px 0;column-gap:16px;flex-wrap:wrap}
+  .who{flex:1 1 0}
+  .who-role{white-space:normal}
+  .lockup svg{width:100px}
+  .who-name{font-size:24px;line-height:28px}
+  .who-role{font-size:13px;line-height:18px}
+  .nav{gap:20px;font-size:14px}
+  .plate{order:2;aspect-ratio:1 / 1;width:min(100%, 37svh);justify-self:center;margin-top:16px}
+  .plate img{object-position:50% 16%}
+  .statement{display:contents}
+  .statement h1{order:3;padding:28px 20px 0}
+  .statement h1{font-size:2.3rem;line-height:1.1}
+  .lede{order:5;margin:0;padding:24px 20px 32px;font-size:18px;line-height:28px}
+  .address{order:4;margin-top:16px;padding:20px 20px 22px}
+  .address a{font-size:24px;line-height:28px;letter-spacing:-0.02em}
+  .sheet-note{display:none}
+  .plate-note{display:block;order:2;margin:8px 20px 0;font-family:var(--sans);font-size:12px;line-height:18px;text-align:center}
+  .spec{padding:calc(var(--u) * 10) 20px calc(var(--u) * 12)}
+  .spec-part{grid-template-columns:minmax(0,1fr);row-gap:var(--u)}
+  .faces,.texture,.motion{grid-template-columns:minmax(0,1fr);gap:28px}
+  .mini{max-width:240px}
+  .face-big{font-size:52px;line-height:56px}
+  .swatches{gap:20px}
+  .prose .art-title{font-size:34px;line-height:calc(var(--u) * 6)}
+  .doc{grid-template-columns:minmax(0,1fr)}
+  .doc-meta{white-space:normal}
+  .foot{padding:0 20px 40px}
+}
+@media (max-width:360px){
+  td:nth-child(2),td:nth-child(3){white-space:normal}
+}
+</style>
+</head>
+<body class="play">
+
+<header class="sheet">
+  <div class="frame">
+    <div class="copy">
+      <div class="letterhead">
+        <a class="lockup" href="#" aria-label="MMM Infra, home">
+          <svg viewBox="20 40 708 380" aria-hidden="true">
+            <path fill="#404040" d="M23.461 167.262A382.358 204.939 0 0 1 724.17 167.262A407.8 165.504 0 0 0 23.461 167.262Z"/>
+            <path fill="#404040" d="M84.827 195.244C142.472 53.197 266.116 132.616 278.063 275.686L231.873 275.686A86.355 142.289 0 0 0 84.827 195.244Z"/>
+            <path fill="#404040" d="M284.025 195.244C341.67 53.197 465.314 132.616 477.261 275.686L431.072 275.686A86.355 142.289 0 0 0 284.025 195.244Z"/>
+            <path fill="#404040" d="M483.223 195.244C540.868 53.197 664.512 132.616 676.46 275.686L630.27 275.686A86.355 142.289 0 0 0 483.223 195.244Z"/>
+            <text class="wordmark" x="392" y="411.6" text-anchor="middle" font-size="69" letter-spacing="2.5" text-rendering="geometricPrecision">MMM INFRA</text>
+          </svg>
+        </a>
+        <div class="who">
+          <span class="who-name">Mark M. Moseley</span>
+          <span class="who-role">Formerly Lead Lawyer, PPP Group, World Bank</span>
+        </div>
+        <nav class="nav" aria-label="Main">
+          <a href="#profile">Profile</a>
+          <a href="#articles">Articles</a>
+          <a href="#blog">Blog</a>
+        </nav>
+      </div>
+
+      <div class="statement">
+        <h1 class="enter">In my view, we are at a turning point in the story of public&#8209;private partnerships.</h1>
+        <p class="lede">I advise multilateral development banks, development agencies and governments on infrastructure – and, in particular, on Public-Private Partnerships that work as true partnerships.</p>
+      </div>
+
+      <div class="address">
+        <span class="address-label">Write to me directly</span>
+        <a href="mailto:Mark.Moseley@MMMinfra.com">Mark.Moseley<wbr>@MMMinfra.com</a>
+      </div>
+    </div>
+
+    <figure class="plate">
+      <img src="../shared/photos/portrait-studio.jpg" width="660" height="847" alt="Mark Moseley, head and shoulders, in a dark suit and glasses, smiling.">
+    </figure>
+    <p class="plate-note">Placeholder: Mark's photo from the current site, until the image round.</p>
+  </div>
+  <p class="sheet-note">Placeholder: Mark's photo from the current site, until the image round.</p>
+</header>
+
+<main class="spec" id="profile">
+
+  <section class="spec-part" aria-labelledby="h-palette">
+    <h2 id="h-palette">Palette</h2>
+    <div>
+      <div class="swatches">
+        <div class="swatch"><div class="swatch-chip" style="background:#F8F6F0"></div>
+          <dl><dt>Counsel's paper</dt><dd>#F8F6F0</dd><dd>The ground, everywhere</dd></dl></div>
+        <div class="swatch"><div class="swatch-chip" style="background:#404040"></div>
+          <dl><dt>Logo grey</dt><dd>#404040</dd><dd>All text, the mark, the one frame</dd></dl></div>
+        <div class="swatch"><div class="swatch-chip" style="background:#0070C0"></div>
+          <dl><dt>Logo blue</dt><dd>#0070C0</dd><dd>Wordmark, links, focus</dd></dl></div>
+        <div class="swatch"><div class="swatch-chip" style="background:#F4ECB0"></div>
+          <dl><dt>Pad yellow</dt><dd>#F4ECB0</dd><dd>The address strip, selected text</dd></dl></div>
+      </div>
+      <p class="spec-note">Contrast, WCAG 2: grey on paper 9.59:1 and on pad yellow 8.63:1; blue on paper 4.76:1, so blue body links pass; blue on pad yellow 4.28:1, so blue sits on the yellow only at large size (the address, 24–30 px). Blue never touches the grey.</p>
+      <p class="spec-note">The photographs add no colour: they are multiplied onto the paper, so their light backdrops take the paper's warmth. The portrait keeps its own light, pulled back in saturation; article photographs print in greys, as in a journal, so a purple stage backdrop turns to ink.</p>
+    </div>
+  </section>
+
+  <section class="spec-part" aria-labelledby="h-type">
+    <h2 id="h-type">Type pair</h2>
+    <div class="faces">
+      <div>
+        <p class="face-big">In my view,</p>
+        <p class="spec-note">Newsreader, a serif cut for news text with a display optical size. Light 300 at 72 px for Mark's one line, Regular 400 at 18/28 for reading, 500 for subheads.</p>
+      </div>
+      <div>
+        <p class="face-sans">Profile · Articles · Blog</p>
+        <p class="spec-note">Public Sans, plain and institutional: nav, labels, captions and dates, 13–15 px. Never in capitals, never tracked. The wordmark keeps the logo's own Georgia letterforms through Gelasio Bold, its open metric twin, and is not part of the pair.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec-part" aria-labelledby="h-texture">
+    <h2 id="h-texture">Texture</h2>
+    <div class="texture">
+      <div class="mini" aria-hidden="true"><i></i></div>
+      <div>
+        <p class="spec-note">None. The paper is flat and quiet, with no grain, no rules and no pad. The one detail borrowed from a real document is its edge: a single 1 px grey hairline round the first screen, square at every corner, the portrait set flush against it.</p>
+        <p class="spec-note">The legal pad survives only as its colour, and only at the foot of the sheet, where a letter carries its sender's address.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="spec-part" id="articles" aria-labelledby="h-article">
+    <h2 id="h-article">Article page</h2>
+    <div class="article-wrap" id="blog">
+      <article class="prose">
+        <h3 class="art-title" style="margin-top:0">The World's Best Public&#8209;Private Partnership Law</h3>
+        <p class="byline">Mark Moseley · MMM Infra Blog No. 8 · 18 September 2024</p>
+        <p>Recently, a client with a development agency asked me “What is the best Public-Private Partnership Law in the world?”</p>
+        <p>My joking response was “Whichever PPP Law I am currently working on with a client country!” On a more serious note however, the question did cause me to reflect on the elements that make a PPP Law particularly effective.</p>
+        <figure>
+          <img src="../shared/photos/portrait-wappp.jpg" width="767" height="553" alt="Mark Moseley speaking at a lectern.">
+          <figcaption>Mark Moseley at the lectern. Placeholder: Mark's photo from the current site, until the image round.</figcaption>
+        </figure>
+        <h3>So, what are the key ‘chapter topics’?</h3>
+        <p>In my view, every PPP law should address the following topics, ideally in separate chapters, in something like this order:</p>
+        <ul>
+          <li>An Introduction chapter, setting out the objectives and scope of the Act, including a listing of the sectors to which the Act does and does not apply.</li>
+          <li>A chapter on Institutional Coordination and Responsibilities, establishing new entities (such as a new central PPP unit and a new PPP inter-ministerial committee)&nbsp;…</li>
+          <li>Lastly, there should be a chapter on Transitional and Final Provisions, dealing with conflicts with antecedent laws&nbsp;…</li>
+        </ul>
+        <p>So, to return to the question I was asked – What is the world's best PPP law – is there a perfect example? The answer has to be “Not yet!”</p>
+        <div class="downloads">
+          <h4>Download</h4>
+          <div class="doc">
+            <a href="#">Streamlining the PPP Process: Meeting the ‘Abundance’ Challenge</a>
+            <span class="doc-meta">Lecture · 23 April 2026 · PDF</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="spec-part" aria-labelledby="h-motion">
+    <h2 id="h-motion">Motion</h2>
+    <div>
+      <p class="motion-words">Settled, unhurried, once.</p>
+      <div class="motion">
+        <div>
+          <svg class="curve" viewBox="-8 -8 216 216" role="img" aria-label="Easing curve cubic-bezier(0.3, 0, 0, 1): it leaves from rest and comes slowly to rest.">
+            <rect x="0" y="0" width="200" height="200" fill="none" stroke="#404040" stroke-width="1"/>
+            <path d="M0 200C60 200 0 0 200 0" fill="none" stroke="#0070C0" stroke-width="2"/>
+          </svg>
+          <p class="spec-note" style="margin-top:14px">cubic-bezier(0.3, 0, 0, 1): leaves from rest, slows into rest.</p>
+        </div>
+        <div>
+          <p class="demo enter">In my view, we are at a turning point in the story of public&#8209;private partnerships.</p>
+          <table>
+            <thead><tr><th>Element</th><th>Start</th><th>Length</th><th>Easing</th></tr></thead>
+            <tbody>
+              <tr><td>Hold: the sheet is already still and readable</td><td>0 ms</td><td>150 ms</td><td>—</td></tr>
+              <tr><td>Mark's line settles: opacity 0 to 1 as it rises 0.16 em (11 px at 72 px) into place</td><td>150 ms</td><td>900 ms</td><td>cubic-bezier(0.3, 0, 0, 1)</td></tr>
+              <tr><td>Total</td><td></td><td>1050 ms</td><td></td></tr>
+            </tbody>
+          </table>
+          <p class="spec-note" style="margin-top:14px">One large brand move inside 400–1000 ms, the whole under 1.6 s (docs/research/animation-length.md F5, F12; #13). Everything else on the sheet is there from the first frame. Reduced motion: the line is simply there. The aqueduct build (#9) is not this entrance; on a first visit this plays after its dissolve.</p>
+          <button class="replay" type="button" id="replay">Replay the entrance</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>v1 Counsel's paper · round 2 style tile, mmm-infra #8. Hero line: Mark Moseley, Blog No. 2, 2020, verbatim. Supporting line: a draft for Mark to rewrite.</p>
+</footer>
+
+<script>
+  // Content is visible without this script; it only replays the one entrance.
+  document.getElementById('replay').addEventListener('click', function () {
+    document.body.classList.remove('play');
+    void document.body.offsetWidth;
+    document.body.classList.add('play');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+{"date":"2026-10-13","project":"mmm-infra","ticket":"lucmoseley/mmm-infra#9","round":1,"first_pick":"v2-slow","reason":"the water reads as one line","confidence":70,"critic_pick":"v1-arches","agree":false}
+{"date":"2026-10-14","project":"mmm-infra","ticket":"lucmoseley/mmm-infra#9","round":2,"first_pick":"v2a-still","reason":"calmer than r1","confidence":60,"critic_pick":"v2a-still","agree":true}

@@ -1,0 +1,2 @@
+
+**Your task: the type critic.** A whole-page critic judges the page as one; you judge only its type, against the brief's type: the typefaces and how many there are, the size and weight hierarchy, case and tracking, alignment, line spacing, emphasis (bold, italic, size, colour), the ranks of text colour, and whether like text is set alike. Answer every record in `rules/records.md` by its question, citing its id with each finding; `rules/sections.md` holds their reasons. Report only faults of type.

@@ -1,0 +1,194 @@
+{
+  "schema_version": 3,
+  "meta": {
+    "owner": "Luc Moseley",
+    "created": "2026-09-28",
+    "imagesPath": "images/"
+  },
+  "dna": {
+    "name": "House DNA",
+    "description": "Defaults, not rules.",
+    "constants": [],
+    "never": [
+      "purple-to-blue gradients"
+    ]
+  },
+  "collections": [
+    {
+      "id": "flat-poster",
+      "name": "Flat Poster",
+      "description": "d",
+      "deployFor": "d",
+      "vocabulary": [
+        "flat colour"
+      ],
+      "risk": "r",
+      "accent": "#223344",
+      "imageStyle": "s",
+      "styles": [
+        "cinematic-dark",
+        "quiet-luxury"
+      ]
+    }
+  ],
+  "page_parts": [
+    {
+      "id": "hero",
+      "name": "Hero",
+      "gloss": "The opening screen"
+    },
+    {
+      "id": "footer",
+      "name": "Footer",
+      "gloss": "The bottom of the page"
+    },
+    {
+      "id": "art-only",
+      "name": "Art only",
+      "gloss": "A picture with no page around it"
+    }
+  ],
+  "motion_kinds": [
+    {
+      "id": "scroll",
+      "name": "Scroll",
+      "gloss": "Moves as you scroll, stops when you stop"
+    },
+    {
+      "id": "pointer",
+      "name": "Pointer",
+      "gloss": "Answers the mouse: hover, point, click"
+    }
+  ],
+  "projects": {
+    "manta": {
+      "name": "Manta Hostels",
+      "rules": "docs/brand/brand-sheet.md in lucmoseley/mantahostels",
+      "groups": [
+        {
+          "id": "mascot-renderings",
+          "name": "Mascot renderings",
+          "header": "h"
+        },
+        {
+          "id": "motion-references",
+          "name": "Motion references",
+          "header": "h"
+        }
+      ],
+      "verdicts": [
+        "on-brand",
+        "adapt",
+        "off-brand"
+      ]
+    }
+  },
+  "keywords_allowed": [
+    "ink-line",
+    "minimal",
+    "scroll-driven"
+  ],
+  "keyword_families": {
+    "Medium": [
+      "ink-line"
+    ],
+    "Colour": [
+      "minimal"
+    ],
+    "Scene": [],
+    "Motion": [
+      "scroll-driven"
+    ]
+  },
+  "entries": [
+    {
+      "id": "porcelain",
+      "file": "porcelain.png",
+      "title": "Porcelain manta",
+      "collection": "flat-poster",
+      "page_parts": [
+        "art-only"
+      ],
+      "description": "d",
+      "note": "n",
+      "keywords": [
+        "ink-line",
+        "minimal"
+      ],
+      "vocabulary": [
+        "cobalt"
+      ],
+      "image_recipe": "r",
+      "composition": "c",
+      "origin": "ai-generated",
+      "source": "Adobe Firefly",
+      "licence": "Founder-owned",
+      "added": "2026-09-05",
+      "fit": {
+        "manta": {
+          "groups": [
+            "mascot-renderings"
+          ],
+          "verdict": "adapt",
+          "take": "t",
+          "sheet_section": "§8"
+        }
+      }
+    },
+    {
+      "id": "site-layers",
+      "url": "https://example.com",
+      "still": "site-layers.png",
+      "title": "Layered scroll",
+      "collection": "flat-poster",
+      "page_parts": [
+        "hero",
+        "footer"
+      ],
+      "description": "d",
+      "note": "n",
+      "keywords": [
+        "scroll-driven"
+      ],
+      "origin": "third-party",
+      "source": "a list of sites",
+      "licence": "live site — capture private",
+      "added": "2026-09-05",
+      "motion": {
+        "kinds": [
+          "scroll"
+        ],
+        "trigger": "scroll",
+        "purpose": "delight",
+        "capture": "site-layers.webm"
+      },
+      "fit": {
+        "manta": {
+          "groups": [
+            "motion-references"
+          ],
+          "verdict": "off-brand",
+          "take": "t",
+          "sheet_section": "§10"
+        }
+      }
+    },
+    {
+      "id": "unjudged",
+      "file": "porcelain.png",
+      "title": "Unjudged reference",
+      "collection": "flat-poster",
+      "page_parts": [
+        "hero"
+      ],
+      "description": "d",
+      "note": "n",
+      "keywords": [],
+      "vocabulary": [],
+      "origin": "third-party",
+      "source": "cth9191/taste-vault",
+      "licence": "No licence held — private reference only",
+      "added": "2026-07-20"
+    }
+  ]
+}

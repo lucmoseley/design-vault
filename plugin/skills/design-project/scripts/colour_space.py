@@ -1,0 +1,108 @@
+"""colour_space.py — the colour maths the palette checks share (#175): sRGB
+hex to CIELAB, OKLCH and WCAG relative luminance, and the CIEDE2000 colour
+difference.
+
+CIELAB and luminance are taken under D65 from sRGB (IEC 61966-2-1); CIEDE2000
+follows Sharma, Wu & Dalal 2005 (kL = kC = kH = 1); OKLab is Ottosson's, in
+polar form; contrast is WCAG 2.x's.
+"""
+
+import math
+
+D65_WHITE = (0.95047, 1.0, 1.08883)
+SRGB_TO_XYZ = (
+    (0.4124564, 0.3575761, 0.1804375),
+    (0.2126729, 0.7151522, 0.0721750),
+    (0.0193339, 0.1191920, 0.9503041),
+)
+
+
+def lin(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def linear_rgb(h):
+    return [lin(int(h[i : i + 2], 16) / 255) for i in (1, 3, 5)]
+
+
+def luminance(h):
+    r, g, b = linear_rgb(h)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(h1, h2):
+    hi, lo = sorted((luminance(h1), luminance(h2)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def f_lab(t):
+    return t ** (1 / 3) if t > (6 / 29) ** 3 else t / (3 * (6 / 29) ** 2) + 4 / 29
+
+
+def lab(h):
+    rgb = linear_rgb(h)
+    fx, fy, fz = (
+        f_lab(sum(m * c for m, c in zip(row, rgb, strict=True)) / w)
+        for row, w in zip(SRGB_TO_XYZ, D65_WHITE, strict=True)
+    )
+    return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
+
+
+def l_star_of_luminance(y):
+    return 116 * f_lab(y) - 16
+
+
+def oklch(h):
+    """(L, C, h in degrees) in OKLCH."""
+    r, g, b = linear_rgb(h)
+    long_ = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    medium = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    short = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    lightness = 0.2104542553 * long_ + 0.7936177850 * medium - 0.0040720468 * short
+    ok_a = 1.9779984951 * long_ - 2.4285922050 * medium + 0.4505937099 * short
+    ok_b = 0.0259040371 * long_ + 0.7827717662 * medium - 0.8086757660 * short
+    return (
+        lightness,
+        math.hypot(ok_a, ok_b),
+        math.degrees(math.atan2(ok_b, ok_a)) % 360,
+    )
+
+
+def de2000(lab1, lab2):
+    l1, a1, b1 = lab1
+    l2, a2, b2 = lab2
+    c_bar = (math.hypot(a1, b1) + math.hypot(a2, b2)) / 2
+    g = 0.5 * (1 - math.sqrt(c_bar**7 / (c_bar**7 + 25**7)))
+    a1p, a2p = (1 + g) * a1, (1 + g) * a2
+    c1p, c2p = math.hypot(a1p, b1), math.hypot(a2p, b2)
+    h1p = 0 if (a1p == 0 and b1 == 0) else math.degrees(math.atan2(b1, a1p)) % 360
+    h2p = 0 if (a2p == 0 and b2 == 0) else math.degrees(math.atan2(b2, a2p)) % 360
+    dlp, dcp = l2 - l1, c2p - c1p
+    dh_angle = 0 if c1p * c2p == 0 else (h2p - h1p + 180) % 360 - 180
+    d_hue = 2 * math.sqrt(c1p * c2p) * math.sin(math.radians(dh_angle / 2))
+    lbp, cbp = (l1 + l2) / 2, (c1p + c2p) / 2
+    if c1p * c2p == 0:
+        hbp = h1p + h2p
+    elif abs(h1p - h2p) <= 180:
+        hbp = (h1p + h2p) / 2
+    else:
+        hbp = (h1p + h2p + (360 if h1p + h2p < 360 else -360)) / 2
+    t_hue = (
+        1
+        - 0.17 * math.cos(math.radians(hbp - 30))
+        + 0.24 * math.cos(math.radians(2 * hbp))
+        + 0.32 * math.cos(math.radians(3 * hbp + 6))
+        - 0.20 * math.cos(math.radians(4 * hbp - 63))
+    )
+    dth = 30 * math.exp(-(((hbp - 275) / 25) ** 2))
+    rc = 2 * math.sqrt(cbp**7 / (cbp**7 + 25**7))
+    sl = 1 + 0.015 * (lbp - 50) ** 2 / math.sqrt(20 + (lbp - 50) ** 2)
+    sc = 1 + 0.045 * cbp
+    sh = 1 + 0.015 * cbp * t_hue
+    rt = -math.sin(math.radians(2 * dth)) * rc
+    return math.sqrt(
+        (dlp / sl) ** 2
+        + (dcp / sc) ** 2
+        + (d_hue / sh) ** 2
+        + rt * (dcp / sc) * (d_hue / sh)
+    )

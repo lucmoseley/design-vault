@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- Starts the viewer never sees at rest, and ones that are seen (#297). Every
+     move is 300 px over 400 ms on a cubic ease-out, 36 px in its first
+     frame: a jolt and a jump wherever it is seen.
+     Unseen: #enter starts left of the viewport, #flush touching its left edge
+     with nothing on screen, #word below the line that clips it by overflow,
+     #reveal below the window that clips it by clip-path, and #fade at zero
+     opacity.
+     Seen: #shown starts on screen. #escape starts outside a box whose overflow
+     would clip it, but is positioned against <body>, and #pinned outside a
+     positioned one, but is fixed, so neither box clips it. #wrap has no size
+     and starts left of the viewport, but its child shows. #drop, in the flow,
+     starts below <body>'s box, which ends at 480 px, but <body>'s overflow
+     passes to the viewport and clips nothing.
+     Each element's style is its first keyframe, so a frame drawn before the
+     script runs or the animations start shows the same as their start (#326). -->
+<html><head><style>
+body { margin: 0; overflow: hidden; }
+.box { position: absolute; width: 40px; height: 40px; background: #333; }
+#line { position: absolute; top: 200px; left: 40px; width: 200px; height: 40px; overflow: hidden; }
+#word, #reveal { position: absolute; top: 0; left: 0; width: 40px; height: 40px; background: #333; transform: translateY(300px); }
+#window { position: absolute; top: 700px; left: 40px; width: 200px; height: 40px; clip-path: inset(0); }
+#holder { margin: 400px 0 0 400px; width: 40px; height: 40px; overflow: hidden; }
+#escape { top: 300px; left: 40px; }
+#frame { position: absolute; top: 800px; left: 800px; width: 40px; height: 40px; overflow: hidden; }
+#pinned { position: fixed; top: 900px; left: 40px; }
+#wrap { position: absolute; top: 600px; left: -100px; }
+#wrap > div { left: 140px; }
+#drop { margin-left: 40px; width: 40px; height: 40px; background: #333; transform: translate(0, 200px); }
+#fade { opacity: 0; }
+</style></head>
+<body>
+<div class="box" id="enter" style="top: 20px; left: -320px"></div>
+<div class="box" id="flush" style="top: 60px; left: -40px"></div>
+<div id="line"><div id="word"></div></div>
+<div id="window"><div id="reveal"></div></div>
+<div class="box" id="fade" style="top: 100px; left: 40px"></div>
+<div class="box" id="shown" style="top: 500px; left: 40px"></div>
+<div id="holder"><div class="box" id="escape"></div></div>
+<div id="frame"><div class="box" id="pinned"></div></div>
+<div id="wrap"><div class="box"></div></div>
+<div id="drop"></div>
+<script>
+const timing = { duration: 400, easing: "cubic-bezier(0.33, 1, 0.68, 1)", fill: "forwards" };
+for (const id of ["enter", "flush", "shown", "escape", "pinned", "wrap"]) {
+  document.getElementById(id).animate(
+    [{ transform: "translateX(0)" }, { transform: "translateX(300px)" }], timing);
+}
+document.getElementById("drop").animate(
+  [{ transform: "translate(0, 200px)" }, { transform: "translate(300px, 200px)" }], timing);
+for (const id of ["word", "reveal"]) {
+  document.getElementById(id).animate(
+    [{ transform: "translateY(300px)" }, { transform: "translateY(0)" }], timing);
+}
+document.getElementById("fade").animate(
+  [{ transform: "translateX(0)", opacity: 0 }, { transform: "translateX(300px)", opacity: 1 }], timing);
+</script>
+</body></html>

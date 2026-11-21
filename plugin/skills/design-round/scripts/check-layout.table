@@ -1,0 +1,39 @@
+# Each value comes from its record in design-critique/rules/; change them together.
+vault.text-spacing | spacing | line-height 1.5, after-paragraph 2, letter-spacing 0.12, word-spacing 0.16
+vault.fluid-type | zoom | 2
+vault.fluid-type | size | 2
+# --records: one line per record check, its value the record's own figures.
+vault.false-floor | fold | none
+vault.nav-by-width | nav-place | under 600
+vault.nav-wide | nav-wide | from 1024
+vault.visible-nav | visible-nav | at most 4 links
+vault.rtl-image-order | rtl-order | none
+vault.fluid-zoom | fluid-zoom | zoom 5, grow 2
+vault.joined-fills | seams | scales 1.25, 1.5, 1.75
+vault.safe-centre | safe-centre | none
+vault.card-alignment | card-rows | none
+# 34 px: the bottom inset a Face ID iPhone keeps in portrait, which no record gives.
+vault.bottom-safe-area | safe-bottom | inset 34
+vault.alignment-lines | text-edge | none
+vault.content-width | content-width | reading 864, default 1300
+vault.content-width | footer-bands | none
+vault.capped-centre | capped-centre | none
+vault.line-length | line-length | body 50-75, columns 40-50, large 75, short 80
+vault.optical-alignment | optical | none
+vault.table-width | table-width | none
+vault.table-narrow | table-narrow | none
+vault.button-group-stack | button-stack | none
+vault.content-columns | card-columns | one under 600, minimum 15em
+vault.content-columns | phone-width | under 600
+vault.panes-by-width | panes | one under 840 or under 480 tall
+vault.side-pane | side-pane | one under 840 or under 480 tall
+vault.popover-sheet | popover-sheet | under 600
+vault.bar-fit | bar-fit | none
+vault.breadcrumb-narrow | breadcrumb | label Show more breadcrumbs
+vault.nav-strip | nav-strip | none
+vault.tabs-narrow | tabs-narrow | none
+vault.footer-narrow | footer-narrow | toggles under 480, 2 columns from 480, 4 columns from 1024
+vault.card-media-stack | card-media | 25em
+vault.label-value-stack | label-value | size 2
+vault.row-wrap | row-wrap | none
+vault.logo-version | logo-version | none

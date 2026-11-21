@@ -1,0 +1,8 @@
+{
+	"_comment": [
+		"The text each hook this repo registers in .claude/settings.json prints, so the core's",
+		"count-guard-fires.js can count it (workflow-core#1267). Shape and rules: the core's",
+		"scripts/guard-fire-needles.json `_comment`."
+	],
+	"guards": {}
+}

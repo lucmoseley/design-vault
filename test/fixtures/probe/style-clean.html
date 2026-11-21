@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Style clean</title>
+<style>
+@font-face { font-family: "Body Fallback"; src: local("DejaVu Sans"); size-adjust: 100%; }
+:root { color-scheme: light dark; }
+html { background: #fff; color: #1a1a1a; font: 16px/1.5 "DejaVu Sans", "Body Fallback", sans-serif; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: #fff; }
+@media (prefers-color-scheme: dark) {
+  html, body { background: #161616; color: #e6e6e6; }
+}
+main { max-width: 36rem; margin: 0 auto; padding: 0 1rem; }
+h1, h2, h3 { font-weight: 600; text-wrap: balance; margin: 2rem 0 1rem; }
+h1 { font-size: clamp(2rem, 1.5rem + 2vw, 3rem); line-height: 1.15; }
+h2 { font-size: 1.5rem; line-height: 1.25; }
+h3 { font-size: 1.25rem; line-height: 1.3; }
+p, li, dd, blockquote { text-wrap: pretty; }
+p { margin: 0 0 1rem; }
+@media (max-width: 420px) {
+  p, li, dd, blockquote { hyphens: auto; hyphenate-limit-chars: 5 2 3; }
+}
+a { color: #1d4ed8; }
+abbr { letter-spacing: 0.06em; text-decoration: none; }
+code { font-family: "DejaVu Sans Mono", monospace; font-size: 1em; }
+small { font-size: 0.875rem; }
+figcaption, caption { font-size: 0.875rem; line-height: 1.4; text-wrap: balance; }
+.service { padding: 0.25rem 1rem; }
+header { background: #ededed; padding: 0.5rem 1rem; }
+nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 1rem; }
+.hero { background: #1d3461 url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJElEQVR4nGM8ceLEhg0bGBgYGBgYmOAsBgYGJgYkgOAcOXIEACgbCMzch5TjAAAAAElFTkSuQmCC") center / cover; color: #f0f0f0; padding: 1rem; }
+.hero h1 { margin-top: 0; }
+.actions, .group { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1rem; }
+input, select, textarea, button { font: inherit; touch-action: manipulation; border: 1px solid #767676; border-radius: 8px; background: #fff; color: #1a1a1a; }
+button { line-height: 1.2; padding: 0.75rem 1.25rem; font-weight: 600; }
+button.primary { padding: 1rem 1.5rem; border-radius: 999px; background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+button.danger { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+button:disabled { background: #ededed; color: #595959; }
+.card { border: 1px solid #d4d4d4; border-radius: 12px; padding: 1rem; margin: 0 0 1rem; }
+.tag { background: #ededed; border-radius: 999px; padding: 0 0.5rem; }
+.list-head { background: #ededed; padding: 0.5rem; }
+.band { height: 0.5rem; background-image: linear-gradient(in oklab, #ededed, #dcdcdc, #ededed); }
+hr { border: 0; border-top: 1px solid #d4d4d4; }
+img { outline: 1px solid rgba(0, 0, 0, 0.1); outline-offset: -1px; }
+img.pixel { image-rendering: pixelated; }
+.typo { text-decoration-line: spelling-error; }
+table { border-collapse: collapse; }
+td, th { font-variant-numeric: tabular-nums; text-align: left; padding: 0.25rem 0.5rem; }
+td.num, th.num { text-align: right; }
+footer { padding: 1rem; }
+footer > .legal { background: #ededed; padding: 0.5rem; }
+.wash { height: 0.25rem; background: rgba(0, 0, 0, 0.4); }
+.menu { background: #2a4a80; padding: 0.5rem; margin: 0 0 1rem; }
+.raised { border-color: transparent; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+.centre { text-align: center; }
+.cols { column-count: 2; }
+.cols h3 { column-span: all; }
+.stroke { -webkit-text-stroke: 1px #1a1a1a; paint-order: stroke fill; }
+@media (max-width: 640px) { table.stack tr { display: block; } }
+</style>
+</head>
+<body>
+<div class="service"><small>Open every day</small></div>
+<header>
+  <nav><ul><li><a href="#rooms">Rooms</a></li><li><a href="#book">Book</a></li></ul></nav>
+</header>
+<main>
+  <section class="hero">
+    <h1>Rooms by the sea</h1>
+    <p>Quiet rooms a short walk from the harbour, with breakfast served until noon.</p>
+    <div class="wash"></div>
+    <div role="menu" class="menu">Rooms, prices and the way here</div>
+    <div class="group"><button type="button">See the rooms</button></div>
+  </section>
+  <div class="band"></div>
+  <h2 id="rooms">Our rooms</h2>
+  <p>Each room has a desk, a window that opens and a bed made up with cotton sheets. We follow the <abbr>WCAG</abbr> guidance for every page we publish, and the rooms on the ground floor have step-free access from the street.</p>
+  <p>Rooms cost from <span class="price">£24</span> a night. Run <code>npm test</code> to check the booking script before you change it, then tell <span class="who">Ana Silva</span> what you found.</p>
+  <p class="centre">Open all year.</p>
+  <div class="cols"><h3>Getting here</h3><p>Take the coast road to the harbour and turn left at the <span class="stroke">lighthouse</span>.</p><p>The <ruby>quay<rt>key</rt></ruby> is a minute away on foot.</p></div>
+  <blockquote>The best night's sleep I have had on the coast in years.</blockquote>
+  <article class="card">
+    <h3>Garden room</h3>
+    <p>Looks over the garden. <strong>Breakfast included</strong> and <em>late check-out</em> on request.</p>
+    <small class="meta">Sleeps two</small> <span class="tag">New</span> <span class="badge">Popular</span>
+  </article>
+  <article class="card">
+    <h3>Harbour room</h3>
+    <p>Looks over the harbour and the boats coming in at dawn.</p>
+  </article>
+  <figure>
+    <img class="photo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJElEQVR4nGM8ceLEhg0bGBgYGBgYmOAsBgYGJgYkgOAcOXIEACgbCMzch5TjAAAAAElFTkSuQmCC" width="200" height="120" alt="The garden room">
+    <figcaption>The garden room in the morning</figcaption>
+  </figure>
+  <img class="pixel" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJElEQVR4nGM8ceLEhg0bGBgYGBgYmOAsBgYGJgYkgOAcOXIEACgbCMzch5TjAAAAAElFTkSuQmCC" width="64" height="64" alt="Map sprite">
+  <div class="list-head">Nearby</div>
+  <ul><li>The harbour</li><li>The market</li></ul>
+  <table>
+    <caption>Prices per night</caption>
+    <thead><tr><th scope="col">Room</th><th scope="col" class="num">Price</th></tr></thead>
+    <tbody>
+      <tr><td>Garden</td><td class="num">£24</td></tr>
+      <tr><td>Harbour</td><td class="num">£32</td></tr>
+    </tbody>
+  </table>
+  <table class="stack"><tbody><tr><th scope="row">Garden</th><td class="num">£24</td></tr></tbody></table>
+  <hr>
+  <h2 id="book">Book</h2>
+  <div class="actions"><button class="primary" type="button">Book a room</button></div>
+  <div class="group">
+    <button type="button" class="raised">Ask a question</button>
+    <button class="danger" type="button">Cancel booking</button>
+    <button type="button" disabled>Sold out</button>
+  </div>
+  <form>
+    <label for="name">Name</label>
+    <input id="name" type="text">
+    <label for="note">Note</label>
+    <textarea id="note"></textarea>
+    <select aria-label="Nights"><option>One night</option></select>
+  </form>
+  <p>Write to us any time: you will <span class="typo">recieve</span> a reply within a day.</p>
+</main>
+<footer>
+  <p>Rooms by the sea, the harbour road.</p>
+  <div class="legal"><small>Registered in England</small></div>
+</footer>
+</body>
+</html>

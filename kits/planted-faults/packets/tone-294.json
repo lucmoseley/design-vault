@@ -1,0 +1,40 @@
+{
+ "_about": "#294's tone lines, inferred from each brief's Aesthetic and Client values words and the project's rules file, never from a render. runner.py packets writes each packet's brief-tone.md from them (tone_brief).",
+ "mmm1": {
+  "brief": "the range the five directions sit inside. Energy calm (Client values 2 and 4: calm first, not busy). Weight light to middle (Client values 6: confident without big-firm claims; inferred). Warmth middle to warm and soft (Client values 1: personal and approachable; inferred). Order ordered (Client values 4 and 9: not busy, survives a lay editor). Familiarity typical of the category to middle (Client values 5: a marketing vehicle, not a campaign; inferred).",
+  "cards": {
+   "v1 Legal pad": "energy calm (Client values 2). Weight light (ballpoint ink on paper; inferred). Warmth warm and soft (canary paper and Mark's hand; inferred). Order middle (a ruled pad and one handwritten note per view; inferred). Familiarity novel, outside the range: Client values 10 puts Mark's legal pad on the table.",
+   "v2 General arrangement": "energy middle, outside the range: Client values 10 puts Mark's blueprint paper on the table, and its diazo ground and one amber band are louder than calm. Weight middle (inferred). Warmth cool and hard (an engineer's section sheet; inferred). Order ordered (a title block and a sheet's grid; inferred). Familiarity novel, outside the range, by the same Client values 10.",
+   "v3 Inscription": "energy calm (Client values 2). Weight heavy, outside the range: the aqueduct's own stone and carved capitals, tested as the literal reading of the brand (inferred). Warmth cool and hard (grey granite, square capitals, hard edges; inferred). Order ordered (a fixed three-colour palette, one accent; inferred). Familiarity novel, outside the range, as the one literal direction (inferred).",
+   "v4 Water": "energy calm (Client values 2). Weight middle (inferred). Warmth middle (a muted river green; inferred). Order ordered (one hue, one photograph, one line; Client values 4). Familiarity middle (Client values 10: Mark's muted colour).",
+   "v5 House colours": "energy calm (Client values 2 and 4). Weight light (a true white page, generous margins; inferred). Warmth middle (the logo's blue and grey; inferred). Order ordered (nothing in a panel; Client values 4). Familiarity typical of the category (Client values 5; inferred)."
+  }
+ },
+ "mmm2": {
+  "brief": "the range the seven directions sit inside. Energy calm to middle (Client values 2, calm first, against the founder's \"alive, not boring\"). Weight light (the founder's \"refined, never childish\"; inferred). Warmth middle (the house blue and grey, on a warm paper ground: research b). Order ordered (a ground, an ink and at most one accent: research a.2; Client values 4). Familiarity typical of the category to middle (\"reflects what Mark does\", yet not \"a look any consultancy could own\").",
+  "cards": {
+   "v1 Counsel's paper": "energy calm (Client values 2). Weight light (a hairline frame and a large light serif; the founder's \"refined\"). Warmth warm and soft (warm ivory paper and a pale legal yellow; inferred). Order ordered (one frame, grey ink, blue only on the wordmark and links). Familiarity middle (the legal pad remembered rather than drawn; inferred).",
+   "v2 Night drawing": "energy middle (Client values 2 against \"alive, not boring\"; inferred). Weight heavy, outside the range: the darker backdrop the founder suggested. Warmth cool and hard (a deep navy, fine pale linework; inferred). Order ordered (one fine drawing, at most a ghost of a grid). Familiarity middle (inferred).",
+   "v3 The annotated brief": "energy calm (Client values 2). Weight light (a serif text column; inferred). Warmth middle (inferred). Order middle (margin notes and framed exhibits beside the column; inferred). Familiarity middle (a page set like a legal journal; inferred).",
+   "v4 House colours, dark ground": "energy calm to middle (inferred). Weight heavy, outside the range: the founder's question whether a darker backdrop helps. Warmth cool and hard (deep charcoal or navy; inferred). Order ordered (Client values 4). Familiarity typical of the category (round 1 v5 rebuilt; inferred).",
+   "v5 House colours, one blue field": "energy middle (one committed field of house blue, the founder's \"alive, not boring\"; inferred). Weight middle (inferred). Warmth cool and hard (a field of #0070C0; inferred). Order ordered (one field, one line). Familiarity middle (inferred).",
+   "v6 House colours, the portrait": "energy calm (Client values 2). Weight light (inferred). Warmth warm and soft (a warm off-white ground and Mark at full height; inferred). Order ordered (Client values 4). Familiarity typical of the category (inferred).",
+   "v7 Mark at work": "energy middle (a full-bleed photograph of Mark speaking; the founder's \"alive, not boring\"; inferred). Weight middle (inferred). Warmth middle (a warm photograph graded into the house blue-grey; inferred). Order ordered (one serif line, one quiet action). Familiarity typical of the category (inferred)."
+  }
+ },
+ "manta": {
+  "line": "energy loud in the hero and marketing zones and calm in the working area (DESIGN.md Overview: \"Loud moments, calm machine\", volume 6-7 against 4-5). Weight middle (inferred). Warmth warm and soft (beachy, Quicksand's rounded letters, 8-12 px corners; DESIGN.md Overview and Shapes; inferred). Order ordered (\"one focal action, colour only where it carries information\": DESIGN.md Do's). Familiarity typical of the category (a scan-heavy comparison surface: PRODUCT.md Operating Context; inferred)."
+ },
+ "candidates": {
+  "r1-v1": "v1 Legal pad",
+  "r1-v2": "v2 General arrangement",
+  "r1-v3": "v3 Inscription",
+  "r1-v5": "v5 House colours",
+  "r2-v1": "v1 Counsel's paper",
+  "r2-v1p": "v1 Counsel's paper",
+  "r2-v3p": "v3 The annotated brief",
+  "r2-v5p": "v5 House colours, one blue field",
+  "r2-v7": "v7 Mark at work",
+  "r2-v7p": "v7 Mark at work"
+ }
+}

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>keyboard faults</title>
+<!-- One fault for each keyboard and focus record #315 scripts, each on the element whose id is the record's name.
+     Run with keyboard-tier01-parts.json, which declares the carousel.
+     vault.skip-link: the first Tab stop is a navigation link, not a skip link.
+     vault.visual-order: order: -1 shows the row's third link first.
+     vault.scroller-focus: a box of text that scrolls has no tabindex, role or name.
+     vault.roving-focus: each tab of the tab list is a Tab stop of its own.
+     vault.menu-focus: Enter opens the menu and leaves focus on its button.
+     vault.carousel-focus: the link on the slide out of view takes Tab focus.
+     vault.ring-outline: the Save button's focus ring is a box-shadow with no outline.
+     vault.focus-colour-kept: the deal link's text is the focus ring's red.
+     vault.focus-visible: the Book button's ring is set on :focus, so a mouse press draws it. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  :focus-visible { outline: 3px solid #b3261e; outline-offset: 2px }
+  header, main { padding: 16px }
+  a { color: #0a3542 }
+  nav a, .row a { display: inline-block; padding: 8px }
+  button { font: inherit; padding: 8px 12px; margin: 4px; color: #fff; background: #0a3542; border: 1px solid transparent }
+  .row { display: flex; gap: 16px }
+  #visual-order { order: -1 }
+  #scroller-focus { overflow: auto; height: 96px; width: 280px; border: 1px solid #767676; padding: 8px }
+  #ring-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px #b3261e }
+  #focus-visible:focus { outline: 3px solid #b3261e; outline-offset: 2px }
+  #focus-colour-kept { color: #b3261e }
+  [role=menu] { list-style: none; margin: 4px; padding: 4px; border: 1px solid #767676; width: 160px }
+  [role=menuitem] { display: block; padding: 8px }
+  #carousel-focus { overflow: hidden; width: 300px; border: 1px solid #767676 }
+  .track { display: flex; width: 600px }
+  .slide { width: 300px; flex: none; padding: 16px; box-sizing: border-box }
+</style>
+<header>
+  <nav><a id="skip-link" href="#rooms">Rooms</a> <a href="#about">About</a></nav>
+</header>
+<main id="main">
+  <h1>Beds in Lisbon</h1>
+  <div class="row"><a href="#one">First</a><a href="#two">Second</a><a id="visual-order" href="#three">Third</a></div>
+  <div id="scroller-focus">
+    <p>Check-in opens at two in the afternoon. Bags can be left at the desk from eight in the morning.</p>
+    <p>Quiet hours run from eleven at night until seven in the morning, every day of the week.</p>
+    <p>Towels are free. Lockers take a padlock, which the desk sells.</p>
+  </div>
+  <div role="tablist" id="roving-focus" aria-label="Room types">
+    <button role="tab" aria-selected="true">Dorm</button><button role="tab" aria-selected="false">Private</button>
+  </div>
+  <div>
+    <button id="menu-focus" aria-haspopup="menu" aria-expanded="false" aria-controls="actions">Actions</button>
+    <ul role="menu" id="actions" hidden>
+      <li role="menuitem" tabindex="-1">Copy link</li>
+      <li role="menuitem" tabindex="-1">Share</li>
+    </ul>
+  </div>
+  <div id="carousel-focus" class="carousel">
+    <div class="track">
+      <div class="slide"><p>Rooftop bar, open till late.</p></div>
+      <div class="slide"><p><a href="#pool">See the pool</a></p></div>
+    </div>
+  </div>
+  <p><button id="ring-outline">Save</button> <button id="focus-visible">Book</button></p>
+  <p>See <a id="focus-colour-kept" href="#deal">today's deal</a> before it ends.</p>
+</main>
+<script>
+  const menuButton = document.getElementById('menu-focus');
+  const menu = document.getElementById('actions');
+  menuButton.addEventListener('click', () => {
+    menu.hidden = !menu.hidden;
+    menuButton.setAttribute('aria-expanded', String(!menu.hidden));
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { menu.hidden = true; menuButton.setAttribute('aria-expanded', 'false'); } });
+</script>
+</html>

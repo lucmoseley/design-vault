@@ -1,0 +1,15 @@
+### vault.inputs-alone
+- applies-when: web-surface; every field
+- question: Does vault.inputs-alone hold?
+- answered-by: script
+- writes: inputs-alone
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- stage: value
+- script: owed
+- inputs: x-height, size
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: none
+- status: live
