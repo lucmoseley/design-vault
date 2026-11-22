@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Every vault suite, the repo's declared `commands.test` (#85): bash test/all.sh
-# The core's pre-commit runs it and refuses the commit on a non-zero exit.
+# While its verdict proof stands (test/verdict-canary.test.js, #491) the lander's run is the gate; while it is stale or
+# failed, the core's pre-commit runs it and refuses the commit on a non-zero exit.
 # A missing tool fails the run naming its install step.
 # Inside a commit only the suites its staged files can break run, as test/select-suites.js reads them (#146).
 # Run by hand, or with VAULT_ALL_SUITES=1, every suite runs. --plan prints what would run and runs nothing.
@@ -12,7 +13,11 @@
 # run of every suite fits it (#462).
 
 set -u
-cd "$(dirname "$0")/.." || exit 1
+# Its loads are spelled off this file's own path, which workflow-core's verdict proof walks to key the runner (#491).
+# Residual: the walk follows neither the reporter nor the suites the list below holds, so an edit to
+# test/failed-files.js leaves the proof fresh (lucmoseley/workflow-core-tracker#5512).
+vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
+cd "$vault" || exit 1
 # The one list of suites (#233). A Python suite names after a tab what it needs past the standard library: `images` for
 # numpy, Pillow and scipy, `chromium` for Playwright and its Chromium.
 # A new suite also owes README §Validating the library its sentence, and, if it never loads check-flow.py,
@@ -155,7 +160,7 @@ run=("${suites[@]}")
 (($#)) && run=("${named[@]}")
 if ((in_commit)); then
   if plan="$(VAULT_SIDES_DIR="$copies" VAULT_SIDES="${sides[*]}" VAULT_RUNNER_STAGED="$copies/staged" \
-    node test/select-suites.js --select "${suites[@]}")" && [[ -n $plan ]]; then
+    node "$vault/test/select-suites.js" --select "${suites[@]}")" && [[ -n $plan ]]; then
     selected=()
     everything=0
     while IFS=$'\t' read -r verdict suite why; do
@@ -234,5 +239,5 @@ if ((missing)); then
   exit 1
 fi
 
-bash test/run-lanes.sh "${run[@]}" || exit 1
+bash "$vault/test/run-lanes.sh" "${run[@]}" || exit 1
 if (($#)); then echo "${#run[@]} named suite(s) passed"; elif [[ -n $shard ]]; then echo "${#run[@]} suites of shard $shard passed"; else echo "${#run[@]} of ${#suites[@]} suites passed"; fi

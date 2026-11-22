@@ -24,7 +24,7 @@ State: being built — the build order is the spec lucmoseley/mantahostels#3631.
 <!-- Only what `.claude/workflow-core.json`'s `commands.*` declares. A command absent
      there means "this repo has none", and the core's checks skip it saying so. -->
 
-- `bash test/all.sh` runs every vault suite; the pre-commit gate runs it on every commit and refuses a red (#85), running there only the suites the staged files can break — `VAULT_ALL_SUITES=1` forces all (#146, README §Validating the library). `node --test` alone runs only the JavaScript suites.
+- `bash test/all.sh` runs every vault suite; while its verdict proof stands the lander's run before `main` moves is the gate and commits run none (#491); while the proof is stale or failed the pre-commit gate runs it and refuses a red (#85), running there only the suites the staged files can break — `VAULT_ALL_SUITES=1` forces all (#146, README §Validating the library). `node --test` alone runs only the JavaScript suites.
 
 ## Conventions specific to this repo
 
