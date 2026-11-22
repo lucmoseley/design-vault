@@ -1,6 +1,6 @@
 # Taste Vault
 
-> **This is `lucmoseley/design-vault`**, a private repo seeded with the full history of [cth9191/taste-vault](https://github.com/cth9191/taste-vault). It is becoming the home of the portable design method (the `design-vault` Claude Code plugin under `plugin/`) and one merged inspiration library. Upstream changes are taken by path-scoped cherry-pick from the `upstream` remote, never by data; nothing is pushed upstream.
+> **This is `lucmoseley/design-vault`**, a public repo published as one squashed commit; its history, seeded from [cth9191/taste-vault](https://github.com/cth9191/taste-vault), and its issue tracker stay in the private `lucmoseley/design-vault-tracker`. It is becoming the home of the portable design method (the `design-vault` Claude Code plugin under `plugin/`) and one merged inspiration library. Upstream changes are taken by path-scoped cherry-pick from the `upstream` remote, never by data; nothing is pushed upstream.
 
 **Inspiration in, vocabulary out.** A local, zero-build design-taste gallery that turns screenshots of sites you love into objective design vocabulary, clustered collections, and paste-ready briefs for Codex, Claude Code and other coding assistants.
 
