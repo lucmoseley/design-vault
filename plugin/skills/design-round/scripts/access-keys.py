@@ -9,9 +9,6 @@ check-access.py calls, at each width:
     keys.walked(page, js, readings, unseen)   # after the walk: the answers it settles
     keys.driven(context, url, js, carousels, mouse=...)  # a fresh load: the answers that press keys or the mouse
 
-access-contrast.py calls keys.still(handle) to wait out a slide's transition, and builds on SIG_JS to tell slides
-apart.
-
 `js` wraps a page-side body with check-access.py's helpers (label, shown, TARGET, visiblePart and the rest);
 `carousels` are the CSS selectors the parts declaration gives the carousel part. Each answer is a
 {question id: access-answers.py's Judged}.

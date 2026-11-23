@@ -1555,8 +1555,6 @@ def open_page(browser, at, width, height, **scheme):
 
 
 def load(context, url):
-    """A new page in `context`, loaded and settled, with how many looping
-    animations never finish."""
     page = context.new_page()
     page.goto(url, wait_until="load")
     return page, page.evaluate(layout.SETTLE_JS)

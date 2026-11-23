@@ -253,7 +253,7 @@ class Slides(unittest.TestCase):  # #427
 
     def verdict(self, readings):
         photo = contrasts.answering.unjudged()
-        contrasts.photo_verdict(photo, readings, TABLE)
+        contrasts._photo_verdict(photo, readings, TABLE)
         return photo
 
     def test_a_control_takes_its_worst_figure_over_every_slide(self):
@@ -300,7 +300,7 @@ class EndToEnd(unittest.TestCase):
             os.path.join(FIXTURES, "contrast-tier01-fault.html"), encoding="utf8"
         ) as fh:
             plants = [(m[0] or m[3], m[1] or m[2]) for m in PLANT.findall(fh.read())]
-        self.assertEqual(len(plants), 13)
+        self.assertEqual(len(plants), 14)
         for plant, record in plants:
             with self.subTest(plant):
                 subjects = [f["subject"] for f in found["answers"][record]["faults"]]
@@ -321,14 +321,17 @@ class EndToEnd(unittest.TestCase):
     ):  # #427
         photo = DONE["fault"][3]["answers"]["vault.controls-on-photo"]
         faults = {f["subject"]: f["detail"] for f in photo["faults"]}
-        # The next button's slide 1 shows again on its second press, so no slide is left unread.
-        self.assertEqual(photo["unmeasured"], [])
+        self.assertEqual(photo["unmeasured"], [], "every deck's slides were reached")
         self.assertIn(
             "at best on div#deck-dots's slide 2 of 2 (", faults["button#slide-plant"]
         )
         self.assertIn(
             "at best on div#deck-next's slide 2, reached by its next button (",
             faults["button#next-plant"],
+        )
+        self.assertIn(
+            "at best on div#deck-swap's slide 2, reached by its next button (",
+            faults["button#swap-plant"],
         )
 
     def test_a_thin_face_short_of_the_ladders_aim_is_a_note_not_a_fault(self):

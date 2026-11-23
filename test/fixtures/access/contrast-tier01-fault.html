@@ -7,7 +7,8 @@
      The photo is a light check of #f2f2f2 and #e0e0e0. With contrast-tier01-parts.json, .carousel is the carousel
      and #chart the chart. The thin paragraph passes vault.contrast at 5.74:1 but not the ladder's 7:1 aim: a note. vault.theme-contrast
      takes two plants, one per scheme. Each .deck shows a dark slide at load and a light one after, reached by its page
-     dots in #deck-dots and its next button in #deck-next; its bare Save icon fails on the light slide alone (#427). -->
+     dots in #deck-dots and its next button in #deck-next, and in #deck-swap by its next button swapping the one image's
+     source and then disabling itself; its bare Save icon fails on the light slide alone (#427). -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
   .photo { position: relative; max-width: 320px; height: 160px; margin: 16px 0;
@@ -18,7 +19,7 @@
   .dots button { width: 12px; height: 12px; margin: 0 6px; padding: 0; border: 0; border-radius: 50%; background: #fff; opacity: 0.5 }
   .dots button[aria-current] { opacity: 1 }
   .deck { background: none; overflow: hidden }
-  .slide { position: absolute; left: 0; top: 0; width: 100%; height: 100% }
+  .slide, .shown { position: absolute; left: 0; top: 0; width: 100%; height: 100% }
   .save { position: absolute; right: 16px; top: 16px; width: 32px; height: 32px; padding: 0; border: 0; background: none }
   .pips { margin: 0; list-style: none; position: absolute; left: 16px; bottom: 16px; padding: 4px 6px; border-radius: 12px; background: rgba(0, 0, 0, 0.7) }
   .pips li { display: inline }
@@ -61,6 +62,11 @@
   <button class="save" id="next-plant" data-record="vault.controls-on-photo" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
   <button class="next" aria-label="Next">›</button>
 </div>
+<div class="photo carousel deck" id="deck-swap">
+  <img class="shown" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23222'/%3E%3Crect width='20' height='20' fill='%23333'/%3E%3C/svg%3E" data-next="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E">
+  <button class="save" id="swap-plant" data-record="vault.controls-on-photo" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
+  <button class="next" aria-label="Next">›</button>
+</div>
 <p><label>Name <input class="faint" id="edge-plant" data-record="vault.control-edges" type="text"></label></p>
 <p><button class="icon" id="icon-plant" data-record="vault.contrast-ladder" aria-label="Close">
   <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#ccc"/></svg>
@@ -79,8 +85,7 @@
 <p id="more-plant" data-record="vault.theme-contrast">Text more contrast greys to 5.33:1, short of its 7:1</p>
 <p class="thin" id="thin-note">A thin face in grey</p>
 <script>
-  // Each deck shows one slide: its page dots show theirs, its next button the one after.
-  for (const deck of document.querySelectorAll('.deck')) {
+  for (const deck of document.querySelectorAll('.deck:not(#deck-swap)')) {
     const slides = [...deck.querySelectorAll('.slide')], pips = [...deck.querySelectorAll('.pips button')];
     let at = 0;
     const show = (k) => {
@@ -92,5 +97,11 @@
     const next = deck.querySelector('.next');
     if (next) next.addEventListener('click', () => show((at + 1) % slides.length));
   }
+  const swap = document.querySelector('#deck-swap');
+  swap.querySelector('.next').addEventListener('click', (e) => {
+    const img = swap.querySelector('.shown');
+    img.src = img.dataset.next;
+    e.currentTarget.disabled = true;
+  });
 </script>
 </html>
