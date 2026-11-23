@@ -1008,8 +1008,8 @@ def answers(lines, faults_by_mode, seen, unmet):
     out = {}
     for record, modes in by_record.items():
         out[record] = rule_table.answer(
-            any(faults_by_mode.get(m) for m in modes),
-            any(m in unmet for m in modes),
-            any(m in seen for m in modes),
+            misses=any(faults_by_mode.get(m) for m in modes),
+            unjudged=any(m in unmet for m in modes),
+            judged=any(m in seen for m in modes),
         )
     return out

@@ -1315,7 +1315,9 @@ def findings(rules, swept):
     for f in out.values():
         for held in f["misses"] + f["unjudged"]:
             held.pop("_last", None)
-        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], f["id"] in answered)
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=f["id"] in answered
+        )
     return list(out.values())
 
 

@@ -1033,6 +1033,8 @@ def findings(values, loads, words, desktop, *, unjudged=None):
             for u in got.unjudged:
                 if u not in f["unjudged"]:
                     f["unjudged"].append(u)
-        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], judged)
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=judged
+        )
         out.append(f)
     return out

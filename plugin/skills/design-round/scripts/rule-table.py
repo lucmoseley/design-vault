@@ -9,7 +9,7 @@ Line = collections.namedtuple("Line", "id check value text")
 ANSWERS = ("no match", "pass", "not judged", "fail")
 
 
-def answer(misses, unjudged, judged):
+def answer(*, misses, unjudged, judged):
     if misses:
         return "fail"
     if unjudged:
@@ -97,5 +97,9 @@ class Answers:
 
     def done(self):
         for f in self.found.values():
-            f["answer"] = answer(f["misses"], f["unjudged"], f["id"] in self.judged)
+            f["answer"] = answer(
+                misses=f["misses"],
+                unjudged=f["unjudged"],
+                judged=f["id"] in self.judged,
+            )
         return list(self.found.values())

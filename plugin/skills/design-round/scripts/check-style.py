@@ -381,7 +381,9 @@ def _compare(browser, url, block, *, widths, heights, parts, timeout):
 def _answered(out):
     for f in out.values():
         judged = f.pop("_judged", False)
-        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], judged)
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=judged
+        )
     return list(out.values())
 
 

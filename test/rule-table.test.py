@@ -81,13 +81,18 @@ class Answers(unittest.TestCase):
         )
 
     def test_answers_rank_so_the_strongest_of_two_is_their_joint_answer(self):
-        cases = [(m, u, j) for m in (0, 1) for u in (0, 1) for j in (0, 1)]
+        cases = [
+            {"misses": m, "unjudged": u, "judged": j}
+            for m in (0, 1)
+            for u in (0, 1)
+            for j in (0, 1)
+        ]
         for x in cases:
             for y in cases:
-                joint = rule_table.answer(*(a or b for a, b in zip(x, y, strict=True)))
+                joint = rule_table.answer(**{k: x[k] or y[k] for k in x})
                 strongest = max(
-                    rule_table.answer(*x),
-                    rule_table.answer(*y),
+                    rule_table.answer(**x),
+                    rule_table.answer(**y),
                     key=rule_table.ANSWERS.index,
                 )
                 with self.subTest(x=x, y=y):

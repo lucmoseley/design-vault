@@ -1008,8 +1008,8 @@ def answers(lines, got):
     out = {}
     for record, answers_of in by_record.items():
         out[record] = rule_table.answer(
-            any(a.faults for a in answers_of),
-            any(a.unmet for a in answers_of),
-            any(a.seen for a in answers_of),
+            misses=any(a.faults for a in answers_of),
+            unjudged=any(a.unmet for a in answers_of),
+            judged=any(a.seen for a in answers_of),
         )
     return out
