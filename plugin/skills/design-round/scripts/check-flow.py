@@ -1870,9 +1870,8 @@ DRAG_FRAME_MS = 16
 # frameworks/native, include/input/VelocityTracker.h, HORIZON of its default
 # least-squares strategy).
 RELEASE_HORIZON_MS = 100
-# How many flings a part gets before one is fast enough, on a busy machine,
-# for its projection to pick another snap point than where it was let go: a
-# guess.
+# How many flings a part gets before one is fast enough for its projection
+# to pick another snap point than where it was let go: a guess.
 FLING_TRIES = 3
 
 
@@ -2169,22 +2168,41 @@ def _rest(page, sel, axis):
 
 def _fling(page, sel, axis, *, way, along):
     """Flings the part `way` along `axis` and lets go: where it was let go,
-    the velocity the page was handed at the release, and its path after."""
+    the velocity the page was handed at the release, and its path after.
+    Each event carries the time it would have had a frame apart, so the page
+    is handed the same throw however late the machine sends it."""
     dx, dy = along
     x0, y0 = page.evaluate(records.CENTRE_JS, [sel, False])
     page.evaluate(
         "(w) => { window.__watch = w; window.__path = null; }",
         [sel, axis, STILL_MS, PATH_CAP_MS],
     )
-    page.mouse.move(x0, y0)
-    page.mouse.down()
-    for i in range(1, FLING_FRAMES + 1):
-        page.wait_for_timeout(DRAG_FRAME_MS)
-        page.mouse.move(
-            x0 + dx * way * FLING_PX * i / FLING_FRAMES,
-            y0 + dy * way * FLING_PX * i / FLING_FRAMES,
+    cdp = page.context.new_cdp_session(page)
+    frame = DRAG_FRAME_MS / 1000
+    # Stamped so the release's time is now, and no event is stamped later
+    # than it is sent.
+    t0 = time.time() - (FLING_FRAMES + 1) * frame
+
+    def send(kind, i, buttons):
+        cdp.send(
+            "Input.dispatchMouseEvent",
+            {
+                "type": kind,
+                "x": x0 + dx * way * FLING_PX * min(i, FLING_FRAMES) / FLING_FRAMES,
+                "y": y0 + dy * way * FLING_PX * min(i, FLING_FRAMES) / FLING_FRAMES,
+                "button": "left",
+                "buttons": buttons,
+                "clickCount": 1,
+                "timestamp": t0 + i * frame,
+            },
         )
-    page.mouse.up()
+
+    send("mouseMoved", 0, 0)
+    send("mousePressed", 0, 1)
+    for i in range(1, FLING_FRAMES + 1):
+        send("mouseMoved", i, 1)
+    send("mouseReleased", FLING_FRAMES + 1, 0)
+    cdp.detach()
     page.wait_for_function("() => window.__path")
     path, release = page.evaluate("() => [window.__path, window.__release]")
     return {
@@ -2200,7 +2218,7 @@ def drag_check(open_page, at, values, phone):
     if not parts:
         why = "no bottom-sheet or card part declared with a selector (--parts)"
         return {"drag-release": records.Answer(None, False, why)}
-    faults, seen, untold = [], False, []
+    faults, seen, too_slow = [], False, []
     for name, sel in parts:
         for axis, along in (("top", (0, 1)), ("left", (1, 0))):
             dx, dy = along
@@ -2226,17 +2244,16 @@ def drag_check(open_page, at, values, phone):
                 fling = _fling(
                     page, sel, axis, way=records.fling_way(snaps, here), along=along
                 )
-                if records.fling_tells(snaps, fling, v["rate"]):
+                if records.picks_another_snap(snaps, fling, v["rate"]):
                     break
             else:
-                untold.append(label)
-                continue
+                too_slow.append(label)
             faults += records.drag_faults(
                 {"label": label, "snaps": snaps, "fling": fling}, v
             )
     why = (
-        f"no fling of {', '.join(untold)} was let go fast enough to pick another snap point"
-        if untold
+        f"no fling of {', '.join(too_slow)} was let go fast enough to pick another snap point"
+        if too_slow
         else None
     )
     return {"drag-release": records.Answer(faults, seen, why)}

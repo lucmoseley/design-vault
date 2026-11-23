@@ -38,7 +38,7 @@ ACCESS = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
-LATE_PRESS = os.path.join(HERE, "late-press.py")
+LATE_INPUT = os.path.join(HERE, "late-input.py")
 
 
 def load(name, path):
@@ -343,12 +343,20 @@ class Judgements(unittest.TestCase):
         late = {"at": 650, "moves": release["moves"]}
         self.assertEqual(records.release_velocity(late, "left", 100), 0)
 
-    def test_a_fling_tells_only_where_its_projection_picks_another_snap(self):
+    def test_a_fling_serves_only_where_its_projection_picks_another_snap(self):
         fast = {"at": 260, "velocity": -1000}
         slow = {"at": 260, "velocity": -10}
-        self.assertTrue(records.fling_tells([0, 300], fast, 0.998))
-        self.assertFalse(records.fling_tells([0, 300], slow, 0.998))
-        self.assertTrue(records.fling_tells([300], slow, 0.998))
+        self.assertTrue(records.picks_another_snap([0, 300], fast, 0.998))
+        self.assertFalse(records.picks_another_snap([0, 300], slow, 0.998))
+        self.assertTrue(records.picks_another_snap([300], slow, 0.998))
+
+    def test_a_slow_fling_still_names_a_bounce_but_not_where_it_settles(self):
+        # Let go at 260 px at 10 px/s: the projection picks 300, the snap
+        # point it was let go nearest, so settling at 0 is not judged.
+        self.assertEqual(self.drag(0, [260, 200, 0], velocity=-10), [])
+        bounce = self.drag(300, [260, 320, 300], velocity=10)
+        self.assertEqual(len(bounce), 1)
+        self.assertIn("bounce", bounce[0]["detail"])
 
     def test_a_release_that_overshoots_or_turns_back_fails_naming_the_bounce_or_the_turn(
         self,
@@ -588,7 +596,7 @@ class Pages(unittest.TestCase):
 
         def go(name):
             page, *extra = runs[name]
-            script = LATE_PRESS if name == "late" else FLOW
+            script = LATE_INPUT if name == "late" else FLOW
             return name, run(page, os.path.join(where, name), *extra, script=script)
 
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
@@ -650,15 +658,19 @@ class Pages(unittest.TestCase):
                 self.assertEqual(got[rid]["answer"], "pass", out)
 
     def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own(self):
-        """The fault card moves only along its width; the pointer driver's
-        scroll to it once read as a move along its height, whose flings
-        could pick no other snap point."""
+        """#478: the fault card moves only along its width; the pointer
+        driver's scroll to it once read as a move along its height, whose
+        flings could pick no other snap point. Its pair is the clean page's
+        drag-release, judged along both axes in
+        test_the_clean_page_names_nothing."""
         _, got, out = self.fault
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
-    def test_a_late_press_is_not_read_into_the_clean_pages_fling(self):
-        """#478: a press slow to reach the page, as on a busy machine, once
-        made the read velocity a fraction of the one the page was handed."""
+    def test_late_input_is_not_read_into_the_clean_pages_fling(self):
+        """#478: pointer events slow to reach the page, as on a busy machine,
+        once made the read velocity a fraction of the one the page was
+        handed, or left too few moves to read any. Its pair is the fault
+        page's drag-release, failed in test_the_fault_page_names_every_plant."""
         code, got, out = self.runs["late"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)

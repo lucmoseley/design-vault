@@ -362,7 +362,12 @@ def release_velocity(release, axis, horizon):
     return (recent[-1][k] - recent[0][k]) / span * 1000 if span > 0 else 0
 
 
-def fling_tells(snaps, fling, rate):
+def nearest(snaps, x):
+    """The snap point nearest `x`."""
+    return min(snaps, key=lambda s: abs(s - x))
+
+
+def picks_another_snap(snaps, fling, rate):
     """Whether the fling's projection picks a different snap point than the
     one nearest where it was let go, so a part that ignores its velocity
     would settle wrong. A part with one snap point has none to pick between,
@@ -370,9 +375,7 @@ def fling_tells(snaps, fling, rate):
     if len(snaps) < 2:
         return True
     aim = projected(fling["at"], fling["velocity"], rate)
-    return min(snaps, key=lambda s: abs(s - aim)) != min(
-        snaps, key=lambda s: abs(s - fling["at"])
-    )
+    return nearest(snaps, aim) != nearest(snaps, fling["at"])
 
 
 def drag_faults(got, v):
@@ -380,14 +383,17 @@ def drag_faults(got, v):
     `got`: the snap points its slow releases settled at, and its flung
     release: where it was let go, at what velocity, and the path it took
     after, one position a frame. It must settle where the release's
-    projection picks, set off the way it was thrown and not overshoot."""
+    projection picks, set off the way it was thrown and not overshoot. The
+    settle is judged only where the projection picks another snap point than
+    where it was let go, since otherwise a part that ignores its velocity
+    settles there too."""
     snaps, fling, label = got["snaps"], got["fling"], got["label"]
     path = fling["path"]
     end = path[-1]
     aim = projected(fling["at"], fling["velocity"], v["rate"])
-    want = min(snaps, key=lambda s: abs(s - aim))
+    want = nearest(snaps, aim)
     out = []
-    if abs(end - want) > v["slack"]:
+    if picks_another_snap(snaps, fling, v["rate"]) and abs(end - want) > v["slack"]:
         out.append(
             fault(
                 "drag-release",
@@ -397,8 +403,8 @@ def drag_faults(got, v):
                 f"settle on the snap point nearest its projection, {want:.0f} px",
             )
         )
-    # The path starts while the pointer is still held, so its first move is
-    # the release's.
+    # The path starts at the release, before the page's own handler runs, so
+    # its first move is the release's.
     first = next(
         (b - a for a, b in itertools.pairwise(path) if abs(b - a) > v["slack"]), 0
     )
