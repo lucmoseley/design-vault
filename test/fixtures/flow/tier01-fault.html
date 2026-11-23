@@ -78,10 +78,9 @@
   setInterval(() => go(at + 1), 2000);
   document.querySelector('.next').addEventListener('click', () => go(at + 1));
 
-  // Each card follows the pointer along its width; on release, `settle` gets
-  // where it was let go and the release velocity (px/s, over the last 100 ms
-  // of moves, as tier01-clean.html reads it) and returns where to move and how.
   const SNAPS = [0, 300];
+  const VELOCITY_WINDOW_MS = 100; // #428: tier01-clean.html's release window, a guess
+  const DECELERATION = 0.998; // #428: check-flow.table's drag-release deceleration
   const nearest = (to) => SNAPS.reduce((a, b) => (Math.abs(b - to) < Math.abs(a - to) ? b : a));
   const dragCard = (card, settle) => {
     let x = 0, from = null, base = 0, moves = [];
@@ -94,7 +93,7 @@
     });
     card.addEventListener('pointerup', (e) => {
       from = null;
-      const recent = moves.filter((m) => m[0] > e.timeStamp - 100);
+      const recent = moves.filter((m) => m[0] > e.timeStamp - VELOCITY_WINDOW_MS);
       const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
       const [to, transition] = settle(x, v);
       x = to;
@@ -103,9 +102,7 @@
     });
   };
   dragCard(document.querySelector('.card'), (x) => [nearest(x), 'transform 200ms ease-out']);
-  // The projection is the one check-flow.table's drag-release line judges by,
-  // deceleration 0.998 a ms; any ease that starts from rest serves the plant.
-  dragCard(document.querySelector('.rest-card'), (x, v) => [nearest(x + (v / 1000) * (0.998 / (1 - 0.998))), 'transform 300ms ease-in']);
+  dragCard(document.querySelector('.rest-card'), (x, v) => [nearest(x + (v / 1000) * (DECELERATION / (1 - DECELERATION))), 'transform 300ms ease-in']);
 </script>
 </body>
 </html>
