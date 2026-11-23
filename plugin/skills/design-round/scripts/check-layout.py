@@ -154,6 +154,7 @@ def _load(name, file):
 
 
 records = _load("layout_records", "layout-records.py")
+rule_table = _load("rule_table", "rule-table.py")
 
 
 # 320 is WCAG 1.4.10's reflow width, a 1280 px desktop at 400% zoom. 2560 is
@@ -271,18 +272,14 @@ class BadSelectorError(Exception):
     args are the flag, the selector and the browser's message."""
 
 
-class TableError(Exception):
-    """A table line check-layout cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_table(text):
     """{mode: Mode} from the table's lines; a spacing value is its four
     numbers by property, a zoom or size value the factor text is enlarged by."""
     out = {}
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         if len(fields) != 3 or fields[1] not in (*MODES, *records.CHECKS):
             raise TableError(

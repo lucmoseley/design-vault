@@ -42,6 +42,7 @@ def _sibling(name):
 answering = _sibling("access-answers.py")
 maths = _sibling("access-pixels.py")
 face = _sibling("face-profile.py")
+rule_table = _sibling("rule-table.py")
 
 TABLE = os.path.join(HERE, "check-access-contrast.table")
 SEP = "|"
@@ -93,17 +94,13 @@ ADJ_PX = 2
 ID_BLUE = 167
 
 
-class TableError(Exception):
-    """A table line check-access cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_table(text):
     """The Table check-access-contrast.table's lines give."""
     got = {}
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         key = tuple(fields[:2])
         if len(fields) != 3 or key not in LINES:

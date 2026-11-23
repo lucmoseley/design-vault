@@ -146,6 +146,7 @@ def _load(name, path):
 flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
 layout = _load("check_layout", os.path.join(HERE, "check-layout.py"))
 conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 colour_space = _load(
     "colour_space",
     os.path.join(HERE, "..", "..", "design-project", "scripts", "colour_space.py"),
@@ -247,8 +248,7 @@ Subject = collections.namedtuple("Subject", "subject value verdict why")
 Result = collections.namedtuple("Result", "rule subjects")
 
 
-class TableError(Exception):
-    """A table line the probe cannot read: exit 2."""
+TableError = rule_table.TableError
 
 
 class DeclarationError(Exception):
@@ -263,10 +263,7 @@ class ProbeError(Exception):
 def parse(text):
     """The table's rules, in order. Raises TableError naming the line."""
     rules = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         try:
             rules.append(_rule(line))
         except TableError as exc:

@@ -65,6 +65,7 @@ def _load(name, path):
 probe = _load("probe", os.path.join(HERE, "probe.py"))
 cross = _load("check_cross", os.path.join(HERE, "check-cross.py"))
 conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 flow, layout = probe.flow, probe.layout
 
 TABLE = os.path.join(HERE, "check-style.table")
@@ -77,8 +78,7 @@ DEFAULT = "page as it loads"
 Block = collections.namedtuple("Block", "kind header given span brief compare rules")
 
 
-class TableError(Exception):
-    """A table check-style.py cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse(text):
@@ -94,10 +94,7 @@ def parse(text):
             blocks.append(current._replace(rules=_rules(pending, current)))
         pending = []
 
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         try:
             m = re.fullmatch(r"define\s+\$([\w-]+)\s*=\s*(.+)", line)
             header = None if m else _header(line)

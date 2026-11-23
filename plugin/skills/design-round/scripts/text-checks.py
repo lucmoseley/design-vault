@@ -9,7 +9,16 @@ returns a Found.
 """
 
 import collections
+import importlib.util
+import os
 import re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+_spec = importlib.util.spec_from_file_location(
+    "rule_table", os.path.join(HERE, "rule-table.py")
+)
+rule_table = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(rule_table)
 
 PAGE = "page"
 RTL = "rtl"
@@ -50,8 +59,7 @@ FRACTION = r"(?<![\d/.,])(\d+)\/(\d+)(?![\d/.,])"
 Load = collections.namedtuple("Load", "condition width data")
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 class WordsError(Exception):
@@ -907,10 +915,7 @@ NUMBER_KEYS = {
 
 def parse_table(text):
     values = {}
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [x.strip() for x in line.split(SEP)]
         if len(fields) != 3 or not all(fields):
             raise TableError(f"line {n}: want ID | KEY | VALUE, got {line!r}")
@@ -965,10 +970,7 @@ def parse_words(text, into=None, name="the word lists"):
     caller's lists, so a project's file adds to the vault's."""
     lists = into if into is not None else {k: [] for k in LISTS}
     current = None
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         m = re.fullmatch(r"\[([\w-]+)\]", line)
         if m:
             if m[1] not in LISTS:

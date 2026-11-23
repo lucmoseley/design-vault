@@ -14,9 +14,18 @@ to, else no match.
 """
 
 import collections
+import importlib.util
 import itertools
 import math
+import os
 import re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+_spec = importlib.util.spec_from_file_location(
+    "rule_table", os.path.join(HERE, "rule-table.py")
+)
+rule_table = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(rule_table)
 
 NUMBER = r"(\d+(?:\.\d+)?)"
 Check = collections.namedtuple("Check", "pattern parse needs")
@@ -80,8 +89,7 @@ CHECKS = {
 DRAG_PARTS = ("bottom-sheet", "card")
 
 
-class TableError(Exception):
-    """A table line check-flow cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_value(mode, value):
@@ -98,13 +106,11 @@ def parse_value(mode, value):
 def parse_table(text):
     """The table's lines, each a Line; `#` lines and blank ones are skipped."""
     lines = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        if not raw.strip() or raw.lstrip().startswith("#"):
-            continue
-        fields = [f.strip() for f in raw.split("|")]
+    for n, line in rule_table.lines(text):
+        fields = [f.strip() for f in line.split("|")]
         if len(fields) != 3 or fields[1] not in CHECKS:
             raise TableError(
-                f"line {n}: wants `record id | check | value`, the check one of {', '.join(CHECKS)}: {raw!r}"
+                f"line {n}: wants `record id | check | value`, the check one of {', '.join(CHECKS)}: {line!r}"
             )
         try:
             value = parse_value(fields[1], fields[2])
