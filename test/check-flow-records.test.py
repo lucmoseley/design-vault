@@ -500,8 +500,7 @@ RUN_TIMEOUT_S = 240
 
 def run(page, out, *extra, script=FLOW, parts="tier01-parts.json"):
     """check-flow.py --records on `page` as a child, or `script` standing in
-    for it, given the parts declaration `parts` from the fixtures: its exit
-    code, its records and its stdout."""
+    for it: its exit code, its records and its stdout."""
     done = child.run(
         [
             sys.executable,
@@ -599,13 +598,15 @@ class Pages(unittest.TestCase):
                 table_of(where, "drag-release"),
             ),
         }
+        options = {
+            "late": {"script": LATE_INPUT},
+            "rest": {"parts": "tier01-rest-parts.json"},
+        }
 
         def go(name):
             page, *extra = runs[name]
-            script = LATE_INPUT if name == "late" else FLOW
-            parts = "tier01-rest-parts.json" if name == "rest" else "tier01-parts.json"
             return name, run(
-                page, os.path.join(where, name), *extra, script=script, parts=parts
+                page, os.path.join(where, name), *extra, **options.get(name, {})
             )
 
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
@@ -681,10 +682,8 @@ class Pages(unittest.TestCase):
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
 
     def test_a_settle_from_rest_on_the_projected_snap_passes_the_script(self):
-        """The fault page's .rest-card settles where its projection picks with
-        no bounce, but from rest: vault.drag-release-spring-code's plant, which
-        the code reader names and the script passes. Its pair is the fault
-        page's .card, failed in test_the_fault_page_names_every_plant."""
+        """#428. Its pair is the fault page's .card, failed in
+        test_the_fault_page_names_every_plant."""
         code, got, out = self.runs["rest"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)

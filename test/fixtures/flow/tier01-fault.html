@@ -78,36 +78,34 @@
   setInterval(() => go(at + 1), 2000);
   document.querySelector('.next').addEventListener('click', () => go(at + 1));
 
-  const card = document.querySelector('.card');
+  // Each card follows the pointer along its width; on release, `settle` gets
+  // where it was let go and the release velocity (px/s, over the last 100 ms
+  // of moves, as tier01-clean.html reads it) and returns where to move and how.
   const SNAPS = [0, 300];
-  let x = 0, from = null, base = 0;
-  card.addEventListener('pointerdown', (e) => { card.setPointerCapture(e.pointerId); from = e.clientX; base = x; card.style.transition = 'none'; });
-  card.addEventListener('pointermove', (e) => { if (from === null) return; x = base + e.clientX - from; card.style.transform = `translateX(${x}px)`; });
-  card.addEventListener('pointerup', () => {
-    from = null;
-    x = SNAPS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
-    card.style.transition = 'transform 200ms ease-out';
-    card.style.transform = `translateX(${x}px)`;
-  });
-
-  const rest = document.querySelector('.rest-card');
-  let rx = 0, rfrom = null, rbase = 0, moves = [];
-  rest.addEventListener('pointerdown', (e) => { rest.setPointerCapture(e.pointerId); rfrom = e.clientX; rbase = rx; moves = [[e.timeStamp, e.clientX]]; rest.style.transition = 'none'; });
-  rest.addEventListener('pointermove', (e) => {
-    if (rfrom === null) return;
-    rx = rbase + e.clientX - rfrom;
-    rest.style.transform = `translateX(${rx}px)`;
-    moves.push([e.timeStamp, e.clientX]);
-  });
-  rest.addEventListener('pointerup', (e) => {
-    rfrom = null;
-    const recent = moves.filter((m) => m[0] > e.timeStamp - 100);
-    const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
-    const aim = rx + (v / 1000) * (0.998 / (1 - 0.998));
-    rx = SNAPS.reduce((a, b) => (Math.abs(b - aim) < Math.abs(a - aim) ? b : a));
-    rest.style.transition = 'transform 300ms ease-in';
-    rest.style.transform = `translateX(${rx}px)`;
-  });
+  const nearest = (to) => SNAPS.reduce((a, b) => (Math.abs(b - to) < Math.abs(a - to) ? b : a));
+  const dragCard = (card, settle) => {
+    let x = 0, from = null, base = 0, moves = [];
+    card.addEventListener('pointerdown', (e) => { card.setPointerCapture(e.pointerId); from = e.clientX; base = x; moves = [[e.timeStamp, e.clientX]]; card.style.transition = 'none'; });
+    card.addEventListener('pointermove', (e) => {
+      if (from === null) return;
+      x = base + e.clientX - from;
+      card.style.transform = `translateX(${x}px)`;
+      moves.push([e.timeStamp, e.clientX]);
+    });
+    card.addEventListener('pointerup', (e) => {
+      from = null;
+      const recent = moves.filter((m) => m[0] > e.timeStamp - 100);
+      const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
+      const [to, transition] = settle(x, v);
+      x = to;
+      card.style.transition = transition;
+      card.style.transform = `translateX(${x}px)`;
+    });
+  };
+  dragCard(document.querySelector('.card'), (x) => [nearest(x), 'transform 200ms ease-out']);
+  // The projection is the one check-flow.table's drag-release line judges by,
+  // deceleration 0.998 a ms; any ease that starts from rest serves the plant.
+  dragCard(document.querySelector('.rest-card'), (x, v) => [nearest(x + (v / 1000) * (0.998 / (1 - 0.998))), 'transform 300ms ease-in']);
 </script>
 </body>
 </html>
