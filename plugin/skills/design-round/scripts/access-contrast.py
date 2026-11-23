@@ -804,7 +804,7 @@ def measure(page, js, table, *, parts, absent, texts):
             (photo, "its current dot was"),
             (
                 out["vault.carousel-focus"],
-                "its Tab order, rotation and previous and next buttons were",
+                "its rotation, Tab order, slides out of view and previous and next buttons were",
             ),
         ):
             q.unmeasured.append(

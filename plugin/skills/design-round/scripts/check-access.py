@@ -1622,8 +1622,8 @@ def theme_answer(browser, at, width, height, *, light, answered):
 
 
 def merge(into, more):
-    """Extends `into`, the caller's {question id: Judged}, by each of
-    `more`'s findings, adding a Judged for a question it lacks."""
+    """`into` is the caller's accumulator, a {question id: Judged}: each of
+    `more`'s findings is added to it, with a Judged for any question it lacks."""
     for qid, judged in more.items():
         for mine, theirs in zip(
             into.setdefault(qid, answering.unjudged()), judged, strict=True
