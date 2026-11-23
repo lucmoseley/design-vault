@@ -52,8 +52,8 @@ CHECKS = {
     "text-edge": Check(r"none", _none, ()),
     "grid-lines": Check(r"none", _none, ()),
     "content-width": Check(
-        rf"reading {NUMBER}, default {NUMBER}-{NUMBER}",
-        _numbers("reading", "floor", "default"),
+        rf"reading {NUMBER} or text in {NUMBER}/{NUMBER}, default {NUMBER}-{NUMBER}",
+        _numbers("reading", "share", "whole", "floor", "default"),
         (),
     ),
     "empty-width": Check(
@@ -216,6 +216,10 @@ READ_JS = (
     [...document.querySelectorAll('header')].find((h) => !h.parentElement.closest('article, aside, main, nav, section'));
   const footer = document.querySelector('[role="contentinfo"]') ||
     [...document.querySelectorAll('footer')].reverse().find((f) => !f.parentElement.closest('article, aside, main, nav, section')) || null;
+  const mainEl = document.querySelector('main, [role="main"]');
+  const main = mainEl || document.body;
+  const byParentOf = (els) => { const m = new Map(); for (const e of els) { if (!m.has(e.parentElement)) m.set(e.parentElement, []); m.get(e.parentElement).push(e); } return m; };
+  const contentWidth = (el) => { const s = css(el); return el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight); };
   const crumbs = (el) => /breadcrumb/i.test(`${el.getAttribute('aria-label') || ''} ${el.className || ''}`);
   const mainNav = () => {
     if (parts.nav) return document.querySelector(parts.nav);
@@ -286,7 +290,6 @@ READ_JS = (
   // vault.joined-fills: adjacent boxes of one opaque fill that meet off a whole device pixel.
   if (on('seams')) {
     const opaque = (c) => { const m = /rgba\([^)]*,\s*([\d.]+)\)/.exec(c); return c !== 'transparent' && (!m || parseFloat(m[1]) === 1); };
-    // Where no ancestor paints, the canvas shows: the Canvas colour of the root's colour scheme.
     const probe = document.documentElement.appendChild(document.createElement('div'));
     probe.style.cssText = 'background-color: Canvas; position: absolute';
     const canvas = css(probe).backgroundColor;
@@ -330,7 +333,6 @@ READ_JS = (
   if (on('content-width') && brief.page !== 'canvas') {
     const v = lines['content-width'], reading = brief.page === 'reading';
     const cap = reading ? v.reading : v.default;
-    const main = document.querySelector('main, [role="main"]') || document.body;
     if (vw > cap + EDGE) {
       const items = [...main.querySelectorAll('*')].filter((e) => drawn(e) && !e.parentElement.closest('svg') &&
         (e.matches(IMAGE) || [...e.childNodes].some((n) => n.nodeType === 3 && /\S/.test(n.data))))
@@ -340,7 +342,7 @@ READ_JS = (
         seen.add('content-width');
         const wide = u.right - u.left;
         const text = reading ? union(items.filter(([e]) => e.matches('p, li, blockquote')).map(([, r]) => r)) : null;
-        const column = text && text.right - text.left <= wide * 2 / 3 + EDGE;
+        const column = text && text.right - text.left <= wide * v.share / v.whole + EDGE;
         const widest = items.reduce((a, b) => (b[1].right - b[1].left > a[1].right - a[1].left ? b : a))[0];
         if (wide > cap + EDGE && !column) fault('content-width', label(widest), `spreads the main content ${px(wide)} wide, past the ${cap} px a ${brief.page || 'default'} page is capped at${reading ? ', its main text in no two-thirds column of it' : ''}`);
       }
@@ -391,7 +393,6 @@ READ_JS = (
 
   // vault.alignment-lines: each section's main text edge against the edge most sections share.
   if (on('text-edge')) {
-    const main = document.querySelector('main, [role="main"]') || document.body;
     const edges = [];
     for (const s of main.children) {
       if (!drawn(s) || s.matches('header, footer, nav, aside, [role="banner"], [role="contentinfo"]') || (parts.hero && s.matches(parts.hero))) continue;
@@ -414,13 +415,12 @@ READ_JS = (
 
   // vault.alignment-lines, column lines: each top-level container in a CSS grid of the main content off its column lines.
   if (on('grid-lines')) {
-    const main = document.querySelector('main, [role="main"]') || document.body;
     const SMALL = `${BUTTON}, a, span, label, input, select, textarea, svg, small`;
-    for (const g of main.querySelectorAll('*')) {
+    for (const g of [main, ...main.querySelectorAll('*')]) {
       const cs = css(g);
       if (!/grid/.test(cs.display) || !drawn(g)) continue;
       let nested = false;
-      for (let e = g.parentElement; e && e !== main.parentElement; e = e.parentElement) if (/grid/.test(css(e).display)) nested = true;
+      for (let e = g.parentElement; e && main.contains(e); e = e.parentElement) if (/grid/.test(css(e).display)) nested = true;
       const tracks = cs.gridTemplateColumns.split(/\s+/).map(parseFloat);
       if (nested || tracks.length < 2 || tracks.some(Number.isNaN)) continue;
       const r = box(g), gap = parseFloat(cs.columnGap) || 0, rtl = cs.direction === 'rtl';
@@ -472,7 +472,7 @@ READ_JS = (
     for (const t of document.querySelectorAll('table')) {
       if (!drawn(t)) continue;
       seen.add('table-width');
-      const r = box(t), p = t.parentElement, room = p.clientWidth - parseFloat(css(p).paddingLeft) - parseFloat(css(p).paddingRight);
+      const r = box(t), p = t.parentElement, room = contentWidth(p);
       const need = needs(t);
       if (!scroller(t) && r.right > vw + EDGE) fault('table-width', label(t), `runs ${px(r.right - vw)} past the screen's edge, widening the page, with no scrolling box of its own`);
       else if (r.width < need - EDGE && room > r.width + EDGE) fault('table-width', label(t), `is held to ${px(r.width)}, under the ${px(need)} its columns need, with ${px(room)} free`);
@@ -621,7 +621,6 @@ READ_JS = (
   }
 
   // The page's panes: its main content, and each supporting pane outside it or a child of it.
-  const mainEl = document.querySelector('main, [role="main"]');
   const asides = [...document.querySelectorAll('aside, [role="complementary"]')]
     .filter((a) => !a.parentElement.closest('article, aside, [role="complementary"]') && (!mainEl || !mainEl.contains(a) || a.parentElement === mainEl));
   const mainBox = () => {
@@ -669,14 +668,13 @@ READ_JS = (
       seen.add('bar-fit');
       const br = box(bar), s = css(bar), clips = s.overflowX !== 'visible';
       const right = clips ? Math.min(vw, br.left + bar.clientLeft + bar.clientWidth) : vw;
-      // In the header, an action in a bar of its own is that bar's, and one in a sideways scroller is vault.nav-strip's.
       const own = (a) => bar !== banner || (!a.closest(BARS) && !(scroller(a) && bar.contains(scroller(a))));
       const out = [...bar.querySelectorAll(`${BUTTON}, a[href], [role="menuitem"]`)].filter((a) => drawn(a) && own(a) && (box(a).right > right + EDGE || box(a).left < -EDGE));
       if (out.length) fault('bar-fit', label(bar), `has ${out.length} of its actions past ${clips ? 'its own edge' : "the screen's edge"}, ${out.map((a) => label(a)).join(', ')}`);
     }
   }
 
-  // vault.bottom-safe-area: a control pinned to the bottom that a large viewport unit places, lvh or the default vh, which CSS Values 4 sizes alike.
+  // vault.bottom-safe-area: a control pinned to the bottom that a large viewport unit places, lvh or the default vh, which CSS Values 4 sizes alike (https://www.w3.org/TR/css-values-4/#viewport-variants).
   if (on('safe-bottom') && phone) {
     const LARGE = /\d(lv[hb]|v[hb])\b/;
     const PLACING = ['top', 'bottom', 'height', 'min-height', 'max-height', 'inset', 'inset-block', 'inset-block-start', 'inset-block-end', 'translate', 'transform', 'block-size', 'min-block-size', 'max-block-size'];
@@ -728,8 +726,7 @@ READ_JS = (
   if (on('card-rows') && parts.card) {
     const start = (el) => { const s = css(el); return box(el).top + parseFloat(s.borderTopWidth) + parseFloat(s.paddingTop); };
     const cards = [...document.querySelectorAll(parts.card)].filter(drawn);
-    const byParent = new Map();
-    for (const c of cards) { if (!byParent.has(c.parentElement)) byParent.set(c.parentElement, []); byParent.get(c.parentElement).push(c); }
+    const byParent = byParentOf(cards);
     const key = (card, el) => { const path = []; for (let e = el; e !== card; e = e.parentElement) path.unshift(`${e.localName}:${[...e.parentElement.children].filter((s) => s.localName === e.localName).indexOf(e)}`); return path.join('/'); };
     for (const sibs of byParent.values()) {
       for (const row of rowsOf(sibs).filter((r) => r.length >= 2)) {
@@ -752,16 +749,12 @@ READ_JS = (
   // vault.content-columns: a grid of cards in more than one column on a phone, or squeezing its cards under their minimum.
   if (on('card-columns') && parts.card) {
     const v = lines['card-columns'];
-    const byParent = new Map();
-    for (const c of [...document.querySelectorAll(parts.card)].filter(drawn)) { if (!byParent.has(c.parentElement)) byParent.set(c.parentElement, []); byParent.get(c.parentElement).push(c); }
-    for (const [p, sibs] of byParent) {
+    for (const [p, sibs] of byParentOf([...document.querySelectorAll(parts.card)].filter(drawn))) {
       if (sibs.length < 2) continue;
       seen.add('card-columns');
       const across = rowsOf(sibs)[0].length, c = sibs[0], min = v.minimum * parseFloat(css(c).fontSize);
-      // As many columns as fit the container at the cards' minimum: (width + gap) ÷ (minimum + gap).
-      const ps = css(p), gap = parseFloat(ps.columnGap) || 0;
-      const room = p.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight);
-      const fit = Math.min(sibs.length, Math.max(1, Math.floor((room + gap + EDGE) / (min + gap))));
+      const gap = parseFloat(css(p).columnGap) || 0;
+      const fit = Math.min(sibs.length, Math.max(1, Math.floor((contentWidth(p) + gap + EDGE) / (min + gap))));
       if (vw < v.under && across > 1) fault('card-columns', label(p), `sets its cards ${across} across under ${v.under} px, not in one column`);
       else if (across > 1 && box(c).width < min - EDGE) fault('card-columns', label(p), `squeezes its ${across} columns of cards to ${px(box(c).width)}, under their ${v.minimum}em minimum of ${px(min)}`);
       else if (vw >= v.under && across < fit) fault('card-columns', label(p), `sets its cards ${across} across where ${fit} fit at their ${v.minimum}em minimum of ${px(min)}`);
@@ -771,13 +764,11 @@ READ_JS = (
   // vault.content-columns, category tiles: at phone width, the tile columns the table gives, or a single column where a tile's label outgrows its share.
   if (on('tile-columns') && parts['category-tile']) {
     const v = lines['tile-columns'];
-    const byParent = new Map();
-    for (const t of [...document.querySelectorAll(parts['category-tile'])].filter(drawn)) { if (!byParent.has(t.parentElement)) byParent.set(t.parentElement, []); byParent.get(t.parentElement).push(t); }
-    for (const [p, sibs] of byParent) {
+    for (const [p, sibs] of byParentOf([...document.querySelectorAll(parts['category-tile'])].filter(drawn))) {
       if (sibs.length < 2 || vw >= v.under) continue;
       seen.add('tile-columns');
-      const across = rowsOf(sibs)[0].length, ps = css(p);
-      const share = (p.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight) - (v.columns - 1) * (parseFloat(ps.columnGap) || 0)) / v.columns;
+      const across = rowsOf(sibs)[0].length;
+      const share = (contentWidth(p) - (v.columns - 1) * (parseFloat(css(p).columnGap) || 0)) / v.columns;
       const natural = (t) => { const was = t.style.cssText; t.style.setProperty('width', 'max-content', 'important'); const w = box(t).width; t.style.cssText = was; return w; };
       const cut = sibs.some((t) => natural(t) > share + EDGE);
       if (across !== v.columns && !(across === 1 && cut)) fault('tile-columns', label(p), `sets its category tiles ${across} across under ${v.under} px, not ${v.columns}`);
@@ -794,7 +785,6 @@ READ_JS = (
       notes.cards.push({ at: place.get(c), label: label(c), em: box(c).width / parseFloat(css(c).fontSize), beside: beside(m, t) });
     }
   }
-  // A logo's variant is the images it shows and whether its name shows as text, so a mark beside a text name differs from the mark alone.
   if (on('logo-version') && parts.logo) {
     const logo = [...document.querySelectorAll(parts.logo)].find(drawn);
     if (logo) {

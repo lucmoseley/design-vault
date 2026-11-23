@@ -15,7 +15,7 @@ vault.card-alignment | card-rows | none
 vault.bottom-safe-area | safe-bottom | inset 34
 vault.alignment-lines | text-edge | none
 vault.alignment-lines | grid-lines | none
-vault.content-width | content-width | reading 864, default 1020-1300
+vault.content-width | content-width | reading 864 or text in 2/3, default 1020-1300
 vault.content-width | empty-width | 464, or 304 under 464
 vault.content-width | footer-bands | none
 vault.capped-centre | capped-centre | none

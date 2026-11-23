@@ -21,6 +21,7 @@ tier01-clean.html, where every record must pass with no fault.
 import argparse
 import concurrent.futures
 import datetime
+import functools
 import html.parser
 import importlib.util
 import json
@@ -106,6 +107,7 @@ RUNS = {
         "tier01-gaps.html",
         [*RECORDS, "--parts", os.path.join(FIXTURES, "tier01-gaps-parts.json")],
     ),
+    "main-grid": ("tier01-main-grid.html", ["--widths", "700-700", "--records"]),
     "reading-column": (
         "tier01-reading-column.html",
         ["--widths", "1400-1400", "--records", "--brief", "page=reading"],
@@ -114,7 +116,6 @@ RUNS = {
         "tier01-reading-wide.html",
         ["--widths", "1400-1400", "--records", "--brief", "page=reading"],
     ),
-    # Partial sweeps: one holding no screenshot width under 600 px, one none at all.
     "records-narrow": (
         "tier01-fault.html",
         ["--widths", "400-500", "--step", "100", "--records", *RECORD_FACTS],
@@ -1242,11 +1243,7 @@ class Records(unittest.TestCase):
         )
 
     def test_the_gaps_page_fails_each_widened_check_on_its_plant(self):
-        # Header actions, a mark beside a text name, plain vh, padding in a
-        # card, white fills on a dark canvas, grid lines, the default page's
-        # floor, an empty state, tiles and the column count that fits.
         got = self.assert_each_plant_fails("records-gaps", plants("tier01-gaps.html"))
-        # The half-width box ending at the fold is no band.
         self.assertEqual(got["answers"]["vault.false-floor"], "pass")
         self.assertEqual(
             [
@@ -1261,6 +1258,28 @@ class Records(unittest.TestCase):
                     1400,
                     "sets its cards 2 across where 3 fit at their 15em minimum of 240 px",
                 ),
+            ],
+        )
+        self.assertIn(
+            (390, "the 304 px an empty state's text takes in a container under 464 px"),
+            [
+                (r["from"], r["detail"].split("past ")[-1])
+                for r in got["ranges"]
+                if r["kind"] == "empty-width"
+            ],
+        )
+
+    def test_a_main_element_laid_as_the_grid_has_its_children_held_to_its_lines(self):
+        got = self.assert_each_plant_fails("main-grid", plants("tier01-main-grid.html"))
+        self.assertIn(
+            (
+                "section#f-grid-lines",
+                "runs 362 px–488 px across, off the column lines of main's grid",
+            ),
+            [
+                (r["subject"], r["detail"])
+                for r in got["ranges"]
+                if r["kind"] == "grid-lines"
             ],
         )
 
@@ -1301,8 +1320,8 @@ class Records(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as out:
             pathlib.Path(out, "x.css").write_text("p { color: #333; }\n")
-            handler = lambda *a: http.server.SimpleHTTPRequestHandler(  # noqa: E731
-                *a, directory=out
+            handler = functools.partial(
+                http.server.SimpleHTTPRequestHandler, directory=out
             )
             server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
             threading.Thread(target=server.serve_forever, daemon=True).start()

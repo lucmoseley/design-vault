@@ -1116,9 +1116,6 @@ def records_after(browser, at, rec, page_as):
     widths = [w for w, _ in rec.notes]
 
     def narrow(under, mode):
-        """The widths under `under` the check reads: the screenshot widths
-        the sweep holds, else its narrowest under it. With neither, `mode`
-        is not judged."""
         held = [w for w in widths if w < under]
         if not held:
             rec.unmet[mode] = f"the sweep holds no width under {under:g} px"

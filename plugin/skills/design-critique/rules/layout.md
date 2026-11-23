@@ -231,7 +231,7 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - owner: vault
 - stage: role
 - inputs: the container's role (reading page, default page or app view, canvas or board, footer band, empty state), the viewport width
-- output: reading page (articles, docs, blog): 864 px at most, margins included, or the main text in a two-thirds column of a wider page; default page (dashboard, directory, search results, and any page no other role names): 1020–1300 px, margins included; canvas or board: no cap; each stacked footer band (footer, identifier, sub-footer): the site footer's one max-width; empty state text: 464 px, or 304 px in a container narrower than 464 px
+- output: reading page (articles, docs, blog): 864 px at most, margins included, or the main text in a two-thirds column (2/3) of a wider page; default page (dashboard, directory, search results, and any page no other role names): 1020–1300 px, margins included; canvas or board: no cap; each stacked footer band (footer, identifier, sub-footer): the site footer's one max-width; empty state text: 464 px, or 304 px in a container narrower than 464 px
 - target: Cap each container by its role: about 864 px for a reading page, 1020–1300 px for the default page, none for a canvas; give every footer band the footer's one max-width and an empty state's text 464 px (304 px in a narrow container).
 - script: check-layout.py <page> --out <dir> --records --parts <declaration> [--brief page=<reading, default or canvas>]
 - reasons: design-critique/references/alignment-and-width.md#content-width-by-role

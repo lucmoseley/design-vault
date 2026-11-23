@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A main element laid out as the grid, one child off its lines</title>
+<!-- vault.alignment-lines reads the column lines of a grid the main element itself lays: its second child, held to 40% of its column, ends off them. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 24px; }
+  #f-grid-lines { justify-self: start; width: 40%; }
+</style>
+</head>
+<body>
+<main>
+  <section><h2>By train</h2><p>From the main station.</p></section>
+  <section id="f-grid-lines" data-record="vault.alignment-lines"><h2>By bus</h2><p>From the old town.</p></section>
+</main>
+</body>
+</html>
