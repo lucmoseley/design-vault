@@ -1584,6 +1584,23 @@ def renderers_killed():
         killer.join()
 
 
+def renderers_ended():
+    """SIGTERMs each renderer this process's browsers run, and returns once /proc
+    shows none."""
+    end = time.monotonic() + CASE_LIMIT_S
+    while running := [
+        pid
+        for pid in flow.descendants(os.getpid())
+        if "--type=renderer" in flow.process_args(pid)
+    ]:
+        if time.monotonic() > end:
+            raise AssertionError(f"renderers {running} still running")
+        for pid in running:
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGTERM)
+        time.sleep(KILL_POLL_S)
+
+
 def renderers_frozen():
     """SIGSTOPs each renderer this process's browsers run, leaving it alive and
     never answering (#459)."""
@@ -1618,8 +1635,10 @@ class HungCalls(unittest.TestCase):
         return done["got"], done["err"]
 
     def test_a_renderer_killed_as_it_starts_exits_7_naming_the_call(self):
-        # With PAUSED_AT_START, new_page waits on the
-        # renderer it starts, so the hang lands there on every run.
+        # With PAUSED_AT_START, the kill lands while new_page waits on the
+        # renderer it starts. Landing after Playwright has sent the page's setup,
+        # it leaves new_page waiting for the watch; landing before, as a loaded
+        # machine slows the driver, it makes new_page raise (#472).
         def work():
             with flow.chromium(PAUSED_AT_START) as browser:
                 browser.new_context().new_page()
@@ -1630,8 +1649,51 @@ class HungCalls(unittest.TestCase):
         self.assertRegex(
             err,
             r"^BrowserContext\.new_page at check-flow\.test\.py:\d+ "
-            rf"waited {TEST_WINDOW_S} s with the browser running no renderer",
+            rf"(waited {TEST_WINDOW_S} s|raised .*) "
+            "with the browser running no renderer",
         )
+
+    def test_a_call_on_a_page_whose_renderer_died_exits_7_naming_the_call(self):
+        def work():
+            with flow.chromium() as browser:
+                page = browser.new_page()
+                # A call made before Playwright hears of the crash waits for the watch.
+                with page.expect_event("crash"):
+                    renderers_ended()
+                call["line"] = sys._getframe().f_lineno + 1
+                page.evaluate("1 + 1")
+
+        call = {}
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 7), err)
+        self.assertRegex(
+            err,
+            rf"^Page\.evaluate at check-flow\.test\.py:{call['line']} raised .* "
+            "with the browser running no renderer",
+        )
+
+    def test_a_refused_load_with_its_renderer_alive_is_a_refusal(self):
+        def work():
+            with flow.chromium() as browser:
+                # Port 1 has no listener: the load is refused at once.
+                browser.new_page().goto("http://127.0.0.1:1/")
+
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 5), err)
+        self.assertRegex(err, r"^the browser could not draw Page\.goto")
+
+    def test_a_call_on_a_page_it_closed_is_a_refusal(self):
+        # No renderer runs, but none died: the script closed its own page.
+        def work():
+            with flow.chromium() as browser:
+                page = browser.new_page()
+                page.close()
+                renderers_ended()
+                page.evaluate("1 + 1")
+
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 5), err)
+        self.assertRegex(err, r"^the browser could not draw Page\.evaluate")
 
     def test_a_long_call_with_its_renderer_alive_is_left_to_finish(self):
         def work():
