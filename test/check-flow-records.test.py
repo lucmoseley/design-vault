@@ -38,6 +38,7 @@ ACCESS = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
+LATE_PRESS = os.path.join(HERE, "late-press.py")
 
 
 def load(name, path):
@@ -327,11 +328,27 @@ class Judgements(unittest.TestCase):
         self.assertEqual(records.fling_way([0, 300], 40), 1)
         self.assertEqual(records.fling_way([0, 300], 260), -1)
 
-    def test_pointer_velocity_is_along_its_axis_and_zero_over_no_time(self):
-        moves = [[0, 10, 50], [50, 30, 40]]
-        self.assertEqual(records.pointer_velocity(moves, "left"), 400)
-        self.assertEqual(records.pointer_velocity(moves, "top"), -200)
-        self.assertEqual(records.pointer_velocity([[5, 0, 0], [5, 9, 9]], "top"), 0)
+    def test_release_velocity_is_along_its_axis_and_zero_over_no_time(self):
+        release = {"at": 60, "moves": [[0, 10, 50], [50, 30, 40]]}
+        self.assertEqual(records.release_velocity(release, "left", 100), 400)
+        self.assertEqual(records.release_velocity(release, "top", 100), -200)
+        still = {"at": 5, "moves": [[5, 0, 0], [5, 9, 9]]}
+        self.assertEqual(records.release_velocity(still, "top", 100), 0)
+
+    def test_release_velocity_reads_only_the_horizon_before_the_release(self):
+        # A press held 400 ms, then a quick throw: the press is past the horizon.
+        release = {"at": 460, "moves": [[0, 0, 0], [400, 0, 0], [450, 50, 0]]}
+        self.assertEqual(records.release_velocity(release, "left", 100), 1000)
+        # Let go 200 ms after the last move: the pointer had stopped.
+        late = {"at": 650, "moves": release["moves"]}
+        self.assertEqual(records.release_velocity(late, "left", 100), 0)
+
+    def test_a_fling_tells_only_where_its_projection_picks_another_snap(self):
+        fast = {"at": 260, "velocity": -1000}
+        slow = {"at": 260, "velocity": -10}
+        self.assertTrue(records.fling_tells([0, 300], fast, 0.998))
+        self.assertFalse(records.fling_tells([0, 300], slow, 0.998))
+        self.assertTrue(records.fling_tells([300], slow, 0.998))
 
     def test_a_release_that_overshoots_or_turns_back_fails_naming_the_bounce_or_the_turn(
         self,
@@ -473,13 +490,13 @@ def table_of(where, *checks):
 RUN_TIMEOUT_S = 240
 
 
-def run(page, out, *extra):
-    """check-flow.py --records on `page` as a child: its exit code, its
-    records and its stdout."""
+def run(page, out, *extra, script=FLOW):
+    """check-flow.py --records on `page` as a child, or `script` standing in
+    for it: its exit code, its records and its stdout."""
     done = child.run(
         [
             sys.executable,
-            FLOW,
+            script,
             page,
             "--out",
             out,
@@ -562,11 +579,17 @@ class Pages(unittest.TestCase):
                 "--table",
                 table_of(where, "slow-update"),
             ),
+            "late": (
+                os.path.join(FIXTURES, "tier01-clean.html"),
+                "--table",
+                table_of(where, "drag-release"),
+            ),
         }
 
         def go(name):
             page, *extra = runs[name]
-            return name, run(page, os.path.join(where, name), *extra)
+            script = LATE_PRESS if name == "late" else FLOW
+            return name, run(page, os.path.join(where, name), *extra, script=script)
 
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
             cls.runs = dict(pool.map(go, runs))
@@ -625,6 +648,20 @@ class Pages(unittest.TestCase):
         for rid in PLANTS:
             with self.subTest(record=rid):
                 self.assertEqual(got[rid]["answer"], "pass", out)
+
+    def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own(self):
+        """The fault card moves only along its width; the pointer driver's
+        scroll to it once read as a move along its height, whose flings
+        could pick no other snap point."""
+        _, got, out = self.fault
+        self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
+
+    def test_a_late_press_is_not_read_into_the_clean_pages_fling(self):
+        """#478: a press slow to reach the page, as on a busy machine, once
+        made the read velocity a fraction of the one the page was handed."""
+        code, got, out = self.runs["late"]
+        self.assertEqual(code, 0, out)
+        self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
 
     def test_a_part_record_without_parts_is_not_judged(self):
         tmp = os.path.join(self.tmp.name, "bare")

@@ -1865,6 +1865,15 @@ FLING_FRAMES = 3
 TOUCH_MOVES = 10
 # A frame's length: 16 ms at 60 Hz.
 DRAG_FRAME_MS = 16
+# The moves before a release its velocity is read from: Android's
+# VelocityTracker reads the 100 ms before its newest sample (AOSP
+# frameworks/native, include/input/VelocityTracker.h, HORIZON of its default
+# least-squares strategy).
+RELEASE_HORIZON_MS = 100
+# How many flings a part gets before one is fast enough, on a busy machine,
+# for its projection to pick another snap point than where it was let go: a
+# guess.
+FLING_TRIES = 3
 
 
 class Opener:
@@ -2159,10 +2168,14 @@ def _rest(page, sel, axis):
 
 
 def _fling(page, sel, axis, *, way, along):
-    """Flings the part `way` along `axis` and lets go: the page's own
-    velocity for the throw, where it was let go, and its path after."""
+    """Flings the part `way` along `axis` and lets go: where it was let go,
+    the velocity the page was handed at the release, and its path after."""
     dx, dy = along
     x0, y0 = page.evaluate(records.CENTRE_JS, [sel, False])
+    page.evaluate(
+        "(w) => { window.__watch = w; window.__path = null; }",
+        [sel, axis, STILL_MS, PATH_CAP_MS],
+    )
     page.mouse.move(x0, y0)
     page.mouse.down()
     for i in range(1, FLING_FRAMES + 1):
@@ -2171,15 +2184,13 @@ def _fling(page, sel, axis, *, way, along):
             x0 + dx * way * FLING_PX * i / FLING_FRAMES,
             y0 + dy * way * FLING_PX * i / FLING_FRAMES,
         )
-    moves = page.evaluate("(n) => window.__moves.slice(-n)", FLING_FRAMES + 1)
-    released = page.evaluate(records.WHERE_JS, [sel, axis])
-    page.evaluate(records.PATH_JS, [sel, axis, STILL_MS, PATH_CAP_MS])
     page.mouse.up()
     page.wait_for_function("() => window.__path")
+    path, release = page.evaluate("() => [window.__path, window.__release]")
     return {
-        "at": released,
-        "velocity": records.pointer_velocity(moves, axis),
-        "path": page.evaluate("() => window.__path"),
+        "at": path[0],
+        "velocity": records.release_velocity(release, axis, RELEASE_HORIZON_MS),
+        "path": path,
     }
 
 
@@ -2189,11 +2200,11 @@ def drag_check(open_page, at, values, phone):
     if not parts:
         why = "no bottom-sheet or card part declared with a selector (--parts)"
         return {"drag-release": records.Answer(None, False, why)}
-    faults, seen = [], False
+    faults, seen, untold = [], False, []
     for name, sel in parts:
         for axis, along in (("top", (0, 1)), ("left", (1, 0))):
             dx, dy = along
-            page = open_page(at.viewport_size, init=[records.MOVES_INIT])
+            page = open_page(at.viewport_size, init=[records.RELEASE_INIT])
             if not page.query_selector(sel):
                 continue
             start = page.evaluate(records.WHERE_JS, [sel, axis])
@@ -2209,19 +2220,26 @@ def drag_check(open_page, at, values, phone):
                 page.mouse.up()
                 rests.append(_rest(page, sel, axis)[-1])
             snaps = records.snap_points(rests, v["slack"])
-            here = page.evaluate(records.WHERE_JS, [sel, axis])
-            fling = _fling(
-                page, sel, axis, way=records.fling_way(snaps, here), along=along
-            )
+            label = f"{name} {sel}, dragged along its {'height' if axis == 'top' else 'width'}"
+            for _ in range(FLING_TRIES):
+                here = page.evaluate(records.WHERE_JS, [sel, axis])
+                fling = _fling(
+                    page, sel, axis, way=records.fling_way(snaps, here), along=along
+                )
+                if records.fling_tells(snaps, fling, v["rate"]):
+                    break
+            else:
+                untold.append(label)
+                continue
             faults += records.drag_faults(
-                {
-                    "label": f"{name} {sel}, dragged along its {'height' if axis == 'top' else 'width'}",
-                    "snaps": snaps,
-                    "fling": fling,
-                },
-                v,
+                {"label": label, "snaps": snaps, "fling": fling}, v
             )
-    return {"drag-release": records.Answer(faults, seen, None)}
+    why = (
+        f"no fling of {', '.join(untold)} was let go fast enough to pick another snap point"
+        if untold
+        else None
+    )
+    return {"drag-release": records.Answer(faults, seen, why)}
 
 
 def frequent_check(open_page, at, values, phone):

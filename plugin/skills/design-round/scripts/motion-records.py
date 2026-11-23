@@ -351,13 +351,28 @@ def fling_way(snaps, here):
     return 1 if max(snaps) - here > here - min(snaps) else -1
 
 
-def pointer_velocity(moves, axis):
-    """The pointer's velocity in px/s along `axis` (left or top) over
-    `moves`, the page's own pointer moves, each [ms, x, y]; 0 where they
-    span no time."""
+def release_velocity(release, axis, horizon):
+    """The release's velocity in px/s along `axis` (left or top), from
+    `release`: its time and the pointer's moves, each [ms, x, y], since the
+    press. Only the moves within `horizon` ms of the release count; 0 where
+    fewer than two do, or they span no time."""
     k = 2 if axis == "top" else 1
-    span = moves[-1][0] - moves[0][0]
-    return (moves[-1][k] - moves[0][k]) / span * 1000 if span > 0 else 0
+    recent = [m for m in release["moves"] if m[0] > release["at"] - horizon]
+    span = recent[-1][0] - recent[0][0] if len(recent) > 1 else 0
+    return (recent[-1][k] - recent[0][k]) / span * 1000 if span > 0 else 0
+
+
+def fling_tells(snaps, fling, rate):
+    """Whether the fling's projection picks a different snap point than the
+    one nearest where it was let go, so a part that ignores its velocity
+    would settle wrong. A part with one snap point has none to pick between,
+    so any fling serves."""
+    if len(snaps) < 2:
+        return True
+    aim = projected(fling["at"], fling["velocity"], rate)
+    return min(snaps, key=lambda s: abs(s - aim)) != min(
+        snaps, key=lambda s: abs(s - fling["at"])
+    )
 
 
 def drag_faults(got, v):
@@ -895,12 +910,6 @@ SLOW_JS = (
 """
 )
 
-# Each pointer move the page sees, so a release's velocity is the page's own.
-MOVES_INIT = r"""
-window.__moves = [];
-addEventListener('pointermove', (e) => window.__moves.push([performance.now(), e.clientX, e.clientY]), true);
-"""
-
 # The centre of the element `sel` in the window, scrolled to the middle of
 # the window first where `show` is set.
 CENTRE_JS = r"""
@@ -923,23 +932,29 @@ POINT_JS = (
 """
 )
 
-# The part's position along `axis` (left or top), in the window.
-WHERE_JS = "([sel, axis]) => document.querySelector(sel).getBoundingClientRect()[axis]"
+# The part's position along `axis` (left or top), in the page, so a scroll
+# that brings it under the pointer is no move of its own.
+AT_JS = "const at = (el, axis) => el.getBoundingClientRect()[axis] + (axis === 'top' ? scrollY : scrollX);"
+WHERE_JS = (
+    "([sel, axis]) => {" + AT_JS + " return at(document.querySelector(sel), axis); }"
+)
 
-# Records the part's position along `axis` each frame from now until it has
-# not moved for `still` ms, or `cap` ms have passed, into window.__path. A
-# move of half a CSS px or less is no move, so sub-pixel jitter at rest does
-# not hold the path open: a guess, which reads a part creeping under half a
-# px a frame, about 30 px/s at 60 Hz, as still.
-PATH_JS = r"""
-([sel, axis, still, cap]) => {
+# Records the part's position along `axis`, as AT_JS reads it, now and each
+# frame after until it has not moved for `still` ms, or `cap` ms have passed,
+# into window.__path. A move of half a CSS px or less is no move, so sub-pixel
+# jitter at rest does not hold the path open: a guess, which reads a part
+# creeping under half a px a frame, about 30 px/s at 60 Hz, as still.
+PATH_JS = (
+    "([sel, axis, still, cap]) => {"
+    + AT_JS
+    + r"""
   const el = document.querySelector(sel);
-  const path = [], t0 = performance.now();
+  const path = [at(el, axis)], t0 = performance.now();
   window.__path = null;
   let last = t0;
   const tick = (now) => {
-    const p = el.getBoundingClientRect()[axis];
-    if (path.length && Math.abs(p - path[path.length - 1]) > 0.5) last = now;
+    const p = at(el, axis);
+    if (Math.abs(p - path[path.length - 1]) > 0.5) last = now;
     path.push(p);
     if (now - last >= still || now - t0 >= cap) window.__path = path;
     else requestAnimationFrame(tick);
@@ -947,6 +962,31 @@ PATH_JS = r"""
   requestAnimationFrame(tick);
 }
 """
+)
+
+# The press and each pointer move since, timed by the events' own clock, and
+# the release: its time and those moves into window.__release. Where
+# window.__watch holds PATH_JS's arguments, the release starts that path
+# before the page's own handler runs, so its first position is the one let
+# go at. A release's velocity is then the one the page was handed, however
+# late its frames ran.
+RELEASE_INIT = (
+    "const pathOf = ("
+    + PATH_JS
+    + ")"
+    + r""";
+window.__moves = [];
+window.__release = null;
+window.__watch = null;
+addEventListener('pointerdown', (e) => { window.__moves = [[e.timeStamp, e.clientX, e.clientY]]; }, true);
+addEventListener('pointermove', (e) => window.__moves.push([e.timeStamp, e.clientX, e.clientY]), true);
+addEventListener('pointerup', (e) => {
+  window.__release = { at: e.timeStamp, moves: window.__moves };
+  if (window.__watch) pathOf(window.__watch);
+  window.__watch = null;
+}, true);
+"""
+)
 
 
 # --- answers -------------------------------------------------------------------
