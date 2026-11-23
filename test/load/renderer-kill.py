@@ -5,8 +5,7 @@ Run by hand, never by the gate:
 Runs the test's case, new_page on a browser holding each renderer at its start, through check-overlay-shot.py's
 loop(), SIGTERMing each renderer as /proc first shows it, every KILL_POLL_S. Each run's outcome is its exit and,
 for an exit 7, the route: "waited", the watch's, or "raised", new_page raising once its renderer died. Runs
-other than "7 waited" are printed. #472 has the counts: a kill landing before Playwright's driver has sent the
-page's setup makes new_page raise, which exited 5 before #472.
+other than "7 waited" are printed. #472 has the counts.
 """
 
 import contextlib
