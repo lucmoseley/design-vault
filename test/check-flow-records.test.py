@@ -658,18 +658,14 @@ class Pages(unittest.TestCase):
                 self.assertEqual(got[rid]["answer"], "pass", out)
 
     def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own(self):
-        """#478: the fault card moves only along its width; the pointer
-        driver's scroll to it once read as a move along its height, whose
-        flings could pick no other snap point. Its pair is the clean page's
+        """#478: the fault card moves only along its width. Its pair is the clean page's
         drag-release, judged along both axes in
         test_the_clean_page_names_nothing."""
         _, got, out = self.fault
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
     def test_late_input_is_not_read_into_the_clean_pages_fling(self):
-        """#478: pointer events slow to reach the page, as on a busy machine,
-        once made the read velocity a fraction of the one the page was
-        handed, or left too few moves to read any. Its pair is the fault
+        """#478. Its pair is the fault
         page's drag-release, failed in test_the_fault_page_names_every_plant."""
         code, got, out = self.runs["late"]
         self.assertEqual(code, 0, out)
