@@ -112,7 +112,10 @@
   // On release, the snap point nearest the position the release velocity
   // (over the 100 ms of moves before it, by the events' own clock) projects
   // to, reached on a critically damped spring that starts at the release
-  // velocity, stiff enough never to pass its rest.
+  // velocity, stiff enough never to pass its rest. Its clock starts at its
+  // first frame: a frame's time is when the frame began, which on a busy
+  // machine is before the release was handled, and a spring read at a time
+  // before its start runs backwards.
   const card = document.querySelector('.card');
   const SNAPS = [0, 300];
   let x = 0, from = null, base = 0, moves = [], spring = 0;
@@ -134,9 +137,11 @@
     const aim = x + (v / 1000) * (0.998 / (1 - 0.998));
     const to = SNAPS.reduce((a, b) => (Math.abs(b - aim) < Math.abs(a - aim) ? b : a));
     if (!fast) { place(to); return; }
-    const d0 = x - to, v0 = v / 1000, t0 = performance.now();
+    const d0 = x - to, v0 = v / 1000;
     const w = Math.max(0.01, d0 && v0 * d0 < 0 ? Math.abs(v0 / d0) : 0);
+    let t0 = null;
     const step = (now) => {
+      t0 ??= now;
       const t = now - t0;
       const off = (d0 + (v0 + w * d0) * t) * Math.exp(-w * t);
       if (Math.abs(off) < 0.5 && t > 50) { place(to); return; }
