@@ -162,7 +162,6 @@ Rules for the full site and the round: function codes, one look per function, th
 - era: dated 2027-10-14
 - owner: vault
 - stage: value
-- target: Keep interaction to next paint under 200 ms and cumulative layout shift under 0.1, reserving space for images, embeds and late fonts.
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: IMG-134, LAY-101, NAV-46
 - status: live

@@ -73,7 +73,6 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - era: timeless
 - owner: vault
 - stage: value
-- target: Take every space from one scale on a 4 px step.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: LAY-1, OTH-11

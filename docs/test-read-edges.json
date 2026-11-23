@@ -1330,6 +1330,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/gate/project-unread-target.md": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/gate/recheck/answered.json": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1387,6 +1391,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/gate/record-owed-look.md": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/gate/record-unread-target.md": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],

@@ -102,6 +102,9 @@ function recordFaults(q) {
   if (value("script") && answerer && answerer !== "script") out.push([`gives \`script: ${value("script")}\` but is answered by ${answerer}: only a record answered by script names one`, f.script.line]);
   const builderLoads = answerer === "builder" || (STAGES.includes(value("stage")) && value("stage") !== "value");
   if (builderLoads && !value("target")) out.push([`is loaded by the builder (${answerer === "builder" ? "answered by builder" : `stage ${value("stage")}`}) but gives no target`, q.line]);
+  // A stage missing from a vault record, or outside STAGES, is its own fault, and no load can be read from it.
+  const stageRead = value("stage") ? STAGES.includes(value("stage")) : !isVault;
+  if (!builderLoads && stageRead && value("target")) out.push([`gives a target the builder never loads (${value("stage") ? `stage ${value("stage")}` : "no stage"}, answered by ${answerer ?? "nobody"}): only a record at function, role or treatment, or answered by builder, gives one`, f.target.line]);
   if (value("parts")) {
     const unknown = value("parts").split(",").map((p) => p.trim()).filter((p) => !PARTS.includes(p));
     if (value("stage") !== "treatment") out.push([`names parts at stage ${value("stage") ?? "none"}: only a treatment record is chosen by the candidate's parts`, f.parts.line]);

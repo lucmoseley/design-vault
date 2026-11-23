@@ -213,6 +213,8 @@ const refusals = [
   ["record-inputs-alone.md", /:12: vault\.inputs-alone gives inputs with no output/m],
   ["record-bad-ledger.md", /:13: vault\.bad-ledger names a ledger entry that is no row key \(or `none`\): forms$/m],
   ["project-stage-no-target.md", /:1: demo\.staged is loaded by the builder \(stage role\) but gives no target$/m],
+  ["record-unread-target.md", /:14: vault\.unread-target gives a target the builder never loads \(stage value, answered by script\): only a record at function, role or treatment, or answered by builder, gives one$/m],
+  ["project-unread-target.md", /:10: demo\.unread gives a target the builder never loads \(no stage, answered by look\): only a record at function, role or treatment, or answered by builder, gives one$/m],
 ];
 for (const [fixture, why] of refusals) {
   test(`check refuses ${fixture} with exit 1, naming the line and the fault, and nothing else`, () => {
