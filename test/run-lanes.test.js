@@ -54,6 +54,8 @@ const ps = (name, lines) => {
 const QUIET = ps("quiet", []);
 // Above the ladder's last rung, so memory never holds a suite back.
 const AMPLE = 8000;
+// The file run-lanes.sh keeps a suite's seconds in under `times`, named by the POSIX cksum of its command line.
+const keptFile = (times, suite) => path.join(times, spawnSync("cksum", { input: suite, encoding: "utf8" }).stdout.split(" ")[0]);
 
 let runs = 0;
 function run(args, env) {
@@ -201,8 +203,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     const kept = path.join(d, "times");
     fs.mkdirSync(kept, { recursive: true });
     const suite = (name, code = 0) => `python3 ${FAKE} ${d} ${name} ${code}`;
-    // The file run-lanes.sh keeps a suite's seconds in, named by the POSIX cksum of its command line.
-    const file = (s) => path.join(kept, spawnSync("cksum", { input: s, encoding: "utf8" }).stdout.split(" ")[0]);
+    const file = (s) => keptFile(kept, s);
     // Far past what a fake suite takes, so a figure it writes is told from its seed by value, never by its size.
     const seed = { short: 5000, long: 30000, red: 77000 };
     for (const [name, secs] of Object.entries(seed)) fs.writeFileSync(file(suite(name, name === "red" ? 1 : 0)), `${secs}\n`);
@@ -240,8 +241,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     const suite = (name) => `python3 ${FAKE} ${d} ${name} 0`;
     const given = [];
     for (const [name, secs] of [["a", 6], ["b", 5], ["c", 4], ["d", 3]]) {
-      const sum = spawnSync("cksum", { input: suite(name), encoding: "utf8" }).stdout.split(" ")[0];
-      fs.writeFileSync(path.join(times, sum), `${secs}\n`);
+      fs.writeFileSync(keptFile(times, suite(name)), `${secs}\n`);
       given.push(suite(name));
     }
     if (untimed) given.push(suite("new"));
@@ -253,7 +253,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     const proc = await underBudget(17, { VAULT_SUITE_LANES: "1" });
     assert.equal(proc.status, 1, proc.stderr);
     assert.equal(proc.ran, false);
-    assert.match(proc.stderr, /refused before any suite ran: the 4 suites' kept green seconds sum to 18 s, which on the 1 lane\(s\) the machine opens now end at about 18 s, past VAULT_SUITE_BUDGET's 17 s, the time left under workflow-core's suite ceiling \(workflow-core#2667\) inside a commit\. Run it again once fewer suites run on the machine and more memory is free/);
+    assert.match(proc.stderr, /refused before any suite ran: the 4 suites' kept green seconds sum to 18 s, which on the 1 lane\(s\) the machine opens now end at about 18 s, past VAULT_SUITE_BUDGET's 17 s, the time a gate run has left under workflow-core's suite ceiling \(workflow-core#2667\)\. VAULT_SUITE_LANES caps this run at 1 lane\(s\); raise it, or run it again once fewer suites run on the machine and more memory is free/);
   });
 
   test("a run whose kept seconds end at VAULT_SUITE_BUDGET runs", async () => {
@@ -275,6 +275,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
   test("a suite with no seconds kept counts as none against the budget", async () => {
     const proc = await underBudget(18, { VAULT_SUITE_LANES: "1" }, { untimed: true });
     assert.equal(proc.status, 0, proc.stderr);
+    assert.equal(proc.ran, true);
   });
 
   test("a VAULT_SUITE_BUDGET that is no whole count of seconds runs nothing and exits 2", async () => {

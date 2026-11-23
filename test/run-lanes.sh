@@ -136,11 +136,11 @@ budget=${VAULT_SUITE_BUDGET:-}
   { echo "test/run-lanes.sh: VAULT_SUITE_BUDGET wants whole seconds, 1 or more — got '$budget'" >&2 && exit 2; }
 if [[ -n $budget && -n $timings ]]; then
   open_lanes="$(lanes_now)"
-  loads=() kept=0
+  loads=() kept_total=0
   for ((i = 0; i < open_lanes; i++)); do loads+=(0); done
   for suite in "${queue[@]}"; do # in the order they start, each onto the lane that frees first
     secs="$(kept_secs "$suite" 0)"
-    kept=$((kept + secs))
+    kept_total=$((kept_total + secs))
     least=0
     for i in "${!loads[@]}"; do ((loads[i] < loads[least])) && least=$i; done
     loads[least]=$((loads[least] + secs))
@@ -148,9 +148,14 @@ if [[ -n $budget && -n $timings ]]; then
   ends=0
   for load in "${loads[@]}"; do ((load > ends)) && ends=$load; done
   if ((ends > budget)); then
-    echo "test/run-lanes.sh: refused before any suite ran: the ${#queue[@]} suites' kept green seconds sum to $kept s, \
-which on the $open_lanes lane(s) the machine opens now end at about $ends s, past VAULT_SUITE_BUDGET's $budget s, \
-the time left under workflow-core's suite ceiling (workflow-core#2667) inside a commit. Run it again once fewer \
+    if ((open_lanes == max && max < ceiling)); then
+      remedy="VAULT_SUITE_LANES caps this run at $max lane(s); raise it, or run it again once"
+    else
+      remedy="Run it again once"
+    fi
+    echo "test/run-lanes.sh: refused before any suite ran: the ${#queue[@]} suites' kept green seconds sum to \
+$kept_total s, which on the $open_lanes lane(s) the machine opens now end at about $ends s, past VAULT_SUITE_BUDGET's \
+$budget s, the time a gate run has left under workflow-core's suite ceiling (workflow-core#2667). $remedy fewer \
 suites run on the machine and more memory is free (#473)." >&2
     exit 1
   fi

@@ -245,7 +245,7 @@ fi
 # only the early verdict is lost.
 if [[ (-n ${WFC_GATE_SEAT:-} || in_commit -eq 1) && -z ${VAULT_SUITE_BUDGET:-} ]]; then
   if ceiling_ms="$(node -e 'const core = require(process.argv[1]).resolveCore();
-process.stdout.write(String(require(`${core}/scripts/lib/suite-ceiling.js`).ceilingMs()))' "$vault/scripts/lib/resolve-core.js" 2>/dev/null)" &&
+process.stdout.write(String(require(`${core}/scripts/lib/suite-ceiling.js`).ceilingMs()))' "$vault/scripts/lib/resolve-core.js")" &&
     [[ $ceiling_ms =~ ^[0-9]+$ ]] && ((ceiling_ms / 1000 > SECONDS)); then
     export VAULT_SUITE_BUDGET=$((ceiling_ms / 1000 - SECONDS))
   else
