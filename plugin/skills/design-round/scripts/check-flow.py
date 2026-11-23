@@ -1500,11 +1500,16 @@ class CallWatch:
                     time.sleep(WATCH_POLL_S)
                 return
 
-    def renderer_gone(self, exc, page_open):
+    def renderer_death(self, exc, page_open):
         """Why the Playwright error `exc` came of a renderer's death, or None:
         the browser runs no renderer as it raises, and a page was open or the
         call was opening one. A renderer killed while new_page sets its page up
-        makes it raise instead of wait (#472)."""
+        makes it raise instead of wait (#472); a browser that died has closed
+        its pages first.
+        Residual: a call refused for another reason whose renderer then dies
+        before this reads /proc is reported as the renderer's death. Residual:
+        a call that opens a page under another name than new_page, as
+        Browser.new_context does not, is not recognised as opening one."""
         call = raising_call(exc, self.package_dir)
         if call is None or self._rendering():
             return None
@@ -1567,7 +1572,7 @@ def chromium(args=()):
                 and isinstance(exc, PlaywrightError)
                 and not isinstance(exc, PlaywrightTimeout)
                 and (
-                    why := watch.renderer_gone(
+                    why := watch.renderer_death(
                         exc, any(c.pages for c in browser.contexts)
                     )
                 )
