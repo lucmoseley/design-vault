@@ -12,7 +12,7 @@ const RECORD_FIELDS = ["stage", "target", "inputs", "output", "script", "parts",
 const RECORD_REQUIRED = ["stage", "reasons", "ledger", "status"];
 const ALL_FIELDS = [...FIELDS, ...RECORD_FIELDS];
 const ANSWERERS = ["script", "code", "look", "whole-page", "type", "builder"];
-// #121's dependency order. The builder loads every record but a value one, which reaches it only as a script to run.
+// #121's dependency order.
 const STAGES = ["function", "role", "treatment", "value"];
 const BUILDER_STAGES = ["function", "role", "treatment"];
 
