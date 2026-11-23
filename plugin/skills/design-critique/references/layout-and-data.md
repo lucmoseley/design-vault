@@ -80,9 +80,9 @@ Record: `vault.nav-by-width`.
 
 ### Striped rows
 
-Record: `vault.zebra-rows`.
+Records: `vault.zebra-rows`, `vault.zebra-tint`.
 
-- **Why.** In a wide table the eye can slip to the next row on its way across; a stripe holds it there (Apple HIG, USWDS).
+- **Why.** In a wide table the eye can slip to the next row on its way across; a stripe holds it there (Apple HIG, USWDS). The design systems that stripe keep the tint between 1.07:1 and 1.32:1 of the plain row on a light ground, and up to 1.48:1 on a dark one (USWDS, Carbon, Bootstrap, Polaris, Primer). No source gives a column count at which striping starts to help, so how wide a table must be stays a look.
 - **Trade-off.** Stripes add fill to every other row and can suggest those rows matter more (Rutter); measured evidence for them is weak (Enders, A List Apart, summaries only).
 - **Clash.** None known.
 

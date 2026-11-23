@@ -43,7 +43,8 @@ READS, one value per element:
   xheight              the font's x-height over its size, by the ex unit
   face:<descriptor>    with fonts: a FontFace descriptor by its CSS name,
                        display, size-adjust, ascent-override and the rest
-  decl:<property>, media  with sheet: a rule's declaration, and its conditions
+  decl:<property>, media, selector  with sheet: a rule's declaration, its
+                       conditions, and its selector
   text, tag, lang      the element's text, its tag name, the nearest lang
   lines, measure, hyphen-run  its line boxes: how many, the characters on its
                        median full line, the longest run of lines ending in a
@@ -68,9 +69,13 @@ READS, one value per element:
                        selection, exactly, or in each group `within` names:
                        grouping near values, as designlang buckets shadows,
                        is the calling rule's
-A read may start parent, body or root to read that element instead, and two
+A read may start parent, prev, next, body or root to read that element
+instead, prev and next the element siblings either side, and two
 reads may be joined by per, minus or times: style:line-height per
-style:font-size. A style, ground or backdrop read may end "as oklch-l", "as
+style:font-size. Two decl: colours may be joined by on, the first's WCAG
+contrast over the second, which is drawn over black and over white where it
+is translucent and the lower taken: decl:color on decl:background-color. A
+style, ground, backdrop or decl read may end "as oklch-l", "as
 oklch-c", "as oklch-h", "as alpha" or "as luminance", read off the colour by
 colour_space.py.
 
@@ -178,16 +183,17 @@ KEYWORD_READS = (
     "webfont",
     "synthesised",
     "media",
+    "selector",
 )
 READ_FORMS = "style:, authored:, attr:, face:, decl:, pixels: or one of " + ", ".join(
     KEYWORD_READS
 )
-COLOUR_READS = ("style", "ground", "backdrop")
+COLOUR_READS = ("style", "ground", "backdrop", "decl")
 # Reads whose values are words, never numbers.
-TEXT_READS = ("authored", "face", "text", "tag", "lang", "media", "decl")
-SHEET_READS = {"decl", "media"}
-SCOPES = ("self", "parent", "body", "root")
-COMBINE = ("per", "minus", "times")
+TEXT_READS = ("authored", "face", "text", "tag", "lang", "media", "selector", "decl")
+SHEET_READS = {"decl", "media", "selector"}
+SCOPES = ("self", "parent", "prev", "next", "body", "root")
+COMBINE = ("per", "minus", "times", "on")
 WITHIN = ("parent", "column", "ground")
 PIXEL_STATS = ("chroma-share",)
 MUST_FORMS = "=, !=, in, not in, matches, not matches, >=, <=, >, <, between, within N% of, multiple of, present or absent"
@@ -295,12 +301,18 @@ def _fits(select, read):
         raise TableError("face: reads go with fonts, and fonts takes only face:")
     if select.source == "sheet" and not kinds <= SHEET_READS:
         raise TableError(f"sheet takes only {', '.join(sorted(SHEET_READS))}")
-    if select.source != "sheet" and kinds & {"decl", "media"}:
-        raise TableError("decl: and media read the sheet's rules: select sheet")
+    if select.source != "sheet" and kinds & SHEET_READS:
+        raise TableError(
+            "decl:, media and selector read the sheet's rules: select sheet"
+        )
+    if read.op == "on" and kinds != {"decl"}:
+        raise TableError(
+            "on sets one decl: colour on another: decl:color on decl:background-color"
+        )
 
 
 def _textual(read):
-    if read.op:
+    if read.op or read.lens:
         return False
     return read.kind in TEXT_READS or (read.kind == "style" and "+" in read.name)
 
@@ -482,7 +494,7 @@ def _ref(text, required=False):
         return Ref(None, read, text)
     if required:
         raise TableError(
-            "within N% of wants a read: self, parent, body, root or all of (…)"
+            "within N% of wants a read: self, parent, prev, next, body, root or all of (…)"
         )
     return None
 
@@ -494,11 +506,33 @@ def _quantity(text):
     return float(m[1]), (m[2] or "").lower()
 
 
+# Any CSS colour as sRGB bytes, gamut-clipped by a canvas: null where it is none.
+RGBA_JS = r"""
+const rgba = (() => {
+  let paint = null;
+  return (v) => {
+    if (!v || !CSS.supports('color', v)) return null;
+    paint ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    // A value the canvas cannot parse, var() among them, leaves fillStyle as it was.
+    paint.fillStyle = '#000';
+    paint.fillStyle = v;
+    const onBlack = paint.fillStyle;
+    paint.fillStyle = '#fff';
+    paint.fillStyle = v;
+    if (paint.fillStyle !== onBlack) return null;
+    paint.clearRect(0, 0, 1, 1);
+    paint.fillRect(0, 0, 1, 1);
+    return [...paint.getImageData(0, 0, 1, 1).data];
+  };
+})();
+"""
+
 # The selected elements' values. Only the drawn ones are kept unless `all`;
 # those kept wait at window[STASH] where `stash` is set. Each read in `reads`
 # gives each element one {value, rgba?, pair?, rect?}.
 ELEMENTS_JS = (
     flow.LABEL_JS
+    + RGBA_JS
     + r"""
 (els, { reads, groups, all, stash, places }) => {
   // Drawn: shown by display, visibility and opacity, not clipped to nothing
@@ -529,7 +563,7 @@ ELEMENTS_JS = (
     return el.__vaultUid;
   };
   const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  let ruler = null, paint = null;
+  let ruler = null;
   // probe.py's PLACES, so a value reads as the Python side rounds it.
   const fixed = (n) => Math.round(n * 10 ** places) / 10 ** places;
   // 100ex set at 100px, so the ratio keeps four places.
@@ -542,15 +576,6 @@ ELEMENTS_JS = (
     for (const p of ['font-family', 'font-weight', 'font-style', 'font-stretch', 'font-size-adjust', 'font-variation-settings', 'font-optical-sizing'])
       ruler.style.setProperty(p, cs.getPropertyValue(p));
     return Math.round(ruler.getBoundingClientRect().width) / 10000;
-  };
-  // Any CSS colour as sRGB bytes, gamut-clipped by a canvas: null where it is none.
-  const rgba = (v) => {
-    if (!v || !CSS.supports('color', v)) return null;
-    paint ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-    paint.clearRect(0, 0, 1, 1);
-    paint.fillStyle = v;
-    paint.fillRect(0, 0, 1, 1);
-    return [...paint.getImageData(0, 0, 1, 1).data];
   };
   // `top` drawn over `under` (sRGB bytes, under opaque), as the browser blends.
   const over = (top, under) => {
@@ -625,7 +650,7 @@ ELEMENTS_JS = (
     return want >= lo && want <= hi;
   };
   const one = (el, read, cs, info) => {
-    const target = read.scope === 'parent' ? el.parentElement : read.scope === 'body' ? document.body : read.scope === 'root' ? document.documentElement : el;
+    const target = { parent: el.parentElement, prev: el.previousElementSibling, next: el.nextElementSibling, body: document.body, root: document.documentElement }[read.scope] ?? (read.scope === 'self' ? el : null);
     if (!target) return { value: null };
     const tcs = target === el ? cs : getComputedStyle(target);
     const lines = () => (info.lines ??= lineInfo(target));
@@ -712,7 +737,9 @@ FONTS_JS = r"""
 """
 
 # A sheet from another origin cannot be read and is skipped.
-SHEET_JS = r"""
+SHEET_JS = (
+    RGBA_JS
+    + r"""
 (reads) => {
   const out = [];
   const walk = (rules, conditions) => {
@@ -722,7 +749,12 @@ SHEET_JS = r"""
         const subject = rule.selectorText ?? `@font-face ${rule.style.getPropertyValue('font-family')}`;
         out.push({
           subject: here.length ? `${subject} @ ${here.join(' and ')}` : subject, uid: null, groups: [],
-          values: reads.map((r) => ({ value: r.kind === 'media' ? (here.join(' and ') || null) : (rule.style.getPropertyValue(r.name).trim() || null) })),
+          values: reads.map((r) => {
+            if (r.kind === 'media') return { value: here.join(' and ') || null };
+            if (r.kind === 'selector') return { value: rule.selectorText ?? null };
+            const value = rule.style.getPropertyValue(r.name).trim() || null;
+            return { value, rgba: rgba(value) };
+          }),
           fontSize: 0, rootSize: 0,
         });
       }
@@ -737,6 +769,7 @@ SHEET_JS = r"""
   return out;
 }
 """
+)
 
 SELECTOR_ERROR_JS = r"""
 (s) => { try { document.querySelector(s); return null; } catch (e) { return e.message; } }
@@ -1012,6 +1045,8 @@ def judged(rule, rows, refs=None):
 def _value(read, row):
     """A row's value for `read`, through its lens and combined with its
     second read: (value, None), or (None, why) where it cannot be read."""
+    if read.op == "on":
+        return _on(row["by"][_spec(read)], row["by"][_spec(read.other)])
     first, why = _one(read, row)
     if why or not read.op:
         return first, why
@@ -1038,6 +1073,28 @@ def _value(read, row):
         return None, f"units differ: {a[1]} against {b[1]}"
     n = round(a[0] - b[0], PLACES)
     return (f"{n}{BASE_UNIT[a[1]]}" if a[1] != "number" else n), None
+
+
+def _on(text, under):
+    """WCAG contrast of `text`'s colour over `under`'s, `under` drawn over
+    black and over white where it is translucent, and the lower taken: what
+    lies behind it, a video under a caption's box, is not known."""
+    for got in (text, under):
+        if got.get("rgba") is None:
+            return None, f"not a colour: {got['value']!r}"
+    worst = None
+    for canvas in ((0, 0, 0), (255, 255, 255)):
+        box = _over(under["rgba"], canvas)
+        ratio = colour_space.contrast(_hex(_over(text["rgba"], box)), _hex(box))
+        worst = ratio if worst is None else min(worst, ratio)
+    return round(worst, PLACES), None
+
+
+def _over(top, under):
+    a = top[3] / 255
+    return tuple(
+        round(t * a + u * (1 - a)) for t, u in zip(top[:3], under[:3], strict=True)
+    )
 
 
 def _one(read, row):

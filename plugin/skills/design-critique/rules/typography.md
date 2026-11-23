@@ -802,7 +802,7 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 ### vault.text-style-count
 - applies-when: web-surface; all visible text on the page
 - question: Is every text style on the page (its face, size, weight and colour together) one of the site's named type-scale styles, with no one-off combination outside the scale and the lead or display sizes held to at most two elements a view?
-- answered-by: script
+- answered-by: look
 - writes: text style set
 - yields-to: vault.face-roles, vault.weight-count, vault.text-steps, vault.heading-step, level 2
 - source: Apple HIG, Typography (alert date 16 Dec 2025), "Minimize the number of typefaces" and use the built-in text styles; GOV.UK Design System styles (as read Nov 2026), a fixed type scale, bold "sparingly", the lead paragraph "only use it once per page"; USWDS Typography (2024), other sizes "sparingly"; NN/g, Gordon, "Visual Hierarchy in UX" (2021), "Use no more than 3 sizes" and "Limit how many elements are big to a maximum of 2"; NN/g, Nielsen, homepage guideline 63 (2001), "Limit font styles and other text formatting"; Polaris, Using type (2024), the same body size everywhere hides key elements; strength: design-system and expert guidance, no study sets a count
@@ -810,7 +810,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - owner: vault
 - stage: value
 - target: Set every text from the site's named type-scale styles, add no one-off size, weight or colour beside them, and hold display sizes to two elements a view.
-- script: owed
 - reasons: design-critique/references/busyness.md#text-styles
 - ledger: NEW1-7
 - status: staged

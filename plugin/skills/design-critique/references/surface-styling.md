@@ -224,7 +224,7 @@ Record: `vault.color-scheme`.
 
 ### Caption colours
 
-Record: `vault.caption-colours`.
+Records: `vault.caption-colours`, `vault.caption-settings`.
 
 - **Why.** White on 80% black is the WebVTT default. Viewers who need other colours set them in their player, a choice US rules require of video apparatus (47 CFR 79.103), so the page leaves those settings working.
 - **Trade-off.** Brand-coloured captions lose to the default on legibility over a busy frame.

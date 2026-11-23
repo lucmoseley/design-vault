@@ -12,6 +12,7 @@ define $gradient = where style:background-image matches gradient\(
 define $on-dark = where ground as luminance < 0.179
 define $on-light = where ground as luminance >= 0.179
 define $over-dark = where backdrop as luminance < 0.179
+define $over-light = where backdrop as luminance >= 0.179
 define $per-em = style:line-height per style:font-size
 
 # Buttons
@@ -47,6 +48,9 @@ vault.bar-ground | css:header, nav, [role=banner], [role=navigation] where groun
 vault.bar-ground | part:service-bar | ground as oklch-l | > all of (part:brand-bar) ground as oklch-l
 vault.tag-fill | part:tag $on-light | style:color as oklch-l | < self ground as oklch-l
 vault.list-header-fill | part:list-header | style:background-color as alpha | > 0
+vault.caption-colours | sheet where selector matches ::cue where decl:color present where decl:background-color present | decl:color on decl:background-color | >= 4.5
+vault.caption-colours | sheet where selector matches ::cue where decl:color present | decl:background-color | present
+vault.caption-colours | sheet where selector matches ::cue where decl:background-color present | decl:color | present
 
 under scheme=dark
 vault.dark-ground | css:html, body, main $on-dark where style:background-color as alpha = 1 | ground as oklch-l | between 0.18 and 0.22
@@ -166,7 +170,7 @@ vault.spelling-mark | part:misspelling | style:text-decoration-line | in spellin
 vault.skip-ink | $text | style:text-decoration-skip-ink | != none
 vault.text-stroke | $text where style:-webkit-text-stroke-width > 0px | style:paint-order | matches ^stroke
 vault.ruby-position | css:ruby | style:ruby-position | = over
-vault.white-space | css:p, li, h1, h2, h3, h4, h5, h6, td, dd, blockquote | style:white-space-collapse | = collapse
+vault.white-space | css:p, li, h1, h2, h3, h4, h5, h6, td, dd, blockquote | style:white-space-collapse | in collapse or preserve-breaks
 
 under rtl
 vault.rtl-sides | $prose | style:text-align | in start or right or center
@@ -184,7 +188,10 @@ vault.touch-action | css:html, body | style:touch-action | not in none or pan-x 
 vault.forced-colour-edges | $controls where style:box-shadow != none | style:border-top-width | > 0px
 
 # Surfaces
-vault.border-width | css:hr | style:border-top-width | = 1px
+vault.border-width | css:hr:first-child, hr:last-child | style:border-top-width | = 1px
+vault.border-width | css:hr where prev style:border-bottom-width = 0px | style:border-top-width | = 1px
+vault.border-width | css:hr where next style:border-top-width = 0px | style:border-top-width | = 1px
+vault.border-width | css:hr where prev style:border-bottom-width > 0px where next style:border-top-width > 0px | style:border-top-width | between 1px and 2px
 vault.border-width | css:body *:not(input, select, textarea, button, hr, [aria-selected=true], [aria-current], [aria-pressed=true]) where style:border-top-style = solid | style:border-top-width | = 1px
 vault.border-width | $controls where style:border-top-style = solid | style:border-top-width | between 1px and 2px
 vault.border-style | css:body *:not(hr, td, th, tr) | style:border-top-style | in none or solid or hidden
@@ -209,6 +216,8 @@ vault.image-edge | part:image | style:outline-offset | = -1px
 vault.image-edge | part:image | style:outline-color as alpha | between 0.08 and 0.15
 vault.edge-over-image | css:a, button, [role=button], [role=status] where over-image = 1 | style:background-color as alpha | > 0
 vault.image-scaling | part:pixel-image | style:image-rendering | = pixelated
+vault.zebra-tint | css:tbody tr:not([aria-selected=true]), tbody tr:not([aria-selected=true]) > td where style:background-color as alpha > 0 $over-light | fill-contrast | <= 1.32
+vault.zebra-tint | css:tbody tr:not([aria-selected=true]), tbody tr:not([aria-selected=true]) > td where style:background-color as alpha > 0 $over-dark | fill-contrast | <= 1.48
 
 at 320-640
 vault.table-text-narrow | css:td, th | style:font-size | >= 14px

@@ -286,15 +286,32 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 
 ### vault.caption-colours
 - applies-when: web-surface and has-motion; every video with captions
-- question: Do captions keep the WebVTT default, white text on black at 80% opacity, or an author `::cue` style that holds 4.5:1 against its own background, and does a custom player leave the viewer able to change caption colour, opacity, size and background?
-- answered-by: builder
+- question: Does every author `::cue` rule that sets a caption colour or background set both, and does its text hold 4.5:1 against that background, drawn over black and over white where it is translucent, as the WebVTT default of white on black at 80% opacity does?
+- answered-by: script
 - writes: caption colours
 - yields-to: none
-- source: W3C WebVTT §7, CSS rendering: cue `color` "rgba(255,255,255,1)" and cue background "rgba(0,0,0,0.8)"; 47 CFR 79.103(c): US video apparatus lets the viewer set caption character colour, opacity, size, background colour and opacity, and edges; WCAG 2.2 SC 1.4.3, 4.5:1 for text (all as read Oct 2026); strength: web standard and US regulation
+- source: W3C WebVTT §7, CSS rendering: cue `color` "rgba(255,255,255,1)" and cue background "rgba(0,0,0,0.8)"; WCAG 2.2 SC 1.4.3, 4.5:1 for text (all as read Oct 2026); the box drawn over black and over white is the probe's reading of a translucent box over an unknown video frame; strength: web standard
 - era: timeless
 - owner: vault
 - stage: treatment
-- target: Leave captions white on 80% black, or style `::cue` with a background that holds 4.5:1; in a custom player, keep the viewer's caption colour, size and background settings.
+- target: Leave captions white on 80% black, or style `::cue` with its own background, and hold its text to 4.5:1 on that background over any frame.
+- parts: video
+- script: check-style.py <page> --out <dir> [--parts <declaration>]
+- reasons: design-critique/references/surface-styling.md#caption-colours
+- ledger: COL-104
+- status: live
+
+### vault.caption-settings
+- applies-when: web-surface and has-motion; every video with captions in a custom player
+- question: Does a custom player leave the viewer able to change caption colour, opacity, size and background, as the browser's own caption settings do?
+- answered-by: builder
+- writes: caption settings
+- yields-to: vault.caption-colours
+- source: 47 CFR 79.103(c): US video apparatus lets the viewer set caption character colour, opacity, size, background colour and opacity, and edges (as read Oct 2026); strength: US regulation
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: In a custom player, keep the viewer's caption colour, size and background settings.
 - parts: video
 - reasons: design-critique/references/surface-styling.md#caption-colours
 - ledger: COL-104
