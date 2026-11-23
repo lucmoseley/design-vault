@@ -329,7 +329,8 @@ class HeldResult:
 def rerun(case, run_once, result=None, *, kills):
     """case.run(result), where `run_once` is the case's own run(), but a test that failed with a CRASHED wording after
     earlyoom killed a renderer of this process's tree is run once more, said on stderr, and the first run's outcome
-    dropped. Residual: the result is told nothing until the test ends, so a test that hangs leaves no name in a verbose log.
+    dropped.
+    Residual: the result is told nothing until the test ends, so a test that hangs leaves no name in a verbose log.
     A module's or class's fixture runs outside this: launching Chromium starts no renderer until its first page,
     and a fixture's child is re-run by run(), but a page a fixture opens in this process is not run again."""
     if result is None:
