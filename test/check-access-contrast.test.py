@@ -118,18 +118,20 @@ class Table(unittest.TestCase):
             "no vault.contrast-ladder | more line": "\n".join(
                 line for line in lines if line != more
             ),
-            "more wants 1 number(s)": TABLE_TEXT.replace(more, more + ", 7"),
-            "more wants numbers over 0": TABLE_TEXT.replace(
+            "| more wants 1 number(s) over 0, got '4.5, 7'": TABLE_TEXT.replace(
+                more, more + ", 7"
+            ),
+            "| more wants numbers over 0": TABLE_TEXT.replace(
                 more, more.replace("| 4.5", "| 0")
             ),
-            "more wants 1 number(s) over 0": TABLE_TEXT.replace(
+            "| more wants 1 number(s) over 0, got 'high'": TABLE_TEXT.replace(
                 more, more.replace("| 4.5", "| high")
             ),
         }
         for why, text in cases.items():
             with self.subTest(why), self.assertRaises(contrasts.TableError) as caught:
                 contrasts.parse_table(text)
-            self.assertIn(why.removeprefix("more "), str(caught.exception))
+            self.assertIn(why, str(caught.exception))
 
     def test_more_contrast_raises_every_role_and_dark_keeps_the_floors(self):
         more = contrasts.scheme_table("more contrast", TABLE)
@@ -138,10 +140,6 @@ class Table(unittest.TestCase):
             (more.edge, more.icon, more.state, more.photo, more.mark), (4.5,) * 5
         )
         self.assertEqual(contrasts.scheme_table("dark", TABLE), TABLE)
-
-
-def read(subject, role, ratio):
-    return contrasts.Reading(subject, role, ratio)
 
 
 class Rungs(unittest.TestCase):
@@ -167,19 +165,19 @@ class Rungs(unittest.TestCase):
 
     def test_a_drop_is_reported_and_a_rise_or_a_move_above_the_top_is_not(self):
         light = [
-            read("p#drop", "text", 7.31),
-            read("p#rise", "text", 5),
-            read("p#top", "text", 15),
-            read("button#icon", "icon", 18),
-            read("p#light-only", "text", 8),
+            contrasts.Reading("p#drop", "text", 7.31),
+            contrasts.Reading("p#rise", "text", 5),
+            contrasts.Reading("p#top", "text", 15),
+            contrasts.Reading("button#icon", "icon", 18),
+            contrasts.Reading("p#light-only", "text", 8),
         ]
         dark = [
-            read("p#drop", "text", 4.62),
-            read("p#drop", "text", 9),
-            read("p#rise", "text", 8),
-            read("p#top", "text", 12),
-            read("button#icon", "icon", 5),
-            read("p#dark-only", "text", 4.6),
+            contrasts.Reading("p#drop", "text", 4.62),
+            contrasts.Reading("p#drop", "text", 9),
+            contrasts.Reading("p#rise", "text", 8),
+            contrasts.Reading("p#top", "text", 12),
+            contrasts.Reading("button#icon", "icon", 5),
+            contrasts.Reading("p#dark-only", "text", 4.6),
         ]
         (fault,) = contrasts.rung_drops(light, dark, TABLE)
         self.assertEqual(fault["subject"], "p#drop")
@@ -190,8 +188,11 @@ class Rungs(unittest.TestCase):
         )
 
     def test_a_part_is_compared_within_its_role(self):
-        light = [read("button#go", "text", 8), read("button#go", "control edge", 5)]
-        dark = [read("button#go", "control edge", 8)]
+        light = [
+            contrasts.Reading("button#go", "text", 8),
+            contrasts.Reading("button#go", "control edge", 5),
+        ]
+        dark = [contrasts.Reading("button#go", "control edge", 8)]
         self.assertEqual(contrasts.rung_drops(light, dark, TABLE), [])
 
     def test_a_bad_table_stops_the_run_with_exit_2(self):

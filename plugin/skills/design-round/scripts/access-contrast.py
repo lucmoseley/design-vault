@@ -165,10 +165,10 @@ def scheme_table(name, table):
     return table
 
 
-# One part's worst ratio in one scheme, by its subject and its role, one of ROLES: each measurement gives one per
-# part it measured and did not fault.
+# Only a part read and not faulted has one, so its ratio clears its role's floor in that scheme: rung_drops relies
+# on it.
 Reading = collections.namedtuple("Reading", "subject role ratio")
-ROLES = (
+_ROLES = (
     "text",
     "large text",
     "control edge",
@@ -179,7 +179,7 @@ ROLES = (
 )
 
 
-def role_rungs(role, table):
+def _role_rungs(role, table):
     """(floor rung, top rung) of `role`, from the light page's `table`: the top is also its more-contrast rung."""
     return {
         "text": (table.floors.body, table.aim.body),
@@ -195,8 +195,8 @@ def role_rungs(role, table):
 def rung(ratio, role, table):
     """The highest rung of the ladder, every role's floor and top rung, from `role`'s floor up that `ratio` clears,
     capped at its top rung; None under its floor."""
-    floor, top = role_rungs(role, table)
-    ladder = {r for each in ROLES for r in role_rungs(each, table)}
+    floor, top = _role_rungs(role, table)
+    ladder = {r for each in _ROLES for r in _role_rungs(each, table)}
     cleared = [r for r in ladder if floor <= r <= ratio]
     return min(max(cleared), top) if cleared else None
 

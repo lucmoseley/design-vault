@@ -1621,12 +1621,14 @@ def theme_answer(browser, at, width, height, *, light, answered, readings):
             shipped.append(name)
             table = contrasts.scheme_table(name, at.table)
             got, shots = read_texts(page, at.logotype)
-            judged, read = judge(got, shots, {}, table)
-            measured, more = contrast_answers(page, at, None, table)
+            judged, judge_readings = judge(got, shots, {}, table)
+            measured, contrast_readings = contrast_answers(page, at, None, table)
             found = contrasts.scheme(name, judged, measured, answered)
             if name == "dark":
                 found.faults.extend(
-                    contrasts.rung_drops(readings, read + more, at.table)
+                    contrasts.rung_drops(
+                        readings, judge_readings + contrast_readings, at.table
+                    )
                 )
             for mine, theirs in zip(out, found, strict=True):
                 mine.extend(theirs)
@@ -1656,7 +1658,9 @@ def run(at):
             context, page, loops = open_page(browser, at, width, height)
             looping = max(looping, loops)
             got, shots = read_texts(page, at.logotype)
-            measured, read = contrast_answers(page, at, (got, shots), at.table)
+            measured, contrast_readings = contrast_answers(
+                page, at, (got, shots), at.table
+            )
             light = contrasts.signature(page, contrast_js)
             merge(measured, tab_walk(page, at.carousels))
             measured["vault.pause"] = answering.Judged(
@@ -1669,7 +1673,7 @@ def run(at):
                 ),
             )
             context.close()
-            answered, judged = judge(got, shots, measured, at.table)
+            answered, judge_readings = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(
                 browser,
                 at,
@@ -1677,7 +1681,7 @@ def run(at):
                 height,
                 light=light,
                 answered=answered,
-                readings=judged + read,
+                readings=judge_readings + contrast_readings,
             )
             found.append((name, answered))
     return found, looping
