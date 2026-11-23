@@ -4,7 +4,7 @@
 		"class": "generated-only",
 		"classQualifier": null,
 		"role": null,
-		"route": "`node scripts/check-guard-registry.js --review`, which re-anchors a guard whose annotation has been read",
+		"route": "workflow-core's `scripts/check-guard-registry.js --review`, which re-anchors a guard whose annotation has been read",
 		"consumes": null
 	},
 	".claude/implicit-behaviours.json": {
@@ -12,7 +12,7 @@
 		"class": "source-of-truth",
 		"classQualifier": null,
 		"role": "What each script of the vault's own that git runs does to a session unasked, why, and its escape; workflow-core's guard registry reads it",
-		"route": "Direct, then `node scripts/check-guard-registry.js --review <script>`",
+		"route": "Direct, then workflow-core's `scripts/check-guard-registry.js --review <script>`",
 		"consumes": null
 	},
 	".claude/settings.json": {

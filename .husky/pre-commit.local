@@ -1,27 +1,8 @@
 # shellcheck shell=sh
 # .husky/pre-commit.local — the vault's own gate, sourced last by the core's .husky/pre-commit (#1).
 # Each gate ends in `|| exit 1`: git runs .husky/pre-commit here as plain sh, without -e (#33).
-# IMPLICIT:  a commit staging data/gallery.json, data/styles.json or anything under images/ runs `node validate.js --staged` and is refused on any fault it prints.
-# JUSTIFIED: fail-safe — a malformed entry travels from the library into every brief copied from it; the commit is the last local moment to catch it (lucmoseley/mantahostels#3631 step 2).
-# DEFEAT:    none — fix the fault the validator names; a commit that touches none of these paths never runs it.
 if git diff --cached --name-only --no-renames | grep -qE '^(data/(gallery|styles)\.json|images/)'; then node validate.js --staged || exit 1; fi
-
-# IMPLICIT:  a commit staging data/gallery.json, data/styles.json or data/vault-data.js runs `node bundle.js --staged` and is refused when the staged bundle does not match the staged JSON (#32).
-# JUSTIFIED: fail-safe — the page opened from its folder reads only the bundle, so a stale one shows the library a version behind with nothing on the page saying so.
-# DEFEAT:    none — run node bundle.js and commit data/vault-data.js with the JSON; a commit that touches none of the three never runs it.
 if git diff --cached --name-only --no-renames | grep -qE '^data/(gallery\.json|styles\.json|vault-data\.js)$'; then node bundle.js --staged || exit 1; fi
-
-# IMPLICIT:  a commit staging data/round-log.jsonl runs `node round-log.js --staged` and is refused on a malformed row, on a row that changes one HEAD holds beyond adding its final_pick, or where git cannot be read (#95).
-# JUSTIFIED: fail-safe — the log's first picks are the founder's measure of his eye, made before he read the critic; a rewritten one cannot be recovered from anywhere else.
-# DEFEAT:    none — fix the row it names, or append a new one; a commit that does not touch the log never runs it.
 if git diff --cached --name-only --no-renames | grep -qE '^data/round-log\.jsonl$'; then node round-log.js --staged || exit 1; fi
-
-# IMPLICIT:  a commit staging data/corrections-log.jsonl runs `node corrections-log.js --staged` and is refused on a malformed row, on a row that changes one HEAD holds beyond answering its pending ruling, or where git cannot be read (#166).
-# JUSTIFIED: fail-safe — the log keeps the founder's corrections in his own words; a reworded entry, or a ruling changed after he gave it, cannot be told apart from his own later.
-# DEFEAT:    none — fix the row it names, or append a new one; a commit that does not touch the log never runs it.
 if git diff --cached --name-only --no-renames | grep -qE '^data/corrections-log\.jsonl$'; then node corrections-log.js --staged || exit 1; fi
-
-# IMPLICIT:  a commit staging data/calibration-log.jsonl runs `node calibration-log.js --staged` and is refused on a malformed row, on a run's figures that disagree with the disagreements listed under them, on any change to a row HEAD holds, or where git cannot be read (#168).
-# JUSTIFIED: fail-safe — round-log.js counts "calibration due" from the last row's round_log_rows, and a run's agreement figures are the founder's only measure of the critic; a rewritten one cannot be re-measured.
-# DEFEAT:    none — fix the row it names, or append a new run; a commit that does not touch the log never runs it.
 if git diff --cached --name-only --no-renames | grep -qE '^data/calibration-log\.jsonl$'; then node calibration-log.js --staged || exit 1; fi
