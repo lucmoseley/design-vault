@@ -110,8 +110,9 @@
   plan();
 
   // On release, the snap point nearest the position the release velocity
-  // projects to, reached on a critically damped spring that starts at the
-  // release velocity, stiff enough never to pass its rest.
+  // (over the 100 ms of moves before it, by the events' own clock) projects
+  // to, reached on a critically damped spring that starts at the release
+  // velocity, stiff enough never to pass its rest.
   const card = document.querySelector('.card');
   const SNAPS = [0, 300];
   let x = 0, from = null, base = 0, moves = [], spring = 0;
@@ -119,16 +120,16 @@
   card.addEventListener('pointerdown', (e) => {
     card.setPointerCapture(e.pointerId);
     cancelAnimationFrame(spring);
-    from = e.clientX; base = x; moves = [[performance.now(), e.clientX]];
+    from = e.clientX; base = x; moves = [[e.timeStamp, e.clientX]];
   });
   card.addEventListener('pointermove', (e) => {
     if (from === null) return;
     place(base + e.clientX - from);
-    moves.push([performance.now(), e.clientX]);
+    moves.push([e.timeStamp, e.clientX]);
   });
-  card.addEventListener('pointerup', () => {
+  card.addEventListener('pointerup', (e) => {
     from = null;
-    const recent = moves.filter((m) => m[0] > performance.now() - 100);
+    const recent = moves.filter((m) => m[0] > e.timeStamp - 100);
     const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
     const aim = x + (v / 1000) * (0.998 / (1 - 0.998));
     const to = SNAPS.reduce((a, b) => (Math.abs(b - aim) < Math.abs(a - aim) ? b : a));
