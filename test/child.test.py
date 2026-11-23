@@ -8,7 +8,6 @@ because earlyoom chose its renderer, or hide a renderer crash of its own behind 
 """
 
 import contextlib
-import importlib.util
 import io
 import os
 import shutil
@@ -20,9 +19,8 @@ import time
 import unittest
 
 HERE = os.path.dirname(__file__)
-spec = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
 # The stall case's limit, in s: long enough for a loaded machine to start Python and its grandchild first.
 STALL_S = 3
@@ -73,9 +71,8 @@ print("passed on run", n)
 """
 
 
-class Rerun(unittest.TestCase):
-    """A crashed run is re-run once only where earlyoom's journal names one of its own renderers, killed while it
-    lived (#431)."""
+class Kills:
+    """A file each stand-in renderer's kill is written to, one `pid time` line per run."""
 
     def setUp(self):
         fd, self.runs = tempfile.mkstemp()
@@ -83,9 +80,14 @@ class Rerun(unittest.TestCase):
         self.addCleanup(os.unlink, self.runs)
 
     def killed(self):
-        """(time, pid) for each grandchild killed so far, as earlyoom's journal would give it."""
+        """(time, pid) for each stand-in renderer killed so far, as earlyoom's journal would give it."""
         with open(self.runs, encoding="utf8") as fh:
             return [(float(t), int(pid)) for pid, t in map(str.split, fh)]
+
+
+class Rerun(Kills, unittest.TestCase):
+    """A crashed run is re-run once only where earlyoom's journal names one of its own renderers, killed while it
+    lived (#431)."""
 
     def run_with(self, crash_on, kills, kind="renderer"):
         said = io.StringIO()
@@ -104,7 +106,7 @@ class Rerun(unittest.TestCase):
         self.assertRegex(
             said, rf"earlyoom killed renderer {self.killed()[0][1]} of .*once more"
         )
-        self.assertIn(self.killed()[0][1], child.SPENT)
+        self.assertIn(self.killed()[0][1], child.RERUN_RENDERERS)
 
     def test_it_is_run_once_more_only_once(self):
         r, _ = self.run_with("1,2", lambda since: self.killed())
@@ -207,15 +209,17 @@ class Run(unittest.TestCase):
         self.assertTrue(issubclass(child.StallError, child.subprocess.TimeoutExpired))
 
 
-class InProcess(unittest.TestCase):
-    def setUp(self):
-        self.runs = tempfile.NamedTemporaryFile(delete=False).name
-        self.addCleanup(os.unlink, self.runs)
+class RaiseIfCrashed(unittest.TestCase):
+    def test_a_captured_crash_is_raised_with_its_stderr(self):
+        said = f"page.goto: {child.CRASHED}"
+        with self.assertRaisesRegex(RuntimeError, said):
+            child.raise_if_crashed(said)
 
-    def killed(self):
-        with open(self.runs, encoding="utf8") as fh:
-            return [(float(t), int(pid)) for pid, t in map(str.split, fh)]
+    def test_a_capture_with_no_crash_is_kept(self):
+        self.assertIsNone(child.raise_if_crashed("Traceback: a fault of its own"))
 
+
+class InProcess(Kills, unittest.TestCase):
     def outcome(
         self, crash_on, kills, *, said=None, how="raise", foreign=False, spent=False
     ):
@@ -255,7 +259,7 @@ class InProcess(unittest.TestCase):
                 if started:
                     started.wait()
                 if spent:
-                    child.SPENT.add(pid)
+                    child.RERUN_RENDERERS.add(pid)
                 with open(runs, encoding="utf8") as fh:
                     n = len(fh.read().splitlines())
                 if n not in crash_on:

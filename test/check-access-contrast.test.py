@@ -20,9 +20,9 @@ HERE = os.path.dirname(__file__)
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 FIXTURES = os.path.join(HERE, "fixtures", "access")
 PARTS = os.path.join(FIXTURES, "contrast-tier01-parts.json")
 ABSENT = os.path.join(FIXTURES, "contrast-tier01-absent.json")
@@ -312,7 +312,7 @@ class EndToEnd(unittest.TestCase):
                 self.assertEqual((answer["answer"], answer["unmeasured"]), ("pass", []))
 
 
-class Undeclared(unittest.TestCase):  # #429
+class Undeclared(unittest.TestCase):  # #429, #453
     def test_a_chart_and_page_dots_no_declaration_names_cannot_be_measured_and_say_so(
         self,
     ):
@@ -326,6 +326,7 @@ class Undeclared(unittest.TestCase):  # #429
                 ["figure#chart > svg", "canvas#spark", "svg#bars", "svg#nest"],
             ),
             ("vault.controls-on-photo", "no carousel was declared", ["ul.dots"]),
+            ("vault.carousel-focus", "no carousel was declared", ["ul.dots"]),  # #453
         ):
             with self.subTest(qid):
                 reasons = [u["reason"] for u in answers[qid]["unmeasured"]]
@@ -335,14 +336,22 @@ class Undeclared(unittest.TestCase):  # #429
                     self.assertIn(subject, reason)
                     self.assertIn(part, reason)
         for qid, answer in answers.items():
-            if qid not in ("vault.chart-contrast", "vault.controls-on-photo"):
+            if qid not in (
+                "vault.chart-contrast",
+                "vault.controls-on-photo",
+                "vault.carousel-focus",
+            ):
                 with self.subTest(qid):
                     self.assertEqual(answer["answer"], "pass")
 
     def test_a_chart_and_carousel_declared_absent_are_not_looked_for(self):
         code, out, err, found = DONE["absent"]
         self.assertEqual(code, 0, out + err)
-        for qid in ("vault.chart-contrast", "vault.controls-on-photo"):
+        for qid in (
+            "vault.chart-contrast",
+            "vault.controls-on-photo",
+            "vault.carousel-focus",
+        ):
             with self.subTest(qid):
                 answer = found["answers"][qid]
                 self.assertEqual((answer["answer"], answer["unmeasured"]), ("pass", []))
