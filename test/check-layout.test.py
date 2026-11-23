@@ -102,6 +102,8 @@ RUNS = {
     "records-site": ("tier01-real-site.html", [*RECORDS, "--brief", "kind=site"]),
     "records-app": ("tier01-real-app.html", [*RECORDS, "--brief", "kind=app"]),
     "records-overlay": ("tier01-real-overlay.html", [*RECORDS, "--brief", "kind=site"]),
+    "columns-clean": ("tier01-columns-clean.html", RECORDS),
+    "columns-fault": ("tier01-columns-fault.html", RECORDS),
     "focal-cover": (
         "focal-cover.html",
         [
@@ -1215,6 +1217,22 @@ class Records(unittest.TestCase):
         self.assertEqual(
             DONE["records-overlay"][3]["records"]["answers"]["vault.footer-narrow"],
             "pass",
+        )
+
+    def test_each_column_of_sections_set_side_by_side_keeps_its_own_text_edge(self):
+        clean = DONE["columns-clean"][3]["records"]
+        self.assertEqual(clean["answers"]["vault.alignment-lines"], "pass")
+        self.assertEqual(
+            [r for r in clean["ranges"] if r["kind"] == "text-edge"],
+            [],
+            clean["ranges"],
+        )
+        fault = DONE["columns-fault"][3]["records"]
+        self.assertEqual(fault["answers"]["vault.alignment-lines"], "fail")
+        self.assertEqual(
+            {r["subject"] for r in fault["ranges"] if r["kind"] == "text-edge"},
+            {"section#f-column-edge"},
+            fault["ranges"],
         )
 
     def test_a_record_table_with_no_phone_width_line_exits_2(self):

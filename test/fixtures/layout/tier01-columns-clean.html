@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A main element of two columns of sections, each on its own text edge</title>
+<!-- vault.alignment-lines compares each column of sections set side by side with its own column, so the second column's edge is no fault. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 24px; }
+  .wide { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<main>
+  <section class="wide"><h2>Getting here</h2><p>Two ways in from the airport.</p></section>
+  <section><h2>By train</h2><p>From the main station.</p></section>
+  <section><h2>By bus</h2><p>From the old town.</p></section>
+  <section><h2>By taxi</h2><p>From the rank outside arrivals.</p></section>
+  <section><h2>On foot</h2><p>From the harbour.</p></section>
+</main>
+</body>
+</html>

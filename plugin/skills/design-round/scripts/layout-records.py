@@ -338,7 +338,8 @@ READ_JS = (
     }
   }
 
-  // vault.alignment-lines: each section's main text edge against the edge most sections share.
+  // vault.alignment-lines: each section's main text edge against the edge most sections in its column share.
+  // A section set beside another, right of its row's first, is in the column its box starts; the rest are in the page's.
   if (on('text-edge')) {
     const main = document.querySelector('main, [role="main"]') || document.body;
     const edges = [];
@@ -352,12 +353,21 @@ READ_JS = (
       if (Math.abs((tr.left - sr.left) - (sr.right - tr.right)) <= EDGE && tr.width < sr.width - EDGE && css(t).textAlign !== 'start' && css(t).textAlign !== 'left') continue;
       edges.push([s, Math.round(tl)]);
     }
-    if (edges.length >= 2) {
+    const columns = new Map();
+    for (const [s, e] of edges) {
+      const sr = box(s);
+      const first = Math.min(...edges.map(([o]) => box(o)).filter((r) => vOverlap(r, sr)).map((r) => r.left));
+      const key = sr.left - first > EDGE ? Math.round(sr.left) : 'page';
+      columns.set(key, [...(columns.get(key) || []), [s, e]]);
+    }
+    for (const [key, column] of columns) {
+      if (column.length < 2) continue;
       seen.add('text-edge');
       const count = new Map();
-      for (const [, e] of edges) count.set(e, (count.get(e) || 0) + 1);
+      for (const [, e] of column) count.set(e, (count.get(e) || 0) + 1);
       const common = [...count].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
-      for (const [s, e] of edges) if (Math.abs(e - common) > EDGE) fault('text-edge', label(s), `starts its text at ${px(e)}, off the ${px(common)} edge the page's other sections share`);
+      const whose = key === 'page' ? "the page's other sections" : 'the other sections in its column';
+      for (const [s, e] of column) if (Math.abs(e - common) > EDGE) fault('text-edge', label(s), `starts its text at ${px(e)}, off the ${px(common)} edge ${whose} share`);
     }
   }
 
