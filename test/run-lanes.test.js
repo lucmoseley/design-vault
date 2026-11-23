@@ -149,7 +149,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     assert.match(proc.stderr, /VAULT_SUITE_LANES wants 1 or more — got '0'/);
   });
 
-  // Past the ceiling, one suite still runs, as the one-at-a-time run always did.
+  // Past the ceiling, one suite still runs.
   for (const [others, lines, n, peak] of [
     ["one", ["  11 /usr/bin/python3 test/check-flow.test.py"], 3, 2],
     ["two", ["  11 python3 test/check-flow.test.py", "  12 /home/u/.nvm/bin/node --test"], 3, 1],
@@ -230,8 +230,8 @@ describe("run-lanes.sh", { concurrency: true }, () => {
   });
 
   /**
-   * Runs four fake suites kept at 6, 5, 4 and 3 s, and one with none kept where `untimed`, under VAULT_SUITE_BUDGET
-   * (#473), in a directory of their own: a green run rewrites the seconds it keeps.
+   * Runs four kept fake suites, and one with none kept where `untimed`, under VAULT_SUITE_BUDGET (#473): a green run
+   * rewrites the seconds it keeps.
    */
   let budgeted = 0;
   function underBudget(budget, env = {}, { untimed = false } = {}) {

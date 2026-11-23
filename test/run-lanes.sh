@@ -13,9 +13,8 @@
 # VAULT_SUITE_LANES caps this run's own lanes (1 runs one at a time). VAULT_MEMINFO and VAULT_PS stand in for
 # /proc/meminfo and ps in test/run-lanes.test.js.
 # VAULT_SUITE_BUDGET, in seconds, refuses the run before any suite starts where the kept seconds, laid longest first
-# on the lanes the machine would open now, end past it: a commit gate's run under the suite ceiling gets a verdict at
-# once rather than a kill at the ceiling (#473). A suite with none kept counts as 0 s, so only a sure overrun refuses;
-# lanes that open later than the start can still make a refused run fit.
+# on the lanes the machine would open now, end past it (#473). A suite with none kept counts as 0 s; lanes that open
+# later than the start can still make a refused run fit.
 
 set -u
 ceiling=3
@@ -23,8 +22,7 @@ max=${VAULT_SUITE_LANES:-$ceiling}
 [[ $max =~ ^[1-9][0-9]*$ ]] || { echo "test/run-lanes.sh: VAULT_SUITE_LANES wants 1 or more — got '$max'" >&2 && exit 2; }
 meminfo=${VAULT_MEMINFO:-/proc/meminfo}
 ps_bin=${VAULT_PS:-ps}
-# MemAvailable, in MB, wanted resting before the machine's 1st, 2nd and 3rd concurrent suite. The 1st is never read,
-# since one suite may always run.
+# MemAvailable, in MB, wanted resting before the machine's 1st, 2nd and 3rd concurrent suite. The 1st is never read.
 rungs=(0 2500 3400 4050)
 # A runner's own line, never a wrapper's: a shell or `timeout` before it is its parent, which has its own line.
 suite_line='^([^ ]*/)?(python3?( [^ ]+)* [^ ]*\.test\.py|node( [^ ]+)* --test|pytest|py\.test|python3? -m (pytest|unittest)|(node( [^ ]+)* )?[^ ]*[.]bin/vitest)( |$)'
