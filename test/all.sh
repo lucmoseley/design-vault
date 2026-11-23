@@ -239,5 +239,18 @@ if ((missing)); then
   exit 1
 fi
 
+# A gate seat's run, a commit's or the lander's, is held to workflow-core's suite ceiling (workflow-core#2667), which
+# kills it there: run-lanes.sh refuses at once a plan its kept seconds say cannot end in what is left of it on the
+# lanes it gets (#473). Where the ceiling will not read the run goes ahead, since the ceiling still kills an overrun:
+# only the early verdict is lost.
+if [[ (-n ${WFC_GATE_SEAT:-} || in_commit -eq 1) && -z ${VAULT_SUITE_BUDGET:-} ]]; then
+  if ceiling_ms="$(node -e 'const core = require(process.argv[1]).resolveCore();
+process.stdout.write(String(require(`${core}/scripts/lib/suite-ceiling.js`).ceilingMs()))' "$vault/scripts/lib/resolve-core.js" 2>/dev/null)" &&
+    [[ $ceiling_ms =~ ^[0-9]+$ ]] && ((ceiling_ms / 1000 > SECONDS)); then
+    export VAULT_SUITE_BUDGET=$((ceiling_ms / 1000 - SECONDS))
+  else
+    echo "the suite ceiling will not read from workflow-core, so this run is not judged against it before it starts"
+  fi
+fi
 bash "$vault/test/run-lanes.sh" "${run[@]}" || exit 1
 if (($#)); then echo "${#run[@]} named suite(s) passed"; elif [[ -n $shard ]]; then echo "${#run[@]} suites of shard $shard passed"; else echo "${#run[@]} of ${#suites[@]} suites passed"; fi

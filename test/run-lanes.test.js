@@ -1,7 +1,8 @@
 "use strict";
 // test/run-lanes.sh, which runs test/all.sh's suites side by side within the machine's 3-suite ceiling (#363).
 // Loosen it and a red suite lands, one suite's output is spliced into another's, or a commit's suites start a 4th on
-// a machine core docs/environment.md §6 measured only to 3.
+// a machine core docs/environment.md §6 measured only to 3. Loosen its VAULT_SUITE_BUDGET refusal and a commit planning
+// more than its lanes can end is killed at workflow-core's suite ceiling, with no verdict (#473).
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { spawn, spawnSync } = require("node:child_process");
@@ -57,7 +58,7 @@ const AMPLE = 8000;
 let runs = 0;
 function run(args, env) {
   return new Promise((resolve) => {
-    const child = spawn("bash", [LANES, ...args], { env: { ...process.env, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", ...env } });
+    const child = spawn("bash", [LANES, ...args], { env: { ...process.env, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", ...env } });
     const out = { stdout: "", stderr: "" };
     child.stdout.on("data", (b) => (out.stdout += b));
     child.stderr.on("data", (b) => (out.stderr += b));
@@ -225,6 +226,62 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     const given = ["b", "a", "c"].map((n) => `python3 ${FAKE} ${d} ${n} 0`);
     const proc = await run(given, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, VAULT_SUITE_LANES: "1", VAULT_SUITE_TIMES: "" });
     assert.deepEqual([...proc.stdout.matchAll(/^== python3 \S+ \S+ (\w+) /gm)].map((m) => m[1]), ["b", "a", "c"]);
+  });
+
+  /**
+   * Runs four fake suites kept at 6, 5, 4 and 3 s, and one with none kept where `untimed`, under VAULT_SUITE_BUDGET
+   * (#473), in a directory of their own: a green run rewrites the seconds it keeps.
+   */
+  let budgeted = 0;
+  function underBudget(budget, env = {}, { untimed = false } = {}) {
+    const d = path.join(dir, `budget-${budgeted++}`);
+    const times = path.join(d, "times");
+    fs.mkdirSync(times, { recursive: true });
+    const suite = (name) => `python3 ${FAKE} ${d} ${name} 0`;
+    const given = [];
+    for (const [name, secs] of [["a", 6], ["b", 5], ["c", 4], ["d", 3]]) {
+      const sum = spawnSync("cksum", { input: suite(name), encoding: "utf8" }).stdout.split(" ")[0];
+      fs.writeFileSync(path.join(times, sum), `${secs}\n`);
+      given.push(suite(name));
+    }
+    if (untimed) given.push(suite("new"));
+    return run(given, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, VAULT_SUITE_TIMES: times, VAULT_SUITE_BUDGET: String(budget), ...env })
+      .then((proc) => ({ ...proc, ran: fs.existsSync(path.join(d, "peaks")) }));
+  }
+
+  test("a run whose kept seconds end past VAULT_SUITE_BUDGET on one lane is refused before any suite starts (#473)", async () => {
+    const proc = await underBudget(17, { VAULT_SUITE_LANES: "1" });
+    assert.equal(proc.status, 1, proc.stderr);
+    assert.equal(proc.ran, false);
+    assert.match(proc.stderr, /refused before any suite ran: the 4 suites' kept green seconds sum to 18 s, which on the 1 lane\(s\) the machine opens now end at about 18 s, past VAULT_SUITE_BUDGET's 17 s, the time left under workflow-core's suite ceiling \(workflow-core#2667\) inside a commit\. Run it again once fewer suites run on the machine and more memory is free/);
+  });
+
+  test("a run whose kept seconds end at VAULT_SUITE_BUDGET runs", async () => {
+    const proc = await underBudget(18, { VAULT_SUITE_LANES: "1" });
+    assert.equal(proc.status, 0, proc.stderr);
+    assert.equal(proc.ran, true);
+  });
+
+  test("the budget is judged on the lanes open at the start, longest first onto the one that frees first", async () => {
+    // Three lanes end at 7 s (6, 5, 4 + 3); with one suite running elsewhere, two end at 9 s (6 + 3, 5 + 4).
+    const three = await underBudget(8);
+    assert.equal(three.status, 0, three.stderr);
+    const two = await underBudget(8, { VAULT_PS: ps("one-budget", ["  11 python3 test/check-flow.test.py"]) });
+    assert.equal(two.status, 1, two.stderr);
+    assert.equal(two.ran, false);
+    assert.match(two.stderr, /on the 2 lane\(s\) the machine opens now end at about 9 s, past VAULT_SUITE_BUDGET's 8 s/);
+  });
+
+  test("a suite with no seconds kept counts as none against the budget", async () => {
+    const proc = await underBudget(18, { VAULT_SUITE_LANES: "1" }, { untimed: true });
+    assert.equal(proc.status, 0, proc.stderr);
+  });
+
+  test("a VAULT_SUITE_BUDGET that is no whole count of seconds runs nothing and exits 2", async () => {
+    const proc = await underBudget(0);
+    assert.equal(proc.status, 2);
+    assert.equal(proc.ran, false);
+    assert.match(proc.stderr, /VAULT_SUITE_BUDGET wants whole seconds, 1 or more — got '0'/);
   });
 
   for (const [signal, status] of [["SIGINT", 130], ["SIGTERM", 143]]) {

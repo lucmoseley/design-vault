@@ -12,6 +12,10 @@
 # suite to end is a short one wherever a second lane opens (#457).
 # VAULT_SUITE_LANES caps this run's own lanes (1 runs one at a time). VAULT_MEMINFO and VAULT_PS stand in for
 # /proc/meminfo and ps in test/run-lanes.test.js.
+# VAULT_SUITE_BUDGET, in seconds, refuses the run before any suite starts where the kept seconds, laid longest first
+# on the lanes the machine would open now, end past it: a commit gate's run under the suite ceiling gets a verdict at
+# once rather than a kill at the ceiling (#473). A suite with none kept counts as 0 s, so only a sure overrun refuses;
+# lanes that open later than the start can still make a refused run fit.
 
 set -u
 ceiling=3
@@ -41,12 +45,16 @@ available_mb() {
   echo $((BASH_REMATCH[1] / 1024))
 }
 
+fits() { # fits <count>: whether the machine may run that many suites at once, by the ceiling and its memory rung
+  local mb
+  (($1 <= ceiling)) && mb="$(available_mb)" && ((mb >= rungs[$1]))
+}
+
 opens() { # whether one more suite may start now; where ps or the memory reading fails, no second one does
-  local mine=${#lane[@]} n mb
+  local mine=${#lane[@]} n
   ((mine == 0)) && return 0
   ((mine < max)) && n="$(others)" || return 1
-  n=$((n + mine + 1))
-  ((n <= ceiling)) && mb="$(available_mb)" && ((mb >= rungs[n]))
+  fits $((n + mine + 1))
 }
 
 declare -A lane=() began=() log=()
@@ -84,6 +92,12 @@ timed() { # timed <suite>: the file its last green seconds are kept in
   echo "$timings/${sum%% *}"
 }
 
+kept_secs() { # kept_secs <suite> <default>: its last green seconds, else the default
+  local secs=''
+  read -r secs 2>/dev/null <"$(timed "$1")"
+  [[ $secs =~ ^[0-9]+$ ]] && echo "$secs" || echo "$2"
+}
+
 finish() { # finish <pid> <status>
   local suite=${lane[$1]} took
   took=$(((${EPOCHREALTIME/./} - ${began[$1]/./} + 500000) / 1000000))
@@ -104,14 +118,42 @@ untimed=999999999
 if [[ -n $timings ]] && ((${#queue[@]} > 1)); then
   order=()
   for i in "${!queue[@]}"; do
-    secs=''
-    read -r secs 2>/dev/null <"$(timed "${queue[i]}")"
-    [[ $secs =~ ^[0-9]+$ ]] || secs=$untimed
-    order+=("$secs"$'\t'"$i")
+    order+=("$(kept_secs "${queue[i]}" "$untimed")"$'\t'"$i")
   done
   sorted=()
   while IFS=$'\t' read -r _ i; do sorted+=("${queue[i]}"); done < <(printf '%s\n' "${order[@]}" | sort -t$'\t' -k1,1nr -k2,2n)
   queue=("${sorted[@]}")
+fi
+lanes_now() { # how many lanes opens() would grant at once, read before any suite of this run starts
+  local n count=1
+  n="$(others)" || { echo 1 && return; }
+  while ((count < max)) && fits $((n + count + 1)); do count=$((count + 1)); done
+  echo "$count"
+}
+
+budget=${VAULT_SUITE_BUDGET:-}
+[[ -z $budget || $budget =~ ^[1-9][0-9]*$ ]] ||
+  { echo "test/run-lanes.sh: VAULT_SUITE_BUDGET wants whole seconds, 1 or more — got '$budget'" >&2 && exit 2; }
+if [[ -n $budget && -n $timings ]]; then
+  open_lanes="$(lanes_now)"
+  loads=() kept=0
+  for ((i = 0; i < open_lanes; i++)); do loads+=(0); done
+  for suite in "${queue[@]}"; do # in the order they start, each onto the lane that frees first
+    secs="$(kept_secs "$suite" 0)"
+    kept=$((kept + secs))
+    least=0
+    for i in "${!loads[@]}"; do ((loads[i] < loads[least])) && least=$i; done
+    loads[least]=$((loads[least] + secs))
+  done
+  ends=0
+  for load in "${loads[@]}"; do ((load > ends)) && ends=$load; done
+  if ((ends > budget)); then
+    echo "test/run-lanes.sh: refused before any suite ran: the ${#queue[@]} suites' kept green seconds sum to $kept s, \
+which on the $open_lanes lane(s) the machine opens now end at about $ends s, past VAULT_SUITE_BUDGET's $budget s, \
+the time left under workflow-core's suite ceiling (workflow-core#2667) inside a commit. Run it again once fewer \
+suites run on the machine and more memory is free (#473)." >&2
+    exit 1
+  fi
 fi
 started=0
 while ((${#queue[@]} || ${#lane[@]})); do
