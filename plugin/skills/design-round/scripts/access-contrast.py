@@ -165,8 +165,6 @@ def scheme_table(name, table):
     return table
 
 
-# Only a part read and not faulted has one, so its ratio clears its role's floor in that scheme: rung_drops relies
-# on it.
 Reading = collections.namedtuple("Reading", "subject role ratio")
 _ROLES = (
     "text",

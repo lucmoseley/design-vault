@@ -389,6 +389,7 @@ class EndToEnd(unittest.TestCase):
         self.assertNotIn(
             "p#rung-plant", {f["subject"] for f in answers["vault.contrast"]["faults"]}
         )
+        self.assertNotIn("down from", theme["p#theme-plant"])
 
     def test_more_contrast_holds_an_icon_to_its_raised_rung(self):
         answers = DONE["fault"][3]["answers"]
