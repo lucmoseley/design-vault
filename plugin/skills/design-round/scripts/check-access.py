@@ -114,8 +114,12 @@ check-layout.py does, and measures each question at both:
 - vault.theme-contrast: the page is loaded again in a dark scheme and under
   prefers-contrast: more, and each one that changes any colour the page draws
   is measured as the light page is, for vault.contrast, vault.control-edges
-  and the questions above, text held to the ladder's aim line under more
-  contrast; each fault there is this question's;
+  and the questions above, every role held to its top rung under more
+  contrast: text to the ladder's aim line, every other role to its more line;
+  each fault there is this question's, as is each part, by subject and role,
+  read in light and dark whose worst ratio sits on a lower rung of the
+  ladder in dark, a rung being the highest of its role's floor and top it
+  clears, capped at the top;
 - vault.keyboard: Tab walks the page from its top to its end, then Shift+Tab
   walks it back. Every part a pointer can work must take
   focus: a link, button, form control or ARIA widget, or an element with a
@@ -1440,7 +1444,9 @@ def pause_answer(context, url):
 
 def judge(got, shots, measured, table):
     """One width's {question id: access-answers.py's Judged}, with `measured`
-    holding those other calls' Judged."""
+    holding those other calls' Judged, and access-contrast.py's Reading for
+    each text and control edge read and not faulted."""
+    readings = []
     out = {qid: answering.Judged([], [], [], []) for qid, _ in answering.QUESTIONS}
     shot, ink, held, sizes = shots.shot, shots.ink, shots.held, shots.sizes
     # A fault read over the whole box is otherwise taken for one under the letters (#290).
@@ -1459,7 +1465,9 @@ def judge(got, shots, measured, table):
     for text, read_on, held_on in read + got["focused"]:
         if text.get("under"):
             under.setdefault(text["under"], []).append(text["subject"])
-        fault, why = maths.text_contrast(*read_on, text, table.floors, held=held_on)
+        fault, why, worst = maths.text_reading(
+            *read_on, text, table.floors, held=held_on
+        )
         if text["logotype"]:
             if fault or why:
                 out["vault.contrast"].exempt.append(
@@ -1476,6 +1484,13 @@ def judge(got, shots, measured, table):
             )
         if why:
             out["vault.contrast"].unmeasured.append(why)
+        if worst is not None:
+            big = maths.large(text["size"], text["weight"], table.floors)
+            readings.append(
+                contrasts.Reading(
+                    text["subject"], "large text" if big else "text", worst
+                )
+            )
     out["vault.contrast"].unmeasured.extend(
         f"{subject} is generated text in a Tab stop hidden at rest, which is read only "
         "focused, and generated text is not read there"
@@ -1517,12 +1532,14 @@ def judge(got, shots, measured, table):
                     "detail": f"shows {by} at {edge.ratio:.2f}:1 at best against {maths.hexed(edge.behind)} behind that; {table.edge:g}:1 needed",
                 }
             )
+        elif edge.box is not None:
+            readings.append(contrasts.Reading(subject, "control edge", edge.ratio))
     out["vault.target-size"].faults.extend(got["targetFaults"])
     out["vault.colour-script"].faults.extend(got["linkFaults"])
     for qid, judged in measured.items():
         for mine, theirs in zip(out[qid], judged, strict=True):
             mine.extend(theirs)
-    return out
+    return out, readings
 
 
 class BadSelectorError(Exception):
@@ -1579,20 +1596,22 @@ def read_texts(page, logotype):
     return got, shots
 
 
-def contrast_answers(page, at, texts):
-    """access-contrast.py's {question id: Judged} for a settled page."""
-    found = contrasts.measure(
-        page, contrast_js, at.table, parts=at.parts, absent=at.absent, texts=texts
+def contrast_answers(page, at, texts, table):
+    """access-contrast.py's {question id: Judged} for a settled page, held to
+    `table`, and its Readings."""
+    found, readings = contrasts.measure(
+        page, contrast_js, table, parts=at.parts, absent=at.absent, texts=texts
     )
     if "bad" in found:
         raise BadSelectorError("--parts", found["bad"])
-    return found
+    return found, readings
 
 
-def theme_answer(browser, at, width, height, *, light, answered):
+def theme_answer(browser, at, width, height, *, light, answered, readings):
     """vault.theme-contrast's Judged at one width: each scheme in contrasts.SCHEMES
     that changes a colour the `light` signature holds, measured as the light
-    page is, past what the light page's `answered` already finds."""
+    page is, past what the light page's `answered` already finds, and in dark
+    each part a rung lower than the light page's `readings` put it."""
     out, shipped = answering.unjudged(), []
     for name, options in contrasts.SCHEMES:
         context, page, _ = open_page(browser, at, width, height, **options)
@@ -1600,16 +1619,15 @@ def theme_answer(browser, at, width, height, *, light, answered):
             if contrasts.signature(page, contrast_js) == light:
                 continue
             shipped.append(name)
+            table = contrasts.scheme_table(name, at.table)
             got, shots = read_texts(page, at.logotype)
-            judged = judge(
-                got,
-                shots,
-                {},
-                at.table._replace(floors=contrasts.scheme_floors(name, at.table)),
-            )
-            found = contrasts.scheme(
-                name, judged, contrast_answers(page, at, None), answered
-            )
+            judged, read = judge(got, shots, {}, table)
+            measured, more = contrast_answers(page, at, None, table)
+            found = contrasts.scheme(name, judged, measured, answered)
+            if name == "dark":
+                found.faults.extend(
+                    contrasts.rung_drops(readings, read + more, at.table)
+                )
             for mine, theirs in zip(out, found, strict=True):
                 mine.extend(theirs)
         finally:
@@ -1638,7 +1656,7 @@ def run(at):
             context, page, loops = open_page(browser, at, width, height)
             looping = max(looping, loops)
             got, shots = read_texts(page, at.logotype)
-            measured = contrast_answers(page, at, (got, shots))
+            measured, read = contrast_answers(page, at, (got, shots), at.table)
             light = contrasts.signature(page, contrast_js)
             merge(measured, tab_walk(page, at.carousels))
             measured["vault.pause"] = answering.Judged(
@@ -1651,9 +1669,15 @@ def run(at):
                 ),
             )
             context.close()
-            answered = judge(got, shots, measured, at.table)
+            answered, judged = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(
-                browser, at, width, height, light=light, answered=answered
+                browser,
+                at,
+                width,
+                height,
+                light=light,
+                answered=answered,
+                readings=judged + read,
             )
             found.append((name, answered))
     return found, looping
