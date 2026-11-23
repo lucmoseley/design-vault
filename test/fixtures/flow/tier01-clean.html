@@ -112,10 +112,7 @@
   // On release, the snap point nearest the position the release velocity
   // (over the 100 ms of moves before it, by the events' own clock) projects
   // to, reached on a critically damped spring that starts at the release
-  // velocity, stiff enough never to pass its rest. Its clock starts at its
-  // first frame, since a frame's time is when the frame began, which can
-  // precede the release's handler (#510): MDN, requestAnimationFrame,
-  // https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
+  // velocity, stiff enough never to pass its rest.
   const card = document.querySelector('.card');
   const SNAPS = [0, 300];
   let x = 0, from = null, base = 0, moves = [], spring = 0;
@@ -141,7 +138,7 @@
     const w = Math.max(0.01, d0 && v0 * d0 < 0 ? Math.abs(v0 / d0) : 0);
     let t0 = null;
     const step = (now) => {
-      t0 ??= now;
+      t0 ??= now; // #510
       const t = now - t0;
       const off = (d0 + (v0 + w * d0) * t) * Math.exp(-w * t);
       if (Math.abs(off) < 0.5 && t > 50) { place(to); return; }

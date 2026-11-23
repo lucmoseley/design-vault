@@ -1,6 +1,6 @@
 """check-flow.py, with each pointer event reaching the page late: a press
 LATE_PRESS_MS, any other LATE_MOVE_MS; and with the page's main thread held
-BUSY_RELEASE_MS at each release, before the page's own handler runs (#510):
+BUSY_RELEASE_MS at each release, before the page's own handler runs:
 python3 test/late-input.py <check-flow args>
 
 check-flow-records.test.py runs the clean page's drag-release through it.
