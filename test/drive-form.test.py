@@ -43,11 +43,12 @@ flow = library(
 PAGE_FILE = pathlib.Path(HERE, "fixtures", "drivers", "form.html").resolve()
 PAGE = PAGE_FILE.as_uri()
 OPEN = contextlib.ExitStack()
-BROWSER = []
+BROWSER = None
 
 
 def setUpModule():
-    BROWSER.append(OPEN.enter_context(flow.chromium()))
+    global BROWSER
+    BROWSER = OPEN.enter_context(flow.chromium())
 
 
 def tearDownModule():
@@ -56,7 +57,7 @@ def tearDownModule():
 
 class OnThePage(unittest.TestCase):
     def setUp(self):
-        self.page = BROWSER[0].new_page()
+        self.page = BROWSER.new_page()
         self.addCleanup(self.page.close)
         self.page.goto(PAGE)
 
@@ -304,7 +305,7 @@ class InFlight(unittest.TestCase):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
-        page = BROWSER[0].new_page()
+        page = BROWSER.new_page()
         self.addCleanup(page.close)
         page.goto(f"http://127.0.0.1:{server.server_port}/form.html")
         driver.fill(page, "#remote")
