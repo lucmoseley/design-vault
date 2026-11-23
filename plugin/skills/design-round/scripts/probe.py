@@ -1437,19 +1437,7 @@ def page_arguments(p, out_file):
     where `out_file` goes, the parts, the widths and the load timeout."""
     p.add_argument("url", help="an http(s) URL, or a local HTML file")
     p.add_argument("--out", required=True, metavar="DIR", help=f"where {out_file} goes")
-    p.add_argument(
-        "--parts",
-        dest="declaration",
-        metavar="FILE",
-        help=f"the building session's parts declaration, {DECLARATION}",
-    )
-    p.add_argument(
-        "--part",
-        action="append",
-        default=[],
-        metavar="NAME=SELECTOR",
-        help="a declared part's name and its CSS selector, for part: lines",
-    )
+    part_arguments(p)
     p.add_argument("--step", type=int, default=layout.GATE_STEP, metavar="PX")
     p.add_argument(
         "--widths",
@@ -1477,6 +1465,29 @@ def page_options(p, at):
         p.error(
             f"--widths wants LOW-HIGH within {layout.LOW}-{layout.HIGH}, e.g. 1100-1340 — got {at.widths!r}"
         )
+    return part_options(p, at)
+
+
+def part_arguments(p):
+    """--parts FILE and --part NAME=SELECTOR, read by part_options."""
+    p.add_argument(
+        "--parts",
+        dest="declaration",
+        metavar="FILE",
+        help=f"the building session's parts declaration, {DECLARATION}",
+    )
+    p.add_argument(
+        "--part",
+        action="append",
+        default=[],
+        metavar="NAME=SELECTOR",
+        help="a declared part's name and its CSS selector, for part: lines",
+    )
+
+
+def part_options(p, at):
+    """Sets at.parts from part_arguments' values, the declaration first and
+    each --part winning, and returns the parts declared with no selector."""
     at.parts, unselected = {}, set()
     if at.declaration:
         try:
