@@ -54,9 +54,9 @@ pathlib.Path(NO_CHANGE).write_text(
     "vault.fluid-type | zoom | 1\n"
     "vault.fluid-type | size | 1\n"
 )
-# The live table and the check #515 holds while the whole-page critic answers vault.visible-nav.
-RECORDS_TABLE = os.path.join(SCRATCH.name, "records.table")
-pathlib.Path(RECORDS_TABLE).write_text(
+# #515
+TABLE_WITH_VISIBLE_NAV = os.path.join(SCRATCH.name, "records.table")
+pathlib.Path(TABLE_WITH_VISIBLE_NAV).write_text(
     pathlib.Path(layout.TABLE).read_text()
     + "vault.visible-nav | visible-nav | at most 4 links\n"
 )
@@ -69,7 +69,7 @@ RECORDS = [
     "310",
     "--records",
     "--table",
-    RECORDS_TABLE,
+    TABLE_WITH_VISIBLE_NAV,
 ]
 RECORD_FACTS = [
     "--parts",
@@ -942,7 +942,9 @@ records = layout.records
 def record_modes():
     """{record: [mode…]} from the table's record lines."""
     out = {}
-    for m in layout.parse_table(pathlib.Path(RECORDS_TABLE).read_text()).values():
+    for m in layout.parse_table(
+        pathlib.Path(TABLE_WITH_VISIBLE_NAV).read_text()
+    ).values():
         if m.name in records.CHECKS:
             out.setdefault(m.id, []).append(m.name)
     return out
@@ -1003,7 +1005,7 @@ class RecordUnits(unittest.TestCase):
         # The one value no record states, named on #311's resolution: a Face ID
         # iPhone's portrait bottom inset.
         untraced = {("vault.bottom-safe-area", 34)}
-        for line in pathlib.Path(RECORDS_TABLE).read_text().splitlines():
+        for line in pathlib.Path(TABLE_WITH_VISIBLE_NAV).read_text().splitlines():
             fields = [f.strip() for f in line.split("|")]
             if len(fields) != 3 or fields[1] not in records.CHECKS:
                 continue
