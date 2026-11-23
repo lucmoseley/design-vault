@@ -4,7 +4,8 @@ It is a suite of the commit gate (test/all.sh): loosening it lets a page pass
 a computed-style record it misses, or fail one it meets.
 test/fixtures/probe/style-fault.html plants one fault per record, on an
 element whose id is f- and the record's name, and every record must fail on
-its plant, or on the whole selection where WHOLE names it.
+its plant, or on the whole selection where WHOLE names it. A record's
+extra plants take f-<record>-<variant>.
 test/fixtures/probe/style-clean.html meets every record but those UNMET names,
 and nothing may fail or go unjudged there.
 """
