@@ -1736,7 +1736,10 @@ class HungCalls(unittest.TestCase):
                 page = browser.new_page()
                 (pid,) = flow.browser_pids(flow.descendants(os.getpid()))
                 os.kill(pid, signal.SIGKILL)
+                end = time.monotonic() + CASE_LIMIT_S
                 while flow.process_args(pid):
+                    if time.monotonic() > end:
+                        raise AssertionError(f"browser {pid} still running")
                     time.sleep(KILL_POLL_S)
                 page.evaluate("1 + 1")
 
@@ -1880,8 +1883,13 @@ class RendererDeath(unittest.TestCase):
     def test_another_call_raising_with_no_page_open_is_not(self):
         self.assertIsNone(self.death("new_cdp_session", page_open=False))
 
-    def test_another_call_raising_with_a_page_open_is(self):
-        self.assertIsNotNone(self.death("new_cdp_session", page_open=True))
+    def test_another_call_raising_with_a_page_open_is_a_renderer_death_naming_the_call(
+        self,
+    ):
+        self.assertRegex(
+            self.death("new_cdp_session", page_open=True) or "",
+            r"^BrowserContext\.new_cdp_session at check-flow\.test\.py:\d+ raised ",
+        )
 
 
 class Sweep(unittest.TestCase):
