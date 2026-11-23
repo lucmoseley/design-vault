@@ -247,6 +247,46 @@ class Chart(unittest.TestCase):
         self.assertEqual(self.chart([0x33] * 3), [])
 
 
+class Slides(unittest.TestCase):  # #427
+    LIGHT = contrasts.Figure(1.2, np.array([255.0] * 3), np.array([0xF2] * 3))
+    DARK = contrasts.Figure(9.0, np.array([255.0] * 3), np.array([0x22] * 3))
+
+    def verdict(self, readings):
+        photo = contrasts.answering.unjudged()
+        contrasts.photo_verdict(photo, readings, TABLE)
+        return photo
+
+    def test_a_control_takes_its_worst_figure_over_every_slide(self):
+        photo = self.verdict(
+            [
+                (None, [("button#save", self.DARK)]),
+                ("on its slide 2 of 2", [("button#save", self.LIGHT)]),
+            ]
+        )
+        (fault,) = photo.faults
+        self.assertEqual(fault["subject"], "button#save")
+        self.assertIn(
+            "1.20:1 at best on its slide 2 of 2 (#ffffff against #f2f2f2",
+            fault["detail"],
+        )
+
+    def test_a_control_that_holds_on_every_slide_passes(self):
+        photo = self.verdict(
+            [
+                (None, [("button#save", self.DARK)]),
+                ("on its slide 2 of 2", [("button#save", self.DARK)]),
+            ]
+        )
+        self.assertEqual((photo.faults, photo.unmeasured), ([], []))
+
+    def test_a_reason_seen_on_several_slides_is_named_once_where_first_seen(self):
+        why = "lies over a video, which a script draws"
+        photo = self.verdict(
+            [(None, [("a#play", why)]), ("on its slide 2 of 2", [("a#play", why)])]
+        )
+        self.assertEqual(photo.unmeasured, [f"a#play {why}"])
+
+
 PLANT = re.compile(
     r'id="([^"]+)" data-record="([^"]+)"|data-record="([^"]+)"[^>]*id="([^"]+)"'
 )
@@ -260,7 +300,7 @@ class EndToEnd(unittest.TestCase):
             os.path.join(FIXTURES, "contrast-tier01-fault.html"), encoding="utf8"
         ) as fh:
             plants = [(m[0] or m[3], m[1] or m[2]) for m in PLANT.findall(fh.read())]
-        self.assertEqual(len(plants), 11)
+        self.assertEqual(len(plants), 13)
         for plant, record in plants:
             with self.subTest(plant):
                 subjects = [f["subject"] for f in found["answers"][record]["faults"]]
@@ -275,6 +315,21 @@ class EndToEnd(unittest.TestCase):
             "div#dots-plant holds 3 page dots that differ by opacity alone", out
         )
         self.assertIn("mark it by fill, size or shape", out)
+
+    def test_a_control_that_fails_on_a_later_slide_alone_is_named_on_that_slide(
+        self,
+    ):  # #427
+        photo = DONE["fault"][3]["answers"]["vault.controls-on-photo"]
+        faults = {f["subject"]: f["detail"] for f in photo["faults"]}
+        # The next button's slide 1 shows again on its second press, so no slide is left unread.
+        self.assertEqual(photo["unmeasured"], [])
+        self.assertIn(
+            "at best on div#deck-dots's slide 2 of 2 (", faults["button#slide-plant"]
+        )
+        self.assertIn(
+            "at best on div#deck-next's slide 2, reached by its next button (",
+            faults["button#next-plant"],
+        )
 
     def test_a_thin_face_short_of_the_ladders_aim_is_a_note_not_a_fault(self):
         ladder = DONE["fault"][3]["answers"]["vault.contrast-ladder"]
@@ -325,8 +380,16 @@ class Undeclared(unittest.TestCase):  # #429, #453
                 "no chart was declared",
                 ["figure#chart > svg", "canvas#spark", "svg#bars", "svg#nest"],
             ),
-            ("vault.controls-on-photo", "no carousel was declared", ["ul.dots"]),
-            ("vault.carousel-focus", "no carousel was declared", ["ul.dots"]),  # #453
+            (
+                "vault.controls-on-photo",
+                "no carousel was declared",
+                ["ul.dots", "ul.pips"],
+            ),
+            (
+                "vault.carousel-focus",
+                "no carousel was declared",
+                ["ul.dots", "ul.pips"],
+            ),  # #453
         ):
             with self.subTest(qid):
                 reasons = [u["reason"] for u in answers[qid]["unmeasured"]]

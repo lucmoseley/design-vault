@@ -9,6 +9,9 @@ check-access.py calls, at each width:
     keys.walked(page, js, readings, unseen)   # after the walk: the answers it settles
     keys.driven(context, url, js, carousels, mouse=...)  # a fresh load: the answers that press keys or the mouse
 
+access-contrast.py calls keys.still(handle) to wait out a slide's transition, and builds on SIG_JS to tell slides
+apart.
+
 `js` wraps a page-side body with check-access.py's helpers (label, shown, TARGET, visiblePart and the rest);
 `carousels` are the CSS selectors the parts declaration gives the carousel part. Each answer is a
 {question id: access-answers.py's Judged}.
@@ -759,7 +762,7 @@ def _change(page, handle, within_ms):
         handle.evaluate("(e) => { e.__watch.on = false; }")
 
 
-def _still(handle):
+def still(handle):
     """Waits until no box inside the carousel has moved or faded for ROTATE_POLL_MS of frames, as after a
     slide's transition; False at ROTATE_MS. Read in the page, as two shots that far apart never match on a
     loaded machine, where one shot outlasts the gap between a fast carousel's turns."""
@@ -789,7 +792,7 @@ def _carousels(page, js, carousels):
                     }
                 )
             page.evaluate(BLUR_JS)
-            _still(handle)
+            still(handle)
             try:
                 pointer.hover(page, handle)
                 if _change(page, handle, hold) is not None:
@@ -821,12 +824,12 @@ def _span(page, handle):
     why it cannot be timed."""
     if _change(page, handle, ROTATE_MS) is None:
         return None
-    if not _still(handle):
+    if not still(handle):
         return f"never holds still for {ROTATE_POLL_MS} ms within {ROTATE_MS} ms, so its rotation cannot be timed"
     span = _change(page, handle, ROTATE_MS)
     if span is None:
         return f"changed once and then held for {ROTATE_MS} ms, so its rotation cannot be timed"
-    _still(handle)
+    still(handle)
     return span
 
 

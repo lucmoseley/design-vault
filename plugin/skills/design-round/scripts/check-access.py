@@ -88,7 +88,12 @@ check-layout.py does, and measures each question at both:
   and icons) against the colours next to it, or its own fill or border against
   those outside it, at the table's figure, so its own backdrop, halo or shadow
   counts and the image's worst pixel beside it decides. One over a video or
-  canvas cannot be measured. In the declared carousel, a row of two or more
+  canvas cannot be measured. Where a control lies on a photo at load and a
+  carousel is declared, a fresh load presses each of its page dots in turn,
+  else its next button until a slide shows again, up to MAX_SLIDES, and each
+  control's worst figure over every slide decides, the fault naming that
+  slide; a carousel with neither cannot be measured past the slide it shows
+  at load. In the declared carousel, a row of two or more
   controls drawing no text or icon, its page dots, must hold one that differs
   by more than opacity. With no carousel declared, each such row on the page
   whose names match but for a number ("Slide 1", "Slide 2", or none) cannot
@@ -1546,9 +1551,15 @@ def open_page(browser, at, width, height, **scheme):
     )
     context.set_default_timeout(at.timeout)
     context.add_init_script(LISTEN_JS)
+    return (context, *load(context, at.url))
+
+
+def load(context, url):
+    """A new page in `context`, loaded and settled, with how many looping
+    animations never finish."""
     page = context.new_page()
-    page.goto(at.url, wait_until="load")
-    return context, page, page.evaluate(layout.SETTLE_JS)
+    page.goto(url, wait_until="load")
+    return page, page.evaluate(layout.SETTLE_JS)
 
 
 def read_texts(page, logotype):
@@ -1582,7 +1593,13 @@ def read_texts(page, logotype):
 def contrast_answers(page, at, texts):
     """access-contrast.py's {question id: Judged} for a settled page."""
     found = contrasts.measure(
-        page, contrast_js, at.table, parts=at.parts, absent=at.absent, texts=texts
+        page,
+        contrast_js,
+        at.table,
+        parts=at.parts,
+        absent=at.absent,
+        texts=texts,
+        fresh=lambda: load(page.context, at.url)[0],
     )
     if "bad" in found:
         raise BadSelectorError("--parts", found["bad"])

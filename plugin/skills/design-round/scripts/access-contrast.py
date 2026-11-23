@@ -6,8 +6,10 @@ docstring says what each question asks of a page.
 check-access.py calls, at each width:
 
     contrasts.parse_table(text)                       # check-access-contrast.table's figures, once
-    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts)  # the page at rest, after its own contrast shots: the answers,
-                                                                                  # and vault.carousel-focus's for undeclared page dots
+    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts, fresh=fresh)
+                                                      # the page at rest, after its own contrast shots, and the declared
+                                                      # carousel's slides on fresh(), a new load: the answers, and
+                                                      # vault.carousel-focus's for undeclared page dots
     contrasts.signature(page, js)                     # the colours the page draws in, to tell a scheme it ships
     contrasts.scheme(name, judged, measured, light)   # one scheme's vault.theme-contrast, from its own judge() and measure()
 
@@ -15,7 +17,9 @@ check-access.py calls, at each width:
 parts declaration's {name: selector} and `absent` the names it declares null; `texts` is the light page's (MEASURE_JS's result, its Shots), or None in a scheme's pass, which takes no thin-face notes.
 
 Its I/O is the Playwright page it is handed: it marks elements with data-contrast-* attributes and injected styles, and
-takes them off again, leaving only its window.__contrast* lists.
+takes them off again, leaving only its window.__contrast* lists. The carousel's slides are pressed through on the page
+fresh() gives, which it closes, so the page at rest is left showing what it showed at load. Where no carousel is
+declared, the image under a control is the one the page shows: a slot whose image a build may swap is read as built.
 """
 
 import collections
@@ -40,6 +44,7 @@ def _sibling(name):
 
 
 answering = _sibling("access-answers.py")
+keys = _sibling("access-keys.py")
 maths = _sibling("access-pixels.py")
 face = _sibling("face-profile.py")
 
@@ -81,6 +86,9 @@ SCHEMES = (("dark", {"color_scheme": "dark"}), ("more contrast", {"contrast": "m
 # control edges read 2 px outside a box. A guess, unmeasured: a halo or backdrop of 3 px or more is read as the
 # glyph's ground, a thinner one as the image's.
 RING_PX = 3
+# The most slides of one declared carousel read: past it, the rest are named unread. A guess, unmeasured: a hero
+# carousel holds a handful.
+MAX_SLIDES = 12
 # Two hued colours share a hue within this many degrees of OKLCH hue. A guess, unmeasured: a USWDS family spans about
 # this much.
 HUE_SAME = 30
@@ -162,6 +170,26 @@ STRIP_JS = """
 () => document.querySelectorAll('[data-contrast-glyph], [data-contrast-box], [data-contrast-chart]').forEach(
   (el) => ['data-contrast-glyph', 'data-contrast-box', 'data-contrast-chart'].forEach((a) => el.removeAttribute(a)))
 """
+
+# Stops a click on a link to another document from leaving the page, so a carousel's page dots or next button can be
+# pressed whatever they are; a link to a place in the page still goes there, as a :target carousel's do.
+STAY_JS = """
+() => addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('a[href]');
+  if (a && a.href.split('#')[0] !== location.href.split('#')[0]) e.preventDefault();
+}, true)
+"""
+# Presses declared carousel n's page dot k, or its next button where k is null, and gives the page's scroll before.
+PRESS_JS = """
+([n, k]) => {
+  const c = window.__contrastCarousels[n], at = [scrollX, scrollY];
+  (k === null ? c.next : c.dots[k]).click();
+  return at;
+}
+"""
+BACK_JS = "([x, y]) => scrollTo({ left: x, top: y, behavior: 'instant' })"
+# What carousel e shows, as access-keys's SIG_JS reads it: two slides read alike are one.
+SLIDE_JS = "(e, limit) => {" + keys.SIG_JS + "  return sig();\n}"
 
 # With no chart declared (#429), the longest side, in px, of a canvas or SVG left out as an icon rather than listed
 # as what may be a chart, and the fewest shapes an SVG draws to be listed: a bar chart's three bars, or an axis and
@@ -265,6 +293,18 @@ MARK_JS = r"""
   const strayDots = !undeclared.carousel ? [] : dotRows(document)
     .filter(([, row]) => new Set(row.map(unnumbered)).size === 1 && !row.some(glyph))
     .map(([parent, row]) => ({ subject: label(parent), count: row.length }));
+  // Each declared carousel's way to its other slides: its first row of page dots named as none of its previous and
+  // next buttons are, else its next button.
+  const nameOf = (el) => (el.getAttribute('aria-label') || el.title || el.textContent || el.value || '').trim();
+  const step = /\b(prev|previous|next|back|forward)\b|^\s*[‹›←→<>]\s*$/i, ahead = /\b(next|forward)\b|^\s*[›→>]\s*$/i;
+  window.__contrastCarousels = [];
+  const slides = [];
+  for (const sel of carousels) for (const c of document.querySelectorAll(sel)) {
+    const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => step.test(nameOf(e)))) || [];
+    const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && ahead.test(nameOf(e))) || null;
+    window.__contrastCarousels.push({ el: c, dots: row, next });
+    slides.push({ subject: label(c), dots: row.length, next: !!next });
+  }
 
   // Custom checkboxes, radios and switches, each with the box its state is drawn in: its own, or its labels' where
   // it is hidden and they draw it. A native one the browser draws is left out, as is a radio not checked, since
@@ -377,11 +417,12 @@ MARK_JS = r"""
   }
 
   // Controls told from the ground around them by nothing but a shadow, a gradient or a fill, with no border drawn
-  // on all four sides, past MEASURE_JS's Tab stops hidden at rest, which show no edge there.
+  // on all four sides, past the Tab stops hidden at rest, which show no edge there.
+  const resting = restingStops();
   const forced = [];
   window.__contrastForced = [];
   for (const el of document.querySelectorAll(CONTROL + ', [role=switch], [role=option]')) {
-    if (!shown(el) || disabled(el) || empty(rectOf(el)) || window.__resting.some((r) => r.contains(el))) continue;
+    if (!shown(el) || disabled(el) || empty(rectOf(el)) || resting.some((r) => r.contains(el))) continue;
     const cs = css(el);
     if (SIDES.every((s) => drawnSide(cs, s) && painted(cs[`border${s}Color`]))) continue;
     const ground = backdrop(el.parentElement).slice(0, 3).join();
@@ -391,7 +432,7 @@ MARK_JS = r"""
     forced.push({ subject: label(el), by });
     window.__contrastForced.push(el);
   }
-  return { photo, iconOnly, dots, strayDots, states, fills, charts: chartsOut, strayCharts, forced };
+  return { photo, iconOnly, dots, strayDots, slides, states, fills, charts: chartsOut, strayCharts, forced };
 }
 """
 
@@ -767,18 +808,14 @@ def _thin_notes(page, js, table, texts):
     return notes
 
 
-def measure(page, js, table, *, parts, absent, texts):
-    """The page's {question id: Judged} for QUESTIONS, at rest, and vault.carousel-focus's cannot-measure reason for
-    each row of page dots where no carousel was declared."""
-    out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
-    charts = [parts["chart"]] if "chart" in parts else []
-    carousels = [parts["carousel"]] if "carousel" in parts else []
+def _mark(page, js, parts, absent):
+    """MARK_JS's result for the page as it stands, its earlier marks taken off first."""
     page.evaluate(STRIP_JS)
-    got = page.evaluate(
+    return page.evaluate(
         js(MARK_JS),
         {
-            "charts": charts,
-            "carousels": carousels,
+            "charts": [parts["chart"]] if "chart" in parts else [],
+            "carousels": [parts["carousel"]] if "carousel" in parts else [],
             "undeclared": {
                 p: p not in parts and p not in absent for p in ("chart", "carousel")
             },
@@ -786,6 +823,160 @@ def measure(page, js, table, *, parts, absent, texts):
             "STRAY_CHART_MARKS": STRAY_CHART_MARKS,
         },
     )
+
+
+def photo_reading(c, *, drawn, glyph, boxed, taken):
+    """Control `c`'s best Figure on a photo, its glyph's or its own box's, or why it has none."""
+    if c["why"]:
+        return c["why"]
+    figures = [
+        f
+        for f in (
+            glyph_figure(drawn, glyph, c["rect"]),
+            box_figure(drawn, boxed, taken, c["rect"]) if c["box"] else None,
+        )
+        if f
+    ]
+    if not figures:
+        return "shows no glyph or edge the check can find"
+    return max(figures, key=lambda f: f.ratio)
+
+
+def _photo_now(page, js, parts, absent):
+    """[(subject, photo_reading)] for each control on a photo as the page now stands, or None where the page changed
+    size between its shots."""
+    photo = _mark(page, js, parts, absent)["photo"]
+    if not photo:
+        return []
+    drawn = _shoot(page)
+    glyph = _recoloured(page, GLYPH_CSS)
+    boxed = _recoloured(page, BOX_CSS) if any(c.get("box") for c in photo) else None
+    if (
+        glyph is None
+        or glyph.shape != drawn.shape[:2]
+        or (boxed is not None and boxed.shape != drawn.shape[:2])
+    ):
+        return None
+    taken = glyph | (boxed if boxed is not None else False)
+    return [
+        (
+            c["subject"],
+            photo_reading(c, drawn=drawn, glyph=glyph, boxed=boxed, taken=taken),
+        )
+        for c in photo
+    ]
+
+
+def _press(page, handle, n, k):
+    """Presses carousel n's page dot k, or its next button where k is None; False where it never holds still after."""
+    at = page.evaluate(PRESS_JS, [n, k])
+    settled = keys.still(handle)
+    page.evaluate(BACK_JS, at)
+    return settled
+
+
+def slide_readings(page, js, parts, absent):
+    """Each declared carousel's slides on `page`, a fresh load, each reached by pressing its page dots in turn, else
+    its next button until a slide shows again: [(where, _photo_now's list)], and why any slide went unread."""
+    page.evaluate(STAY_JS)
+    readings, unread = [], []
+
+    def read(subject, where, held):
+        if not held:
+            unread.append(
+                f"{subject} never held still after {where}, so that slide was not read"
+            )
+            return
+        got = _photo_now(page, js, parts, absent)
+        if got is None:
+            unread.append(
+                f"the page changed size between its shots {where}, so its controls were not read"
+            )
+        else:
+            readings.append((where, got))
+
+    for n, deck in enumerate(_mark(page, js, parts, absent)["slides"]):
+        subject = deck["subject"]
+        handle = page.evaluate_handle(
+            "(n) => window.__contrastCarousels[n].el", n
+        ).as_element()
+        if deck["dots"]:
+            count = min(deck["dots"], MAX_SLIDES)
+            for k in range(count):
+                read(
+                    subject,
+                    f"on {subject}'s slide {k + 1} of {deck['dots']}",
+                    _press(page, handle, n, k),
+                )
+            if deck["dots"] > count:
+                unread.append(
+                    f"{subject} holds {deck['dots']} page dots, so its slides past {count} were not read"
+                )
+        elif deck["next"]:
+            seen = {handle.evaluate(SLIDE_JS, keys.WATCH_LIMIT)}
+            for pressed in range(1, MAX_SLIDES + 1):
+                where = (
+                    f"on {subject}'s slide {pressed + 1}, reached by its next button"
+                )
+                if not _press(page, handle, n, None):
+                    read(subject, where, False)
+                    break
+                shows = handle.evaluate(SLIDE_JS, keys.WATCH_LIMIT)
+                if shows in seen:
+                    break
+                seen.add(shows)
+                read(subject, where, True)
+            else:
+                unread.append(
+                    f"{subject} still showed a new slide after {MAX_SLIDES} presses of its next button, so its later "
+                    "slides were not read"
+                )
+        else:
+            unread.append(
+                f"{subject} shows no page dots or next button the check can press, so only the slide it shows at load "
+                "was read"
+            )
+    return readings, unread
+
+
+def photo_verdict(photo, readings, table):
+    """Adds to `photo`, vault.controls-on-photo's Judged, each control's worst figure across `readings`, a list of
+    (where, [(subject, photo_reading)]) with where None at load, and each reason one went unread."""
+    by = {}
+    for where, got in readings:
+        for subject, reading in got:
+            by.setdefault(subject, []).append((where, reading))
+    for subject, seen in by.items():
+        reasons = {}
+        for where, reading in seen:
+            if isinstance(reading, str):
+                reasons.setdefault(reading, where)
+        photo.unmeasured.extend(
+            f"{subject} {why}" + (f", {where}" if where else "")
+            for why, where in reasons.items()
+        )
+        figures = [(where, r) for where, r in seen if isinstance(r, Figure)]
+        if not figures:
+            continue
+        where, worst = min(figures, key=lambda wf: wf[1].ratio)
+        if worst.ratio < table.photo:
+            photo.faults.append(
+                {
+                    "subject": subject,
+                    "detail": f"sits on a photo and shows {worst.ratio:.2f}:1 at best"
+                    + (f" {where}" if where else "")
+                    + f" ({maths.hexed(worst.colour)} against {maths.hexed(worst.next)} next to it); "
+                    f"{table.photo:g}:1 needed, by a backdrop, halo or shadow of its own",
+                }
+            )
+
+
+def measure(page, js, table, *, parts, absent, texts, fresh):
+    """The page's {question id: Judged} for QUESTIONS, at rest and, for vault.controls-on-photo, on each slide of the
+    declared carousel, read on the page `fresh()` loads; and vault.carousel-focus's cannot-measure reason for each row
+    of page dots where no carousel was declared."""
+    out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
+    got = _mark(page, js, parts, absent)
     if "bad" in got:
         return got
     photo, ladder, fills, chart_q, forced = (
@@ -819,6 +1010,7 @@ def measure(page, js, table, *, parts, absent, texts):
     )
 
     glyphs = got["photo"] + got["iconOnly"]
+    readings = []
     if glyphs:
         drawn = _shoot(page)
         glyph = _recoloured(page, GLYPH_CSS)
@@ -838,35 +1030,20 @@ def measure(page, js, table, *, parts, absent, texts):
                 )
         else:
             taken = glyph | (boxed if boxed is not None else False)
-            for c in got["photo"]:
-                if c["why"]:
-                    photo.unmeasured.append(f"{c['subject']} {c['why']}")
-                    continue
-                figures = [
-                    f
-                    for f in (
-                        glyph_figure(drawn, glyph, c["rect"]),
-                        box_figure(drawn, boxed, taken, c["rect"])
-                        if c["box"]
-                        else None,
-                    )
-                    if f
-                ]
-                if not figures:
-                    photo.unmeasured.append(
-                        f"{c['subject']} shows no glyph or edge the check can find"
-                    )
-                    continue
-                best = max(figures, key=lambda f: f.ratio)
-                if best.ratio < table.photo:
-                    photo.faults.append(
-                        {
-                            "subject": c["subject"],
-                            "detail": f"sits on a photo and shows {best.ratio:.2f}:1 at best ({maths.hexed(best.colour)} "
-                            f"against {maths.hexed(best.next)} next to it); {table.photo:g}:1 needed, by a backdrop, "
-                            "halo or shadow of its own",
-                        }
-                    )
+            readings.append(
+                (
+                    None,
+                    [
+                        (
+                            c["subject"],
+                            photo_reading(
+                                c, drawn=drawn, glyph=glyph, boxed=boxed, taken=taken
+                            ),
+                        )
+                        for c in got["photo"]
+                    ],
+                )
+            )
             for c in got["iconOnly"]:
                 f = glyph_figure(drawn, glyph, c["rect"])
                 if f is None:
@@ -954,6 +1131,16 @@ def measure(page, js, table, *, parts, absent, texts):
                     }
                 )
     page.evaluate(STRIP_JS)
+
+    if got["photo"] and got["slides"]:
+        slid = fresh()
+        try:
+            more, unread = slide_readings(slid, js, parts, absent)
+        finally:
+            slid.close()
+        readings += more
+        photo.unmeasured.extend(unread)
+    photo_verdict(photo, readings, table)
     return out
 
 
