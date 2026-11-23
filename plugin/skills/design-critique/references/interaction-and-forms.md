@@ -23,11 +23,12 @@ Record: `vault.drag-tracking`.
 
 ### A released drag follows its throw
 
-Record: `vault.drag-release`.
+Records: `vault.drag-release`, `vault.drag-release-spring-code`.
 
 - **Why.** Picking the snap point nearest the release position ignores the flick: a light throw toward a corner lands back where it started. Projecting the position from the release velocity, as scrolling decelerates, lands it where the visitor aimed (Apple, WWDC 2018). A spring starts at any velocity, so the motion picks up where the hand left off; with no bounce it is the general-purpose default (Apple, WWDC 2023).
 - **Trade-off.** A swipe row should stop where the visitor puts it, not fling past its action, so it takes no momentum and snaps back short of its threshold (Krehel). Bounce suits brand motion, which the motion brief governs, not interface settling.
 - **Clash.** `vault.motion-duration` times fixed transitions; a release spring runs as long as its velocity needs. `vault.reduced-motion` says what a visitor who asks for less motion sees, and a project's motion tokens win.
+- **Why no script answers it.** `check-flow.py` judges the snap point, the set-off and the bounce, but not whether the settle starts at the release velocity. A path sampled a frame at a time cannot tell: on `tier01-clean.html` a critically damped spring that does start at the release velocity read 2.3 to 2.85 times it over its second frame, since a stiff spring pulled toward a far snap point speeds up within a frame. A spring driven from requestAnimationFrame is also read a frame late. Playwright's clock steps requestAnimationFrame a millisecond at a time but not the document timeline a CSS transition runs on. The settle's own definition answers it: the velocity a spring is handed, or a keyframe list's first slope.
 
 ### States change no widths
 

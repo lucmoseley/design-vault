@@ -25,7 +25,7 @@
   .layer { height: 300px; background-image: linear-gradient(#fecaca, #7f1d1d); }
   .reveal { opacity: 0; transition: opacity 300ms; }
   .reveal.in { opacity: 1; }
-  .card { width: 160px; height: 100px; background: #fde68a; touch-action: none; user-select: none; }
+  .card, .rest-card { width: 160px; height: 100px; background: #fde68a; touch-action: none; user-select: none; }
   .lane { width: 800px; height: 120px; }
 </style>
 </head>
@@ -47,6 +47,11 @@
 <!-- vault.drag-release: a card that settles on the snap point nearest where it was let go. -->
 <section>
   <div class="lane"><div class="card" data-record="vault.drag-release">Drag me</div></div>
+</section>
+<!-- vault.drag-release-spring-code: a card that settles on the snap point its release velocity projects to,
+     with no overshoot, but on an ease that starts from rest, so its settle ignores the release velocity. -->
+<section>
+  <div class="lane"><div class="rest-card" data-record="vault.drag-release-spring-code">Drag me too</div></div>
 </section>
 <!-- vault.parallax: a heading that drifts at 0.4 of the scroll. -->
 <section><h2 class="drift" data-record="vault.parallax">A drifting heading</h2></section>
@@ -83,6 +88,25 @@
     x = SNAPS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
     card.style.transition = 'transform 200ms ease-out';
     card.style.transform = `translateX(${x}px)`;
+  });
+
+  const rest = document.querySelector('.rest-card');
+  let rx = 0, rfrom = null, rbase = 0, moves = [];
+  rest.addEventListener('pointerdown', (e) => { rest.setPointerCapture(e.pointerId); rfrom = e.clientX; rbase = rx; moves = [[e.timeStamp, e.clientX]]; rest.style.transition = 'none'; });
+  rest.addEventListener('pointermove', (e) => {
+    if (rfrom === null) return;
+    rx = rbase + e.clientX - rfrom;
+    rest.style.transform = `translateX(${rx}px)`;
+    moves.push([e.timeStamp, e.clientX]);
+  });
+  rest.addEventListener('pointerup', (e) => {
+    rfrom = null;
+    const recent = moves.filter((m) => m[0] > e.timeStamp - 100);
+    const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
+    const aim = rx + (v / 1000) * (0.998 / (1 - 0.998));
+    rx = SNAPS.reduce((a, b) => (Math.abs(b - aim) < Math.abs(a - aim) ? b : a));
+    rest.style.transition = 'transform 300ms ease-in';
+    rest.style.transform = `translateX(${rx}px)`;
   });
 </script>
 </body>
