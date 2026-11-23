@@ -1076,9 +1076,6 @@ def _value(read, row):
 
 
 def _on(text, under):
-    """WCAG contrast of `text`'s colour over `under`'s, `under` drawn over
-    black and over white where it is translucent, and the lower taken: what
-    lies behind it, a video under a caption's box, is not known."""
     for got in (text, under):
         if got.get("rgba") is None:
             return None, f"not a colour: {got['value']!r}"

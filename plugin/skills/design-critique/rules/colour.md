@@ -290,7 +290,7 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - answered-by: script
 - writes: caption colours
 - yields-to: none
-- source: W3C WebVTT §7, CSS rendering: cue `color` "rgba(255,255,255,1)" and cue background "rgba(0,0,0,0.8)"; WCAG 2.2 SC 1.4.3, 4.5:1 for text (all as read Oct 2026); the box drawn over black and over white is the probe's reading of a translucent box over an unknown video frame; strength: web standard
+- source: W3C WebVTT §7, CSS rendering: cue `color` "rgba(255,255,255,1)" and cue background "rgba(0,0,0,0.8)"; WCAG 2.2 SC 1.4.3, 4.5:1 for text (all as read Oct 2026); strength: web standard
 - era: timeless
 - owner: vault
 - stage: treatment

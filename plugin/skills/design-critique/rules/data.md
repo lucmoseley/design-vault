@@ -166,7 +166,7 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 
 ### vault.zebra-tint
 - applies-when: web-surface; every filled row or cell in a table body
-- question: Does each striped row's or cell's fill hold within 1.32:1 WCAG contrast of the table's ground beneath it on a light ground, and 1.48:1 on a dark one, a tint that guides the eye rather than a band that cuts the table up?
+- question: Does each striped row's or cell's fill hold within 1.32:1 WCAG contrast of the table's ground beneath it on a light ground, and 1.48:1 on a dark one?
 - answered-by: script
 - writes: row stripe tint
 - yields-to: vault.ground-step, level 2
