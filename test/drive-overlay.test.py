@@ -10,12 +10,13 @@ test that watches the trial clears it first.
 import importlib.util
 import os
 import pathlib
+import sys
 import unittest
 
 HERE = os.path.dirname(__file__)
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 FIXTURE = pathlib.Path(HERE, "fixtures", "drivers", "overlay.html").resolve().as_uri()
 AT_LOAD = (
     pathlib.Path(HERE, "fixtures", "drivers", "overlay-at-load.html").resolve().as_uri()

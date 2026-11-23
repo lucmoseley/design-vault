@@ -11,14 +11,14 @@ import http.server
 import importlib.util
 import os
 import pathlib
+import sys
 import threading
 import time
 import unittest
 
 HERE = os.path.dirname(__file__)
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
 
 def library(name, path):

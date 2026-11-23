@@ -24,9 +24,9 @@ import threading
 import unittest
 
 HERE = os.path.dirname(__file__)
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
 RULES = os.path.join(HERE, "..", "plugin", "skills", "design-critique", "rules")
 
@@ -56,6 +56,9 @@ OPEN = contextlib.ExitStack()
 BROWSER = []
 SITES = {}
 SWEPT = {}
+# How long one check-dom.py run may take, in s: about twelve times the fault page's run, 5.1-5.3 s over three runs at
+# load average 9.9 on this machine (#454).
+PROGRAM_S = 60
 
 
 def site(page, missing, status):
@@ -172,10 +175,9 @@ def records_naming(script):
 def program(*argv):
     """Runs check-dom.py as its own process: its sync browser cannot open
     inside this module's, which is already running."""
-    # A guess, the figure the other suites give one whole checker run.
     return child.run(
         [sys.executable, os.path.join(SCRIPTS, "check-dom.py"), *argv],
-        timeout=180,
+        timeout=PROGRAM_S,
     )
 
 

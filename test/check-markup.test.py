@@ -20,9 +20,9 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(__file__)
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-markup.py"
 )
@@ -72,9 +72,7 @@ def run(page, *argv, table=None):
                 code = exc.code
         written = pathlib.Path(out, "markup.json")
         data = json.loads(written.read_text()) if written.exists() else None
-    if child.CRASHED in stderr.getvalue():
-        # Raised, and not kept, so child.main() can run the test once more.
-        raise RuntimeError(stderr.getvalue())
+    child.raise_if_crashed(stderr.getvalue())
     RUNS[key] = (code, stdout.getvalue(), stderr.getvalue(), data)
     return RUNS[key]
 

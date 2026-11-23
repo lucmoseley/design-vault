@@ -20,9 +20,9 @@ HERE = os.path.dirname(__file__)
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 FIXTURES = os.path.join(HERE, "fixtures", "access")
 PARTS = os.path.join(FIXTURES, "contrast-tier01-parts.json")
 ABSENT = os.path.join(FIXTURES, "contrast-tier01-absent.json")
