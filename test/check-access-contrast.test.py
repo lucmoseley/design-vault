@@ -321,7 +321,7 @@ class EndToEnd(unittest.TestCase):
     ):  # #427
         photo = DONE["fault"][3]["answers"]["vault.controls-on-photo"]
         faults = {f["subject"]: f["detail"] for f in photo["faults"]}
-        self.assertEqual(photo["unmeasured"], [], "every deck's slides were reached")
+        self.assertEqual(photo["unmeasured"], [])
         self.assertIn(
             "at best on div#deck-dots's slide 2 of 2 (", faults["button#slide-plant"]
         )

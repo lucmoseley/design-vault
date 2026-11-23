@@ -6,20 +6,16 @@ docstring says what each question asks of a page.
 check-access.py calls, at each width:
 
     contrasts.parse_table(text)                       # check-access-contrast.table's figures, once
-    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts, fresh=fresh)
-                                                      # the page at rest, after its own contrast shots, and the declared
-                                                      # carousel's slides on fresh(), a new load: the answers, and
-                                                      # vault.carousel-focus's for undeclared page dots
+    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts, fresh=fresh)  # the page at rest, after its own contrast shots: the answers,
+                                                      # and vault.carousel-focus's for undeclared page dots
     contrasts.signature(page, js)                     # the colours the page draws in, to tell a scheme it ships
     contrasts.scheme(name, judged, measured, light)   # one scheme's vault.theme-contrast, from its own judge() and measure()
 
 `js` wraps a page-side body with check-access.py's helpers (css, rgba, shown, label, box and the rest); `parts` is the
-parts declaration's {name: selector} and `absent` the names it declares null; `texts` is the light page's (MEASURE_JS's result, its Shots), or None in a scheme's pass, which takes no thin-face notes.
+parts declaration's {name: selector} and `absent` the names it declares null; `texts` is the light page's (MEASURE_JS's result, its Shots), or None in a scheme's pass, which takes no thin-face notes; `fresh()` gives a new load of the page.
 
 Its I/O is the Playwright page it is handed: it marks elements with data-contrast-* attributes and injected styles, and
-takes them off again, leaving only its window.__contrast* lists. The carousel's slides are pressed through on the page
-fresh() gives, which it closes, so the page at rest is left showing what it showed at load. Where no carousel is
-declared, the image under a control is the one the page shows: a slot whose image a build may swap is read as built.
+takes them off again, leaving only its window.__contrast* lists.
 """
 
 import collections
@@ -833,8 +829,6 @@ Shots = collections.namedtuple("Shots", "drawn glyph boxed taken")
 
 
 def _shots(page, photo):
-    """The page drawn, its glyphs and, where a control in `photo` draws a box, its boxes; None where the page changed
-    size between them."""
     drawn = _shoot(page)
     glyph = _recoloured(page, GLYPH_CSS)
     boxed = _recoloured(page, BOX_CSS) if any(c.get("box") for c in photo) else None
@@ -848,7 +842,6 @@ def _shots(page, photo):
 
 
 def _photo_reading(c, shots):
-    """Control `c`'s best Figure on a photo, its glyph's or its own box's, or why it has none."""
     if c["why"]:
         return c["why"]
     figures = [
@@ -871,8 +864,6 @@ def _photo_readings(photo, shots):
 
 
 def _press(page, js, handle, *, deck, dot):
-    """True once carousel `deck` holds still after its page dot `dot`, or its next button where `dot` is None, is pressed; False
-    where it never does; None where that control is gone, hidden or disabled."""
     at = page.evaluate(js(PRESS_JS), [deck, dot])
     if at is None:
         return None
@@ -882,9 +873,6 @@ def _press(page, js, handle, *, deck, dot):
 
 
 def _slide_readings(page, js, mark):
-    """Each declared carousel's slides on `page`, a fresh load `mark` reads, each reached by pressing its page dots in
-    turn, else its next button until a slide shows again or the button goes: [(where, _photo_readings' list)], and
-    why any slide went unread."""
     page.evaluate(STAY_ON_PAGE_JS)
     readings, unread = [], []
 
@@ -961,8 +949,6 @@ def _slide_readings(page, js, mark):
 
 
 def _photo_verdict(photo, readings, table):
-    """Adds to `photo`, vault.controls-on-photo's Judged, each control's worst figure across `readings`, a list of
-    (where, [(subject, _photo_reading)]) with where None at load, and each reason one went unread."""
     by = {}
     for where, got in readings:
         for subject, reading in got:
