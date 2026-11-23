@@ -264,8 +264,7 @@ def parse_args(argv):
         help="for each load",
     )
     at = p.parse_args(argv)
-    # A part declared with no selector is answered not judged, not refused.
-    probe.part_options(p, at)
+    at.parts, _ = probe.part_options(p, at)
     try:
         with open(at.table, encoding="utf8") as fh:
             at.table = parse(fh.read())
