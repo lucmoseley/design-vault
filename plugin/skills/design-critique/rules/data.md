@@ -217,7 +217,7 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 
 ### vault.table-narrow
 - applies-when: web-surface; each data table wider than the screen at phone width
-- question: At phone width, does each data table too wide for the screen take the form its use needs: a table read to compare across rows or columns scrolling sideways in its own keyboard-focusable container with its headers kept, a list of records stacking each row into a block of label-value lines, a comparison of items showing at most two at a time or one tab each, a spec sheet becoming one column of collapsible sections, and never the whole table shrunk to fit?
+- question: At phone width, does each data table too wide for the screen either scroll sideways in its own keyboard-focusable container or stack its rows into blocks, rather than run past the screen or scroll in a box a keyboard cannot reach?
 - answered-by: script
 - writes: data table form at narrow widths
 - yields-to: vault.reflow, level 2
@@ -227,6 +227,21 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 - stage: role
 - target: Pick each wide table's phone form by its use: a scrolling, focusable container for tables read across rows or columns; stacked label-value blocks for a list of records; two items or one tab each for a comparison; collapsible single-column sections for a spec sheet.
 - script: check-layout.py <page> --out <dir> --records
+- reasons: design-critique/references/responsive-structure.md#wide-tables-by-purpose
+- ledger: LAY-76
+- status: staged
+
+### vault.table-narrow-form
+- applies-when: web-surface; each data table wider than the screen at phone width
+- question: At phone width, does each wide table take the form its use needs, with its headers kept and never shrunk to fit: scrolling for a table read across rows or columns, label-value blocks for a list of records, two items or one tab each for a comparison, collapsible single-column sections for a spec sheet?
+- answered-by: look
+- writes: data table form by use at narrow widths
+- yields-to: vault.table-narrow, level 2
+- source: Rutter, Web Typography (2017), "Numerals and tables" pp. 140–143: "Make tables responsive according to their purpose", "Linearise simple tables into lists"; NN/g, "Comparison Tables for Products, Services, and Features" (9 Feb 2024): "unlikely that you'll be able to show more than 2 items at a time", "converting the table to tabs or lists for small screens"; Baymard, "Product Spec Sheet UX" (24 Sep 2026): "consider using vertically collapsible sections or truncation rather than compressing the layout"; strength: expert and design-system guidance
+- era: timeless
+- owner: vault
+- stage: role
+- target: Pick each wide table's phone form by its use, keeping its headers at full size: scrolling for tables read across, label-value blocks for records, two items or one tab each for a comparison, collapsible sections for a spec sheet.
 - reasons: design-critique/references/responsive-structure.md#wide-tables-by-purpose
 - ledger: LAY-76
 - status: staged

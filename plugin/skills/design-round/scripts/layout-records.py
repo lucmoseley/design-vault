@@ -8,7 +8,7 @@ of its own, and passes what they find to the functions below. The checks and
 the value each takes are in CHECKS; each table line names its record, its
 check and the value from that record:
 
-    vault.line-length | line-length | body 50-75, columns 40-50, large 75, short 80
+    vault.line-length | line-length | body 50-75, columns 40-50, large 75, short 80 to 3 lines
 
 Each record's answer is fail where any of its checks found a fault at any
 width, else not judged where a check needs a part or a brief fact the round
@@ -50,14 +50,30 @@ CHECKS = {
     "card-rows": Check(r"none", _none, ("part:card",)),
     "safe-bottom": Check(rf"inset {NUMBER}", _numbers("inset"), ()),
     "text-edge": Check(r"none", _none, ()),
+    "grid-lines": Check(r"none", _none, ()),
     "content-width": Check(
-        rf"reading {NUMBER}, default {NUMBER}", _numbers("reading", "default"), ()
+        rf"reading {NUMBER}, default {NUMBER}-{NUMBER}",
+        _numbers("reading", "floor", "default"),
+        (),
+    ),
+    "empty-width": Check(
+        rf"{NUMBER}, or {NUMBER} under {NUMBER}",
+        _numbers("cap", "narrow", "under"),
+        ("part:empty-state",),
     ),
     "footer-bands": Check(r"none", _none, ()),
     "capped-centre": Check(r"none", _none, ()),
     "line-length": Check(
-        rf"body {NUMBER}-{NUMBER}, columns {NUMBER}-{NUMBER}, large {NUMBER}, short {NUMBER}",
-        _numbers("body_lo", "body_hi", "columns_lo", "columns_hi", "large", "short"),
+        rf"body {NUMBER}-{NUMBER}, columns {NUMBER}-{NUMBER}, large {NUMBER}, short {NUMBER} to {NUMBER} lines",
+        _numbers(
+            "body_lo",
+            "body_hi",
+            "columns_lo",
+            "columns_hi",
+            "large",
+            "short",
+            "short_lines",
+        ),
         (),
     ),
     "optical": Check(r"none", _none, ()),
@@ -69,8 +85,15 @@ CHECKS = {
         _numbers("under", "minimum"),
         ("part:card",),
     ),
+    "tile-columns": Check(
+        rf"{NUMBER} under {NUMBER}",
+        _numbers("columns", "under"),
+        ("part:category-tile",),
+    ),
     "panes": Check(
-        rf"one under {NUMBER} or under {NUMBER} tall", _numbers("wide", "tall"), ()
+        rf"{NUMBER} under {NUMBER} or under {NUMBER} tall, else {NUMBER}",
+        _numbers("few", "wide", "tall", "most"),
+        (),
     ),
     "side-pane": Check(
         rf"one under {NUMBER} or under {NUMBER} tall", _numbers("wide", "tall"), ()
@@ -99,9 +122,6 @@ EDGE = 1
 # Blink lays boxes out in 64ths of a px, so an edge this close to a whole
 # device pixel lands on it.
 SNAP = 1 / 64
-# A passage of this many lines or fewer is short, as vault.line-length's
-# applies-when gives it.
-SHORT_LINES = 3
 # How far the line-length read widens the page: any width well past EDGE
 # serves.
 FILL_PROBE = 16
@@ -194,6 +214,8 @@ READ_JS = (
   const TOGGLE = 'summary, button[aria-expanded], [role="button"][aria-expanded]';
   const banner = document.querySelector('[role="banner"]') ||
     [...document.querySelectorAll('header')].find((h) => !h.parentElement.closest('article, aside, main, nav, section'));
+  const footer = document.querySelector('[role="contentinfo"]') ||
+    [...document.querySelectorAll('footer')].reverse().find((f) => !f.parentElement.closest('article, aside, main, nav, section')) || null;
   const crumbs = (el) => /breadcrumb/i.test(`${el.getAttribute('aria-label') || ''} ${el.className || ''}`);
   const mainNav = () => {
     if (parts.nav) return document.querySelector(parts.nav);
@@ -239,7 +261,7 @@ READ_JS = (
     content.push(...textBoxes(document.body, true));
     const crosses = content.some((r) => r.top < vh - EDGE && r.bottom > vh + EDGE);
     const paints = (el) => { const s = css(el); return s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none'; };
-    const band = all.find((el) => !pinned(el) && drawn(el) && paints(el) && Math.abs(box(el).bottom - vh) <= EDGE);
+    const band = all.find((el) => !pinned(el) && drawn(el) && paints(el) && box(el).width >= vw - EDGE && Math.abs(box(el).bottom - vh) <= EDGE);
     if (!crosses && band) fault('fold', label(band), `ends at the first screen's foot, ${vh} px down, and no text or image runs past it`);
   }
 
@@ -264,7 +286,12 @@ READ_JS = (
   // vault.joined-fills: adjacent boxes of one opaque fill that meet off a whole device pixel.
   if (on('seams')) {
     const opaque = (c) => { const m = /rgba\([^)]*,\s*([\d.]+)\)/.exec(c); return c !== 'transparent' && (!m || parseFloat(m[1]) === 1); };
-    const under = (el) => { for (let e = el; e; e = e.parentElement) { const c = css(e).backgroundColor; if (opaque(c)) return c; } return 'rgb(255, 255, 255)'; };
+    // Where no ancestor paints, the canvas shows: the Canvas colour of the root's colour scheme.
+    const probe = document.documentElement.appendChild(document.createElement('div'));
+    probe.style.cssText = 'background-color: Canvas; position: absolute';
+    const canvas = css(probe).backgroundColor;
+    probe.remove();
+    const under = (el) => { for (let e = el; e; e = e.parentElement) { const c = css(e).backgroundColor; if (opaque(c)) return c; } return canvas; };
     for (const p of all) {
       const kids = [...p.children].filter(drawn);
       for (let i = 0; i + 1 < kids.length; i++) {
@@ -298,28 +325,52 @@ READ_JS = (
     }
   }
 
-  // vault.content-width: the main content's text and images wider than its role's cap.
+  // vault.content-width: the main content's text and images wider than its role's cap, a reading page's main
+  // text outside a two-thirds column of it, or a default page's content capped under its floor.
   if (on('content-width') && brief.page !== 'canvas') {
-    const cap = brief.page === 'reading' ? lines['content-width'].reading : lines['content-width'].default;
+    const v = lines['content-width'], reading = brief.page === 'reading';
+    const cap = reading ? v.reading : v.default;
+    const main = document.querySelector('main, [role="main"]') || document.body;
     if (vw > cap + EDGE) {
-      const main = document.querySelector('main, [role="main"]') || document.body;
       const items = [...main.querySelectorAll('*')].filter((e) => drawn(e) && !e.parentElement.closest('svg') &&
         (e.matches(IMAGE) || [...e.childNodes].some((n) => n.nodeType === 3 && /\S/.test(n.data))))
         .map((e) => [e, e.matches(IMAGE) ? box(e) : union(textBoxes(e))]).filter(([, r]) => r && r.right - r.left < vw - EDGE);
       const u = union(items.map(([, r]) => r));
       if (u) {
         seen.add('content-width');
+        const wide = u.right - u.left;
+        const text = reading ? union(items.filter(([e]) => e.matches('p, li, blockquote')).map(([, r]) => r)) : null;
+        const column = text && text.right - text.left <= wide * 2 / 3 + EDGE;
         const widest = items.reduce((a, b) => (b[1].right - b[1].left > a[1].right - a[1].left ? b : a))[0];
-        if (u.right - u.left > cap + EDGE) fault('content-width', label(widest), `spreads the main content ${px(u.right - u.left)} wide, past the ${cap} px a ${brief.page || 'default'} page is capped at`);
+        if (wide > cap + EDGE && !column) fault('content-width', label(widest), `spreads the main content ${px(wide)} wide, past the ${cap} px a ${brief.page || 'default'} page is capped at${reading ? ', its main text in no two-thirds column of it' : ''}`);
       }
+    }
+    if (!reading && vw > v.floor + EDGE) {
+      const holds = capped(document.body).filter((c) => drawn(c) && (c.contains(main) || main.contains(c)));
+      const widest = holds.sort((a, b) => parseFloat(css(b).maxWidth) - parseFloat(css(a).maxWidth))[0];
+      if (widest) {
+        seen.add('content-width');
+        const at = parseFloat(css(widest).maxWidth);
+        if (at < v.floor - EDGE) fault('content-width', label(widest), `caps the main content at ${px(at)}, under the ${v.floor} px a default page takes`);
+      }
+    }
+  }
+
+  // vault.content-width, empty states: an empty state's text wider than its cap, the narrow cap in a narrow container.
+  if (on('empty-width') && parts['empty-state']) {
+    const v = lines['empty-width'];
+    for (const el of [...document.querySelectorAll(parts['empty-state'])].filter(drawn)) {
+      const t = union(textBoxes(el));
+      if (!t) continue;
+      seen.add('empty-width');
+      const cap = box(el).width < v.under ? v.narrow : v.cap;
+      if (t.right - t.left > cap + EDGE) fault('empty-width', label(el), `sets its text ${px(t.right - t.left)} wide, past the ${cap} px an empty state's text takes${cap === v.narrow ? ` in a container under ${v.under} px` : ''}`);
     }
   }
 
   // vault.content-width, footer bands: each band's content edges against the first's.
   if (on('footer-bands')) {
-    const foot = document.querySelector('[role="contentinfo"]') ||
-      [...document.querySelectorAll('footer')].reverse().find((f) => !f.parentElement.closest('article, aside, main, section'));
-    const bands = foot ? [...foot.children].filter((b) => drawn(b) && box(b).width >= box(foot).width - EDGE) : [];
+    const bands = footer ? [...footer.children].filter((b) => drawn(b) && box(b).width >= box(footer).width - EDGE) : [];
     if (bands.length >= 2) {
       seen.add('footer-bands');
       // A band's content box: down through each lone block child to the box that holds its content.
@@ -358,6 +409,31 @@ READ_JS = (
       for (const [, e] of edges) count.set(e, (count.get(e) || 0) + 1);
       const common = [...count].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
       for (const [s, e] of edges) if (Math.abs(e - common) > EDGE) fault('text-edge', label(s), `starts its text at ${px(e)}, off the ${px(common)} edge the page's other sections share`);
+    }
+  }
+
+  // vault.alignment-lines, column lines: each top-level container in a CSS grid of the main content off its column lines.
+  if (on('grid-lines')) {
+    const main = document.querySelector('main, [role="main"]') || document.body;
+    const SMALL = `${BUTTON}, a, span, label, input, select, textarea, svg, small`;
+    for (const g of main.querySelectorAll('*')) {
+      const cs = css(g);
+      if (!/grid/.test(cs.display) || !drawn(g)) continue;
+      let nested = false;
+      for (let e = g.parentElement; e && e !== main.parentElement; e = e.parentElement) if (/grid/.test(css(e).display)) nested = true;
+      const tracks = cs.gridTemplateColumns.split(/\s+/).map(parseFloat);
+      if (nested || tracks.length < 2 || tracks.some(Number.isNaN)) continue;
+      const r = box(g), gap = parseFloat(cs.columnGap) || 0, rtl = cs.direction === 'rtl';
+      let x = rtl ? r.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) : r.left + g.clientLeft + parseFloat(cs.paddingLeft);
+      const edges = [];
+      for (const t of tracks) { const end = rtl ? x - t : x + t; edges.push(x, end); x = rtl ? end - gap : end + gap; }
+      const onLine = (at) => edges.some((e) => Math.abs(e - at) <= EDGE);
+      for (const c of g.children) {
+        if (!drawn(c) || c.matches(SMALL) || /absolute|fixed/.test(css(c).position)) continue;
+        seen.add('grid-lines');
+        const cr = box(c);
+        if (!onLine(cr.left) || !onLine(cr.right)) fault('grid-lines', label(c), `runs ${px(cr.left)}–${px(cr.right)} across, off the column lines of ${label(g)}'s grid`);
+      }
     }
   }
 
@@ -488,11 +564,10 @@ READ_JS = (
   // vault.footer-narrow: the footer's link groups, toggled on a phone and in columns wider.
   if (on('footer-narrow')) {
     const v = lines['footer-narrow'];
-    const foot = document.querySelector('[role="contentinfo"]') || [...document.querySelectorAll('footer')].pop();
-    const allHeads = foot ? [...foot.querySelectorAll('h2, h3, h4, h5, h6, [role="heading"], summary')] : [];
+    const allHeads = footer ? [...footer.querySelectorAll('h2, h3, h4, h5, h6, [role="heading"], summary')] : [];
     const heads = allHeads.filter((h) => !allHeads.some((o) => o !== h && o.contains(h)));
-    const groupsOf = heads.map((h) => { let g = h.parentElement; while (g !== foot && g.querySelectorAll('a[href]').length < 2) g = g.parentElement; return [h, g]; })
-      .filter(([, g]) => g !== foot && heads.filter((h) => g.contains(h)).length === 1);
+    const groupsOf = heads.map((h) => { let g = h.parentElement; while (g !== footer && g.querySelectorAll('a[href]').length < 2) g = g.parentElement; return [h, g]; })
+      .filter(([, g]) => g !== footer && heads.filter((h) => g.contains(h)).length === 1);
     if (groupsOf.length >= 2) {
       seen.add('footer-narrow');
       if (vw < v.toggles) {
@@ -504,7 +579,7 @@ READ_JS = (
         const want = vw >= v.wide ? v.wide_columns : vw >= v.mid ? v.mid_columns : 1;
         const rows = rowsOf(groupsOf.map(([, g]) => g).filter(drawn));
         const across = rows.length ? rows[0].length : 0;
-        if (across !== Math.min(want, groupsOf.length)) fault('footer-narrow', label(foot), `sets its link groups ${across} across, not ${Math.min(want, groupsOf.length)}`);
+        if (across !== Math.min(want, groupsOf.length)) fault('footer-narrow', label(footer), `sets its link groups ${across} across, not ${Math.min(want, groupsOf.length)}`);
       }
     }
   }
@@ -561,12 +636,11 @@ READ_JS = (
     if (m) {
       seen.add('panes');
       const side = asides.filter((a) => drawn(a) && beside(box(a), m));
-      const most = oneUnder(lines.panes) ? 1 : 2;
+      const most = oneUnder(lines.panes) ? lines.panes.few : lines.panes.most;
       if (side.length + 1 > most) fault('panes', label(mainEl), `sets ${side.length + 1} panes side by side, where a ${vw} by ${vh} px window allows ${most}`);
       const head = banner && drawn(banner) && !/absolute|fixed/.test(css(banner).position) ? box(banner) : null;
-      const foot = document.querySelector('[role="contentinfo"]') || [...document.querySelectorAll('footer')].find((f) => !f.parentElement.closest('article, aside, main, section'));
       if (head && head.bottom > m.top + EDGE) fault('panes', label(banner), `does not span the top above the panes`);
-      if (foot && drawn(foot) && box(foot).top < m.bottom - EDGE) fault('panes', label(foot), `does not span the bottom below the panes`);
+      if (footer && drawn(footer) && box(footer).top < m.bottom - EDGE) fault('panes', label(footer), `does not span the bottom below the panes`);
     }
   }
 
@@ -587,21 +661,24 @@ READ_JS = (
     }
   }
 
-  // vault.bar-fit: a bar's actions past the screen or past the bar's own edge.
+  // vault.bar-fit: a bar's actions, a toolbar's, a menubar's or the header's, past the screen or past the bar's own edge.
   if (on('bar-fit')) {
-    for (const bar of document.querySelectorAll('[role="toolbar"], [role="menubar"]')) {
+    const BARS = '[role="toolbar"], [role="menubar"]';
+    for (const bar of [...document.querySelectorAll(BARS), ...(banner ? [banner] : [])]) {
       if (!drawn(bar)) continue;
       seen.add('bar-fit');
       const br = box(bar), s = css(bar), clips = s.overflowX !== 'visible';
       const right = clips ? Math.min(vw, br.left + bar.clientLeft + bar.clientWidth) : vw;
-      const out = [...bar.querySelectorAll(`${BUTTON}, a[href], [role="menuitem"]`)].filter((a) => drawn(a) && (box(a).right > right + EDGE || box(a).left < -EDGE));
+      // In the header, an action in a bar of its own is that bar's, and one in a sideways scroller is vault.nav-strip's.
+      const own = (a) => bar !== banner || (!a.closest(BARS) && !(scroller(a) && bar.contains(scroller(a))));
+      const out = [...bar.querySelectorAll(`${BUTTON}, a[href], [role="menuitem"]`)].filter((a) => drawn(a) && own(a) && (box(a).right > right + EDGE || box(a).left < -EDGE));
       if (out.length) fault('bar-fit', label(bar), `has ${out.length} of its actions past ${clips ? 'its own edge' : "the screen's edge"}, ${out.map((a) => label(a)).join(', ')}`);
     }
   }
 
-  // vault.bottom-safe-area: a control pinned to the bottom that a large viewport unit places.
+  // vault.bottom-safe-area: a control pinned to the bottom that a large viewport unit places, lvh or the default vh, which CSS Values 4 sizes alike.
   if (on('safe-bottom') && phone) {
-    const LVH = /\d(lvh|lvb)\b/;
+    const LARGE = /\d(lv[hb]|v[hb])\b/;
     const PLACING = ['top', 'bottom', 'height', 'min-height', 'max-height', 'inset', 'inset-block', 'inset-block-start', 'inset-block-end', 'translate', 'transform', 'block-size', 'min-block-size', 'max-block-size'];
     const rules = [];
     const collect = (list) => { for (const r of list) { if (r.cssRules && !(r instanceof CSSStyleRule)) { if (!r.media || matchMedia(r.media.mediaText).matches) collect(r.cssRules); } else if (r.selectorText) rules.push(r); } };
@@ -611,8 +688,9 @@ READ_JS = (
       if (p !== el || !drawn(el) || Math.abs(box(el).bottom - vh) > EDGE) continue;
       seen.add('safe-bottom');
       const decl = rules.filter((r) => { try { return el.matches(r.selectorText); } catch (e) { return false; } }).map((r) => r.style).concat([el.style]);
-      const by = PLACING.find((k) => decl.some((d) => LVH.test(d.getPropertyValue(k))));
-      if (by) fault('safe-bottom', label(el), `is placed by ${by} in lvh, which a browser's toolbar can cover`);
+      const unit = (d, k) => (LARGE.exec(d.getPropertyValue(k)) || [])[1];
+      const by = PLACING.find((k) => decl.some((d) => unit(d, k)));
+      if (by) fault('safe-bottom', label(el), `is placed by ${by} in ${unit(decl.find((d) => unit(d, by)), by)}, the large viewport, which a browser's toolbar can cover`);
     }
   }
 
@@ -646,8 +724,9 @@ READ_JS = (
     }
   }
 
-  // vault.card-alignment: matching inner parts of a row of sibling cards at different heights.
+  // vault.card-alignment: matching inner parts of a row of sibling cards whose content starts at different heights.
   if (on('card-rows') && parts.card) {
+    const start = (el) => { const s = css(el); return box(el).top + parseFloat(s.borderTopWidth) + parseFloat(s.paddingTop); };
     const cards = [...document.querySelectorAll(parts.card)].filter(drawn);
     const byParent = new Map();
     for (const c of cards) { if (!byParent.has(c.parentElement)) byParent.set(c.parentElement, []); byParent.get(c.parentElement).push(c); }
@@ -659,11 +738,11 @@ READ_JS = (
         const bad = [];
         for (const k of maps[0].keys()) {
           if (!maps.every((m) => m.has(k)) || bad.some((b) => k.startsWith(`${b}/`))) continue;
-          const tops = maps.map((m) => box(m.get(k)).top);
+          const tops = maps.map((m) => start(m.get(k)));
           if (Math.max(...tops) - Math.min(...tops) > EDGE) bad.push(k);
         }
         for (const k of bad) {
-          const tops = maps.map((m) => box(m.get(k)).top);
+          const tops = maps.map((m) => start(m.get(k)));
           fault('card-rows', label(maps[0].get(k)), `starts ${px(Math.max(...tops) - Math.min(...tops))} apart across the ${row.length} cards of its row`);
         }
       }
@@ -679,8 +758,29 @@ READ_JS = (
       if (sibs.length < 2) continue;
       seen.add('card-columns');
       const across = rowsOf(sibs)[0].length, c = sibs[0], min = v.minimum * parseFloat(css(c).fontSize);
+      // As many columns as fit the container at the cards' minimum: (width + gap) ÷ (minimum + gap).
+      const ps = css(p), gap = parseFloat(ps.columnGap) || 0;
+      const room = p.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight);
+      const fit = Math.min(sibs.length, Math.max(1, Math.floor((room + gap + EDGE) / (min + gap))));
       if (vw < v.under && across > 1) fault('card-columns', label(p), `sets its cards ${across} across under ${v.under} px, not in one column`);
       else if (across > 1 && box(c).width < min - EDGE) fault('card-columns', label(p), `squeezes its ${across} columns of cards to ${px(box(c).width)}, under their ${v.minimum}em minimum of ${px(min)}`);
+      else if (vw >= v.under && across < fit) fault('card-columns', label(p), `sets its cards ${across} across where ${fit} fit at their ${v.minimum}em minimum of ${px(min)}`);
+    }
+  }
+
+  // vault.content-columns, category tiles: at phone width, the tile columns the table gives, or a single column where a tile's label outgrows its share.
+  if (on('tile-columns') && parts['category-tile']) {
+    const v = lines['tile-columns'];
+    const byParent = new Map();
+    for (const t of [...document.querySelectorAll(parts['category-tile'])].filter(drawn)) { if (!byParent.has(t.parentElement)) byParent.set(t.parentElement, []); byParent.get(t.parentElement).push(t); }
+    for (const [p, sibs] of byParent) {
+      if (sibs.length < 2 || vw >= v.under) continue;
+      seen.add('tile-columns');
+      const across = rowsOf(sibs)[0].length, ps = css(p);
+      const share = (p.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight) - (v.columns - 1) * (parseFloat(ps.columnGap) || 0)) / v.columns;
+      const natural = (t) => { const was = t.style.cssText; t.style.setProperty('width', 'max-content', 'important'); const w = box(t).width; t.style.cssText = was; return w; };
+      const cut = sibs.some((t) => natural(t) > share + EDGE);
+      if (across !== v.columns && !(across === 1 && cut)) fault('tile-columns', label(p), `sets its category tiles ${across} across under ${v.under} px, not ${v.columns}`);
     }
   }
 
@@ -694,12 +794,14 @@ READ_JS = (
       notes.cards.push({ at: place.get(c), label: label(c), em: box(c).width / parseFloat(css(c).fontSize), beside: beside(m, t) });
     }
   }
+  // A logo's variant is the images it shows and whether its name shows as text, so a mark beside a text name differs from the mark alone.
   if (on('logo-version') && parts.logo) {
-    const logo = [...document.querySelectorAll(parts.logo)].map((l) => [l, ...l.querySelectorAll(IMAGE)].filter(drawn)).flat()
-      .find((e) => e.matches(IMAGE)) || [...document.querySelectorAll(parts.logo)].find(drawn);
+    const logo = [...document.querySelectorAll(parts.logo)].find(drawn);
     if (logo) {
-      const r = box(logo);
-      notes.logo = { variant: `${place.get(logo)} ${logo.currentSrc || logo.getAttribute('href') || ''}`, label: label(logo), aspect: r.width / r.height };
+      const images = [logo, ...logo.querySelectorAll(IMAGE)].filter((e) => e.matches(IMAGE) && drawn(e) && !e.parentElement.closest('svg'));
+      const text = textBoxes(logo);
+      const r = union([...images.map(box), ...text]);
+      if (r) notes.logo = { variant: `${images.map((e) => `${place.get(e)} ${e.currentSrc || e.getAttribute('href') || ''}`).join(', ')}${text.length ? ' + text' : ''}`, label: label(logo), aspect: (r.right - r.left) / (r.bottom - r.top) };
     }
   }
   return { faults, seen: [...seen], notes, unread: [...unread] };
@@ -744,7 +846,7 @@ def line_faults(blocks, facts, v):
     body = weight.most_common(1)[0][0]
     out = []
     for b, f in zip(blocks, facts, strict=True):
-        if len(b["lines"]) <= SHORT_LINES:
+        if len(b["lines"]) <= v["short_lines"]:
             role, lo, hi = "a short passage", 0, v["short"]
         elif b["size"] > body + EDGE:
             role, lo, hi = "large text", 0, v["large"]

@@ -102,6 +102,27 @@ RUNS = {
     "records-site": ("tier01-real-site.html", [*RECORDS, "--brief", "kind=site"]),
     "records-app": ("tier01-real-app.html", [*RECORDS, "--brief", "kind=app"]),
     "records-overlay": ("tier01-real-overlay.html", [*RECORDS, "--brief", "kind=site"]),
+    "records-gaps": (
+        "tier01-gaps.html",
+        [*RECORDS, "--parts", os.path.join(FIXTURES, "tier01-gaps-parts.json")],
+    ),
+    "reading-column": (
+        "tier01-reading-column.html",
+        ["--widths", "1400-1400", "--records", "--brief", "page=reading"],
+    ),
+    "reading-wide": (
+        "tier01-reading-wide.html",
+        ["--widths", "1400-1400", "--records", "--brief", "page=reading"],
+    ),
+    # Partial sweeps: one holding no screenshot width under 600 px, one none at all.
+    "records-narrow": (
+        "tier01-fault.html",
+        ["--widths", "400-500", "--step", "100", "--records", *RECORD_FACTS],
+    ),
+    "records-wide": (
+        "tier01-fault.html",
+        ["--widths", "700-900", "--step", "200", "--records", *RECORD_FACTS],
+    ),
     "focal-cover": (
         "focal-cover.html",
         [
@@ -345,6 +366,26 @@ class Arguments(unittest.TestCase):
         self.assertEqual(r.returncode, 2, r.stderr)
         self.assertIn("--cta '[['", r.stderr)
         self.assertEqual(left, [])
+
+    def test_a_brief_fact_or_parts_declaration_it_cannot_read_exits_2(self):
+        with tempfile.TemporaryDirectory() as out:
+            bad = pathlib.Path(out, "bad.json")
+            bad.write_text("not json")
+            for args, said in (
+                (["--brief", "kind=shop"], "--brief wants kind=app|site"),
+                (["--brief", "page=wide"], "got 'page=wide'"),
+                (["--parts", pathlib.Path(out, "absent.json")], "cannot read --parts"),
+                (["--parts", bad], f"--parts {bad}"),
+            ):
+                r = self.run_it(
+                    os.path.join(FIXTURES, "tier01-clean.html"),
+                    "--out",
+                    out,
+                    "--records",
+                    *args,
+                )
+                self.assertEqual(r.returncode, 2, (args, r.stderr))
+                self.assertIn(said, r.stderr, args)
 
     def test_only_a_whole_sweep_at_5_px_or_finer_gates(self):
         self.assertTrue(layout.gating(argparse.Namespace(step=5, span=(320, 2560))))
@@ -938,7 +979,8 @@ class RecordUnits(unittest.TestCase):
     def test_each_value_is_read_by_its_checks_shape(self):
         self.assertEqual(
             records.parse_value(
-                "line-length", "body 50-75, columns 40-50, large 75, short 80"
+                "line-length",
+                "body 50-75, columns 40-50, large 75, short 80 to 3 lines",
             ),
             {
                 "body_lo": 50,
@@ -947,11 +989,12 @@ class RecordUnits(unittest.TestCase):
                 "columns_hi": 50,
                 "large": 75,
                 "short": 80,
+                "short_lines": 3,
             },
         )
         self.assertEqual(
-            records.parse_value("panes", "one under 840 or under 480 tall"),
-            {"wide": 840, "tall": 480},
+            records.parse_value("panes", "1 under 840 or under 480 tall, else 2"),
+            {"few": 1, "wide": 840, "tall": 480, "most": 2},
         )
         self.assertEqual(records.parse_value("seams", "scales 1.25, 1.5"), [1.25, 1.5])
         self.assertIsNone(records.parse_value("fold", "none"))
@@ -970,10 +1013,7 @@ class RecordUnits(unittest.TestCase):
                 HERE, "..", "plugin", "skills", "design-critique", "rules"
             ).glob("*.md")
         )
-        words = {2: "two", 4: "four"}
-        # The one value no record states, named on #311's resolution: a Face ID
-        # iPhone's portrait bottom inset.
-        untraced = {("vault.bottom-safe-area", 34)}
+        words = {1: "one", 2: "two", 3: "three", 4: "four"}
         for line in pathlib.Path(layout.TABLE).read_text().splitlines():
             fields = [f.strip() for f in line.split("|")]
             if len(fields) != 3 or fields[1] not in records.CHECKS:
@@ -988,8 +1028,6 @@ class RecordUnits(unittest.TestCase):
             applies = re.search(r"- applies-when: (.*)", record)[1]
             record += "".join(text(r) for r in re.findall(r"vault\.[a-z-]+", applies))
             for n in map(float, re.findall(r"\d+(?:\.\d+)?", fields[2])):
-                if (fields[0], n) in untraced:
-                    continue
                 # As written, as a percentage (1.25 as 125), or in words.
                 said = any(
                     re.search(rf"(?<![\d.]){re.escape(f'{x:g}')}(?![\d])", record)
@@ -1043,7 +1081,7 @@ class RecordUnits(unittest.TestCase):
 
     def test_each_line_is_judged_by_its_blocks_role(self):
         v = records.parse_value(
-            "line-length", "body 50-75, columns 40-50, large 75, short 80"
+            "line-length", "body 50-75, columns 40-50, large 75, short 80 to 3 lines"
         )
 
         def block(n, size, length, *, full=True, at=0):
@@ -1159,25 +1197,28 @@ class RecordUnits(unittest.TestCase):
         )
 
 
+def plants(fixture):
+    """{record: [plant id…]} from a fixture's data-record marks."""
+    planted = {}
+
+    class Plants(html.parser.HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            a = dict(attrs)
+            for record in a.get("data-record", "").split():
+                planted.setdefault(record, []).append(a["id"])
+
+    Plants().feed(pathlib.Path(FIXTURES, fixture).read_text())
+    return planted
+
+
 class Records(unittest.TestCase):
-    def test_the_fault_page_fails_every_record_on_its_plant(self):
-        code, stdout, stderr, found, _ = DONE["records-fault"]
+    def assert_each_plant_fails(self, run, planted):
+        code, stdout, stderr, found, _ = DONE[run]
         self.assertEqual(code, 1, stdout + stderr)
-        page = pathlib.Path(FIXTURES, "tier01-fault.html").read_text()
         modes = record_modes()
-        planted = {}
-
-        class Plants(html.parser.HTMLParser):
-            def handle_starttag(self, tag, attrs):
-                a = dict(attrs)
-                for record in a.get("data-record", "").split():
-                    planted.setdefault(record, []).append(a["id"])
-
-        Plants().feed(page)
-        self.assertEqual(sorted(planted), sorted(modes))
         got = found["records"]
-        self.assertEqual(got["answers"], {r: "fail" for r in modes})
         for record, ids in planted.items():
+            self.assertEqual(got["answers"][record], "fail", record)
             for plant in ids:
                 self.assertTrue(
                     any(
@@ -1187,11 +1228,103 @@ class Records(unittest.TestCase):
                     f"{record} names no fault on #{plant}",
                 )
             self.assertIn(f"\n{record}: fail\n", stdout)
+        return got
+
+    def test_the_fault_page_fails_every_record_on_its_plant(self):
+        planted = plants("tier01-fault.html")
+        self.assertEqual(sorted(planted), sorted(record_modes()))
+        got = self.assert_each_plant_fails("records-fault", planted)
+        self.assertEqual(got["answers"], {r: "fail" for r in record_modes()})
         # Phone-only checks judge under the records' 600 px, not the 767 px phone band.
         self.assertEqual(
             [(r["from"], r["to"]) for r in got["ranges"] if r["kind"] == "visible-nav"],
             [(390, 390)],
         )
+
+    def test_the_gaps_page_fails_each_widened_check_on_its_plant(self):
+        # Header actions, a mark beside a text name, plain vh, padding in a
+        # card, white fills on a dark canvas, grid lines, the default page's
+        # floor, an empty state, tiles and the column count that fits.
+        got = self.assert_each_plant_fails("records-gaps", plants("tier01-gaps.html"))
+        # The half-width box ending at the fold is no band.
+        self.assertEqual(got["answers"]["vault.false-floor"], "pass")
+        self.assertEqual(
+            [
+                (r["from"], r["to"], r["detail"])
+                for r in got["ranges"]
+                if r["kind"] == "card-columns"
+            ],
+            [
+                (390, 390, "sets its cards 2 across under 600 px, not in one column"),
+                (
+                    1010,
+                    1400,
+                    "sets its cards 2 across where 3 fit at their 15em minimum of 240 px",
+                ),
+            ],
+        )
+
+    def test_a_reading_page_passes_wider_than_its_cap_only_with_its_text_in_two_thirds(
+        self,
+    ):
+        def width(name):
+            return [
+                r["subject"]
+                for r in DONE[name][3]["records"]["ranges"]
+                if r["kind"] == "content-width"
+            ]
+
+        self.assertEqual(width("reading-column"), [])
+        self.assertEqual(width("reading-wide"), ["main > img"])
+
+    def test_the_narrow_checks_read_a_partial_sweeps_narrowest_width_or_say_they_cannot(
+        self,
+    ):
+        got = DONE["records-narrow"][3]["records"]
+        for kind in ("tabs-narrow", "popover-sheet"):
+            self.assertEqual(
+                {(r["from"], r["to"]) for r in got["ranges"] if r["kind"] == kind},
+                {(400, 400)},
+                kind,
+            )
+        got = DONE["records-wide"][3]["records"]
+        for record in ("vault.tabs-narrow", "vault.popover-sheet"):
+            self.assertEqual(got["answers"][record], "not judged", record)
+        self.assertEqual(
+            got["not_judged"]["vault.tabs-narrow"],
+            "the sweep holds no width under 600 px",
+        )
+
+    def test_a_style_sheet_from_another_origin_leaves_its_readers_not_judged(self):
+        import http.server
+        import threading
+
+        with tempfile.TemporaryDirectory() as out:
+            pathlib.Path(out, "x.css").write_text("p { color: #333; }\n")
+            handler = lambda *a: http.server.SimpleHTTPRequestHandler(  # noqa: E731
+                *a, directory=out
+            )
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                page = pathlib.Path(out, "page.html")
+                page.write_text(
+                    pathlib.Path(FIXTURES, "tier01-clean.html")
+                    .read_text()
+                    .replace(
+                        "</head>",
+                        f'<link rel="stylesheet" href="http://127.0.0.1:{server.server_port}/x.css">\n</head>',
+                    )
+                )
+                r = run_it(page, "--out", out, "--widths", "390-390", "--records")
+            finally:
+                server.shutdown()
+            found = json.loads(pathlib.Path(out, "layout.json").read_text())
+        for record in ("vault.fluid-zoom", "vault.bottom-safe-area"):
+            self.assertEqual(
+                found["records"]["answers"][record], "not judged", r.stdout
+            )
+            self.assertEqual(found["records"]["not_judged"][record], layout.UNREAD)
 
     def test_the_clean_page_passes_every_record_with_no_fault(self):
         code, stdout, stderr, found, _ = DONE["records-clean"]
@@ -1205,7 +1338,7 @@ class Records(unittest.TestCase):
     ):
         for name, kinds in (
             ("records-site", {"line-length", "footer-narrow"}),
-            ("records-app", {"fold", "safe-bottom"}),
+            ("records-app", {"safe-bottom"}),
             ("records-overlay", set()),
         ):
             got = DONE[name][3]["records"]

@@ -21,7 +21,7 @@ const GATE_ANSWERERS = ["script", "code", "look"];
 // the roles parts-map.py gives a part a visitor can act on, then parts only the building session's declaration names.
 // rules.md's form lists them too: test/gate-select.test.js holds the three together.
 const MAPPED_PARTS = ["link", "button", "textbox", "combobox", "checkbox", "radio", "switch", "slider", "tab", "menuitem", "option", "iframe"];
-const PARTS = [...MAPPED_PARTS, "hero", "card", "image", "icon", "logo", "form", "nav", "dialog", "toast", "bottom-sheet", "table", "chart", "video", "badge", "testimonial", "primary-action", "destructive-action", "secondary-text", "tag", "list-header", "service-bar", "brand-bar", "user-name", "misspelling", "pixel-image", "cookie-banner", "carousel", "map", "drag-item", "pull-to-refresh", "resizable-sheet", "motion-control", "offer-deadline", "editable-value", "zoomable", "select-all"];
+const PARTS = [...MAPPED_PARTS, "hero", "card", "image", "icon", "logo", "form", "nav", "dialog", "toast", "bottom-sheet", "table", "chart", "video", "badge", "testimonial", "primary-action", "destructive-action", "secondary-text", "tag", "list-header", "service-bar", "brand-bar", "user-name", "misspelling", "pixel-image", "cookie-banner", "carousel", "map", "drag-item", "pull-to-refresh", "resizable-sheet", "motion-control", "offer-deadline", "editable-value", "zoomable", "select-all", "empty-state", "category-tile"];
 // A coverage ledger row key, as docs/coverage-ledger.json writes them: BTN-7, NEW1-14, VG-NEW-0.
 const LEDGER_KEY = /^[A-Z][A-Z0-9]*(-[A-Z0-9]+)+$/;
 // The vocabularies rules.md's form lists: a change to one is made in both.
