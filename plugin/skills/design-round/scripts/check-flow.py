@@ -1508,8 +1508,8 @@ class CallWatch:
         its pages first.
         Residual: a call refused for another reason whose renderer then dies
         before this reads /proc is reported as the renderer's death. Residual:
-        a call that opens a page under another name than new_page, as
-        Browser.new_context does not, is not recognised as opening one."""
+        a call that opens a page under another name than new_page is not
+        recognised as opening one."""
         call = raising_call(exc, self.package_dir)
         if call is None or self._rendering():
             return None
