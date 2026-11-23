@@ -1,0 +1,7 @@
+{
+	".husky/pre-commit.local": {
+		"IMPLICIT": "sourced last by the core's .husky/pre-commit, runs one vault gate per staged path and refuses the commit on any fault it prints: data/gallery.json, data/styles.json or images/ runs `node validate.js --staged`; data/gallery.json, data/styles.json or data/vault-data.js runs `node bundle.js --staged`, refusing a bundle that does not match the staged JSON (#32); data/round-log.jsonl runs `node round-log.js --staged` (#95); data/corrections-log.jsonl runs `node corrections-log.js --staged` (#166); data/calibration-log.jsonl runs `node calibration-log.js --staged` (#168). Each log gate also refuses a change to a row HEAD holds beyond what its file allows, and refuses where git cannot be read.",
+		"JUSTIFIED": "fail-safe — a malformed library entry travels into every brief copied from it (lucmoseley/mantahostels#3631 step 2); the page opened from its folder reads only the bundle, so a stale one shows the library a version behind unannounced; and the round, corrections and calibration logs keep the founder's first picks, words and critic agreement figures, none of which can be recovered once rewritten.",
+		"DEFEAT": "none — fix the row or fault the gate names, or append a new log row; a commit staging none of these paths never runs any of them."
+	}
+}

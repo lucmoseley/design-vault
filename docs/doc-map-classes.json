@@ -7,6 +7,14 @@
 		"route": "`node scripts/check-guard-registry.js --review`, which re-anchors a guard whose annotation has been read",
 		"consumes": null
 	},
+	".claude/implicit-behaviours.json": {
+		"section": "Skills & settings",
+		"class": "source-of-truth",
+		"classQualifier": null,
+		"role": "What each script of the vault's own that git runs does to a session unasked, why, and its escape; workflow-core's guard registry reads it",
+		"route": "Direct, then `node scripts/check-guard-registry.js --review <script>`",
+		"consumes": null
+	},
 	".claude/settings.json": {
 		"section": "Skills & settings",
 		"class": "free-edit",
