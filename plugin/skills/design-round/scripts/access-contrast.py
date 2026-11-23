@@ -6,7 +6,8 @@ docstring says what each question asks of a page.
 check-access.py calls, at each width:
 
     contrasts.parse_table(text)                       # check-access-contrast.table's figures, once
-    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts)  # the page at rest, after its own contrast shots: the answers
+    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts)  # the page at rest, after its own contrast shots: the answers,
+                                                                                  # and vault.carousel-focus's for undeclared page dots
     contrasts.signature(page, js)                     # the colours the page draws in, to tell a scheme it ships
     contrasts.scheme(name, judged, measured, light)   # one scheme's vault.theme-contrast, from its own judge() and measure()
 
@@ -767,8 +768,9 @@ def _thin_notes(page, js, table, texts):
 
 
 def measure(page, js, table, *, parts, absent, texts):
-    """The page's {question id: Judged} for QUESTIONS, at rest."""
-    out = {qid: answering.unjudged() for qid in QUESTIONS}
+    """The page's {question id: Judged} for QUESTIONS, at rest, and vault.carousel-focus's cannot-measure reason for
+    each row of page dots where no carousel was declared."""
+    out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
     charts = [parts["chart"]] if "chart" in parts else []
     carousels = [parts["carousel"]] if "carousel" in parts else []
     page.evaluate(STRIP_JS)
@@ -797,12 +799,19 @@ def measure(page, js, table, *, parts, absent, texts):
         )
     )
     photo.faults.extend(got["dots"])
-    photo.unmeasured.extend(
-        f"{d['subject']} holds {d['count']} controls that draw no text or icon, which may be a carousel's page dots, "
-        "but no carousel was declared, so its current dot was not judged; name it as carousel in --parts, or as null "
-        "where the page has none"
-        for d in got["strayDots"]
-    )
+    for d in got["strayDots"]:
+        for q, left in (
+            (photo, "its current dot was"),
+            (
+                out["vault.carousel-focus"],
+                "its Tab order, rotation and previous and next buttons were",
+            ),
+        ):
+            q.unmeasured.append(
+                f"{d['subject']} holds {d['count']} controls that draw no text or icon, which may be a carousel's "
+                f"page dots, but no carousel was declared, so {left} not judged; name it as carousel in --parts, "
+                "or as null where the page has none"
+            )
     chart_q.unmeasured.extend(
         f"{s} may be a chart, but no chart was declared, so its marks were not read; name it as chart in --parts, or "
         "as null where the page has none"

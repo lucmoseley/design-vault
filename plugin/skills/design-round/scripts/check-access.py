@@ -181,7 +181,9 @@ check-layout.py does, and measures each question at both:
   ROTATE_MS, timed from one slide to the next, must hold still for that span
   and STILL_SLACK_MS more while focus is in it and while the pointer is over
   it, and focus must stay on its previous and next buttons when Enter presses
-  them. One that never holds still between slides cannot be measured;
+  them. One that never holds still between slides cannot be measured. With
+  no carousel declared, each row of page dots vault.controls-on-photo finds
+  cannot be measured, and its reason says no carousel was declared;
 - vault.ring-outline: at each forward stop, where focus changes how the part,
   its label or a wrapper is drawn, an outline must be among the changes, or a
   transparent outline drawn on focus behind a shadow ring; a change of
@@ -1619,6 +1621,16 @@ def theme_answer(browser, at, width, height, *, light, answered):
     return out
 
 
+def merge(into, more):
+    """Extends `into`, the caller's {question id: Judged}, by each of
+    `more`'s findings, adding a Judged for a question it lacks."""
+    for qid, judged in more.items():
+        for mine, theirs in zip(
+            into.setdefault(qid, answering.unjudged()), judged, strict=True
+        ):
+            mine.extend(theirs)
+
+
 def run(at):
     found, looping = [], 0
     with flow.chromium() as browser:
@@ -1628,19 +1640,16 @@ def run(at):
             got, shots = read_texts(page, at.logotype)
             measured = contrast_answers(page, at, (got, shots))
             light = contrasts.signature(page, contrast_js)
-            measured.update(tab_walk(page, at.carousels))
+            merge(measured, tab_walk(page, at.carousels))
             measured["vault.pause"] = answering.Judged(
                 *pause_answer(context, at.url), [], []
             )
-            for qid, judged in keys.driven(
-                context, at.url, keys_js, at.carousels, mouse=name == "desktop"
-            ).items():
-                for mine, theirs in zip(
-                    measured.setdefault(qid, answering.unjudged()),
-                    judged,
-                    strict=True,
-                ):
-                    mine.extend(theirs)
+            merge(
+                measured,
+                keys.driven(
+                    context, at.url, keys_js, at.carousels, mouse=name == "desktop"
+                ),
+            )
             context.close()
             answered = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(
