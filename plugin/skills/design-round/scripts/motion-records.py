@@ -363,7 +363,6 @@ def release_velocity(release, axis, horizon):
 
 
 def nearest(snaps, x):
-    """The snap point nearest `x`."""
     return min(snaps, key=lambda s: abs(s - x))
 
 
@@ -383,10 +382,7 @@ def drag_faults(got, v):
     `got`: the snap points its slow releases settled at, and its flung
     release: where it was let go, at what velocity, and the path it took
     after, one position a frame. It must settle where the release's
-    projection picks, set off the way it was thrown and not overshoot. The
-    settle is judged only where the projection picks another snap point than
-    where it was let go, since otherwise a part that ignores its velocity
-    settles there too."""
+    projection picks, set off the way it was thrown and not overshoot."""
     snaps, fling, label = got["snaps"], got["fling"], got["label"]
     path = fling["path"]
     end = path[-1]
@@ -974,8 +970,7 @@ PATH_JS = (
 # the release: its time and those moves into window.__release. Where
 # window.__watch holds PATH_JS's arguments, the release starts that path
 # before the page's own handler runs, so its first position is the one let
-# go at. A release's velocity is then the one the page was handed, however
-# late its frames ran.
+# go at.
 RELEASE_INIT = (
     "const pathOf = ("
     + PATH_JS
