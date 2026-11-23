@@ -142,13 +142,17 @@ class Pages(unittest.TestCase):
                 self.assertIn(f"{rid}: fail", proc.stdout)
         self.assertIn("every finding: ", proc.stdout)
 
-    def test_dense_text_under_14px_fails_type_size_on_a_tall_x_height(self):
-        """DejaVu Sans's x-height is over 0.52, so at 13.5 px only the
-        14 px floor catches it (#479)."""
+    def test_dense_text_fails_type_size_on_each_floor_alone(self):
+        """#479. Pass pair: test_the_clean_page_reports_nothing."""
         _, found = RAN["fault"]
         (f,) = [f for f in found if f["id"] == "vault.type-size"]
-        reads = {m["read"] for m in f["misses"] if "#dense-type-size" in m["subject"]}
-        self.assertEqual(reads, {"style:font-size"})
+        for plant, read in (
+            ("#f-type-size-tall", "style:font-size"),
+            ("#f-type-size-short", "style:font-size times xheight"),
+        ):
+            with self.subTest(plant):
+                reads = {m["read"] for m in f["misses"] if plant in m["subject"]}
+                self.assertEqual(reads, {read})
 
     def test_every_block_of_the_table_misses_on_the_fault_page(self):
         _, found = RAN["fault"]
