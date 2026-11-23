@@ -78,6 +78,8 @@ RULES = {
     "WN": None,
     "TN": None,
     "WM": None,
+    "WV0": None,
+    "WV1": None,
 }
 # A load-change test's loads: each one's rule files, made by store-refs.py from the rule store, in its own folder.
 # #292: WL is W1 with today's house-principles.md, the old load beside TT1; WS and TS, whole-page and type with tier 0's
@@ -85,6 +87,8 @@ RULES = {
 # records made live; the type load does not change, so TS serves both. #294: WN is WT with the tone lens and tone.md,
 # its records cut from #293's store with #294's wording; TN is TS. Both read brief-tone.md, the brief with its tone
 # lines, where WT and TS read brief.md. WM is WN with the lens asking only for the scales a candidate sits off.
+# #502: WV0 is WM cut from today's store with vault.visible-nav answered by the whole-page critic, WV1 the store as
+# #311 left it, the record answered by script; both under WM's prompt and brief.
 REFS = {
     "W0": "refs-268/old",
     "W1": "refs-268/new-w",
@@ -96,9 +100,19 @@ REFS = {
     "WN": "refs-294/new-w",
     "TN": "refs-292/new-t",
     "WM": "refs-294/new-w",
+    "WV0": "refs-502/old-w",
+    "WV1": "refs-502/new-w",
 }
-PROMPT = {"WL": "W1", "WS": "W1", "TS": "TT1", "WT": "W1", "TN": "TT1"}
-BRIEF = {"WN": "brief-tone.md", "TN": "brief-tone.md", "WM": "brief-tone.md"}
+PROMPT = {
+    "WL": "W1",
+    "WS": "W1",
+    "TS": "TT1",
+    "WT": "W1",
+    "TN": "TT1",
+    "WV0": "WM",
+    "WV1": "WM",
+}
+BRIEF = {c: "brief-tone.md" for c in ("WN", "TN", "WM", "WV0", "WV1")}
 # #415: the gate trio on the look list cut from the rule store with the live records alone (G-old) and with the held
 # records too (G-new), each pass to a fresh trio, as gate-check.md runs it. `gate-lists` freezes both lists in
 # prompts/gate-415/, so a later change to the store does not change what a test's runs were asked.
@@ -337,14 +351,14 @@ def require_canary():
 
 def tone_brief(name):
     """#294's brief for a candidate: brief.md with a Tone line in the dispatch and, for a round's brief, in the brief
-    and on every direction card, from packets/tone-294.json."""
+    and on every direction card, from packets/tone-294.json. A gate copy takes the card of the page it copies."""
     tone = json.load(open(ROOT / "packets/tone-294.json"))
     brief = (ROOT / "packets" / name / "brief.md").read_text()
     project = tone[META["project"][name]]
     if "cards" not in project:
         line = "(the project's, from its rules file) " + project["line"]
     else:
-        card = tone["candidates"][name]
+        card = tone["candidates"][META["sources"].get(name, name)]
         line = f"(direction card {card}'s Tone) " + project["cards"][card]
         if "\n**Reference** —" not in brief:
             raise ValueError(f"{name}: brief.md has no Reference field")
