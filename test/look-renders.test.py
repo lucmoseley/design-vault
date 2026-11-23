@@ -10,7 +10,6 @@ page or on a bare SVG file (#354), and check-curves.js --contacts hands this
 script a contact it refuses or crops somewhere else.
 """
 
-import importlib.util
 import json
 import os
 import shlex
@@ -23,9 +22,9 @@ import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(__file__)
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look-renders.py"
 )

@@ -16,9 +16,9 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(__file__)
-CHILD = importlib.util.spec_from_file_location("child", os.path.join(HERE, "child.py"))
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, HERE)
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-cross.py"
 )
@@ -43,7 +43,7 @@ TABLE = cross.parse(TABLE_TEXT)
 RECORDS = list(dict.fromkeys(line.id for line in TABLE))
 OPEN = contextlib.ExitStack()
 SITES = {}
-BROWSER = []
+BROWSER = None
 DEVICES = {}
 # How long one command run may take, in s: a guess, about six times the
 # fault site's run on this machine.
@@ -73,10 +73,10 @@ def swept(site):
     """run()'s sweep of `site`, made once on the module's browser by the first test that asks. A sweep whose page
     crashed is raised, and not kept, so child.main() can run the test once more."""
     if site not in SITES:
-        got = run(site, BROWSER[0])
-        if crashed := [reason for _, reason in got[1] if child.CRASHED in reason]:
-            raise RuntimeError(crashed[0])
-        SITES[site] = got
+        pages, unread, walks, phones = run(site, BROWSER)
+        for _, reason in unread:
+            child.raise_if_crashed(reason)
+        SITES[site] = pages, unread, walks, phones
     return SITES[site]
 
 
@@ -91,6 +91,7 @@ def found(site, table=TABLE):
 
 
 def setUpModule():
+    global BROWSER
     # device() starts Playwright of its own, so it runs before chromium() opens.
     DEVICES["phone"] = cross.device(
         next(line.value for line in TABLE if line.check == "phone")
@@ -99,7 +100,7 @@ def setUpModule():
         cross.device("Pixel 77")
     except cross.TableError as exc:
         DEVICES["unknown"] = exc
-    BROWSER.append(OPEN.enter_context(flow.chromium()))
+    BROWSER = OPEN.enter_context(flow.chromium())
 
 
 def tearDownModule():

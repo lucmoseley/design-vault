@@ -1,6 +1,7 @@
 """Runs a script as a gate suite's child, catches where it stalls (#430), and runs
 it once more when earlyoom killed one of its renderers and its browser crashed (#431).
-main() runs a Chromium gate suite's tests, each once more on the same evidence (#438).
+main() runs a Chromium gate suite's tests, and runs once more a test that crashed after
+earlyoom killed one of its renderers (#438).
 
 A stalled child's stacks come from test/child-site/sitecustomize.py, which
 PYTHONPATH loads into it.
@@ -214,7 +215,7 @@ def killed_renderers(lives, kills):
 
 # The renderers of each run that run() ran once more, since the test it ran under started: rerun() does not run
 # that test again for them.
-SPENT = set()
+RERUN_RENDERERS = set()
 
 
 def run(argv, *, timeout, kills=earlyoom_kills):
@@ -232,7 +233,7 @@ def run(argv, *, timeout, kills=earlyoom_kills):
             file=sys.stderr,
         )
         result, again = once(argv, timeout=timeout)
-        SPENT.update(lives, again)
+        RERUN_RENDERERS.update(lives, again)
     return result
 
 
@@ -259,8 +260,8 @@ def once(argv, *, timeout):
     return subprocess.CompletedProcess(argv, child.returncode, out, err), lives
 
 
-# What a unittest result is told about a test, held until the test's outcome is known.
-TOLD = {
+# The unittest result calls that report on a test, held until the test's outcome is known.
+REPORT_CALLS = {
     "startTest",
     "stopTest",
     "addSuccess",
@@ -286,7 +287,7 @@ def watching(root):
         watcher.join()
 
 
-class Held:
+class HeldResult:
     """A unittest result that holds what a test tells it until replay(); everything else is the result's own."""
 
     def __init__(self, result):
@@ -294,7 +295,7 @@ class Held:
 
     def __getattr__(self, name):
         got = getattr(self.result, name)
-        if name not in TOLD:
+        if name not in REPORT_CALLS:
             return got
         return lambda *args: self.told.append((name, args))
 
@@ -310,27 +311,35 @@ class Held:
             getattr(self.result, name)(*args)
 
 
-def rerun(case, plain, result=None, *, kills):
-    """case.run(result), but a test that failed with CRASHED after earlyoom killed a renderer of this process's tree
-    is run once more, said on stderr, and the first run's outcome dropped. Residual: the result is told nothing
-    until the test ends, so a test that hangs leaves no name in a verbose log; and a module's or class's fixture
-    runs outside this, so a crash there is not run again."""
+def rerun(case, run_once, result=None, *, kills):
+    """case.run(result), where `run_once` is the case's own run(), but a test that failed with CRASHED after earlyoom
+    killed a renderer of this process's tree is run once more, said on stderr, and the first run's outcome dropped.
+    Residual: the result is told nothing until the test ends, so a test that hangs leaves no name in a verbose log.
+    A module's or class's fixture runs outside this: launching Chromium starts no renderer until its first page,
+    and a fixture's child is re-run by run(), but a page a fixture opens in this process is not run again."""
     if result is None:
-        return plain(result)
-    began, held = time.time(), Held(result)
-    SPENT.clear()
+        return run_once(result)
+    began, held = time.time(), HeldResult(result)
+    RERUN_RENDERERS.clear()
     with watching(os.getpid()) as lives:
-        plain(held)
-    fresh = {pid: life for pid, life in lives.items() if pid not in SPENT}
+        run_once(held)
+    fresh = {pid: life for pid, life in lives.items() if pid not in RERUN_RENDERERS}
     if held.crashed() and (killed := killed_renderers(fresh, kills(began))):
         print(
             f"test/child.py: earlyoom killed renderer {', '.join(map(str, sorted(killed)))} under {case.id()}, "
             f"which then failed with {CRASHED!r}; running it once more (#438)",
             file=sys.stderr,
         )
-        return plain(result)
+        return run_once(result)
     held.replay()
     return result
+
+
+def raise_if_crashed(stderr):
+    """Raises a captured run's stderr where it says CRASHED, so main() can run the test once more rather than keep
+    the run's outcome."""
+    if CRASHED in stderr:
+        raise RuntimeError(stderr)
 
 
 def rerunning(tests, kills=earlyoom_kills):

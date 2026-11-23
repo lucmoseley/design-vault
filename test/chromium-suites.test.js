@@ -1,5 +1,6 @@
 // Every suite test/all.sh tags `chromium` runs its tests through test/child.py's main(), which runs once more a test
-// earlyoom broke (#438).
+// earlyoom broke (#438). Loosening it lets a new Chromium suite fail the gate red whenever earlyoom kills one of
+// its renderers.
 // A node test, since the gate runs every one on each commit: a commit touching only that suite still meets this.
 // full-sweep-only: it reads every suite all.sh tags `chromium`, a list it takes from all.sh at run time.
 "use strict";
