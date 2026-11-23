@@ -15,5 +15,5 @@ Scope: tests that fail for a cause outside the code under test, and when a gate 
 - Admitting fewer jobs while memory is low guards the moment a job starts. Memory that falls after admission, from work the gate does not govern, is outside its reach. [unverified] Derived from design-vault#431's measurement. It sets no default.
 
 ## In this repo
-- `test/child.py` re-runs a gate suite's child once when it failed with Playwright's `Target crashed` and earlyoom's journal names one of that child's renderers, killed while it lived, and says so on stderr (#431).
+- `test/child.py` re-runs a gate suite's child once when it failed with a wording Playwright gives a renderer's death (`child.CRASHED`, #439) and earlyoom's journal names one of that child's renderers, killed while it lived, and says so on stderr (#431).
 - `child.main()` re-runs once, on the same evidence, a test that drives a browser in the suite's own process; every Chromium suite in `test/all.sh` runs its tests through it, which `test/chromium-suites.test.js` pins (#438).

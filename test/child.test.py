@@ -52,10 +52,21 @@ def alive(pid):
 # How long a stand-in renderer lives unkilled, in s: past every case here. How long it is held before its kill, in
 # s: about ten of child.py's reads of its tree.
 RENDERER_S, HELD_S = 30, 10 * child.WATCH_S
-# A run that starts a grandchild, as a browser starts its renderer, and holds it for HELD_S. It crashes as Playwright reports a renderer's death on each run argv[2] lists, counted from 1.
+# The first line of what Playwright 1.61.0 raised for a renderer killed in each call, and the CRASHED wording it
+# holds (#439, measured). The trailing space is Playwright's own: it appends the browser's log, here empty.
+SAID = {
+    "Page.evaluate: Target crashed ": "Target crashed",
+    "Page.goto: Page crashed": "Page crashed",
+    "Navigation failed because page crashed!": "Navigation failed because page crashed!",
+}
+# What a case fails with where it names nothing else; the per-wording cases run the rest.
+DEFAULT_SAID = next(iter(SAID))
+OTHER_SAID = {said: wording for said, wording in SAID.items() if said != DEFAULT_SAID}
+# A run that starts a grandchild, as a browser starts its renderer, and holds it for HELD_S. On each run argv[2]
+# lists, counted from 1, it fails with argv[4], as Playwright reports a renderer's death.
 CRASHES = f"""
 import subprocess, sys, time
-runs, crash_on, kind = sys.argv[1], sys.argv[2].split(","), sys.argv[3]
+runs, crash_on, kind, said = sys.argv[1], sys.argv[2].split(","), sys.argv[3], sys.argv[4]
 # One argument holding the flag among others, as Chromium rewrites a renderer's argv.
 flag = ["headless_shell " + {child.RENDERER.decode()!r}] if kind == "renderer" else []
 grandchild = subprocess.Popen([sys.executable, "-c", "import time; time.sleep({RENDERER_S})", *flag])
@@ -66,7 +77,7 @@ grandchild.kill()
 with open(runs) as fh:
     n = len(fh.read().splitlines())
 if str(n) in crash_on:
-    sys.exit("Keyboard.press: {child.CRASHED}")
+    sys.exit(said)
 print("passed on run", n)
 """
 
@@ -79,6 +90,10 @@ class Kills:
         os.close(fd)
         self.addCleanup(os.unlink, self.runs)
 
+    def forget(self):
+        """Empties the kill file, for a case that runs more than once."""
+        open(self.runs, "w", encoding="utf8").close()
+
     def killed(self):
         """(time, pid) for each stand-in renderer killed so far, as earlyoom's journal would give it."""
         with open(self.runs, encoding="utf8") as fh:
@@ -89,39 +104,53 @@ class Rerun(Kills, unittest.TestCase):
     """A crashed run is re-run once only where earlyoom's journal names one of its own renderers, killed while it
     lived (#431)."""
 
-    def run_with(self, crash_on, kills, kind="renderer"):
-        said = io.StringIO()
-        with contextlib.redirect_stderr(said):
+    def run_with(self, crash_on, kills, kind="renderer", said=DEFAULT_SAID):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
             r = child.run(
-                [sys.executable, "-c", CRASHES, self.runs, crash_on, kind],
+                [sys.executable, "-c", CRASHES, self.runs, crash_on, kind, said],
                 timeout=FOREVER_S,
                 kills=kills,
             )
-        return r, said.getvalue()
+        return r, err.getvalue()
 
     def test_a_crash_after_earlyoom_killed_its_renderer_is_run_once_more(self):
-        r, said = self.run_with("1", lambda since: self.killed()[:1])
+        r, err = self.run_with("1", lambda since: self.killed()[:1])
         self.assertEqual((r.returncode, r.stdout), (0, "passed on run 2\n"))
         self.assertEqual(len(self.killed()), 2)
         self.assertRegex(
-            said, rf"earlyoom killed renderer {self.killed()[0][1]} of .*once more"
+            err, rf"earlyoom killed renderer {self.killed()[0][1]} of .*once more"
         )
         self.assertIn(self.killed()[0][1], child.RERUN_RENDERERS)
 
+    def test_each_wording_playwright_gives_a_killed_renderer_is_run_once_more(self):
+        for said, wording in OTHER_SAID.items():
+            with self.subTest(said=said):
+                self.forget()
+                r, err = self.run_with("1", lambda since: self.killed()[:1], said=said)
+                self.assertEqual((r.returncode, len(self.killed())), (0, 2))
+                self.assertIn(f"failed with {wording!r}", err)
+
+    def test_a_crash_of_another_wording_is_not_run_again(self):
+        r, _ = self.run_with(
+            "1", lambda since: self.killed(), said="Page.goto: net::ERR_ABORTED"
+        )
+        self.assertEqual((r.returncode, len(self.killed())), (1, 1))
+
     def test_it_is_run_once_more_only_once(self):
         r, _ = self.run_with("1,2", lambda since: self.killed())
-        self.assertIn(child.CRASHED, r.stderr)
+        self.assertIn(DEFAULT_SAID, r.stderr)
         self.assertEqual(len(self.killed()), 2)
 
     def test_a_crash_with_no_kill_of_its_own_tree_is_not_run_again(self):
         # A pid outside this run's tree, as another suite's renderer is, killed while this run crashed on its own.
-        r, said = self.run_with("1", lambda since: [(time.time(), os.getpid())])
-        self.assertIn(child.CRASHED, r.stderr)
-        self.assertEqual((len(self.killed()), said), (1, ""))
+        r, err = self.run_with("1", lambda since: [(time.time(), os.getpid())])
+        self.assertIn(DEFAULT_SAID, r.stderr)
+        self.assertEqual((len(self.killed()), err), (1, ""))
 
     def test_a_kill_of_a_process_that_is_no_renderer_is_not_run_again(self):
         r, _ = self.run_with("1", lambda since: self.killed(), kind="gpu")
-        self.assertIn(child.CRASHED, r.stderr)
+        self.assertIn(DEFAULT_SAID, r.stderr)
         self.assertEqual(len(self.killed()), 1)
 
     def test_a_kill_of_its_pid_after_the_renderer_ended_is_not_run_again(self):
@@ -129,7 +158,7 @@ class Rerun(Kills, unittest.TestCase):
         r, _ = self.run_with(
             "1", lambda since: [(t + 60, pid) for t, pid in self.killed()]
         )
-        self.assertIn(child.CRASHED, r.stderr)
+        self.assertIn(DEFAULT_SAID, r.stderr)
         self.assertEqual(len(self.killed()), 1)
 
     def test_a_kill_with_no_crash_is_not_run_again(self):
@@ -211,9 +240,16 @@ class Run(unittest.TestCase):
 
 class RaiseIfCrashed(unittest.TestCase):
     def test_a_captured_crash_is_raised_with_its_stderr(self):
-        said = f"page.goto: {child.CRASHED}"
-        with self.assertRaisesRegex(RuntimeError, said):
-            child.raise_if_crashed(said)
+        for said in SAID:
+            with self.subTest(said=said):
+                with self.assertRaises(RuntimeError) as raised:
+                    child.raise_if_crashed(f"Traceback:\n{said}\n")
+                self.assertIn(said, str(raised.exception))
+
+    def test_each_wording_is_found_in_what_playwright_raised(self):
+        for said, wording in SAID.items():
+            with self.subTest(said=said):
+                self.assertEqual(child.crash(f"Traceback:\n{said}\n"), wording)
 
     def test_a_capture_with_no_crash_is_kept(self):
         self.assertIsNone(child.raise_if_crashed("Traceback: a fault of its own"))
@@ -224,11 +260,11 @@ class InProcess(Kills, unittest.TestCase):
         self, crash_on, kills, *, said=None, how="raise", foreign=False, spent=False
     ):
         """Runs one test that starts a stand-in renderer and kills it, through child.rerunning. On each run counted
-        in `crash_on` it fails with `said` (CRASHED by default) as `how` says: raised, raised in a subtest, or
+        in `crash_on` it fails with `said` (DEFAULT_SAID by default) as `how` says: raised, raised in a subtest, or
         skipped. The renderer is a child of this process, or with `foreign` an orphan outside its tree, as another
         suite's is; `spent` marks it one child.run already ran once more for."""
         runs, flag = self.runs, ["headless_shell " + child.RENDERER.decode()]
-        said = f"Keyboard.press: {child.CRASHED}" if said is None else said
+        said = DEFAULT_SAID if said is None else said
 
         class Drives(unittest.TestCase):
             def test_it(self):
@@ -290,6 +326,17 @@ class InProcess(Kills, unittest.TestCase):
         )
         self.assertEqual(shown.count(" ... "), 1, shown)
 
+    def test_each_wording_playwright_gives_a_killed_renderer_is_run_once_more(self):
+        for said, wording in OTHER_SAID.items():
+            with self.subTest(said=said):
+                self.forget()
+                result, err, shown = self.outcome(
+                    {1}, lambda since: self.killed()[:1], said=said
+                )
+                self.assertTrue(result.wasSuccessful(), shown)
+                self.assertEqual(len(self.killed()), 2)
+                self.assertIn(f"failed with {wording!r}", err)
+
     def test_a_crash_in_a_subtest_is_run_once_more(self):
         result, _, shown = self.outcome(
             {1}, lambda since: self.killed()[:1], how="subtest"
@@ -300,7 +347,7 @@ class InProcess(Kills, unittest.TestCase):
     def test_it_is_run_once_more_only_once(self):
         result, _, _ = self.outcome({1, 2}, lambda since: self.killed())
         self.assertEqual((len(result.errors), len(self.killed())), (1, 2))
-        self.assertIn(child.CRASHED, result.errors[0][1])
+        self.assertIn(DEFAULT_SAID, result.errors[0][1])
 
     def test_a_kill_child_run_already_ran_once_more_for_is_not_run_again(self):
         result, err, _ = self.outcome({1}, lambda since: self.killed(), spent=True)
