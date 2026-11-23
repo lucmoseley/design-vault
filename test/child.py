@@ -32,8 +32,10 @@ WATCH_S = 0.1
 SLACK_S = 1
 # How long the journal read may take, in s. A guess, unmeasured.
 JOURNAL_S = 10
-# What Playwright says when a page's renderer dies under it.
-CRASHED = "Target crashed"
+# What Playwright 1.61.0 says when a page's renderer dies under it, SIGTERM or SIGKILL alike (#439, measured): a
+# call made after the death, a goto or wait_for_event it cuts short, and an expect_navigation or wait_for_url.
+# Residual: a wait_for_load_state it cuts short returns with no error, so only the next call can match.
+CRASHED = ("Target crashed", "Page crashed", "Navigation failed because page crashed!")
 # Chromium's flag on each renderer it starts.
 RENDERER = b"--type=renderer"
 EARLYOOM = "earlyoom"
@@ -204,6 +206,11 @@ def earlyoom_kills(since, tag=EARLYOOM):
     return [(float(t), int(pid)) for t, pid in KILL_LINE.findall(got.stdout)]
 
 
+def crash(said):
+    """The first CRASHED wording in `said`, or None."""
+    return next((wording for wording in CRASHED if wording in said), None)
+
+
 def killed_renderers(lives, kills):
     """The renderers in `lives` that a (time, pid) in `kills` signalled while it was alive."""
     return {
@@ -220,16 +227,18 @@ RERUN_RENDERERS = set()
 
 def run(argv, *, timeout, kills=earlyoom_kills):
     """subprocess.run(argv, capture_output=True, text=True, timeout=timeout), but a
-    stall raises StallError with the child's stacks and tree, and a run that failed with
-    CRASHED after earlyoom killed one of its renderers is run once more, said on stderr.
+    stall raises StallError with the child's stacks and tree, and a run that failed with a
+    CRASHED wording after earlyoom killed one of its renderers is run once more, said on stderr.
     A re-run takes up to `timeout` again, and the first run's output is dropped but for
     that line. `kills` stands in for earlyoom's journal in test/child.test.py."""
     began = time.time()
     result, lives = once(argv, timeout=timeout)
-    if CRASHED in result.stderr and (killed := killed_renderers(lives, kills(began))):
+    if (said := crash(result.stderr)) and (
+        killed := killed_renderers(lives, kills(began))
+    ):
         print(
             f"test/child.py: earlyoom killed renderer {', '.join(map(str, sorted(killed)))} of {argv}, "
-            f"which then failed with {CRASHED!r}; running it once more (#431)",
+            f"which then failed with {said!r}; running it once more (#431)",
             file=sys.stderr,
         )
         result, again = once(argv, timeout=timeout)
@@ -299,11 +308,17 @@ class HeldResult:
             return got
         return lambda *args: self.told.append((name, args))
 
-    def crashed(self):
-        return any(
-            CRASHED in "".join(traceback.format_exception(*args[-1]))
-            for name, args in self.told
-            if name in ("addError", "addFailure", "addSubTest") and args[-1] is not None
+    def crash(self):
+        """The first CRASHED wording a failure the test told holds, or None."""
+        return next(
+            (
+                said
+                for name, args in self.told
+                if name in ("addError", "addFailure", "addSubTest")
+                and args[-1] is not None
+                if (said := crash("".join(traceback.format_exception(*args[-1]))))
+            ),
+            None,
         )
 
     def replay(self):
@@ -312,9 +327,9 @@ class HeldResult:
 
 
 def rerun(case, run_once, result=None, *, kills):
-    """case.run(result), where `run_once` is the case's own run(), but a test that failed with CRASHED after earlyoom
-    killed a renderer of this process's tree is run once more, said on stderr, and the first run's outcome dropped.
-    Residual: the result is told nothing until the test ends, so a test that hangs leaves no name in a verbose log.
+    """case.run(result), where `run_once` is the case's own run(), but a test that failed with a CRASHED wording after
+    earlyoom killed a renderer of this process's tree is run once more, said on stderr, and the first run's outcome
+    dropped. Residual: the result is told nothing until the test ends, so a test that hangs leaves no name in a verbose log.
     A module's or class's fixture runs outside this: launching Chromium starts no renderer until its first page,
     and a fixture's child is re-run by run(), but a page a fixture opens in this process is not run again."""
     if result is None:
@@ -324,10 +339,10 @@ def rerun(case, run_once, result=None, *, kills):
     with watching(os.getpid()) as lives:
         run_once(held)
     fresh = {pid: life for pid, life in lives.items() if pid not in RERUN_RENDERERS}
-    if held.crashed() and (killed := killed_renderers(fresh, kills(began))):
+    if (said := held.crash()) and (killed := killed_renderers(fresh, kills(began))):
         print(
             f"test/child.py: earlyoom killed renderer {', '.join(map(str, sorted(killed)))} under {case.id()}, "
-            f"which then failed with {CRASHED!r}; running it once more (#438)",
+            f"which then failed with {said!r}; running it once more (#438)",
             file=sys.stderr,
         )
         return run_once(result)
@@ -336,9 +351,9 @@ def rerun(case, run_once, result=None, *, kills):
 
 
 def raise_if_crashed(stderr):
-    """Raises a captured run's stderr where it says CRASHED, so main() can run the test once more rather than keep
-    the run's outcome."""
-    if CRASHED in stderr:
+    """Raises a captured run's stderr where it holds a CRASHED wording, so main() can run the test once more rather
+    than keep the run's outcome."""
+    if crash(stderr):
         raise RuntimeError(stderr)
 
 
