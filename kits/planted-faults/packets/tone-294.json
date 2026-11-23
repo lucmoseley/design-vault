@@ -30,11 +30,13 @@
   "r1-v2": "v2 General arrangement",
   "r1-v3": "v3 Inscription",
   "r1-v5": "v5 House colours",
+  "r1-v5g": "v5 House colours",
   "r2-v1": "v1 Counsel's paper",
   "r2-v1p": "v1 Counsel's paper",
   "r2-v3p": "v3 The annotated brief",
   "r2-v5p": "v5 House colours, one blue field",
   "r2-v7": "v7 Mark at work",
-  "r2-v7p": "v7 Mark at work"
+  "r2-v7p": "v7 Mark at work",
+  "r2-v7g": "v7 Mark at work"
  }
 }

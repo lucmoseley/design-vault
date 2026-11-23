@@ -87,8 +87,6 @@ RULES = {
 # records made live; the type load does not change, so TS serves both. #294: WN is WT with the tone lens and tone.md,
 # its records cut from #293's store with #294's wording; TN is TS. Both read brief-tone.md, the brief with its tone
 # lines, where WT and TS read brief.md. WM is WN with the lens asking only for the scales a candidate sits off.
-# #502: WV0 is WM cut from today's store with vault.visible-nav answered by the whole-page critic, WV1 the store as
-# #311 left it, the record answered by script; both under WM's prompt and brief.
 REFS = {
     "W0": "refs-268/old",
     "W1": "refs-268/new-w",
@@ -351,14 +349,14 @@ def require_canary():
 
 def tone_brief(name):
     """#294's brief for a candidate: brief.md with a Tone line in the dispatch and, for a round's brief, in the brief
-    and on every direction card, from packets/tone-294.json. A gate copy takes the card of the page it copies."""
+    and on every direction card, from packets/tone-294.json."""
     tone = json.load(open(ROOT / "packets/tone-294.json"))
     brief = (ROOT / "packets" / name / "brief.md").read_text()
     project = tone[META["project"][name]]
     if "cards" not in project:
         line = "(the project's, from its rules file) " + project["line"]
     else:
-        card = tone["candidates"][META["sources"].get(name, name)]
+        card = tone["candidates"][name]
         line = f"(direction card {card}'s Tone) " + project["cards"][card]
         if "\n**Reference** —" not in brief:
             raise ValueError(f"{name}: brief.md has no Reference field")

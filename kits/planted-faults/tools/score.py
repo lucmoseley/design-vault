@@ -82,7 +82,6 @@ SHAPES["294 tone line"] = ["WN", "TN"]
 SHAPES["294 tone line, whole-page alone"] = ["WN"]
 SHAPES["294 lean tone lens"] = ["WM", "TN"]
 SHAPES["294 lean tone lens, whole-page alone"] = ["WM"]
-# #502's: vault.visible-nav answered by script, against the store with it answered by the whole-page critic.
 SHAPES["502 visible-nav whole-page"] = ["WV0"]
 SHAPES["502 visible-nav script"] = ["WV1"]
 # #415's: the gate trio on the live look records, and on the live and held ones in passes of at most 20.
