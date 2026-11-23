@@ -30,11 +30,9 @@ SCRIPT = os.path.join(
     "scripts",
     "check-overlay.py",
 )
-CHILD = importlib.util.spec_from_file_location(
-    "child", os.path.join(os.path.dirname(__file__), "child.py")
-)
-child = importlib.util.module_from_spec(CHILD)
-CHILD.loader.exec_module(child)
+sys.path.insert(0, os.path.dirname(__file__))
+import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+
 REQUIREMENTS = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", "plugin", "requirements.txt")
 )

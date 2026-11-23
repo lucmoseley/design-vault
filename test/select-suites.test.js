@@ -94,6 +94,16 @@ test("a suite runs for its own test file, its fixtures, and a script its test ru
   assert.deepEqual(ran([`${SCRIPTS}/fall.js`]).filter((s) => PYTHON.includes(s)), ["python3 test/check-flow.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
 });
 
+test("a suite runs for a module beside it that it imports by name, as every Chromium suite does test/child.py (#454)", () => {
+  const p = plan(SUITES, ["test/child.py"]);
+  assert.equal(p.all, undefined, p.all);
+  const chosen = ran(["test/child.py"]);
+  for (const suite of ["python3 test/child.test.py", "python3 test/check-access.test.py", "python3 test/check-seams.test.py"]) {
+    assert.ok(chosen.includes(suite), suite);
+  }
+  assert.ok(!chosen.includes("python3 test/cutout.test.py"));
+});
+
 test("an unrecognised file under plugin/**/scripts/ or test/, or the runner itself, runs every suite", () => {
   for (const stray of [`${SCRIPTS}/new-checker.py`, "test/load/new-load.py", "test/new.test.py", "test/fixtures/new-dir/a.html",
     "test/all.sh", "test/select-suites.js", "package.json", "package-lock.json"]) {

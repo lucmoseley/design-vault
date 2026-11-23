@@ -20,10 +20,13 @@ const RUNNER = new Set(["test/all.sh", "test/select-suites.js", "package.json", 
 const MUST_BE_READ = /^(test\/|plugin\/(.+\/)?scripts\/)/;
 // A run of quoted path parts joined by commas: `os.path.join(HERE, "fixtures", "flow")`, `"check-flow.py"`,
 // `require("../plugin/…/fall.js")`. Read from the files themselves, so a checker that starts loading another this
-// way is seen. Not followed: pathlib's `/`, a Python `import`, a `require` without its extension, a join that
-// starts from a variable other than the file's own directory or the repo top.
+// way is seen. Not followed: pathlib's `/`, a `require` without its extension, a join that starts from a variable
+// other than the file's own directory or the repo top.
 const PART = String.raw`(?:"[\w.@+/-]+"|'[\w.@+/-]+')`;
 const RUN_OF_PARTS = new RegExp(String.raw`${PART}(?:\s*,\s*${PART})*`, "g");
+// A Python `import name` or `from name import …` at a line's start, read as the module beside the file: the suites put
+// their own directory on the path to import test/child.py (#454).
+const PY_IMPORT = /^(?:import|from)\s+(\w+)/gm;
 
 const isPath = (rel) => fs.existsSync(path.join(ROOT, rel));
 const isFile = (rel) => isPath(rel) && fs.statSync(path.join(ROOT, rel)).isFile();
@@ -34,7 +37,14 @@ const isFile = (rel) => isPath(rel) && fs.statSync(path.join(ROOT, rel)).isFile(
  */
 function pathsNamedIn(file) {
   const out = [];
-  for (const [run] of fs.readFileSync(path.join(ROOT, file), "utf8").matchAll(RUN_OF_PARTS)) {
+  const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+  if (file.endsWith(".py")) {
+    for (const [, name] of text.matchAll(PY_IMPORT)) {
+      const rel = path.posix.join(path.posix.dirname(file), `${name}.py`);
+      if (rel !== file && isFile(rel)) out.push(rel);
+    }
+  }
+  for (const [run] of text.matchAll(RUN_OF_PARTS)) {
     const parts = [...run.matchAll(/["']([^"']+)["']/g)].map((m) => m[1]);
     const bases = parts.length > 1 || parts[0].includes("/") ? [path.posix.dirname(file), "."] : [path.posix.dirname(file)];
     for (const base of bases) {

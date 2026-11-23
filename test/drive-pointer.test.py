@@ -39,11 +39,12 @@ pointer = load(
     ),
 )
 OPEN = contextlib.ExitStack()
-BROWSER = []
+BROWSER = None
 
 
 def setUpModule():
-    BROWSER.append(OPEN.enter_context(flow.chromium()))
+    global BROWSER
+    BROWSER = OPEN.enter_context(flow.chromium())
 
 
 def tearDownModule():
@@ -52,7 +53,7 @@ def tearDownModule():
 
 class OnThePage(unittest.TestCase):
     def setUp(self):
-        self.page = BROWSER[0].new_page()
+        self.page = BROWSER.new_page()
         self.addCleanup(self.page.close)
         self.page.goto(PAGE)
 
@@ -282,7 +283,7 @@ class Watched(OnThePage):
     inside the 1.5 s cap."""
 
     def setUp(self):
-        self.page = BROWSER[0].new_page()
+        self.page = BROWSER.new_page()
         self.addCleanup(self.page.close)
         self.page.add_init_script(pointer.WATCH_JS)
         self.page.goto(PAGE)
