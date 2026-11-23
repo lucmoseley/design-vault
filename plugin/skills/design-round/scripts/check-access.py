@@ -114,8 +114,8 @@ check-layout.py does, and measures each question at both:
 - vault.theme-contrast: the page is loaded again in a dark scheme and under
   prefers-contrast: more, and each one that changes any colour the page draws
   is measured as the light page is, for vault.contrast, vault.control-edges
-  and the questions above, every role held to its top rung under more
-  contrast: text to the ladder's aim line, every other role to its more line;
+  and the questions above, under more contrast text held to the ladder's aim
+  line and every other role to its more line;
   each fault there is this question's, as is each part, by subject and role,
   read in light and dark whose worst ratio sits on a lower rung of the
   ladder in dark, a rung being the highest of its role's floor and top it
@@ -1610,8 +1610,7 @@ def contrast_answers(page, at, texts, table):
 def theme_answer(browser, at, width, height, *, light, answered, readings):
     """vault.theme-contrast's Judged at one width: each scheme in contrasts.SCHEMES
     that changes a colour the `light` signature holds, measured as the light
-    page is, past what the light page's `answered` already finds, and in dark
-    each part a rung lower than the light page's `readings` put it."""
+    page is, past what the light page's `answered` already finds."""
     out, shipped = answering.unjudged(), []
     for name, options in contrasts.SCHEMES:
         context, page, _ = open_page(browser, at, width, height, **options)

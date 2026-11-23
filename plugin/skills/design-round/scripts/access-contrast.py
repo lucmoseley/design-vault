@@ -191,8 +191,8 @@ def _role_rungs(role, table):
 
 
 def rung(ratio, role, table):
-    """The highest rung of the ladder, every role's floor and top rung, from `role`'s floor up that `ratio` clears,
-    capped at its top rung; None under its floor."""
+    """The highest ladder rung from `role`'s floor up that `ratio` clears, capped at its top rung; None under its
+    floor."""
     floor, top = _role_rungs(role, table)
     ladder = {r for each in _ROLES for r in _role_rungs(each, table)}
     cleared = [r for r in ladder if floor <= r <= ratio]
