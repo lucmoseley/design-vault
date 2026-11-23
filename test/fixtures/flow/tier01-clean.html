@@ -113,9 +113,9 @@
   // (over the 100 ms of moves before it, by the events' own clock) projects
   // to, reached on a critically damped spring that starts at the release
   // velocity, stiff enough never to pass its rest. Its clock starts at its
-  // first frame: a frame's time is when the frame began, which on a busy
-  // machine is before the release was handled, and a spring read at a time
-  // before its start runs backwards.
+  // first frame, since a frame's time is when the frame began, which can
+  // precede the release's handler (#510): MDN, requestAnimationFrame,
+  // https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
   const card = document.querySelector('.card');
   const SNAPS = [0, 300];
   let x = 0, from = null, base = 0, moves = [], spring = 0;

@@ -665,8 +665,10 @@ class Pages(unittest.TestCase):
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
     def test_late_input_is_not_read_into_the_clean_pages_fling(self):
-        """#478, #510. Its pair is the fault
-        page's drag-release, failed in test_the_fault_page_names_every_plant."""
+        """#478: the fling's velocity is read off the events' own clock.
+        #510: the settle does not turn back when the frame after the release
+        began before its handler ran. Its pair is the fault page's
+        drag-release, failed in test_the_fault_page_names_every_plant."""
         code, got, out = self.runs["late"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
