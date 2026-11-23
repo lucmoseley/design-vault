@@ -219,12 +219,7 @@ def findings(table, swept):
             f["misses"] += [{"width": width, **n} for n in got["violations"]]
             f["review"] += [{"width": width, **n} for n in got["incomplete"]]
             applied = applied or bool(set(got["applied"]) & set(line.rules))
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif applied:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], applied)
         out.append(f)
     return out
 

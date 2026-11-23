@@ -1315,12 +1315,7 @@ def findings(rules, swept):
     for f in out.values():
         for held in f["misses"] + f["unjudged"]:
             held.pop("_last", None)
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif f["id"] in answered:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], f["id"] in answered)
     return list(out.values())
 
 

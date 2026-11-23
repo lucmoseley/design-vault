@@ -381,16 +381,8 @@ def _compare(browser, url, block, *, widths, heights, parts, timeout):
 def _answered(out):
     for f in out.values():
         judged = f.pop("_judged", False)
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif judged:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], judged)
     return list(out.values())
-
-
-RANK = {"fail": 3, "not judged": 2, "pass": 1, "no match": 0}
 
 
 def merged(ran):
@@ -401,8 +393,7 @@ def merged(ran):
             m = out.setdefault(f["id"], _finding(f["id"]))
             for bucket in ("misses", "unjudged"):
                 m[bucket] += [{**held, "block": block.header} for held in f[bucket]]
-            if RANK[f["answer"]] > RANK[m["answer"]]:
-                m["answer"] = f["answer"]
+            m["answer"] = max(m["answer"], f["answer"], key=rule_table.ANSWERS.index)
     return list(out.values())
 
 

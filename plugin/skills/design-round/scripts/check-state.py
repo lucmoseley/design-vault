@@ -506,8 +506,6 @@ def parse(text):
 
 
 def _line_value(n, check, m):
-    """The named groups of a line's value: an `n_` group as a number under
-    its bare name, `words` as a lower-case list, `rules` as a tuple."""
     value = {}
     for key, got in (m.groupdict() if m else {}).items():
         if key.startswith("n_"):

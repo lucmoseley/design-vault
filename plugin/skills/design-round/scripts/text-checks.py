@@ -970,7 +970,10 @@ def parse_words(text, into=None, name="the word lists"):
     caller's lists, so a project's file adds to the vault's."""
     lists = into if into is not None else {k: [] for k in LISTS}
     current = None
-    for n, line in rule_table.lines(text):
+    for n, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
         m = re.fullmatch(r"\[([\w-]+)\]", line)
         if m:
             if m[1] not in LISTS:
@@ -1030,11 +1033,6 @@ def findings(values, loads, words, desktop, *, unjudged=None):
             for u in got.unjudged:
                 if u not in f["unjudged"]:
                     f["unjudged"].append(u)
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif judged:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(f["misses"], f["unjudged"], judged)
         out.append(f)
     return out

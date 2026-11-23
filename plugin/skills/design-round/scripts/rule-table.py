@@ -1,32 +1,27 @@
-"""The rule tables the design-round checks read, and the answers they give.
-
-Each check script loads this file the way it loads probe.py:
-
-    rules = _load("rule_table", os.path.join(HERE, "rule-table.py"))
-    for n, line in rules.lines(text): ...          # each rule line, numbered
-    table = rules.parse(text, CHECKS, value)        # ID | CHECK [| VALUE]
-    answers = rules.Answers(table, "where")         # one finding per record id
-
-A bad line raises TableError, naming the line; the check exits 2 on it.
-"""
-
 import collections
 import re
 
 SEP = " | "
 
-# One `ID | CHECK [| VALUE]` line: the record id, the check, the value the
-# script's `value` hook made of it, and the line as written.
 Line = collections.namedtuple("Line", "id check value text")
 
 
+ANSWERS = ("no match", "pass", "not judged", "fail")
+
+
+def answer(misses, unjudged, judged):
+    if misses:
+        return "fail"
+    if unjudged:
+        return "not judged"
+    return "pass" if judged else "no match"
+
+
 class TableError(Exception):
-    """A table line a check cannot read: exit 2."""
+    pass
 
 
 def lines(text):
-    """(n, line) for each line holding a rule: stripped, numbered from 1,
-    with blank lines and `#` comments left out."""
     for n, raw in enumerate(text.splitlines(), 1):
         line = raw.strip()
         if line and not line.startswith("#"):
@@ -34,13 +29,6 @@ def lines(text):
 
 
 def parse(text, checks, value):
-    """The `ID | CHECK [| VALUE]` lines of `text` as Line records, in order.
-
-    `checks` maps each check to the pattern its whole VALUE must match, or to
-    None for a check that reads none. `value(n, check, match)` gives the
-    Line's value: `match` is the VALUE's full match, or None where the check
-    reads none; it may raise TableError for a value the pattern lets through.
-    """
     out = []
     for n, line in lines(text):
         fields = [f.strip() for f in line.split(SEP)]
@@ -70,14 +58,6 @@ def parse(text, checks, value):
 
 
 class Answers:
-    """The findings being gathered, one per record id in table order.
-
-    Each miss, unjudged and review entry is {"check", <places>, "what"}.
-    With one place named, `at` is its value; with more, `at` is a dict of
-    them, or None, and a place it lacks is None. `review` adds the review
-    list, for findings a person must look at.
-    """
-
     def __init__(self, table, *places, review=False):
         self.places = places
         self.found = {}
@@ -116,13 +96,6 @@ class Answers:
         self.judged.add(line.id)
 
     def done(self):
-        """The findings, each answered: fail on a miss, else not judged on an
-        unjudged entry, else pass where a line was compared, else no match."""
         for f in self.found.values():
-            if f["misses"]:
-                f["answer"] = "fail"
-            elif f["unjudged"]:
-                f["answer"] = "not judged"
-            elif f["id"] in self.judged:
-                f["answer"] = "pass"
+            f["answer"] = answer(f["misses"], f["unjudged"], f["id"] in self.judged)
         return list(self.found.values())

@@ -1007,12 +1007,9 @@ def answers(lines, got):
         by_record[line.id].append(got[line.mode])
     out = {}
     for record, answers_of in by_record.items():
-        if any(a.faults for a in answers_of):
-            out[record] = "fail"
-        elif any(a.unmet for a in answers_of):
-            out[record] = "not judged"
-        elif any(a.seen for a in answers_of):
-            out[record] = "pass"
-        else:
-            out[record] = "no match"
+        out[record] = rule_table.answer(
+            any(a.faults for a in answers_of),
+            any(a.unmet for a in answers_of),
+            any(a.seen for a in answers_of),
+        )
     return out

@@ -1,9 +1,3 @@
-"""Pins rule-table.py, the table reader and answer collector the check scripts share (#413): python3 test/rule-table.test.py
-
-A suite of the commit gate (test/all.sh): a reader that let a bad line through, or a collector that ranked a
-miss below an unjudged entry, would turn a record's fail into not judged in every check that loads it.
-"""
-
 import importlib.util
 import os
 import re
@@ -85,6 +79,19 @@ class Answers(unittest.TestCase):
             [f["answer"] for f in ans.done()],
             ["fail", "not judged", "pass", "fail", "no match"],
         )
+
+    def test_answers_rank_so_the_strongest_of_two_is_their_joint_answer(self):
+        cases = [(m, u, j) for m in (0, 1) for u in (0, 1) for j in (0, 1)]
+        for x in cases:
+            for y in cases:
+                joint = rule_table.answer(*(a or b for a, b in zip(x, y, strict=True)))
+                strongest = max(
+                    rule_table.answer(*x),
+                    rule_table.answer(*y),
+                    key=rule_table.ANSWERS.index,
+                )
+                with self.subTest(x=x, y=y):
+                    self.assertEqual(strongest, joint)
 
     def test_one_place_takes_its_value_and_several_take_a_dict(self):
         one = rule_table.Answers(TABLE[:1], "where")

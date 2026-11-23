@@ -124,7 +124,6 @@ def parse(text):
 
 
 def _line_value(n, check, m):
-    """A ways or home-hub line's count; a phone line's name as written."""
     if m is None:
         return None
     return int(m[1]) if m.groups() else m[0]

@@ -17,7 +17,16 @@ else no match.
 """
 
 import collections
+import importlib.util
+import os
 import re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+_spec = importlib.util.spec_from_file_location(
+    "rule_table", os.path.join(HERE, "rule-table.py")
+)
+rule_table = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(rule_table)
 
 NUMBER = r"(\d+(?:\.\d+)?)"
 Check = collections.namedtuple("Check", "pattern parse needs")
@@ -998,12 +1007,9 @@ def answers(lines, faults_by_mode, seen, unmet):
         by_record[mode.id].append(mode.name)
     out = {}
     for record, modes in by_record.items():
-        if any(faults_by_mode.get(m) for m in modes):
-            out[record] = "fail"
-        elif any(m in unmet for m in modes):
-            out[record] = "not judged"
-        elif any(m in seen for m in modes):
-            out[record] = "pass"
-        else:
-            out[record] = "no match"
+        out[record] = rule_table.answer(
+            any(faults_by_mode.get(m) for m in modes),
+            any(m in unmet for m in modes),
+            any(m in seen for m in modes),
+        )
     return out
