@@ -217,7 +217,7 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 
 ### vault.table-narrow
 - applies-when: web-surface; each data table wider than the screen at phone width
-- question: At phone width, does each data table too wide for the screen either scroll sideways in its own keyboard-focusable container or stack its rows into blocks, rather than run past the screen or scroll in a box a keyboard cannot reach?
+- question: At phone width, does each data table too wide for the screen either scroll sideways in its own keyboard-focusable container or stack its rows into blocks?
 - answered-by: script
 - writes: data table form at narrow widths
 - yields-to: vault.reflow, level 2

@@ -271,7 +271,7 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - status: staged
 
 ### vault.alignment-lines-look
-- applies-when: web-surface; every top-level content container (text block, card, image, table, form) in the main content area that no CSS grid places, its column lines laid by flex, widths or margins
+- applies-when: web-surface; every top-level content container (text block, card, image, table, form) in the main content area that no CSS grid places
 - question: Where the main content is laid on columns with no CSS grid, does each top-level content container start and end on a shared column line, never in a gutter or margin?
 - answered-by: look
 - writes: grid alignment without a CSS grid

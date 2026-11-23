@@ -189,7 +189,7 @@ Action controls: emphasis, size, labels, and how many a view holds. The form is 
 - era: dated 2027-10-19
 - owner: vault
 - stage: treatment
-- target: Pad a control pinned to a phone's bottom edge by `env(safe-area-inset-bottom)` wherever the page sets `viewport-fit=cover`, and place anything sized by the screen's height in `svh` or `dvh`, never `lvh` or plain `vh`, so no browser toolbar covers it.
+- target: Pad a control pinned to a phone's bottom edge by `env(safe-area-inset-bottom)` wherever the page sets `viewport-fit=cover`, and place anything sized by the screen's height in `svh` or `dvh`, never `lvh` or plain `vh`.
 - script: check-layout.py <page> --out <dir> --records
 - parts: button, nav, toast, bottom-sheet
 - reasons: design-critique/references/controls-and-feedback.md#clear-of-the-phones-edges
