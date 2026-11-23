@@ -1,9 +1,7 @@
 """Pins check-dom.py (#310): python3 test/check-dom.test.py
 
 Loosen the DOM family script and a page carrying a fault a table line
-catches, each planted in the fixtures under a `fault: <id>:` comment and a
-`data-fault` or `data-fault-absent` mark naming its line, passes the gate
-unseen.
+catches, each planted in the fixtures, passes the gate unseen.
 
 The fixture pages are served over a local HTTP site, since only a site
 answers a missing address with a status; one browser serves every test.
@@ -150,10 +148,6 @@ def tokens(*pages):
 
 
 def landings(url):
-    """{table line: {token}} of the marks its misses on the page at `url`
-    land on. A miss names an element, or, for a count or a distinct read,
-    the line's own selection: that lands on the marked elements the
-    selection picks, or where it picks none, on the load's absence marks."""
     (as_mark,) = table("vault.marked | css:html | attr:data-fault | absent")[0].rules
     picks = [
         dom.Block(
