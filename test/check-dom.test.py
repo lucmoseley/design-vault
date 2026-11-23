@@ -53,7 +53,7 @@ with open(PARTS_FILE, encoding="utf8") as fh:
     PARTS, UNSET = dom.probe.declared_parts(fh.read())
 RECORDS = list(dict.fromkeys(r.id for b in BLOCKS for r in b.rules))
 OPEN = contextlib.ExitStack()
-BROWSER = []
+BROWSER = None
 SITES = {}
 SWEPT = {}
 # How long one check-dom.py run may take, in s: about twelve times the fault page's run, 5.1-5.3 s over three runs at
@@ -89,7 +89,8 @@ def site(page, missing, status):
 
 
 def setUpModule():
-    BROWSER.append(OPEN.enter_context(dom.flow.chromium()))
+    global BROWSER
+    BROWSER = OPEN.enter_context(dom.flow.chromium())
     SITES["fault"] = site(FAULT, MISSING_FAULT, 200)
     SITES["clean"] = site(CLEAN, MISSING_CLEAN, 404)
     SITES["fault-one"] = site(FAULT_ONE, MISSING_CLEAN, 404)
@@ -104,7 +105,7 @@ def found(url, blocks=BLOCKS, parts=PARTS, unset=UNSET):
     key = (url, id(blocks), tuple(sorted(parts.items())), tuple(sorted(unset)))
     if key not in SWEPT:
         swept = dom.run(
-            BROWSER[0],
+            BROWSER,
             url,
             blocks,
             parts=parts,
@@ -148,7 +149,7 @@ def stamped(body, parts=None, head=""):
     with tempfile.TemporaryDirectory() as d:
         url = local(d, body, head)
         with dom.conditions.open_page(
-            BROWSER[0], url, init_scripts=(dom.LISTEN_JS,)
+            BROWSER, url, init_scripts=(dom.LISTEN_JS,)
         ) as page:
             dom.layout.load(page, url, dom.layout.PHONE_WIDTH, dom.layout.HEIGHTS)
             dom.stamp(page, parts or {})
@@ -412,7 +413,7 @@ class TheStamps(unittest.TestCase):
                 "",
                 '<link id="t" rel="apple-touch-icon" href="t.png"><link id="g" rel="icon" href="gone.png">',
             )
-            with dom.conditions.open_page(BROWSER[0], url) as page:
+            with dom.conditions.open_page(BROWSER, url) as page:
                 dom.stamp(page, {})
                 got = page.evaluate(
                     "[t.dataset.vaultLoaded, t.dataset.vaultSize, g.dataset.vaultLoaded]"
