@@ -44,7 +44,7 @@
   "extraKnownMarketplaces": {
     "workflow-core": {
       "source": {
-        "source": "url",
+        "source": "git",
         "url": "https://github.com/lucmoseley/workflow-core.git",
         "ref": "v3.1.0"
       }
