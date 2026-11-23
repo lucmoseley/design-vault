@@ -1,8 +1,9 @@
 """Pins check-dom.py (#310): python3 test/check-dom.test.py
 
 Loosen the DOM family script and a page carrying a fault a table line
-catches, each planted in the fixtures under a `fault: <id>:` mark, passes the
-gate unseen.
+catches, each planted in the fixtures under a `fault: <id>:` comment and a
+`data-fault` or `data-fault-absent` mark naming its line, passes the gate
+unseen.
 
 The fixture pages are served over a local HTTP site, since only a site
 answers a missing address with a status; one browser serves every test.
@@ -52,6 +53,7 @@ with open(dom.TABLE, encoding="utf8") as fh:
 with open(PARTS_FILE, encoding="utf8") as fh:
     PARTS, UNSET = dom.probe.declared_parts(fh.read())
 RECORDS = list(dict.fromkeys(r.id for b in BLOCKS for r in b.rules))
+MARKED = ("data-fault", "data-fault-absent")
 OPEN = contextlib.ExitStack()
 BROWSER = None
 SITES = {}
@@ -124,9 +126,93 @@ def faults(*pages):
     )
 
 
-def lines(blocks=BLOCKS):
-    """Each table line, as a finding names it."""
-    return [dom.block_line(b, r).line for b in blocks for r in b.rules]
+def own_tokens():
+    nth = collections.Counter()
+    out = {}
+    for b in BLOCKS:
+        for r in b.rules:
+            nth[r.id] += 1
+            out[dom.block_line(b, r).line] = (b, r, f"{r.id}:{nth[r.id]}")
+    return out
+
+
+LINES = own_tokens()
+
+
+def tokens(*pages):
+    return collections.Counter(
+        token
+        for p in pages
+        for attr in MARKED
+        for value in re.findall(rf'{attr}="([^"]*)"', p.read_text())
+        for token in value.split()
+    )
+
+
+def landings(url):
+    """{table line: {token}} of the marks its misses on the page at `url`
+    land on. A miss names an element, or, for a count or a distinct read,
+    the line's own selection: that lands on the marked elements the
+    selection picks, or where it picks none, on the load's absence marks."""
+    (as_mark,) = table("vault.marked | css:html | attr:data-fault | absent")[0].rules
+    picks = [
+        dom.Block(
+            b.load,
+            b.when,
+            [r._replace(read=as_mark.read, must=as_mark.must) for r in b.rules],
+        )
+        for b in BLOCKS
+    ]
+    inventory = {}
+    for load in dict.fromkeys(b.load for b in BLOCKS):
+        for attr in MARKED:
+            block = dom.Block(
+                load,
+                None,
+                table(f"vault.{attr} | all css:[{attr}] | attr:{attr} | absent")[
+                    0
+                ].rules,
+            )
+            inventory[dom.block_line(block, block.rules[0]).line] = (block, attr)
+    swept = dom.run(
+        BROWSER,
+        url,
+        picks + [block for block, _ in inventory.values()],
+        parts=PARTS,
+        unset=UNSET,
+        timeout=dom.flow.LOAD_TIMEOUT_MS,
+    )
+    carried = collections.defaultdict(set)
+    marked_picks = collections.defaultdict(set)
+    lines_picking = set()
+    for _, results in swept:
+        for result in results:
+            line = result.rule.line
+            if line in inventory:
+                block, attr = inventory[line]
+                for s in result.subjects:
+                    carried[block.load, attr, s.subject] |= set(s.value.split())
+                continue
+            if result.subjects:
+                lines_picking.add(line)
+            marked_picks[line] |= {
+                s.subject for s in result.subjects if s.verdict == "miss"
+            }
+    out = collections.defaultdict(set)
+    for f in found(url).values():
+        for m in f["misses"]:
+            line = m["line"]
+            block, rule, _ = LINES[line]
+            if m["subject"] != rule.select.text:
+                attr, elements = "data-fault", {m["subject"]}
+            elif line in lines_picking:
+                attr, elements = "data-fault", marked_picks[line]
+            else:
+                attr = "data-fault-absent"
+                elements = {e for at, a, e in carried if (at, a) == (block.load, attr)}
+            for e in elements:
+                out[line] |= carried[block.load, attr, e]
+    return out
 
 
 def local(folder, body, head=""):
@@ -183,21 +269,31 @@ def program(*argv):
 
 
 class TheFixtures(unittest.TestCase):
-    def test_the_fault_pages_plant_one_fault_for_each_table_line(self):
+    def test_the_fault_pages_plant_and_mark_one_fault_for_each_table_line(self):
         self.assertEqual(
             faults(FAULT, FAULT_ONE, MISSING_FAULT),
             collections.Counter(r.id for b in BLOCKS for r in b.rules),
         )
+        self.assertEqual(
+            tokens(FAULT, FAULT_ONE, MISSING_FAULT),
+            collections.Counter(token for _, _, token in LINES.values()),
+        )
         self.assertEqual(faults(CLEAN, CLEAN_ONE, MISSING_CLEAN), {})
+        self.assertEqual(tokens(CLEAN, CLEAN_ONE, MISSING_CLEAN), {})
 
-    def test_every_table_line_misses_on_a_fault_page(self):
-        missed = {
-            m["line"]
-            for site in ("fault", "fault-one")
-            for f in found(SITES[site]).values()
-            for m in f["misses"]
-        }
-        self.assertEqual([line for line in lines() if line not in missed], [])
+    def test_every_table_line_misses_on_the_element_its_fault_marks(self):
+        landed = collections.defaultdict(set)
+        for site in ("fault", "fault-one"):
+            for line, got in landings(SITES[site]).items():
+                landed[line] |= got
+        self.assertEqual(
+            [
+                line
+                for line, (_, _, token) in LINES.items()
+                if token not in landed[line]
+            ],
+            [],
+        )
 
     def test_every_record_fails_on_the_fault_page(self):
         got = found(SITES["fault"])
