@@ -12,12 +12,11 @@ const RECORD_FIELDS = ["stage", "target", "inputs", "output", "script", "parts",
 const RECORD_REQUIRED = ["stage", "reasons", "ledger", "status"];
 const ALL_FIELDS = [...FIELDS, ...RECORD_FIELDS];
 const ANSWERERS = ["script", "code", "look", "whole-page", "type", "builder"];
-// #121's dependency order.
+// #121
 const STAGES = ["function", "role", "treatment", "value"];
-const BUILDER_STAGES = ["function", "role", "treatment"];
+const BUILDER_RECORD_STAGES = ["function", "role", "treatment"];
 
-/** Whether the builder is given the record at some stage of a round, the only place its target is printed. */
-const builderLoads = (q) => q.fields["answered-by"]?.value === "builder" || BUILDER_STAGES.includes(q.fields.stage?.value);
+const isBuilderLoaded = (q) => q.fields["answered-by"]?.value === "builder" || BUILDER_RECORD_STAGES.includes(q.fields.stage?.value);
 const STATUSES = ["live", "staged"];
 const OWED = "owed";
 const GATE_ANSWERERS = ["script", "code", "look"];
@@ -104,10 +103,10 @@ function recordFaults(q) {
   if (value("status") && !STATUSES.includes(value("status"))) out.push([`has a status that is not one of ${STATUSES.join(", ")}: ${value("status")}`, f.status.line]);
   if (answerer === "script" && isVault && !value("script")) out.push([`is answered by script but names no script (the script and its mode, or \`${OWED}\`)`, q.line]);
   if (value("script") && answerer && answerer !== "script") out.push([`gives \`script: ${value("script")}\` but is answered by ${answerer}: only a record answered by script names one`, f.script.line]);
-  const loaded = builderLoads(q);
+  const loaded = isBuilderLoaded(q);
   if (loaded && !value("target")) out.push([`is loaded by the builder (${answerer === "builder" ? "answered by builder" : `stage ${value("stage")}`}) but gives no target`, q.line]);
-  const loadJudgeable = value("stage") ? STAGES.includes(value("stage")) : !isVault;
-  if (!loaded && loadJudgeable && value("target")) out.push([`gives a target no reader prints (${value("stage") ? `stage ${value("stage")}` : "no stage"}, answered by ${answerer ?? "nobody"}): only a record at ${BUILDER_STAGES.join(", ")}, or answered by builder, gives one`, f.target.line]);
+  const isLoadJudgeable = value("stage") ? STAGES.includes(value("stage")) : !isVault;
+  if (!loaded && isLoadJudgeable && value("target")) out.push([`gives a target no reader prints (${value("stage") ? `stage ${value("stage")}` : "no stage"}, answered by ${answerer ?? "nobody"}): only a record at ${BUILDER_RECORD_STAGES.join(", ")}, or answered by builder, gives one`, f.target.line]);
   if (value("parts")) {
     const unknown = value("parts").split(",").map((p) => p.trim()).filter((p) => !PARTS.includes(p));
     if (value("stage") !== "treatment") out.push([`names parts at stage ${value("stage") ?? "none"}: only a treatment record is chosen by the candidate's parts`, f.parts.line]);
@@ -177,4 +176,4 @@ function applies(appliesWhen, asset, facts) {
   return condition.split(" and ").every((t) => holds(t.trim()));
 }
 
-module.exports = { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, builderLoads, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion };
+module.exports = { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, isBuilderLoaded, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion };
