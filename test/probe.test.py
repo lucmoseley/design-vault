@@ -581,6 +581,12 @@ class Grammar(unittest.TestCase):
             self.judge(line, [{"value": "15px"}, {"value": "16px"}])[0], "miss"
         )
 
+    def test_a_scope_word_alone_is_a_value_not_a_read(self):
+        must = probe.parse("A | css:input | attr:enterkeyhint | = next")[0].must
+        self.assertEqual((must.values, must.ref), (("next",), None))
+        must = probe.parse("A | css:p | style:color | = next style:color")[0].must
+        self.assertEqual(must.ref.read.scope, "next")
+
     def test_all_of_holds_against_every_other_element(self):
         line = "A | part:cta | height | > all of (role:button) height"
         others = [(1, "53px", {}), (2, "45px", {})]

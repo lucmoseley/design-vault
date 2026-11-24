@@ -73,8 +73,8 @@ A read may start parent, prev, next, body or root to read that element
 instead, prev and next the element siblings either side, and two
 reads may be joined by per, minus or times: style:line-height per
 style:font-size. Two decl: colours may be joined by on, the first's WCAG
-contrast over the second, which is drawn over black and over white where it
-is translucent and the lower taken: decl:color on decl:background-color. A
+contrast over the second; a translucent second is composited onto both black
+and white, and the lower ratio kept: decl:color on decl:background-color. A
 style, ground, backdrop or decl read may end "as oklch-l", "as
 oklch-c", "as oklch-h", "as alpha" or "as luminance", read off the colour by
 colour_space.py.
@@ -484,7 +484,8 @@ def _ref(text, required=False):
                     raise TableError("all of reads each element, not distinct or count")
                 return Ref(select, read, text)
         raise TableError("all of ( wants its closing )")
-    if text.split(" ", 1)[0] in SCOPES:
+    scope, _, rest = text.partition(" ")
+    if scope in SCOPES and rest:
         read = _read(text)
         if read.distinct or read.kind == "count":
             raise TableError("a compared read is one element's, not distinct or count")
