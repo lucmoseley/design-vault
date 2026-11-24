@@ -7,6 +7,14 @@
 		"route": "`node scripts/check-guard-registry.js --review`, which re-anchors a guard whose annotation has been read",
 		"consumes": null
 	},
+	".claude/implicit-behaviours.json": {
+		"section": "Skills & settings",
+		"class": "source-of-truth",
+		"classQualifier": null,
+		"role": "What each script git or a hook runs unasked does, why, and its escape, one row per wired path; check-guard-registry.js reads it",
+		"route": "Direct, then `node scripts/check-guard-registry.js --review <path>`",
+		"consumes": null
+	},
 	".claude/settings.json": {
 		"section": "Skills & settings",
 		"class": "free-edit",
