@@ -311,6 +311,8 @@ LONG_MS = 5000
 # named for pausing it clicks. Guesses, unmeasured.
 WATCH_MS = 1000
 PAUSE_TRIES = 6
+# Frames a pause control has to hold still in before it counts as moving (#536): a guess.
+PAUSE_FRAMES = 10
 # Event types that make an element act on a pointer, and React's props for them.
 ACT_EVENTS = (
     "click",
@@ -1041,26 +1043,29 @@ MOTION_JS = (
 """
 )
 
-# Whether the i-th control named for pausing can take a visitor's click, read
-# over frames rather than against a clock, so a busy machine reads it the same
-# (#536): still attached, the same box two frames apart once scrolled to, and
-# itself under the point at that box's centre, where Playwright clicks.
+# #536
 CLICKABLE_JS = r"""
 (i) => new Promise((resolve) => {
   const el = window.__pauses[i];
   if (!el.isConnected) return resolve(false);
   el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
   const box = () => {
-    const r = el.getClientRects()[0];
-    return r ? [r.left, r.top, r.width, r.height] : [0, 0, 0, 0];
+    const r = [...el.getClientRects()].find((r) => r.width && r.height);
+    return r ? [r.left, r.top, r.width, r.height] : null;
   };
-  const was = box();
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const [x, y, w, h] = box();
-    if (!el.isConnected || !w || !h || [x, y, w, h].some((v, k) => v !== was[k])) return resolve(false);
+  let was = box(), left = PAUSE_FRAMES;
+  const frame = () => requestAnimationFrame(() => {
+    const now = box();
+    if (!el.isConnected || disabled(el) || !now) return resolve(false);
+    if (!was || now.some((v, k) => v !== was[k])) {
+      was = now;
+      return --left ? frame() : resolve(false);
+    }
+    const [x, y, w, h] = now;
     const hit = el.getRootNode().elementFromPoint(x + w / 2, y + h / 2);
     resolve(!!hit && el.contains(hit));
-  }));
+  });
+  frame();
 })
 """
 
@@ -1088,7 +1093,7 @@ def page_js(body):
     consts = (
         f"const MIN_TARGET = {MIN_TARGET}, PX_SLACK = {maths.PX_SLACK}, BOLD_CUE = {BOLD_CUE}, WRAP = {WRAP}, "
         f"LINK_RATIO = {LINK_RATIO}, WRAPPERS = {WRAPPERS}, FOCUS_REACH = {FOCUS_REACH}, LONG_MS = {LONG_MS}, "
-        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, "
+        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, PAUSE_FRAMES = {PAUSE_FRAMES}, "
         f"OPAQUE = {OPAQUE}, DATE_PARTS = {DATE_PARTS}, ACT_EVENTS = {json.dumps(ACT_EVENTS)}, REACT_PROPS = {json.dumps(REACT_PROPS)};\n"
     )
     return consts + CUE_JS + body
@@ -1423,14 +1428,13 @@ def pause_answer(context, url):
         if len(stopped) == len(got["long"]):
             break
         # Covered, moving or detached: a visitor could not click it either,
-        # so it pauses nothing. Forced, the click skips Playwright's own
-        # actionability wait, whose timeout a busy machine outruns (#536).
-        if not page.evaluate(CLICKABLE_JS, i):
+        # so it pauses nothing.
+        if not page.evaluate(page_js(CLICKABLE_JS), i):
             unclickable += 1
             continue
         try:
             page.evaluate_handle("(i) => window.__pauses[i]", i).as_element().click(
-                force=True
+                force=True  # #536
             )
         except PlaywrightError:
             unclickable += 1

@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>settling</title>
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .spin { width: 40px; height: 40px; margin: 16px 0; background: #0a3542; animation: spin 2s linear infinite }
+  .still .spin { animation-play-state: paused }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  .gap { height: 2000px }
+  .grown .gap { height: 2100px }
+</style>
+<p>Beds by the sea.</p>
+<div class="spin"></div>
+<div class="gap"></div>
+<button type="button" onclick="document.body.classList.add('still')">Pause</button>
+<div class="gap"></div>
+<script>
+  addEventListener('scroll', () => document.body.classList.add('grown'), { once: true });
+</script>
