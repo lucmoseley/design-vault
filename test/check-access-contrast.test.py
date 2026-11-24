@@ -374,32 +374,39 @@ class Slides(unittest.TestCase):  # #427
         self.assertEqual(photo.unmeasured, [f"a#play {why}"])
 
 
+def photo_answer(fixture, carousel, fresh=None):
+    """vault.controls-on-photo's answer on `fixture`, with `carousel` declared. Without `fresh`, the slide pass
+    reads a new page on the fixture from the same browser."""
+    from playwright.sync_api import sync_playwright
+
+    access = library("check-access.py")
+    url = pathlib.Path(FIXTURES, fixture).resolve().as_uri()
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        try:
+
+            def load():
+                page = browser.new_page()
+                page.goto(url)
+                return page
+
+            out, _ = contrasts.measure(
+                load(),
+                access.contrast_js,
+                TABLE,
+                parts={"carousel": carousel},
+                absent={"chart"},
+                texts=None,
+                fresh=fresh or load,
+            )
+        finally:
+            browser.close()
+    return out["vault.controls-on-photo"]
+
+
 class SlidePassErrors(unittest.TestCase):  # #528
     def photo_answer(self, fresh):
-        from playwright.sync_api import sync_playwright
-
-        access = library("check-access.py")
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            try:
-                page = browser.new_page()
-                page.goto(
-                    pathlib.Path(FIXTURES, "contrast-tier01-later.html")
-                    .resolve()
-                    .as_uri()
-                )
-                out, _ = contrasts.measure(
-                    page,
-                    access.contrast_js,
-                    TABLE,
-                    parts={"carousel": "#deck"},
-                    absent={"chart"},
-                    texts=None,
-                    fresh=fresh,
-                )
-            finally:
-                browser.close()
-        return out["vault.controls-on-photo"]
+        return photo_answer("contrast-tier01-later.html", "#deck", fresh)
 
     def test_a_load_that_throws_is_a_reason_naming_the_error(self):
         from playwright.sync_api import Error as PlaywrightError
@@ -431,6 +438,43 @@ class SlidePassErrors(unittest.TestCase):  # #528
         (why,) = photo.unmeasured
         self.assertIn("Execution context was destroyed", why)
         self.assertTrue(page.closed)
+
+
+class SlidePassLimits(unittest.TestCase):  # #512
+    @classmethod
+    def setUpClass(cls):
+        cls.photo = photo_answer("contrast-tier01-decks.html", ".deck")
+
+    def test_no_deck_is_faulted_and_each_names_one_reason(self):
+        self.assertEqual(self.photo.faults, [])
+        self.assertEqual(len(self.photo.unmeasured), 4, self.photo.unmeasured)
+
+    def test_dots_past_max_slides_are_named_unread(self):
+        self.assertIn(
+            "div#deck-dots holds 13 page dots, so its slides past 12 were not read",
+            self.photo.unmeasured,
+        )
+
+    def test_a_next_button_still_showing_new_slides_is_named_unread(self):
+        self.assertIn(
+            "div#deck-endless still showed a new slide after 12 presses of its next button, so its later "
+            "slides were not read",
+            self.photo.unmeasured,
+        )
+
+    def test_a_deck_with_no_dots_or_next_is_named_read_at_load_alone(self):
+        self.assertIn(
+            "div#deck-bare shows no page dots or next button the check can press, so only the slide it shows "
+            "at load was read",
+            self.photo.unmeasured,
+        )
+
+    def test_a_deck_that_never_holds_still_is_named_unread(self):
+        self.assertIn(
+            "div#deck-restless never held still on div#deck-restless's slide 2, reached by its next "
+            "button, so that slide was not read",
+            self.photo.unmeasured,
+        )
 
 
 PLANT = re.compile(
