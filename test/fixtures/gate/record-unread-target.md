@@ -1,0 +1,15 @@
+### vault.unread-target
+- applies-when: web-surface; every field
+- question: Does vault.unread-target hold?
+- answered-by: script
+- writes: unread-target
+- yields-to: none
+- source: a made-up rule; strength: house judgement
+- era: timeless
+- owner: vault
+- stage: value
+- script: check-style.py
+- reasons: design-critique/references/surface-styling.md#two-border-roles
+- ledger: none
+- target: Build every field to the made-up number.
+- status: live

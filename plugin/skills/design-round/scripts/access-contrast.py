@@ -375,7 +375,6 @@ MARK_JS = r"""
     const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => step.test(nameOf(e)))) || [];
     const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && ahead.test(nameOf(e))) || null;
     window.__contrastCarousels.push({ el: c, dots: row, next });
-    // Whether any slide, shown or not, holds an image, video or canvas a control could lie over.
     const media = [c, ...c.querySelectorAll('*')].some((e) => ['img', 'video', 'canvas'].includes(e.localName)
       || /url\(/.test(getComputedStyle(e).backgroundImage));
     slides.push({ subject: label(c), dots: row.length, next: !!next, media });
