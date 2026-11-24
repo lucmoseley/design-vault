@@ -1,5 +1,6 @@
 """check-flow.py, with each pointer event reaching the page late: a press
-LATE_PRESS_MS, any other LATE_MOVE_MS:
+LATE_PRESS_MS, any other LATE_MOVE_MS; and with the page's main thread held
+BUSY_RELEASE_MS at each release, before the page's own handler runs:
 python3 test/late-input.py <check-flow args>
 
 check-flow-records.test.py runs the clean page's drag-release through it.
@@ -21,6 +22,13 @@ from playwright.sync_api import CDPSession, Mouse
 LATE_PRESS_MS = 400
 # The pause after any other pointer event, in ms: a guess.
 LATE_MOVE_MS = 60
+# measured: turned the clean card back in 10 of 10 flings before the fix (#510)
+BUSY_RELEASE_MS = 40
+BUSY_RELEASE_INIT = (
+    "addEventListener('pointerup', () => {"
+    " const s = performance.now(); while (performance.now() - s < %d); }, true);"
+    % BUSY_RELEASE_MS
+)
 
 FLOW = os.path.join(
     os.path.dirname(__file__),
@@ -55,4 +63,5 @@ if __name__ == "__main__":
     spec = importlib.util.spec_from_file_location("check_flow", FLOW)
     flow = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(flow)
+    flow.records.RELEASE_INIT += BUSY_RELEASE_INIT
     sys.exit(flow.main(sys.argv[1:]))
