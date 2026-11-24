@@ -235,10 +235,13 @@ STRIP_JS = """
 """
 
 STAY_ON_PAGE_JS = """
-() => addEventListener('click', (e) => {
-  const a = e.target.closest && e.target.closest('a[href]');
-  if (a && a.href.split('#')[0] !== location.href.split('#')[0]) e.preventDefault();
-}, true)
+() => {
+  addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (a && a.href.split('#')[0] !== location.href.split('#')[0]) e.preventDefault();
+  }, true);
+  addEventListener('submit', (e) => e.preventDefault(), true);
+}
 """
 KEEP_DECKS_JS = "() => { window.__contrastDecks = window.__contrastCarousels; }"
 PRESS_JS = """
@@ -942,9 +945,36 @@ def _press(page, js, handle, *, deck, dot):
     return settled
 
 
-def _slide_readings(page, js, mark):
-    page.evaluate(STAY_ON_PAGE_JS)
+def _slide_pass(fresh, js, parts, absent):
+    """The slide pass's (readings, cannot-measure reasons), on the page `fresh()` loads. A browser error ends it
+    with a reason naming the error, keeping what it read before (#528)."""
+    from playwright.sync_api import Error as PlaywrightError
+
     readings, unread = [], []
+    deck_page = None
+    try:
+        deck_page = fresh()
+        _slide_readings(
+            deck_page,
+            js,
+            functools.partial(_mark, deck_page, js, parts, absent),
+            readings=readings,
+            unread=unread,
+        )
+    except PlaywrightError as err:
+        first = (str(err).strip().splitlines() or [""])[0]
+        unread.append(
+            "the declared carousel's slides could not be stepped through, so its slides past those already read "
+            f"were not read ({type(err).__name__}: {first})"
+        )
+    finally:
+        if deck_page is not None:
+            deck_page.close()
+    return readings, unread
+
+
+def _slide_readings(page, js, mark, *, readings, unread):
+    page.evaluate(STAY_ON_PAGE_JS)
 
     def read(subject, where, held):
         if not held:
@@ -1015,7 +1045,6 @@ def _slide_readings(page, js, mark):
                 f"{subject} shows no page dots or next button the check can press, so only the slide it shows at load "
                 "was read"
             )
-    return readings, unread
 
 
 def _photo_verdict(photo, readings, table):
@@ -1195,14 +1224,8 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
                 )
     page.evaluate(STRIP_JS)
 
-    if got["photo"] and got["slides"]:
-        deck_page = fresh()
-        try:
-            more, unread = _slide_readings(
-                deck_page, js, functools.partial(_mark, deck_page, js, parts, absent)
-            )
-        finally:
-            deck_page.close()
+    if got["slides"]:
+        more, unread = _slide_pass(fresh, js, parts, absent)
         on_photo += more
         photo.unmeasured.extend(unread)
     readings += _photo_verdict(photo, on_photo, table)
