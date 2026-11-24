@@ -40,7 +40,7 @@ Record: `vault.scroller-input`.
 
 ### Tables hold data
 
-Records: `vault.table-use`, `vault.table-markup`.
+Records: `vault.table-use`, `vault.table-markup`, `vault.table-markup-look`.
 
 - **Why.** Table markup tells a screen reader which row and column each cell belongs to; data in a grid of plain boxes loses that, and a layout table claims relationships its content does not have (WCAG 2.2 SC 1.3.1).
 - **Trade-off.** A table reflows poorly on a phone, which is why data is sometimes laid out as cards; cards then carry each value's label themselves.
@@ -48,7 +48,7 @@ Records: `vault.table-use`, `vault.table-markup`.
 
 ### Table headers
 
-Records: `vault.table-headers`, `vault.table-print-header`.
+Records: `vault.table-headers`, `vault.table-print-header`, `vault.table-header-cells`.
 
 - **Why.** A header cell names what each column or row holds; marked as one, it is read out with every cell and, in `thead`, printed again at the top of each page.
 - **Trade-off.** A table component that emits no `th` or `thead` must be configured or replaced.
@@ -63,7 +63,7 @@ Record: `vault.card-alignment`.
 
 ### Chart marks
 
-Record: `vault.chart-contrast`.
+Records: `vault.chart-contrast`, `vault.chart-carried`.
 
 - **Why.** A visitor who cannot make out a line or tell two slices apart cannot read the chart, so WCAG 2.2 SC 1.4.11 holds each mark needed for that to 3:1.
 - **Trade-off.** A palette of series colours that each clear 3:1 against the ground and their neighbours is narrower; labels on the chart free it.

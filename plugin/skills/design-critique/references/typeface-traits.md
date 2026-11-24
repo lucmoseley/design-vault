@@ -44,7 +44,7 @@ Record: `vault.type-tracking`.
 
 ### Variable fonts and axes
 
-Record: `vault.type-axes`.
+Records: `vault.type-axes`, `vault.axis-properties`.
 
 - **Why.** A weight-axis variable file weighs about two static weights (measured, #282), so it pays once a page uses three weights, a weight between two named ones, or grade or width. An opsz axis adds 1.5–2.4× more and pays where the face is used at both text and display sizes. Optical sizing is on by default and the browser sets opsz to the used size; setting it by hand is outdated advice (Web Almanac 2024).
 - **Trade-off.** A variable file is one request and many styles; at one or two weights it costs bytes. A variable file's default instance may not be 400 (Fira Code ships at 300), so the weight is always set.
@@ -52,7 +52,7 @@ Record: `vault.type-axes`.
 
 ### Width by role
 
-Record: `vault.type-width`.
+Records: `vault.type-width`, `vault.prose-width`.
 
 - **Why.** A narrow width fits more characters in a label or a dense cell, and a wide one carries personality in a short heading (Material 3; Google Fonts Knowledge). Text read at a glance reads best in a non-condensed width at a larger size (Google Fonts Knowledge, 2025).
 - **Trade-off.** A condensed face may need a slightly larger size; a wide one costs space a top bar lacks.
@@ -68,7 +68,7 @@ Record: `vault.code-size`.
 
 ### Emphasis takes bold
 
-Record: `vault.emphasis-weight`.
+Records: `vault.emphasis-weight`, `vault.toggle-state`.
 
 - **Why.** One step from regular to semibold is often too small to read as emphasis, and the visible step shrinks further at small sizes and on dark grounds (Google Fonts Knowledge; [Weight by size and ground](#weight-by-size-and-ground)). The same holds for a selected state shown by weight: it must be obvious (Apple HIG Toggles).
 - **Trade-off.** Butterick allows semibold, which reads a little more easily than bold; the house takes Google's clearly visible difference. A face drawn without a 700 takes its next weight past +300.
@@ -92,7 +92,7 @@ Record: `vault.weight-count`.
 
 ### Telling characters apart
 
-Record: `vault.glyph-distinct`.
+Records: `vault.glyph-distinct`, `vault.zero-distinct`.
 
 - **Why.** Readers with dyslexia and others confuse I, l and 1, and O and 0; in a reference number or code there are no words around them to help.
 - **Trade-off.** A slashed zero looks technical in running prose, so it is kept to codes and data.
@@ -124,7 +124,7 @@ Record: `vault.font-smoothing`.
 
 ### One job per face
 
-Record: `vault.face-roles`.
+Records: `vault.face-roles`, `vault.face-count`.
 
 - **Why.** A second face works when each face keeps one job, body or headings; a third rarely works, and four almost never (Butterick). Too many faces blur the hierarchy and make an interface look inconsistent (Apple). Code needs a monospace face, because its dense punctuation reads better there. Design systems split the faces the same way: USWDS by role tokens, Atlassian with a brand face for marketing and a plain one for the app.
 - **Trade-off.** One family is lighter to load and always consistent; a second face adds voice and file weight.

@@ -8,7 +8,7 @@ A project's rules file wins over every record here except a floor WCAG or the la
 
 ### Help in one place
 
-Records: `vault.consistent-help`, `vault.help-button`.
+Records: `vault.consistent-help`, `vault.help-button`, `vault.help-button-target`.
 
 - **Why.** A visitor who needs help looks where they found it last time; help that moves between pages is found again only by searching (WCAG 2.2 SC 3.2.6). Two help buttons in one view leave the visitor guessing which help each opens.
 - **Trade-off.** A help route fixed in the shared template cannot be moved up on the one page where it matters most; a second, page-specific route can be added, as long as the repeated one keeps its place.
@@ -16,7 +16,7 @@ Records: `vault.consistent-help`, `vault.help-button`.
 
 ### Nothing on hover alone
 
-Records: `vault.hover-reveal`, `vault.hover-content`.
+Records: `vault.hover-reveal`, `vault.hover-content`, `vault.editable-cue`.
 
 - **Why.** A phone, a tablet and a keyboard cannot hover, and a touch laptop's visitor may never move a pointer, so what only hover shows is missing for them (web.dev, MDN). A tooltip a keyboard cannot open, or one that vanishes as the pointer moves onto it, fails the same visitors (WCAG 2.2 SC 1.4.13).
 - **Trade-off.** Showing a card's actions by default where no input hovers makes the card busier on a phone; fewer actions per card is the way out, not hiding them.

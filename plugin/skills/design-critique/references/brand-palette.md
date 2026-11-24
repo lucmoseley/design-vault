@@ -34,7 +34,7 @@ Record: `vault.colour-distance`.
 
 ### A logo's grounds follow its lightness
 
-Record: `vault.logo-ground`.
+Records: `vault.logo-ground`, `vault.logo-ground-script`.
 
 - **Why.** WCAG exempts a logo from contrast only where brand guidelines fix it; a ground the designer chooses is not exempt, so the 3:1 check binds in every round.
 - **Trade-off.** The more grounds a site wants, the more versions the logo needs. A keyline reads as a sticker, and adds a colour that must itself pass the near-miss check.
@@ -42,7 +42,7 @@ Record: `vault.logo-ground`.
 
 ### Never recolour a logo
 
-Record: `vault.logo-colour`.
+Records: `vault.logo-colour`, `vault.logo-unchanged`.
 
 - **Why.** The client owns the logo; its colours are part of the mark, as the brand guidelines of Spotify and GOV.UK both say.
 - **Trade-off.** The page loses grounds it wanted, or waits for the client.

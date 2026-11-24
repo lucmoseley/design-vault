@@ -105,7 +105,7 @@ For each part, in this order, the whole-page critic answers:
 
 ### Whole targets
 
-Record: `vault.whole-target`.
+Records: `vault.whole-target`, `vault.whole-target-look`.
 
 - **Why.** A visitor aims at the whole thing they see, not at its label. GOV.UK linked the whole task row after users tried to press the status labels, and makes the whole accordion heading the button; NN/g found a larger target catches more of the clicks people mean.
 - **Trade-off.** A row or card that is one target cannot hold a second action without hiding it; the second action splits the part into separate targets.
@@ -138,7 +138,7 @@ Record: `vault.brand-layer`.
 
 ### The default button in a dialog
 
-Record: `vault.dialog-default`.
+Records: `vault.dialog-default`, `vault.dialog-default-look`.
 
 - **Why.** People press the button that stands out, or press Return, without reading it first (Apple HIG).
 - **Trade-off.** Where a visitor chose the destructive action themselves (emptying the bin), it stays the default even though it cannot be undone, and saves a step (Apple HIG); opening focus on the safe button instead costs the visitor one more click.
@@ -162,7 +162,7 @@ Record: `vault.image-earns`.
 
 ### Expression by frequency
 
-Records: `vault.motion-frequency`, `vault.delight-frequency`.
+Records: `vault.motion-frequency`, `vault.delight-frequency`, `vault.motion-frequency-look`.
 
 - **Why.** Frequent parts move briefly or not at all, and expression is kept for the rare moments where it is noticed.
 - **Trade-off.** A product kept plain everywhere it is used often can feel flat; its character then rests on the brand layer and the rare moments.

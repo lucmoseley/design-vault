@@ -25,7 +25,7 @@ Record: `vault.fill-text`.
 
 ### Disabled controls
 
-Record: `vault.disabled-legibility`.
+Records: `vault.disabled-legibility`, `vault.disabled-dim`.
 
 - **Why.** WCAG exempts inactive controls, and W3C says no one fix suits everyone. Systems split: Atlassian's disabled text measures 2.0:1, Material's 2.3–3.0:1, USWDS keeps 5.8:1. NN/g asks for lower contrast that a visitor can still read, but not so high it looks live. Whole-control opacity lets the ground show through, so the result changes with the ground; solid tokens do not. A row shown as full or sold out is content, not a control, so it keeps the text floor.
 - **Trade-off.** A legible disabled label invites a click on something that does nothing; a faint one hides what the control would do. A disabled control that stays focusable with `aria-disabled` can explain itself, at the cost of a stop in the Tab order.
@@ -41,7 +41,7 @@ Records: `vault.forced-colours-edge`, `vault.ring-outline`.
 
 ### One focus colour
 
-Record: `vault.focus-colour`.
+Records: `vault.focus-colour`, `vault.focus-colour-kept`.
 
 - **Why.** GOV.UK and Atlassian each reserve a focus colour, so focus never reads as selection or hover; GOV.UK pairs yellow with black so one ring passes on light and dark grounds. Chromium's own ring is already two colours, a dark ring with a thin white outline, drawn for light and dark grounds alike.
 - **Trade-off.** A reserved colour is one hue the brand cannot use elsewhere. Material instead takes focus from its secondary palette role; that keeps the palette smaller but lets focus look like other uses of that colour.

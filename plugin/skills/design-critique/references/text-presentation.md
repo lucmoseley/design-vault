@@ -88,7 +88,7 @@ Record: `vault.visited-links`.
 
 ### Emphasis in running text
 
-Record: `vault.prose-emphasis`.
+Records: `vault.prose-emphasis`, `vault.emphasis-share`, `vault.emphasis-form`.
 
 - **Why.** Bold and italic stand out because they are rare; used often, nothing stands out. A sans serif's italic barely slants, so bold does the job there. Underline belongs to links.
 - **Trade-off.** In an interface already full of semibold labels, bold in prose loses some force.
@@ -104,7 +104,7 @@ Record: `vault.sibling-emphasis`.
 
 ### Ranking text
 
-Record: `vault.emphasis-cues`.
+Records: `vault.emphasis-cues`, `vault.emphasis-cue`.
 
 - **Why.** Weight and a second text colour rank text without breaking the type scale; size steps add up quickly, so they stay small. Text made both lighter and smaller than body text loses legibility twice. Three levels of contrast are enough for a complex view (NN/g).
 - **Trade-off.** Ranking by weight adds visual noise if many things are bold.
@@ -120,7 +120,7 @@ Record: `vault.dark-ground`.
 
 ### Sentence case by element
 
-Record: `vault.text-case`.
+Records: `vault.text-case`, `vault.label-case`, `vault.badge-case`.
 
 - **Why.** Every design system checked sets headings, buttons, tags and list items in sentence case (GOV.UK, Atlassian, USWDS), and GOV.UK moved its tags off uppercase in 2023 because capitals read worse in longer tags. Title case marks words as a title when a heading is a statement (Butterick). An odd case among its siblings reads as emphasis nobody meant (NN/g).
 - **Trade-off.** Title case reads as formal and sentence case as casual (Apple), so a brand that wants a formal voice gives up a little of it.
