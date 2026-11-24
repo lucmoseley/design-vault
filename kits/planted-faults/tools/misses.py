@@ -1,5 +1,6 @@
-"""misses.py — per known fault, which critics found it in each run (2-of-3 scorer vote)."""
+"""misses.py [--runs 1,2,3] — per known fault, which critics found it in each run (2-of-3 scorer vote)."""
 
+import argparse
 import json
 import sys
 import pathlib
@@ -8,6 +9,9 @@ from collections import Counter
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import score
 
+ap = argparse.ArgumentParser()
+ap.add_argument("--runs", default="1,2,3")
+score.RUNS[:] = [int(r) for r in ap.parse_args().runs.split(",")]
 WORK = score.WORK
 hit = {}
 for cand in score.scored_cands():
