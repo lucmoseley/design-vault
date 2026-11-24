@@ -883,8 +883,6 @@ async (back) => {
   const stop = { i: w.els.length - 1, subject: label(el), unreadable: frame, part: null, region: null, cover: null, covered: false, need: 0 };
   const view = [0, 0, document.documentElement.clientWidth, innerHeight];
   const showing = (e) => meet(visiblePart(e, box(e.getBoundingClientRect())), view);
-  // A control hidden for a screen reader shows its focus on what stands for
-  // it: its label, or else the nearest wrapper that shows.
   let shows = el, part = showing(el);
   for (const stand of [...(el.labels || []), ...ancestorsOf(el)]) {
     if (!empty(part)) break;
@@ -1250,14 +1248,10 @@ def focus_fault(page, stop, key):
             "takes focus outside the window or its clipping box, where its focus cannot be seen",
             False,
         )
-    # 2.4.11 judges the part, not its indicator: a ring showing past a bar
-    # that hides the whole part does not save it.
     if stop["covered"]:
         return f"is hidden under {stop['cover']} when {key} brings focus to it", False
     if stop["unreadable"]:
         return None, False
-    # Each state shot twice: a pixel that moves while focus stays put, a
-    # video's or a canvas's, is no indicator, nor is one near it.
     shots = []
     for _ in range(2):
         shots.append(viewport_shot(page))
