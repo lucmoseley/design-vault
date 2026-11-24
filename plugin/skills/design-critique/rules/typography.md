@@ -132,7 +132,7 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - owner: vault
 - stage: value
 - inputs: the face's x-height (face-profile.py `xheight`), the text's role (running text or a dense working role)
-- output: running text max(16, 16 × 0.52 ÷ xheight) px, rounded; dense role max(14, 14 × 0.52 ÷ xheight) px, rounded, never under `vault.type-floor`; a fallback face matched to the primary by `font-size-adjust: from-font` on the primary
+- output: running text max(16, 16 × 0.52 ÷ xheight) px, rounded up; dense role max(14, 14 × 0.52 ÷ xheight) px, rounded up, never under `vault.type-floor`; a fallback face matched to the primary by `font-size-adjust: from-font` on the primary
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#size-from-x-height
 - ledger: TYS-7, TYS-10, TYF-19
