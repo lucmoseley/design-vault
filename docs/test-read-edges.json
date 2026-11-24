@@ -608,6 +608,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/contrast-tier01-decks.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/contrast-tier01-fault.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"

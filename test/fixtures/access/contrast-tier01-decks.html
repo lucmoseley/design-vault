@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>contrast tier 0 and 1, carousels the slide pass reads only in part</title>
+<!-- #512. #deck-restless stays last, so its endless motion starts only once the other decks are read. -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
+  .deck { position: relative; max-width: 320px; height: 120px; margin: 16px 0; overflow: hidden }
+  .deck img { display: block; width: 100%; height: 80px }
+  .dots { display: flex; gap: 4px; margin-top: 8px }
+  .dots button { width: 12px; height: 12px; padding: 0; border: 1px solid #111; border-radius: 6px; background: #fff }
+  .dots button[aria-current] { background: #111 }
+  .strip { display: flex; height: 80px }
+  .strip img { flex: 0 0 100%; height: 80px }
+  .next { height: 32px; margin-top: 4px; padding: 0 12px; border: 1px solid #111; border-radius: 16px;
+    background: #fff; color: #111; font: inherit }
+  .spinner { position: absolute; left: 0; top: 0; width: 8px; height: 8px; background: #111 }
+</style>
+<div class="deck" id="deck-dots">
+  <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23ccc'/%3E%3C/svg%3E">
+  <div class="dots"></div>
+</div>
+<div class="deck" id="deck-endless">
+  <div class="strip"></div>
+  <button class="next">Next</button>
+</div>
+<div class="deck" id="deck-bare">
+  <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23ccc'/%3E%3C/svg%3E">
+</div>
+<div class="deck" id="deck-restless">
+  <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23ccc'/%3E%3C/svg%3E">
+  <div class="spinner" hidden></div>
+  <button class="next">Next</button>
+</div>
+<script>
+  const photo = (n) => `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23${(0x404040 + n * 0x080808).toString(16)}'/%3E%3C/svg%3E`;
+
+  const dots = document.querySelector('#deck-dots .dots');
+  for (let i = 0; i < 13; i++) {
+    const b = document.createElement('button');
+    b.setAttribute('aria-label', `Slide ${i + 1}`);
+    if (i === 0) b.setAttribute('aria-current', 'true');
+    b.addEventListener('click', () => {
+      dots.querySelectorAll('button').forEach((d) => d.toggleAttribute('aria-current', d === b));
+      document.querySelector('#deck-dots img').src = photo(i);
+    });
+    dots.append(b);
+  }
+
+  const strip = document.querySelector('#deck-endless .strip');
+  for (let i = 0; i < 14; i++) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = photo(i);
+    strip.append(img);
+  }
+  let at = 0;
+  document.querySelector('#deck-endless .next').addEventListener('click', () => {
+    at += 1;
+    strip.style.transform = `translateX(${-100 * at}%)`;
+  });
+
+  const spinner = document.querySelector('#deck-restless .spinner');
+  document.querySelector('#deck-restless .next').addEventListener('click', () => {
+    spinner.hidden = false;
+    const spin = (t) => { spinner.style.left = `${Math.round(t / 16) % 300}px`; requestAnimationFrame(spin); };
+    requestAnimationFrame(spin);
+  });
+</script>
+</html>
