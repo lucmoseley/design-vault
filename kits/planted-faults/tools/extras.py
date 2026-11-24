@@ -12,7 +12,9 @@ import score
 
 ap = argparse.ArgumentParser()
 ap.add_argument("critic")
-ap.add_argument("want", nargs="?", default="real")
+ap.add_argument(
+    "want", nargs="?", default="real", choices=["real", "invented", "out-of-scope"]
+)
 ap.add_argument("rows", nargs="?", type=int, default=12)
 score.runner.add_runs(ap)
 args = ap.parse_args()
