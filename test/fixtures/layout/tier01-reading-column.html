@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A reading page, its text in a two-thirds column</title>
+<!-- vault.content-width on a reading page wider than its 864 px cap: test/check-layout.test.py runs it with --brief page=reading at 1400 px, and the text in a two-thirds column passes. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 monospace; }
+  img { display: block; max-width: 100%; height: auto; }
+  main { max-width: 1020px; margin-inline: auto; padding: 0 24px; }
+  p { max-width: 36em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>The old town</h1>
+  <img alt="" width="972" height="200" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='972' height='200'%3E%3Crect width='972' height='200' fill='%23ddd'/%3E%3C/svg%3E">
+  <p>The square sits at the top of the hill, ringed by cafes that open at seven and close long after midnight, and the hostel's door is the blue one beside the bakery.</p>
+</main>
+</body>
+</html>
