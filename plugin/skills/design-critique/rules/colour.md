@@ -164,7 +164,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - era: timeless
 - owner: vault
 - stage: value
-- target: Set body text on a light ground in a dark grey or tinted near-black at about 12:1, never under 7:1; pure black is allowed but not the default.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/text-presentation.md#near-black-body-text
 - ledger: COL-17
@@ -182,7 +181,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - stage: value
 - inputs: the grounds that hold text, the text's role (primary, secondary, placeholder, disabled)
 - output: per ground, primary about 12:1 and secondary 4.5:1 or more, both solid; placeholder 4.5:1 or more; disabled defined, free of the contrast floor and may be an opacity; a third readable grey is refused, and its rank goes to weight, size or space
-- target: Give each ground two text colours, primary near 12:1 and secondary at least 4.5:1, plus a placeholder at 4.5:1 and a disabled colour; rank anything further by weight, size and space.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/text-presentation.md#two-text-colours-per-ground
 - ledger: COL-18, TYS-27
@@ -200,7 +198,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - stage: value
 - inputs: the ground's colour, the text's role and size
 - output: primary off-white at about 10:1 (never pure #FFF on #000); secondary 7:1 or more under 24 px (18.66 px bold), 4.5:1 at or above; status carried by a border, icon or chip with off-white text
-- target: On a dark ground set text in an off-white near 10:1, secondary text at 7:1 when small, and show status by a coloured border, icon or chip, not coloured small text.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/text-presentation.md#text-on-a-dark-ground
 - ledger: COL-52
@@ -374,7 +371,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - stage: value
 - inputs: the part's role; for text, its size and weight and the face's stem (face-profile.py `stem`)
 - output: body and secondary text 4.5:1, aiming at 7:1 (SC 1.4.6) where the face's stem is under 0.06 em or the weight is under 400; large text (24 px, or 18.66 px at 700) 3:1, aiming at 4.5:1 on the same thin-face terms; an icon or edge that is a control's only identifier, a state mark and a chart mark 3:1, a 1 px line aiming at 4.5:1 because anti-aliasing fades it; an icon beside its own text label, no floor; a decorative edge or divider about 1.3–2:1 and no floor; focus, as `vault.focus` measures it; disabled, as `vault.disabled-legibility` sets it. Rungs, floor first, the last also the rung under `prefers-contrast: more`: body and secondary text 4.5:1 then 7:1; large text 3:1 then 4.5:1; an icon or edge that alone identifies a control, a control on a photo, a state mark and a chart mark 3:1 then 4.5:1. A part's rung is the highest of its role's it clears
-- target: Pick each colour pair by the part's role: body text at 4.5:1 or more and 7:1 for a thin face, large text at 3:1, an edge or icon that alone shows a control at 3:1, and 4.5:1 for a 1 px line, and a decorative edge at about 1.3–2:1.
 - script: check-access.py <page> --out <dir>
 - reasons: design-critique/references/edges-and-contrast.md#contrast-by-role
 - ledger: COL-1, COL-2
@@ -390,7 +386,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - era: timeless
 - owner: vault
 - stage: value
-- target: Give each role the same contrast in light and dark and more under `prefers-contrast: more`, and measure each scheme separately.
 - script: check-access.py <page> --out <dir>
 - reasons: design-critique/references/edges-and-contrast.md#contrast-by-role
 - ledger: COL-53
