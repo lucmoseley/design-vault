@@ -1316,6 +1316,9 @@ class Records(unittest.TestCase):
                 if r["kind"] == "grid-lines"
             ],
         )
+        self.assertEqual(
+            [r for r in got["ranges"] if r["kind"] == "text-edge"], [], got["ranges"]
+        )
 
     def test_a_reading_page_passes_wider_than_its_cap_only_with_its_text_in_two_thirds(
         self,

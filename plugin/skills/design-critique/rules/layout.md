@@ -256,7 +256,7 @@ Where things sit on the page: reflow across widths and the first screen. The for
 
 ### vault.alignment-lines
 - applies-when: web-surface; every top-level content container (text block, card, image, table, form) in a CSS grid of the main content area, and each section's main text edge; a container placed without a CSS grid is `vault.alignment-lines-look`'s
-- question: Does each top-level content container in the main content's CSS grid start and end on one of its column lines, never in a gutter or margin, with the main text edge on one line in every section of a column, sections set side by side each keeping their own column's line, but a full-bleed part (header, hero, image band) or a centred section?
+- question: Does each top-level content container in the main content's CSS grid start and end on one of its column lines, never in a gutter or margin, with the main text edge on one line in every section of a column but a full-bleed part (header, hero, image band) or a centred section, sections set side by side each keeping their own column's line?
 - answered-by: script
 - writes: grid alignment
 - yields-to: level 2
