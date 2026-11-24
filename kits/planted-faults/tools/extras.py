@@ -8,6 +8,7 @@ import random
 from collections import Counter
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import runner
 import score
 
 ap = argparse.ArgumentParser()
@@ -16,7 +17,7 @@ ap.add_argument(
     "want", nargs="?", default="real", choices=["real", "invented", "out-of-scope"]
 )
 ap.add_argument("rows", nargs="?", type=int, default=12)
-score.runner.add_runs(ap)
+runner.add_runs(ap)
 args = ap.parse_args()
 score.use_runs(args.runs)
 WORK = score.WORK
