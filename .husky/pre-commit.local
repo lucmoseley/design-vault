@@ -1,10 +1,10 @@
 # shellcheck shell=sh
-if git diff --cached --name-only --no-renames | grep -qE '^(data/(gallery|styles)\.json|images/)'; then node validate.js --staged || exit 1; fi
+if git diff --cached --name-only --no-renames | grep -qE '^(data/(gallery|styles)\.json|images/)'; then node validate.js --staged || exit "$?"; fi
 
-if git diff --cached --name-only --no-renames | grep -qE '^data/(gallery\.json|styles\.json|vault-data\.js)$'; then node bundle.js --staged || exit 1; fi
+if git diff --cached --name-only --no-renames | grep -qE '^data/(gallery\.json|styles\.json|vault-data\.js)$'; then node bundle.js --staged || exit "$?"; fi
 
-if git diff --cached --name-only --no-renames | grep -qE '^data/round-log\.jsonl$'; then node round-log.js --staged || exit 1; fi
+if git diff --cached --name-only --no-renames | grep -qE '^data/round-log\.jsonl$'; then node round-log.js --staged || exit "$?"; fi
 
-if git diff --cached --name-only --no-renames | grep -qE '^data/corrections-log\.jsonl$'; then node corrections-log.js --staged || exit 1; fi
+if git diff --cached --name-only --no-renames | grep -qE '^data/corrections-log\.jsonl$'; then node corrections-log.js --staged || exit "$?"; fi
 
-if git diff --cached --name-only --no-renames | grep -qE '^data/calibration-log\.jsonl$'; then node calibration-log.js --staged || exit 1; fi
+if git diff --cached --name-only --no-renames | grep -qE '^data/calibration-log\.jsonl$'; then node calibration-log.js --staged || exit "$?"; fi
