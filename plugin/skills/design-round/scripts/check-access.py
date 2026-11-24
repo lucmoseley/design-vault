@@ -311,9 +311,6 @@ LONG_MS = 5000
 # named for pausing it clicks. Guesses, unmeasured.
 WATCH_MS = 1000
 PAUSE_TRIES = 6
-# How long a click on one of those controls may wait for it to take a click.
-# A guess, unmeasured: a control that is there to be clicked takes one at once.
-PAUSE_CLICK_MS = 2000
 # Event types that make an element act on a pointer, and React's props for them.
 ACT_EVENTS = (
     "click",
@@ -1044,6 +1041,29 @@ MOTION_JS = (
 """
 )
 
+# Whether the i-th control named for pausing can take a visitor's click, read
+# over frames rather than against a clock, so a busy machine reads it the same
+# (#536): still attached, the same box two frames apart once scrolled to, and
+# itself under the point at that box's centre, where Playwright clicks.
+CLICKABLE_JS = r"""
+(i) => new Promise((resolve) => {
+  const el = window.__pauses[i];
+  if (!el.isConnected) return resolve(false);
+  el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+  const box = () => {
+    const r = el.getClientRects()[0];
+    return r ? [r.left, r.top, r.width, r.height] : [0, 0, 0, 0];
+  };
+  const was = box();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const [x, y, w, h] = box();
+    if (!el.isConnected || !w || !h || [x, y, w, h].some((v, k) => v !== was[k])) return resolve(false);
+    const hit = el.getRootNode().elementFromPoint(x + w / 2, y + h / 2);
+    resolve(!!hit && el.contains(hit));
+  }));
+})
+"""
+
 # Which long motions are stopped now, and which have ended, by their index.
 STOPPED_JS = "() => window.__motions.flatMap((m, i) => (m.stopped() ? [i] : []))"
 ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
@@ -1402,13 +1422,17 @@ def pause_answer(context, url):
     for i in range(got["pauses"]):
         if len(stopped) == len(got["long"]):
             break
+        # Covered, moving or detached: a visitor could not click it either,
+        # so it pauses nothing. Forced, the click skips Playwright's own
+        # actionability wait, whose timeout a busy machine outruns (#536).
+        if not page.evaluate(CLICKABLE_JS, i):
+            unclickable += 1
+            continue
         try:
             page.evaluate_handle("(i) => window.__pauses[i]", i).as_element().click(
-                timeout=PAUSE_CLICK_MS
+                force=True
             )
         except PlaywrightError:
-            # Covered, moving or detached: a visitor could not click it either,
-            # so it pauses nothing.
             unclickable += 1
             continue
         page.evaluate(

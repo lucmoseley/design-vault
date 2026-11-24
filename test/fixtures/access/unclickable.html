@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>unclickable</title>
+<!-- One fault, vault.pause: a square spins forever, and neither control named for pausing it can take a click. The
+     Pause button sits under an opaque bar, and the Stop button slides to and fro. Either one, clicked, would stop it
+     (#536). -->
+<style>
+  body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
+  .spin { width: 40px; height: 40px; margin: 16px 0; background: #0a3542; animation: spin 2s linear infinite }
+  .still .spin { animation-play-state: paused }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  .held { position: relative }
+  .bar { position: absolute; inset: -8px; background: #fff }
+  .drift { animation: drift 0.5s linear infinite alternate }
+  @keyframes drift { to { transform: translateX(200px) } }
+</style>
+<p>Beds by the sea.</p>
+<div class="spin"></div>
+<div class="held">
+  <button type="button" onclick="document.body.classList.add('still')">Pause</button>
+  <div class="bar"></div>
+</div>
+<button class="drift" type="button" onclick="document.body.classList.add('still')">Stop</button>

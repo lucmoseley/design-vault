@@ -594,30 +594,33 @@ class CarouselWatch(unittest.TestCase):
             keys._shot = shot
 
 
+def pause_answer(fixture, watch_ms=None):
+    """check-access.py's vault.pause answer for a fixture, watching motion for watch_ms where given."""
+    from playwright.sync_api import sync_playwright
+
+    access = library("check-access.py")
+    if watch_ms is not None:
+        access.WATCH_MS = watch_ms
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        try:
+            return access.pause_answer(
+                browser.new_context(),
+                pathlib.Path(FIXTURES, fixture).resolve().as_uri(),
+            )
+        finally:
+            browser.close()
+
+
 class LateMotionRead(unittest.TestCase):
     """check-access.py's vault.pause read where a long animation ends before a control can be tried on it, as on a
     busy machine (#368). Their pair, a long animation still running at the read, is
     Questions.test_a_looping_and_a_long_animation_whose_pause_button_does_not_stop_them_fail."""
 
-    def pause_answer(self, fixture, watch_ms):
-        from playwright.sync_api import sync_playwright
-
-        access = library("check-access.py")
-        access.WATCH_MS = watch_ms
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            try:
-                return access.pause_answer(
-                    browser.new_context(),
-                    pathlib.Path(FIXTURES, fixture).resolve().as_uri(),
-                )
-            finally:
-                browser.close()
-
     def test_a_long_animation_that_ended_before_the_read_cannot_be_measured(self):
         # A real late read, as only one reproduces the busy machine's: past ended.html's 6 s slides, by #364's
         # 10 s stand-in delay.
-        faults, unmeasured = self.pause_answer("ended.html", 10_000)
+        faults, unmeasured = pause_answer("ended.html", 10_000)
         self.assertEqual(faults, [])
         ended = "runs 6.0 s from the page's load and ended before a control could be tried on it"
         self.assertEqual(
@@ -627,12 +630,52 @@ class LateMotionRead(unittest.TestCase):
     def test_a_long_animation_that_ends_while_its_controls_are_tried_cannot_be_measured(
         self,
     ):
-        faults, unmeasured = self.pause_answer("ended-tried.html", 1000)
+        faults, unmeasured = pause_answer("ended-tried.html", 1000)
         self.assertEqual(faults, [])
         self.assertEqual(
             unmeasured,
             [
                 'div.slide "slide" runs 60.0 s from the page\'s load and ended while the controls named for pausing it were tried'
+            ],
+        )
+
+
+class PauseClick(unittest.TestCase):
+    """Whether vault.pause's click on a control named for pausing lands, read the same on a busy machine (#536)."""
+
+    def test_a_clean_page_passes_when_every_actionability_wait_outruns_its_budget(self):
+        # The stand-in for a busy machine: every click that waits for Playwright's actionability checks times out
+        # before they pass, as clean.html's Pause button did beside its spinning square under load.
+        from playwright.sync_api import ElementHandle, TimeoutError
+
+        click = ElementHandle.click
+
+        def slow(handle, *args, force=False, **kwargs):
+            if not force:
+                raise TimeoutError("stand-in: the actionability wait outran its budget")
+            return click(handle, *args, force=force, **kwargs)
+
+        ElementHandle.click = slow
+        try:
+            self.assertEqual(pause_answer("clean.html"), ([], []))
+        finally:
+            ElementHandle.click = click
+
+    def test_a_covered_control_and_a_moving_one_cannot_be_clicked(self):
+        faults, unmeasured = pause_answer("unclickable.html")
+        self.assertEqual(unmeasured, [])
+        tried = "none of the 2 control(s) named for pausing it stops it, clicked (2 could not be clicked)"
+        self.assertEqual(
+            faults,
+            [
+                {
+                    "subject": "div.spin:nth-of-type(1)",
+                    "detail": f'"spin" loops forever from the page\'s load, and {tried}',
+                },
+                {
+                    "subject": "button.drift",
+                    "detail": f'"drift" loops forever from the page\'s load, and {tried}',
+                },
             ],
         )
 

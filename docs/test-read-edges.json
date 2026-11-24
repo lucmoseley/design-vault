@@ -772,6 +772,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/unclickable.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/unmeasurable.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
