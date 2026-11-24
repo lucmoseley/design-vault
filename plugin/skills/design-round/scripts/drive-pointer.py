@@ -20,9 +20,9 @@ and drives a Playwright page it has loaded:
     pointer.wheel(page, "#gallery", dx=200)
 
 A `target` is a CSS selector or an ElementHandle. The pointer goes to the point `at` within its box, as
-fractions of its width and height (the centre by default), taken once its box has held still for two frames
-and scrolled into view first where that point is off the screen. A target still moving at SETTLE_CAP_MS, as
-one animated forever, is pointed at where it stands then, and its Pointer reads `settled` False. A target the page lacks, one with no box, or one
+fractions of its width and height (the centre by default), taken once its box has held still for three frames
+with no animation of it waiting to start, and scrolled into view first where that point is off the screen. A
+target still moving at SETTLE_CAP_MS, as one animated forever, is pointed at where it stands then, and its Pointer reads `settled` False. A target the page lacks, one with no box, or one
 another element covers at that point is refused with PointerError, its `cover` naming what lies over the
 target: the move would drive the cover, so there is no state of the target's to read.
 
@@ -81,15 +81,22 @@ POINT_JS = (
     return { r, x: r.left + fx * (r.width - 1), y: r.top + fy * (r.height - 1) };
   };
   const seen = ({ x, y }) => x >= 0 && y >= 0 && x < innerWidth && y < innerHeight;
-  // Still is Playwright's "stable" (playwright.dev/docs/actionability): the same box over two consecutive
-  // animation frames (#458).
+  // Still is Playwright's "stable" (playwright.dev/docs/actionability), the same box over consecutive animation
+  // frames (#458), made stricter where Chromium was seen to fool it (#532): three frames, not two, as a frame can
+  // pass without an animation that has just started advancing; the first read in a frame, as a read before one
+  // can share its animation time; and no animation on the target or an ancestor still waiting to start, as one
+  // holds the box at its first keyframe until it does.
   const frame = () => new Promise((done) => requestAnimationFrame(() => done()));
   const box = () => { const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].join(); };
+  const starting = () => document.getAnimations().some((a) => a.pending && a.effect?.target?.contains(el));
   const start = performance.now();
-  let previous = null, current = box();
-  while (current !== previous && performance.now() - start < cap) {
+  await frame();
+  let held = 0, current = box();
+  while ((held < 2 || starting()) && performance.now() - start < cap) {
     await frame();
-    [previous, current] = [current, box()];
+    const next = box();
+    held = next === current ? held + 1 : 0;
+    current = next;
   }
   let at = place();
   if (!at.r.width || !at.r.height) return { error: `${describe(el)} has no box` };
@@ -100,7 +107,7 @@ POINT_JS = (
   if (!seen(at)) return { error: `${describe(el)} is off the screen at (${Math.round(at.x)}, ${Math.round(at.y)})` };
   // Asked of the target's own root, so a target in a shadow tree is not taken to be covered by its host.
   const hit = el.getRootNode().elementFromPoint(at.x, at.y);
-  return { x: at.x, y: at.y, still: current === previous, cover: hit && hit !== el && !el.contains(hit) ? describe(hit) : null };
+  return { x: at.x, y: at.y, still: held >= 2 && !starting(), cover: hit && hit !== el && !el.contains(hit) ? describe(hit) : null };
 }"""
 )
 
