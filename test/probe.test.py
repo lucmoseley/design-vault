@@ -244,6 +244,41 @@ class Reads(unittest.TestCase):
         (colour,) = values(CASCADE, "A | css:#ua | style:margin-top as alpha | <= 1\n")
         self.assertEqual(colour["p#ua"][1], "unjudged")
 
+    def test_prev_and_next_read_the_element_siblings_either_side(self):
+        page = (
+            "data:text/html,<body><div style='border:1px solid'>a</div>"
+            "<hr id=between><div>b</div><hr id=last></body>"
+        )
+        before, after = values(
+            page,
+            "A | css:hr | prev style:border-bottom-width | = 1px\n"
+            "B | css:hr | next style:border-top-width | = 0px\n",
+        )
+        self.assertEqual(before["hr#between"], ("1px", "pass"))
+        self.assertEqual(before["hr#last"], ("0px", "miss"))
+        self.assertEqual(after["hr#between"], ("0px", "pass"))
+        self.assertEqual(after["hr#last"][0], None)
+
+    def test_on_sets_a_rule_colour_on_its_box_over_black_and_white(self):
+        page = (
+            "data:text/html,<style>"
+            "video::cue { color: %23fff; background-color: rgba(0, 0, 0, 0.8) }"
+            "video.dim::cue { color: yellow; background-color: rgba(0, 0, 0, 0.3) }"
+            "video.token::cue { color: var(--caption); background-color: %23000 }"
+            "p { color: %23fff }</style><video></video>"
+        )
+        on, light = values(
+            page,
+            "A | sheet where selector matches ::cue | decl:color on decl:background-color | >= 4.5\n"
+            "B | sheet where selector matches ::cue | decl:color as luminance | >= 0.9\n",
+        )
+        self.assertEqual(on["video::cue"], (12.6347, "pass"))
+        self.assertEqual(on["video.dim::cue"][1], "miss")
+        self.assertNotIn("p", on)
+        self.assertEqual(on["video.token::cue"][1], "unjudged")
+        self.assertEqual(light["video::cue"], (1.0, "pass"))
+        self.assertEqual(light["video.dim::cue"][1], "pass")
+
     def test_each_comparison_passes_or_misses_by_its_bound(self):
         (got,) = values(
             CASCADE,
@@ -354,8 +389,13 @@ class Refusals(unittest.TestCase):
             ("A | css:p | distinct count | = 1", "distinct wants"),
             (
                 "A | css:p | attr:href as alpha | = 1",
-                "only style, ground, backdrop take as",
+                "only style, ground, backdrop, decl take as",
             ),
+            (
+                "A | css:p | style:color on style:background-color | > 1",
+                "on sets one decl",
+            ),
+            ("A | css:p | selector | = p", "read the sheet's rules"),
             ("A | css:p | style:color | ~ red", "MUST wants"),
             ("A | css:p | style:width | >= wide", "not a number"),
             ("A | css:p | authored:width | >= 4px", "compares numbers"),
@@ -540,6 +580,13 @@ class Grammar(unittest.TestCase):
         self.assertEqual(
             self.judge(line, [{"value": "15px"}, {"value": "16px"}])[0], "miss"
         )
+
+    def test_a_scope_word_alone_is_a_value_not_a_read(self):
+        """check-dom.table's vault.enter-key MUST `= next` is a value (#520)."""
+        must = probe.parse("A | css:input | attr:enterkeyhint | = next")[0].must
+        self.assertEqual((must.values, must.ref), (("next",), None))
+        must = probe.parse("A | css:p | style:color | = next style:color")[0].must
+        self.assertEqual(must.ref.read.scope, "next")
 
     def test_all_of_holds_against_every_other_element(self):
         line = "A | part:cta | height | > all of (role:button) height"

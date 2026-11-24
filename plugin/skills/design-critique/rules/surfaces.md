@@ -432,7 +432,7 @@ How boxes and layers look: borders and dividers, corner radius, shadows and elev
 ### vault.glass-dimming
 - applies-when: web-surface; every clear, highly translucent glass layer over photos, video or other bright media
 - question: Where a clear glass layer floats over bright media, does a dark dimming layer of about 35% opacity sit behind it, and is none added over media already dark or with its own dimming?
-- answered-by: script
+- answered-by: look
 - writes: glass dimming layer
 - yields-to: vault.contrast, vault.glass, level 2
 - source: Apple HIG Materials, Liquid Glass (page updated Sep 2025, as read Oct 2026): for the clear variant, "If the underlying content is bright, consider adding a dark dimming layer of 35% opacity"; "If the underlying content is sufficiently dark ... you don't need to apply a dimming layer"; strength: platform guidance
@@ -442,7 +442,6 @@ How boxes and layers look: borders and dividers, corner radius, shadows and elev
 - inputs: the luminance of the media under the glass
 - output: bright media, a dark dimming layer at about 35% opacity; dark media or media with its own dimming, none
 - target: Put a dark layer of about 35% opacity under clear glass that floats over bright media; leave it out over dark media.
-- script: owed
 - reasons: design-critique/references/surface-styling.md#dimming-under-clear-glass
 - ledger: SUR-59
 - status: staged
