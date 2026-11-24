@@ -3,11 +3,10 @@
 // Loosen a rule and a change lands with its own tests unrun, or the slow suites run on every commit again.
 // And all.sh's --shard=k/n (#462): a suite in no shard is never run by the lander's whole run, one in two runs twice.
 require("./no-git-env");
-// Every command this file runs gets BY_HAND, so it reads as a run by hand whoever runs the file.
 // A caller forcing every suite would select every suite in the commits below too; the one case that wants it sets it (#348).
-// Run under workflow-core's gate, it would read as a gate run itself; the one case that wants it sets it (#457).
+// Run under workflow-core's gate, this file would read as a gate run itself; the one case that wants it sets it (#457).
 // The gate hands every command it runs its merge parents, empty where it has none; the cases that want them set them.
-const { VAULT_ALL_SUITES, WFC_GATE_SEAT, WFC_MERGE_PARENTS, ...BY_HAND } = process.env;
+const { VAULT_ALL_SUITES, WFC_GATE_SEAT, WFC_MERGE_PARENTS, ...HAND_ENV } = process.env;
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
@@ -18,9 +17,11 @@ const { after, test } = require("node:test");
 const ROOT = path.join(__dirname, "..");
 const { plan, planSides } = require("./select-suites.js");
 const SCRIPTS = "plugin/skills/design-round/scripts";
+const allSh = (args, { cwd, env } = {}) => spawnSync("bash", [path.join(cwd ?? ROOT, "test", "all.sh"), ...args],
+  { cwd, encoding: "utf8", env: { ...HAND_ENV, ...env } });
 
 // all.sh's own list, as it prints it run by hand: every suite.
-const byHand = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--plan"], { encoding: "utf8", env: BY_HAND });
+const byHand = allSh(["--plan"]);
 const SUITES = byHand.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
 const PYTHON = SUITES.filter((s) => s.startsWith("python3 "));
 const NODE = SUITES.find((s) => s.startsWith("node "));
@@ -34,7 +35,7 @@ const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
   const shardOf = (k, n) => {
-    const r = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--plan", `--shard=${k}/${n}`], { encoding: "utf8", env: BY_HAND });
+    const r = allSh(["--plan", `--shard=${k}/${n}`]);
     assert.equal(r.status, 0, r.stderr);
     return r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
   };
@@ -51,11 +52,11 @@ test("--shard refuses a shard past its count, a zero, and test files beside it, 
     [["--shard=1/x"], /got '1\/x'/],
     [["--shard=1/4", "test/gate.test.js"], /--shard takes no test files/],
   ]) {
-    const r = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--plan", ...args], { encoding: "utf8", env: BY_HAND });
+    const r = allSh(["--plan", ...args]);
     assert.equal(r.status, 2, args.join(" "));
     assert.match(r.stderr, said);
   }
-  const after = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--shard=1/4", "--plan"], { encoding: "utf8", env: BY_HAND });
+  const after = allSh(["--shard=1/4", "--plan"]);
   assert.equal(after.status, 0, after.stderr);
 });
 
@@ -63,7 +64,7 @@ test("run by hand, all.sh runs every suite file git tracks in test/ and skips no
   assert.equal(byHand.status, 0);
   // Tracked files only, so a suite another session is still writing does not fail this session's commit. A listed
   // suite need only be on disk: the commit that adds one runs this before git tracks it, and no-git-env hides its index.
-  const tracked = execFileSync("git", ["ls-files", "test/*.test.py", "test/*.test.sh"], { cwd: ROOT, encoding: "utf8", env: BY_HAND })
+  const tracked = execFileSync("git", ["ls-files", "test/*.test.py", "test/*.test.sh"], { cwd: ROOT, encoding: "utf8", env: HAND_ENV })
     .split("\n").filter((f) => /^test\/[^/]+$/.test(f)).map((f) => `${f.endsWith(".py") ? "python3" : "bash"} ${f}`);
   assert.deepEqual(tracked.filter((s) => !SUITES.includes(s)), [], "a tracked suite all.sh does not list");
   const missing = SUITES.filter((s) => s !== NODE && !fs.existsSync(path.join(ROOT, s.split(" ")[1])));
@@ -173,7 +174,7 @@ const hooks = path.join(scratch, "hooks");
 const planOut = path.join(scratch, "plan.txt");
 fs.mkdirSync(hooks);
 fs.writeFileSync(path.join(hooks, "pre-commit"), `#!/bin/sh\nbash test/all.sh --plan >"${planOut}"\n`, { mode: 0o755 });
-const git = (args, env = BY_HAND) => execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
+const git = (args, env = HAND_ENV) => execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
   { cwd: repo, encoding: "utf8", env });
 git(["init", "-q", "-b", "main"]);
 git(["-c", "core.hooksPath=/dev/null", "add", "-A"]);
@@ -188,7 +189,7 @@ test("a commit through its own index file, as commit-paths.js makes, is judged o
   git(["add", `${SCRIPTS}/check-flow.py`]);
   touch(`${SCRIPTS}/contact-sheet.py`);
   const index = path.join(scratch, "private-index");
-  const env = { ...BY_HAND, GIT_INDEX_FILE: index };
+  const env = { ...HAND_ENV, GIT_INDEX_FILE: index };
   git(["read-tree", "HEAD"], env);
   git(["add", `${SCRIPTS}/contact-sheet.py`], env);
   git(["commit", "-q", "-m", "private"], env);
@@ -197,7 +198,7 @@ test("a commit through its own index file, as commit-paths.js makes, is judged o
 });
 
 test("a plain commit is judged on the shared index, and VAULT_ALL_SUITES=1 runs every suite", () => {
-  git(["commit", "-q", "-m", "shared"], { ...BY_HAND, VAULT_ALL_SUITES: "1" });
+  git(["commit", "-q", "-m", "shared"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
   assert.deepEqual(planRuns(), SUITES);
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", `${SCRIPTS}/check-flow.py`]);
@@ -207,7 +208,7 @@ test("a plain commit is judged on the shared index, and VAULT_ALL_SUITES=1 runs 
 
 test("in workflow-core's gate, which drops GIT_INDEX_FILE and sets WFC_GATE_SEAT, staged files choose; by hand they do not (#457)", () => {
   const planIn = (env) => {
-    const r = spawnSync("bash", ["test/all.sh", "--plan"], { cwd: repo, encoding: "utf8", env: { ...BY_HAND, ...env } });
+    const r = allSh(["--plan"], { cwd: repo, env });
     assert.equal(r.status, 0, r.stderr);
     return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
   };
@@ -252,7 +253,7 @@ test("a commit through all.sh editing only its list runs only the suite on the l
   const text = fs.readFileSync(sh, "utf8");
   fs.writeFileSync(sh, text.replace("python3 test/palette.test.py\n", "python3 test/palette.test.py\timages\n"));
   const index = path.join(scratch, "list-index");
-  const env = { ...BY_HAND, GIT_INDEX_FILE: index };
+  const env = { ...HAND_ENV, GIT_INDEX_FILE: index };
   git(["read-tree", "HEAD"], env);
   git(["add", "test/all.sh"], env);
   git(["commit", "-q", "-m", "list"], env);
@@ -263,17 +264,17 @@ test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate
   git(["checkout", "-q", "-b", "branch"]);
   touch(`${SCRIPTS}/contact-sheet.py`);
   git(["add", "-A"]);
-  git(["commit", "-q", "-m", "branch"], { ...BY_HAND, VAULT_ALL_SUITES: "1" });
+  git(["commit", "-q", "-m", "branch"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
   git(["checkout", "-q", "main"]);
   touch("test/all.sh");
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", "-A"]);
-  git(["commit", "-q", "-m", "main"], { ...BY_HAND, VAULT_ALL_SUITES: "1" });
+  git(["commit", "-q", "-m", "main"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
   const main = git(["rev-parse", "main"]).trim();
   git(["checkout", "-q", "branch"]);
   git(["merge", "-q", "--no-commit", "--no-ff", "main"]);
   const planIn = (env) => {
-    const r = spawnSync("bash", ["test/all.sh", "--plan"], { cwd: repo, encoding: "utf8", env: { ...BY_HAND, ...env } });
+    const r = allSh(["--plan"], { cwd: repo, env });
     assert.equal(r.status, 0, r.stderr);
     return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
   };
