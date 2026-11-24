@@ -1,0 +1,321 @@
+# CORE-OWNED. Written by workflow-core's upgrade, where the queue lander may test
+# on Actions by run length ("landingTester" absent or "auto" in
+# .claude/workflow-core.json), and REWRITTEN on every bump. Its shard jobs follow
+# "fullTestShards", their runner and ceiling the "ci" key.
+# Change the config, not this file. What it runs: the plugin's
+# scripts/lib/lander-workflows.js. Why: lucmoseley/workflow-core-tracker#5511.
+name: workflow-core lander
+
+on:
+  push:
+    branches: ["lander/batch*", "lander/iso-suite-*"]
+
+permissions:
+  contents: read
+
+jobs:
+  shard-1:
+    name: Vitest (1/4)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      WORKFLOW_CORE_CHECKOUT: ${{ github.workspace }}/.workflow-core
+      WFC_PLUGIN_ROOT: ${{ github.workspace }}/.workflow-core
+      CLAUDE_PROJECT_DIR: ${{ github.workspace }}
+    steps:
+      # Full history: the doc-map checks read git log.
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      # Inline, not the plugin's own pin reader (lib/plugin-state.js): the
+      # plugin is checked out only once this step has read where it is.
+      - id: core-pin
+        name: Read the workflow-core pin
+        run: |
+          node - >> "$GITHUB_OUTPUT" <<'EOF'
+          const fs = require("node:fs");
+          let settings;
+          try {
+            settings = JSON.parse(fs.readFileSync(".claude/settings.json", "utf8"));
+          } catch (e) {
+            if (e.code !== "ENOENT") {
+              console.error(`.claude/settings.json will not read, so no workflow-core pin can be found: ${e.message} — commit a settings.json that parses and pins a workflow-core release tag`);
+              process.exit(1);
+            }
+          }
+          const known = settings?.extraKnownMarketplaces ?? {};
+          const key = Object.keys(settings?.enabledPlugins ?? {}).find((k) => {
+            const [name, marketplace] = k.split("@");
+            return name === "workflow-core" && Object.hasOwn(known, marketplace);
+          });
+          const source = key ? (known[key.split("@")[1]]?.source ?? {}) : {};
+          const ref = source.ref;
+          const repo =
+            source.repo ??
+            /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(source.url ?? "")?.[1];
+          if (!repo || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(ref ?? "")) {
+            console.error(`.claude/settings.json pins no workflow-core release tag on GitHub (found: ${ref ?? "none"}${repo ? ` on ${repo}` : ""}) — pin a release tag in extraKnownMarketplaces.<marketplace>.source.ref, its source a GitHub repo or url`);
+            process.exit(1);
+          }
+          console.log(`repo=${repo}`);
+          console.log(`ref=v${ref.replace(/^v/, "")}`);
+          EOF
+
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.core-pin.outputs.repo }}
+          ref: ${{ steps.core-pin.outputs.ref }}
+          persist-credentials: false
+          path: .workflow-core
+      # Kept out of every git-reading check's view of the tree.
+      - run: echo /.workflow-core/ >> .git/info/exclude
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; fi
+          if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Whole-run group
+        run: node .workflow-core/scripts/lander-ci.js group 1/4
+
+  shard-2:
+    name: Vitest (2/4)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      WORKFLOW_CORE_CHECKOUT: ${{ github.workspace }}/.workflow-core
+      WFC_PLUGIN_ROOT: ${{ github.workspace }}/.workflow-core
+      CLAUDE_PROJECT_DIR: ${{ github.workspace }}
+    steps:
+      # Full history: the doc-map checks read git log.
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      # Inline, not the plugin's own pin reader (lib/plugin-state.js): the
+      # plugin is checked out only once this step has read where it is.
+      - id: core-pin
+        name: Read the workflow-core pin
+        run: |
+          node - >> "$GITHUB_OUTPUT" <<'EOF'
+          const fs = require("node:fs");
+          let settings;
+          try {
+            settings = JSON.parse(fs.readFileSync(".claude/settings.json", "utf8"));
+          } catch (e) {
+            if (e.code !== "ENOENT") {
+              console.error(`.claude/settings.json will not read, so no workflow-core pin can be found: ${e.message} — commit a settings.json that parses and pins a workflow-core release tag`);
+              process.exit(1);
+            }
+          }
+          const known = settings?.extraKnownMarketplaces ?? {};
+          const key = Object.keys(settings?.enabledPlugins ?? {}).find((k) => {
+            const [name, marketplace] = k.split("@");
+            return name === "workflow-core" && Object.hasOwn(known, marketplace);
+          });
+          const source = key ? (known[key.split("@")[1]]?.source ?? {}) : {};
+          const ref = source.ref;
+          const repo =
+            source.repo ??
+            /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(source.url ?? "")?.[1];
+          if (!repo || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(ref ?? "")) {
+            console.error(`.claude/settings.json pins no workflow-core release tag on GitHub (found: ${ref ?? "none"}${repo ? ` on ${repo}` : ""}) — pin a release tag in extraKnownMarketplaces.<marketplace>.source.ref, its source a GitHub repo or url`);
+            process.exit(1);
+          }
+          console.log(`repo=${repo}`);
+          console.log(`ref=v${ref.replace(/^v/, "")}`);
+          EOF
+
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.core-pin.outputs.repo }}
+          ref: ${{ steps.core-pin.outputs.ref }}
+          persist-credentials: false
+          path: .workflow-core
+      # Kept out of every git-reading check's view of the tree.
+      - run: echo /.workflow-core/ >> .git/info/exclude
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; fi
+          if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Whole-run group
+        run: node .workflow-core/scripts/lander-ci.js group 2/4
+
+  shard-3:
+    name: Vitest (3/4)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      WORKFLOW_CORE_CHECKOUT: ${{ github.workspace }}/.workflow-core
+      WFC_PLUGIN_ROOT: ${{ github.workspace }}/.workflow-core
+      CLAUDE_PROJECT_DIR: ${{ github.workspace }}
+    steps:
+      # Full history: the doc-map checks read git log.
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      # Inline, not the plugin's own pin reader (lib/plugin-state.js): the
+      # plugin is checked out only once this step has read where it is.
+      - id: core-pin
+        name: Read the workflow-core pin
+        run: |
+          node - >> "$GITHUB_OUTPUT" <<'EOF'
+          const fs = require("node:fs");
+          let settings;
+          try {
+            settings = JSON.parse(fs.readFileSync(".claude/settings.json", "utf8"));
+          } catch (e) {
+            if (e.code !== "ENOENT") {
+              console.error(`.claude/settings.json will not read, so no workflow-core pin can be found: ${e.message} — commit a settings.json that parses and pins a workflow-core release tag`);
+              process.exit(1);
+            }
+          }
+          const known = settings?.extraKnownMarketplaces ?? {};
+          const key = Object.keys(settings?.enabledPlugins ?? {}).find((k) => {
+            const [name, marketplace] = k.split("@");
+            return name === "workflow-core" && Object.hasOwn(known, marketplace);
+          });
+          const source = key ? (known[key.split("@")[1]]?.source ?? {}) : {};
+          const ref = source.ref;
+          const repo =
+            source.repo ??
+            /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(source.url ?? "")?.[1];
+          if (!repo || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(ref ?? "")) {
+            console.error(`.claude/settings.json pins no workflow-core release tag on GitHub (found: ${ref ?? "none"}${repo ? ` on ${repo}` : ""}) — pin a release tag in extraKnownMarketplaces.<marketplace>.source.ref, its source a GitHub repo or url`);
+            process.exit(1);
+          }
+          console.log(`repo=${repo}`);
+          console.log(`ref=v${ref.replace(/^v/, "")}`);
+          EOF
+
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.core-pin.outputs.repo }}
+          ref: ${{ steps.core-pin.outputs.ref }}
+          persist-credentials: false
+          path: .workflow-core
+      # Kept out of every git-reading check's view of the tree.
+      - run: echo /.workflow-core/ >> .git/info/exclude
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; fi
+          if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Whole-run group
+        run: node .workflow-core/scripts/lander-ci.js group 3/4
+
+  shard-4:
+    name: Vitest (4/4)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      WORKFLOW_CORE_CHECKOUT: ${{ github.workspace }}/.workflow-core
+      WFC_PLUGIN_ROOT: ${{ github.workspace }}/.workflow-core
+      CLAUDE_PROJECT_DIR: ${{ github.workspace }}
+    steps:
+      # Full history: the doc-map checks read git log.
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      # Inline, not the plugin's own pin reader (lib/plugin-state.js): the
+      # plugin is checked out only once this step has read where it is.
+      - id: core-pin
+        name: Read the workflow-core pin
+        run: |
+          node - >> "$GITHUB_OUTPUT" <<'EOF'
+          const fs = require("node:fs");
+          let settings;
+          try {
+            settings = JSON.parse(fs.readFileSync(".claude/settings.json", "utf8"));
+          } catch (e) {
+            if (e.code !== "ENOENT") {
+              console.error(`.claude/settings.json will not read, so no workflow-core pin can be found: ${e.message} — commit a settings.json that parses and pins a workflow-core release tag`);
+              process.exit(1);
+            }
+          }
+          const known = settings?.extraKnownMarketplaces ?? {};
+          const key = Object.keys(settings?.enabledPlugins ?? {}).find((k) => {
+            const [name, marketplace] = k.split("@");
+            return name === "workflow-core" && Object.hasOwn(known, marketplace);
+          });
+          const source = key ? (known[key.split("@")[1]]?.source ?? {}) : {};
+          const ref = source.ref;
+          const repo =
+            source.repo ??
+            /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(source.url ?? "")?.[1];
+          if (!repo || !/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(ref ?? "")) {
+            console.error(`.claude/settings.json pins no workflow-core release tag on GitHub (found: ${ref ?? "none"}${repo ? ` on ${repo}` : ""}) — pin a release tag in extraKnownMarketplaces.<marketplace>.source.ref, its source a GitHub repo or url`);
+            process.exit(1);
+          }
+          console.log(`repo=${repo}`);
+          console.log(`ref=v${ref.replace(/^v/, "")}`);
+          EOF
+
+      - name: Run actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.core-pin.outputs.repo }}
+          ref: ${{ steps.core-pin.outputs.ref }}
+          persist-credentials: false
+          path: .workflow-core
+      # Kept out of every git-reading check's view of the tree.
+      - run: echo /.workflow-core/ >> .git/info/exclude
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; fi
+          if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Whole-run group
+        run: node .workflow-core/scripts/lander-ci.js group 4/4
+
+  passed:
+    name: Suite passed
+    needs: [shard-1, shard-2, shard-3, shard-4]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - name: Every shard passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "shards: $RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done

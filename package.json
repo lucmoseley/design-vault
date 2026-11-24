@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "@wasm-fmt/shfmt": "0.2.7"
+    "@wasm-fmt/shfmt": "0.2.7",
+    "js-yaml": "4.3.2"
   },
   "scripts": {
     "status": "node scripts/lib/resolve-core.js scripts/status-report.js"
