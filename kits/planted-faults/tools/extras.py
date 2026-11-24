@@ -1,5 +1,6 @@
-"""extras.py — on clean pages, the judged groups an added critic finds that W does not, with severity and text."""
+"""python3 kits/planted-faults/tools/extras.py <critic> [real|invented|out-of-scope] [<rows>] [--runs 4,5,6] — on clean pages, the judged groups an added critic finds that W does not, with severity and text."""
 
+import argparse
 import json
 import sys
 import pathlib
@@ -9,9 +10,17 @@ from collections import Counter
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import score
 
+ap = argparse.ArgumentParser()
+ap.add_argument("critic")
+ap.add_argument(
+    "want", nargs="?", default="real", choices=["real", "invented", "out-of-scope"]
+)
+ap.add_argument("rows", nargs="?", type=int, default=12)
+score.runner.add_runs(ap)
+args = ap.parse_args()
+score.use_runs(args.runs)
 WORK = score.WORK
-add = sys.argv[1]
-want = sys.argv[2] if len(sys.argv) > 2 else "real"
+add, want = args.critic, args.want
 rows = []
 for cand in score.CLEAN:
     for run in score.RUNS:
@@ -52,5 +61,5 @@ for cand in score.CLEAN:
                 )
 print(len(rows), "groups;", Counter(r[2] for r in rows))
 random.Random(1).shuffle(rows)
-for r in rows[: int(sys.argv[3]) if len(sys.argv) > 3 else 12]:
+for r in rows[: args.rows]:
     print(r)

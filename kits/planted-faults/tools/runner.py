@@ -697,12 +697,18 @@ def usage():
         )
 
 
+def add_runs(ap):
+    ap.add_argument(
+        "--runs", type=lambda s: [int(r) for r in s.split(",")], default="1,2,3"
+    )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "mode", choices=["packets", "critics", "chain", "gate-lists", "gate", "usage"]
     )
-    ap.add_argument("--runs", default="1,2,3")
+    add_runs(ap)
     ap.add_argument(
         "--critics", default="W,W2,W3,T-function,T-type,T-colour,T-layout,T-trust"
     )
@@ -723,7 +729,7 @@ def main():
     if a.mode == "packets":
         return render_packets()
     require_canary()
-    runs = [int(x) for x in a.runs.split(",")]
+    runs = a.runs
     gate_pages = {CID[n] for n in META["gate_pages"]}
     cands = (
         [c if c in NAME else CID.get(c, c) for c in a.cands.split(",")]

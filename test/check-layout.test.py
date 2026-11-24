@@ -55,23 +55,9 @@ pathlib.Path(NO_CHANGE).write_text(
     "vault.fluid-type | zoom | 1\n"
     "vault.fluid-type | size | 1\n"
 )
-# #515
-TABLE_WITH_VISIBLE_NAV = os.path.join(SCRATCH.name, "records.table")
-pathlib.Path(TABLE_WITH_VISIBLE_NAV).write_text(
-    pathlib.Path(layout.TABLE).read_text()
-    + "vault.visible-nav | visible-nav | at most 4 links\n"
-)
 # Five widths across the phone, tablet and desktop bands, both sides of each
 # record's bounds on the tier01 pages.
-RECORDS = [
-    "--widths",
-    "390-1400",
-    "--step",
-    "310",
-    "--records",
-    "--table",
-    TABLE_WITH_VISIBLE_NAV,
-]
+RECORDS = ["--widths", "390-1400", "--step", "310", "--records"]
 RECORD_FACTS = [
     "--parts",
     os.path.join(FIXTURES, "tier01-parts.json"),
@@ -987,9 +973,7 @@ records = layout.records
 def record_modes():
     """{record: [mode…]} from the table's record lines."""
     out = {}
-    for m in layout.parse_table(
-        pathlib.Path(TABLE_WITH_VISIBLE_NAV).read_text()
-    ).values():
+    for m in layout.parse_table(pathlib.Path(layout.TABLE).read_text()).values():
         if m.name in records.CHECKS:
             out.setdefault(m.id, []).append(m.name)
     return out
@@ -1049,7 +1033,7 @@ class RecordUnits(unittest.TestCase):
             ).glob("*.md")
         )
         words = {1: "one", 2: "two", 3: "three", 4: "four"}
-        for line in pathlib.Path(TABLE_WITH_VISIBLE_NAV).read_text().splitlines():
+        for line in pathlib.Path(layout.TABLE).read_text().splitlines():
             fields = [f.strip() for f in line.split("|")]
             if len(fields) != 3 or fields[1] not in records.CHECKS:
                 continue

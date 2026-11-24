@@ -154,6 +154,7 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     // #311's live records check-layout.py --records answers.
     "vault.joined-fills": "script",
     "vault.safe-centre": "script",
+    "vault.visible-nav": "script",
     "vault.dash-glyphs": "script",
     "vault.emphasis-share": "script",
     "vault.fractions": "script",
