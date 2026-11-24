@@ -141,12 +141,18 @@ def text_contrast(shot, ink, text, floors, *, held=()):
     """(fault detail or None, reason it cannot be measured or None) for one text entry, held to `floors`. `held` are
     the boxes of text whose fill the page holds with its own !important rule: the screenshots cannot take it off or
     recolour it."""
+    return text_reading(shot, ink, text, floors, held=held)[:2]
+
+
+def text_reading(shot, ink, text, floors, *, held=()):
+    """text_contrast's (fault, reason), then the text's worst ratio where it was read and met `floors`, or None."""
     if text["why"]:
-        return None, f"{text['subject']} {text['why']}"
+        return None, f"{text['subject']} {text['why']}", None
     if any(_meet(r, h) for r in text["rects"] for h in held):
         return (
             None,
             f"{text['subject']} holds its own fill, which the check cannot take off",
+            None,
         )
     *rgb, alpha = text["color"]
     masks = [_window(ink, r).reshape(-1) for r in text["rects"]]
@@ -161,22 +167,23 @@ def text_contrast(shot, ink, text, floors, *, held=()):
     if any(k.any() for k in kept):
         masks = kept
     if not any(m.size for m in masks):
-        return None, f"{text['subject']} lies off the screenshot"
+        return None, f"{text['subject']} lies off the screenshot", None
     behind = np.concatenate(
         [pixels(shot, r)[m] for r, m in zip(text["rects"], masks, strict=True)]
     )
     if not len(behind):
-        return None, None  # covered or clipped: no glyph shows, so none to read
+        return None, None, None  # covered or clipped: no glyph shows, so none to read
     seen = alpha * np.array(rgb, dtype=float) + (1 - alpha) * behind
     ratios = contrast(seen, behind)
     worst = float(np.percentile(ratios, WORST_SHARE))
     need = floors.large if large(text["size"], text["weight"], floors) else floors.body
     if worst >= need:
-        return None, None
+        return None, None, worst
     i = int(np.argmin(np.abs(ratios - worst)))
     size = f"{text['size']:g} px{' bold' if text['weight'] >= floors.bold else ''}"
     return (
         f"is {worst:.2f}:1 against {hexed(behind[i])} behind it; {need:g}:1 needed ({hexed(seen[i])} text, {size})",
+        None,
         None,
     )
 
