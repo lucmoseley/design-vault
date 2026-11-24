@@ -946,8 +946,6 @@ def _press(page, js, handle, *, deck, dot):
 
 
 def _slide_pass(fresh, js, parts, absent):
-    """The slide pass's (readings, cannot-measure reasons), on the page `fresh()` loads. A browser error ends it
-    with a reason naming the error, keeping what it read before (#528)."""
     from playwright.sync_api import Error as PlaywrightError
 
     readings, unread = [], []

@@ -9,6 +9,7 @@ import concurrent.futures
 import importlib.util
 import json
 import os
+import pathlib
 import re
 import sys
 import tempfile
@@ -374,14 +375,41 @@ class Slides(unittest.TestCase):  # #427
 
 
 class SlidePassErrors(unittest.TestCase):  # #528
+    def answer(self, fresh):
+        from playwright.sync_api import sync_playwright
+
+        access = library("check-access.py")
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page()
+                page.goto(
+                    pathlib.Path(FIXTURES, "contrast-tier01-later.html")
+                    .resolve()
+                    .as_uri()
+                )
+                out, _ = contrasts.measure(
+                    page,
+                    access.contrast_js,
+                    TABLE,
+                    parts={"carousel": "#deck"},
+                    absent={"chart"},
+                    texts=None,
+                    fresh=fresh,
+                )
+            finally:
+                browser.close()
+        return out["vault.controls-on-photo"]
+
     def test_a_load_that_throws_is_a_reason_naming_the_error(self):
         from playwright.sync_api import Error as PlaywrightError
 
         def fresh():
             raise PlaywrightError("Timeout 30000ms exceeded.\n=== logs ===")
 
-        readings, (why,) = contrasts._slide_pass(fresh, None, {}, set())
-        self.assertEqual(readings, [])
+        photo = self.answer(fresh)
+        self.assertEqual(photo.faults, [])
+        (why,) = photo.unmeasured
         self.assertIn("slides could not be stepped through", why)
         self.assertTrue(why.endswith("(Error: Timeout 30000ms exceeded.)"), why)
 
@@ -398,8 +426,7 @@ class SlidePassErrors(unittest.TestCase):  # #528
                 self.closed = True
 
         page = Page()
-        readings, (why,) = contrasts._slide_pass(lambda: page, None, {}, set())
-        self.assertEqual(readings, [])
+        (why,) = self.answer(lambda: page).unmeasured
         self.assertIn("Execution context was destroyed", why)
         self.assertTrue(page.closed)
 
@@ -451,8 +478,9 @@ class EndToEnd(unittest.TestCase):
             faults["button#swap-plant"],
         )
 
-    def test_a_control_on_a_photo_only_from_slide_2_is_read_there(self):  # #528
-        # Its next button submits a form, which the slide page must not follow.
+    def test_a_control_on_a_photo_only_from_slide_2_is_read_past_a_submitting_next(
+        self,
+    ):  # #528
         photo = DONE["later"][3]["answers"]["vault.controls-on-photo"]
         (fault,) = photo["faults"]
         self.assertEqual(photo["unmeasured"], [])
