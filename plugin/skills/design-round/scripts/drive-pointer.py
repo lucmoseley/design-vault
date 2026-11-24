@@ -20,9 +20,9 @@ and drives a Playwright page it has loaded:
     pointer.wheel(page, "#gallery", dx=200)
 
 A `target` is a CSS selector or an ElementHandle. The pointer goes to the point `at` within its box, as
-fractions of its width and height (the centre by default), taken once its box has held still for two frames
-and scrolled into view first where that point is off the screen. A target still moving at SETTLE_CAP_MS, as
-one animated forever, is pointed at where it stands then, and its Pointer reads `settled` False. A target the page lacks, one with no box, or one
+fractions of its width and height (the centre by default), taken once its box has held still for STILL_FRAMES
+frames with no animation of it waiting to start, and scrolled into view first where that point is off the screen. A
+target still moving at SETTLE_CAP_MS, as one animated forever, is pointed at where it stands then, and its Pointer reads `settled` False. A target the page lacks, one with no box, or one
 another element covers at that point is refused with PointerError, its `cover` naming what lies over the
 target: the move would drive the cover, so there is no state of the target's to read.
 
@@ -44,6 +44,10 @@ QUIET_MS = 800
 # A page still changing after this long is read as it stands: a working figure, several quiet windows. It
 # also bounds the wait for a target to hold still (#458), so one call may wait up to twice this.
 SETTLE_CAP_MS = 5000
+# The frames a target's box must hold to read still: Playwright's "stable" takes two
+# (playwright.dev/docs/actionability); Chromium can pass a frame without advancing an animation that has just
+# started, which read a moving target still in 2 of 300 runs at two and 0 of 250 at three (#532).
+STILL_FRAMES = 3
 # One frame at 60 Hz, the pace drag() moves at.
 FRAME_MS = 16
 # How long a drag takes by default: a working figure for a deliberate drag, not a flick.
@@ -73,7 +77,7 @@ const describe = (el) => el.localName + (el.id ? `#${el.id}` : "") +
 # The viewport point at fractions [fx, fy] of the element's box, scrolled into view where it is off the
 # screen, and the element drawn there where that is not the target or inside it.
 POINT_JS = (
-    "async ([el, fx, fy, scroll, cap]) => {"
+    "async ([el, fx, fy, scroll, cap, frames]) => {"
     + DESCRIBE_JS
     + r"""
   const place = () => {
@@ -81,15 +85,22 @@ POINT_JS = (
     return { r, x: r.left + fx * (r.width - 1), y: r.top + fy * (r.height - 1) };
   };
   const seen = ({ x, y }) => x >= 0 && y >= 0 && x < innerWidth && y < innerHeight;
-  // Still is Playwright's "stable" (playwright.dev/docs/actionability): the same box over two consecutive
-  // animation frames (#458).
+  // The same box over `frames` animation frames (#458), the first read in a frame too, with no timed animation
+  // of the target or an ancestor waiting to start: one holds its first keyframe until it does (#532). A
+  // scroll-driven one on a timeline that cannot scroll waits for ever, and is left out.
   const frame = () => new Promise((done) => requestAnimationFrame(() => done()));
   const box = () => { const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].join(); };
+  const starting = () => document.getAnimations().some((a) =>
+    a.pending && a.timeline instanceof DocumentTimeline && a.effect?.target?.contains(el));
+  const still = () => held >= frames - 1 && !starting();
   const start = performance.now();
-  let previous = null, current = box();
-  while (current !== previous && performance.now() - start < cap) {
+  await frame();
+  let held = 0, current = box();
+  while (!still() && performance.now() - start < cap) {
     await frame();
-    [previous, current] = [current, box()];
+    const next = box();
+    held = next === current ? held + 1 : 0;
+    current = next;
   }
   let at = place();
   if (!at.r.width || !at.r.height) return { error: `${describe(el)} has no box` };
@@ -100,7 +111,7 @@ POINT_JS = (
   if (!seen(at)) return { error: `${describe(el)} is off the screen at (${Math.round(at.x)}, ${Math.round(at.y)})` };
   // Asked of the target's own root, so a target in a shadow tree is not taken to be covered by its host.
   const hit = el.getRootNode().elementFromPoint(at.x, at.y);
-  return { x: at.x, y: at.y, still: current === previous, cover: hit && hit !== el && !el.contains(hit) ? describe(hit) : null };
+  return { x: at.x, y: at.y, still: still(), cover: hit && hit !== el && !el.contains(hit) ? describe(hit) : null };
 }"""
 )
 
@@ -274,7 +285,7 @@ def _point(page, target, at, *, scroll=True, cover_ok=False):
     if not (0 <= fx <= 1 and 0 <= fy <= 1):
         raise ValueError(f"at is two fractions of the box from 0 to 1, not {at!r}")
     found = page.evaluate(
-        POINT_JS, [_element(page, target), fx, fy, scroll, SETTLE_CAP_MS]
+        POINT_JS, [_element(page, target), fx, fy, scroll, SETTLE_CAP_MS, STILL_FRAMES]
     )
     if "error" in found:
         raise PointerError(found["error"], target)

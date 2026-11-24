@@ -253,11 +253,11 @@ test("a change of the critics' model, or a gate-list record changed after the la
 
   commit(project, "2026-10-04T10:00:00Z", "docs/brand/fit-gate.md", record("mmm-infra.audience") + record("mmm-infra.marks"));
   const [projectGate] = run("--gate", gateFile);
-  assert.match(projectGate, /^calibration due — \S*docs\/brand\/fit-gate\.md changed at 2026-10-04T10:00:00\+00:00, after the last run was logged$/);
+  assert.match(projectGate, /^calibration due — \S*docs\/brand\/fit-gate\.md changed at 2026-10-04T10:00:00Z, after the last run was logged$/);
 
   commit(vault, "2026-10-05T10:00:00Z", `${STORE}/layout.md`, record("vault.layout"));
   const [both] = run("--model", "claude-opus-5-6", "--gate", gateFile);
-  assert.match(both, /^calibration due — the critics' model is claude-opus-5-6, .*; plugin\/skills\/design-critique\/rules changed at 2026-10-05T10:00:00\+00:00, after the last run was logged; \S*docs\/brand\/fit-gate\.md changed/);
+  assert.match(both, /^calibration due — the critics' model is claude-opus-5-6, .*; plugin\/skills\/design-critique\/rules changed at 2026-10-05T10:00:00Z, after the last run was logged; \S*docs\/brand\/fit-gate\.md changed/);
 
   commit(vault, "2026-10-06T10:00:00Z", "data/calibration-log.jsonl", '{"round_log_rows":1,"model":"claude-opus-5-5"}\n{"round_log_rows":1,"model":"claude-opus-5-6"}\n');
   assert.deepEqual(run("--model", "claude-opus-5-6", "--gate", gateFile), [], "a run logged after the changes clears them");
@@ -308,14 +308,14 @@ test("only a change to a record a gate list carries makes calibration due, not o
   commit(vault, "2026-10-07T10:00:00Z", `${store}/layout.md`, record("vault.proof", { question: "Is it proofed?" }));
   commit(vault, "2026-10-08T10:00:00Z", `${store}/content.md`, staged + record("vault.kept", { question: "Still kept?" }));
   commit(vault, "2026-10-08T12:00:00Z", `${store}/content.md`, record("vault.staged", { status: "staged", question: "Again?" }) + record("vault.kept", { question: "Still kept?" }));
-  assert.deepEqual(run(), [`calibration due — ${store} changed at 2026-10-08T10:00:00+00:00, after the last run was logged`], "two live look records edited, then a staged one: the latest live change");
+  assert.deepEqual(run(), [`calibration due — ${store} changed at 2026-10-08T10:00:00Z, after the last run was logged`], "two live look records edited, then a staged one: the latest live change");
 
   commit(vault, "2026-10-09T10:00:00Z", "data/calibration-log.jsonl", '{"round_log_rows":1}\n{"round_log_rows":1}\n');
   assert.deepEqual(run(), [], "a run logged after the change clears it");
   commit(vault, "2026-10-10T10:00:00Z", `${store}/content.md`, record("vault.staged", { status: "live", question: "Again?" }) + record("vault.kept", { question: "Still kept?" }));
-  assert.deepEqual(run(), [`calibration due — ${store} changed at 2026-10-10T10:00:00+00:00, after the last run was logged`], "a staged record made live");
+  assert.deepEqual(run(), [`calibration due — ${store} changed at 2026-10-10T10:00:00Z, after the last run was logged`], "a staged record made live");
   commit(project, "2026-10-11T10:00:00Z", "docs/brand/fit-gate.md", record("mmm-infra.audience", { "answered-by": "script" }));
-  assert.match(run()[0], /; \S*docs\/brand\/fit-gate\.md changed at 2026-10-11T10:00:00\+00:00, after the last run was logged$/, "a project's live record edited, and its staged one dropped");
+  assert.match(run()[0], /; \S*docs\/brand\/fit-gate\.md changed at 2026-10-11T10:00:00Z, after the last run was logged$/, "a project's live record edited, and its staged one dropped");
 
   // A change made on a branch before a run, and merged after it, lands with the merge.
   const git = (time, ...args) => gitAt(vault, time, ...args);
@@ -325,5 +325,5 @@ test("only a change to a record a gate list carries makes calibration due, not o
   commit(vault, "2026-10-13T10:00:00Z", "data/calibration-log.jsonl", '{"round_log_rows":1}\n{"round_log_rows":1}\n{"round_log_rows":1}\n');
   assert.deepEqual(run(), [], "a run logged after every change on the main line");
   git("2026-10-14T10:00:00Z", "merge", "-q", "--no-ff", "--no-edit", "side");
-  assert.deepEqual(run(), [`calibration due — ${store} changed at 2026-10-14T10:00:00+00:00, after the last run was logged`], "the branch merged after the run");
+  assert.deepEqual(run(), [`calibration due — ${store} changed at 2026-10-14T10:00:00Z, after the last run was logged`], "the branch merged after the run");
 });
