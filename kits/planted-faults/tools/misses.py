@@ -1,4 +1,4 @@
-"""misses.py [--runs 1,2,3] — per known fault, which critics found it in each run (2-of-3 scorer vote)."""
+"""python3 kits/planted-faults/tools/misses.py [--runs 4,5,6] — per known fault, which critics found it in each run (2-of-3 scorer vote)."""
 
 import argparse
 import json
@@ -10,8 +10,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import score
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--runs", default="1,2,3")
-score.RUNS[:] = [int(r) for r in ap.parse_args().runs.split(",")]
+score.add_runs(ap)
+score.use_runs(ap.parse_args().runs)
 WORK = score.WORK
 hit = {}
 for cand in score.scored_cands():
