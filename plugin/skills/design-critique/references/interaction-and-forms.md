@@ -8,7 +8,7 @@ A project's rules file wins over every record here except a floor WCAG or the la
 
 ### Every drag has a tap path
 
-Records: `vault.drag-alternative`, `vault.slider-keys`, `vault.sheet-grabber`, `vault.motion-input`.
+Records: `vault.drag-alternative`, `vault.slider-keys`, `vault.sheet-grabber`, `vault.motion-input`, `vault.drag-buttons`, `vault.motion-control`, `vault.grabber`.
 
 - **Why.** Some visitors cannot press, hold and move at once (WCAG 2.2 SC 2.5.7) or use two fingers at once, as a pinch needs (SC 2.5.1), and some cannot shake or tilt a device (SC 2.5.4). Keyboard support answers none of them: a pointer user who cannot drag still needs something to tap. A slider's track tap, a sortable list's move buttons, a "Choose file" button and a sheet's grabber are the standard paths (W3C Understanding 2.5.7; GOV.UK File upload; Apple HIG Sheets).
 - **Trade-off.** Each path adds a control, and on a small photo gallery or a sheet that costs room; a grabber and arrow buttons are the smallest that serve. Scrolling and pinching the browser itself handles need no path, so a native scroller is exempt.
@@ -16,7 +16,7 @@ Records: `vault.drag-alternative`, `vault.slider-keys`, `vault.sheet-grabber`, `
 
 ### A drag holds its pointer
 
-Record: `vault.drag-tracking`.
+Records: `vault.drag-tracking`, `vault.drag-tracking-surface`.
 
 - **Why.** A thumb covers a small slider and drifts off it; a drag that stops when the pointer leaves the control drops the visitor's value (Freiberg 2023). Pointer capture keeps the events on the dragged part. In Chromium 149 it did not stop the drag selecting text (the slider's own label, in the measurement), which only `user-select: none` or a cancelled `pointerdown` did.
 - **Trade-off.** `user-select: none` on a card also stops a visitor copying its text; set it on the body only while a drag lasts, or on the drag surface alone. Safari needs `-webkit-user-select` beside it (MDN). Firefox and Safari were not measured.
@@ -71,14 +71,14 @@ Record: `vault.touch-action`.
 
 ### Answers are asked once and kept
 
-Records: `vault.prefilled-repeat`, `vault.redundant-entry`, `vault.keep-answers`.
+Records: `vault.prefilled-repeat`, `vault.redundant-entry`, `vault.keep-answers`, `vault.same-address`, `vault.answers-kept`.
 
 - **Why.** Asking again for what a visitor already typed makes them recall it, and some give up (W3C Understanding 3.3.7). An error that clears the fields, or a back button that loses a step, makes them type it all again (GOV.UK Error message, Question pages). A long form that cannot be paused assumes it is done in one sitting, which it often is not (USWDS).
 - **Trade-off.** Keeping answers stores personal data longer; a public device and a security answer are the exceptions WCAG names. Across sessions WCAG asks nothing; save and resume is the house's ask for long forms only.
 
 ### Long forms offer help in place
 
-Record: `vault.form-help`.
+Records: `vault.form-help`, `vault.form-help-link`.
 
 - **Why.** A form that sends a visitor away for help loses their place (USWDS). An error met three times means the design, not the visitor, has failed, and earns extra help (NN/g, Krause).
 - **Trade-off.** WCAG does not require help to exist; the record asks for it on long or complex forms only.
@@ -86,28 +86,28 @@ Record: `vault.form-help`.
 
 ### Signing in takes no memory test
 
-Record: `vault.sign-in`.
+Records: `vault.sign-in`, `vault.paste-allowed`.
 
 - **Why.** Remembering a password, retyping a code or solving a puzzle is a cognitive test some visitors cannot pass (WCAG 2.2 SC 3.3.8). Paste and password managers take the memory out of a password; a passkey or an email link takes the password away (Apple HIG; W3C technique G218).
 - **Trade-off.** A one-time code sent by text still has to be read and typed; `autocomplete="one-time-code"` lets the phone fill it in.
 
 ### Time limits can be stopped
 
-Record: `vault.time-limit`.
+Records: `vault.time-limit`, `vault.time-limit-look`.
 
 - **Why.** A visitor who reads slowly, or needs a break, loses their work to a silent timeout (WCAG 2.2 SC 2.2.1). A redirect that leaves after a few seconds is a time limit too, so it needs a way to go now and a way to stay.
 - **Trade-off.** A held booking or ticket may be essential to the sale and is exempt; it still shows its end plainly (`vault.offer-deadline`).
 
 ### Deadlines are plain dates
 
-Record: `vault.offer-deadline`.
+Records: `vault.offer-deadline`, `vault.offer-end-date`.
 
 - **Why.** A false "limited time" claim is banned in the UK (Digital Markets, Competition and Consumers Act 2024, Schedule 20). A true one still reads as pressure when it ticks or flashes, which the house's no-urgency-theatre line forbids.
 - **Trade-off.** A countdown converts some visitors; the house trades that for trust.
 
 ### Leaving the site is not interrupted
 
-Record: `vault.exit-warning`.
+Records: `vault.exit-warning`, `vault.exit-warning-look`.
 
 - **Why.** A modal before every external link is a roadblock visitors learn to dismiss unread (USWDS, Link). The link text and an external-link indicator say where it goes before the click.
 - **Trade-off.** A booking handed to another business's site is a real change of who serves the visitor; a project may keep one short notice there, as Manta's rules file does.
@@ -121,7 +121,7 @@ Record: `vault.data-states`.
 
 ### Error pages are plain
 
-Record: `vault.error-page`.
+Records: `vault.error-page`, `vault.missing-page`.
 
 - **Why.** A visitor on an error page is already let down; a code, a joke or red text adds confusion or blame (GOV.UK error page patterns). What they need is what happened, what became of their answers and where to go.
 - **Trade-off.** A brand may want personality on a 404; the house keeps wit to low-stakes surfaces, and an error is not one.

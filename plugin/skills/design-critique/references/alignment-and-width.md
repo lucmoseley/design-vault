@@ -88,7 +88,7 @@ Record: `vault.capped-centre`.
 
 ### Alignment lines between sections
 
-Records: `vault.alignment-lines`, `vault.alignment-break`.
+Records: `vault.alignment-lines`, `vault.alignment-break`, `vault.alignment-lines-look`.
 
 - **Why.** The eye follows a line and groups what sits on it (good continuation, Wagemans et al. 2012). A grid gives every section the same lines, so text, cards and images relate across the page; content in a gutter breaks them (Atlassian, NN/g). That the main text edge repeats from section to section is the house's reading of NN/g's "keep alignment consistent"; no source read states it for sections. Small parts (buttons, icons) sit by their spacing, not the grid (Atlassian).
 - **Trade-off.** A strict grid can feel rigid; a break (a full-bleed header, a centred hero) draws the eye, which is why it needs a reason. No outside source decides whether a measure-capped text column in a wide section sits on the left grid line or centred; GOV.UK sets it left in two thirds, Atlassian centres a block of 8–12 columns. Either passes if the choice repeats from section to section.
@@ -96,7 +96,7 @@ Records: `vault.alignment-lines`, `vault.alignment-break`.
 
 ### Optical alignment
 
-Record: `vault.optical-alignment`.
+Records: `vault.optical-alignment`, `vault.optical-icon`.
 
 - **Why.** The eye aligns what it sees, not the boxes: a padded column's text sits lower than its box, and an icon's shape rarely fills its frame (Refactoring UI, Krehel).
 - **Trade-off.** Optical fixes are by eye, so no script can check them; this record is answered by look, on the render.

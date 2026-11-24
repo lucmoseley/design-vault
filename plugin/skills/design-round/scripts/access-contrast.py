@@ -979,7 +979,7 @@ def _slide_readings(page, js, mark, *, readings, unread):
     def read(subject, where, held):
         if not held:
             unread.append(
-                f"{subject} never held still after {where}, so that slide was not read"
+                f"{subject} never held still {where}, so that slide was not read"
             )
             return
         photo = mark()["photo"]

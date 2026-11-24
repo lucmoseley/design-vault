@@ -1,8 +1,8 @@
 "use strict";
 // The pointers into the vault's store of rule records (#265): gate.md is gone, so nothing a round reads may still send
-// an agent to it; every record's `reasons` names a heading that exists; and every link the plugin makes into the store
-// lands on a file there. It reads the live plugin tree, not fixtures, so the commit that adds a stale pointer is the
-// one refused.
+// an agent to it; every record's `reasons` names a heading that exists; every link the plugin makes into the store
+// lands on a file there; and each reference section's Records line names every record whose `reasons` points at it.
+// It reads the live plugin tree, not fixtures, so the commit that adds a stale pointer is the one refused.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -23,7 +23,20 @@ function walk(dir, pattern) {
 
 /** A heading's anchor as GitHub renders it: lower-cased, punctuation but hyphens dropped, spaces as hyphens. */
 const anchor = (heading) => heading.trim().toLowerCase().replace(/[^\p{L}\p{N} -]/gu, "").replace(/ /g, "-");
-const anchors = (file) => new Set([...fs.readFileSync(file, "utf8").matchAll(/^#{1,6} (.*)$/gm)].map((m) => anchor(m[1])));
+const sectionRecords = new Map();
+function readSectionRecords(file) {
+  if (sectionRecords.has(file)) return sectionRecords.get(file);
+  const named = new Map();
+  let section;
+  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
+    const heading = line.match(/^#{1,6} (.*)$/);
+    if (heading) named.set((section = anchor(heading[1])), []);
+    else if (section && /^Records?: /.test(line)) named.get(section).push(...[...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
+  }
+  sectionRecords.set(file, named);
+  return named;
+}
+const anchors = (file) => new Set(readSectionRecords(file).keys());
 
 // The old home's name, not a project's fit-gate.md.
 const OLD_HOME = /(?<![\w-])gate\.md\b/;
@@ -48,6 +61,23 @@ test("every record's reasons names a heading that exists in a file under the plu
     assert.ok(fs.existsSync(target), `${q.id}: ${file} does not exist`);
     assert.ok(hash && anchors(target).has(hash), `${q.id}: ${file} has no heading #${hash}`);
   }
+});
+
+test("a reference section's Records line names every record whose reasons point at it", () => {
+  const drift = [];
+  let checked = 0;
+  for (const q of storeRecords()) {
+    const [file, hash] = q.fields.reasons.value.split("#");
+    if (!/\/references\/[^/]+\.md$/.test(file)) continue;
+    const ids = readSectionRecords(path.join(SKILLS, file)).get(hash);
+    // #540
+    if (!ids?.length) continue;
+    checked++;
+    if (!ids.includes(q.id)) drift.push(`${file}#${hash} omits ${q.id}`);
+  }
+  // measured 397 at #511; 350 a guess under it
+  assert.ok(checked > 350, `only ${checked} records checked`);
+  assert.deepEqual(drift, []);
 });
 
 test("every link the plugin makes into the store, or to rules.md, lands on a file there", () => {

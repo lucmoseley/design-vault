@@ -14,6 +14,7 @@ import collections
 import concurrent.futures
 import importlib.util
 import json
+import math
 import os
 import re
 import shutil
@@ -51,6 +52,10 @@ WHOLE = {
     "vault.fallback-metrics": "@font-face f-fallback-metrics",
 }
 # Records the clean page cannot meet as anything but no match.
+# Faces under type-size's 0.52 reference: Georgia 0.481 and Times 0.447,
+# measured (docs/research/typeface-traits.md R5); 0.4784, check-style's
+# reading of the plants' `font-size-adjust: 0.481` in Chromium (#514).
+UNDER_REFERENCE_XHEIGHTS = (0.481, 0.4784, 0.447)
 UNMET = {
     # Justified text is allowed only where a project's rules file names it,
     # and vault.text-align refuses it on a page with none.
@@ -110,6 +115,23 @@ def tearDownModule():
         shutil.rmtree(work, ignore_errors=True)
 
 
+def plant_at(plant):
+    """A plant's id in a miss's subject, never a longer id it begins."""
+    return re.compile(re.escape("#" + plant) + r"(?![\w-])")
+
+
+def read_records():
+    records = {}
+    for name in os.listdir(RULES):
+        with open(os.path.join(RULES, name), encoding="utf8") as fh:
+            for chunk in re.split(r"^### ", fh.read(), flags=re.M)[1:]:
+                rid, _, body = chunk.partition("\n")
+                records[rid.strip()] = dict(
+                    re.findall(r"^- ([\w-]+): (.*)$", body, flags=re.M)
+                )
+    return records
+
+
 def table_ids():
     with open(TABLE, encoding="utf8") as fh:
         blocks = style.parse(fh.read())
@@ -135,24 +157,25 @@ class Pages(unittest.TestCase):
                         and WHOLE[rid].endswith(" ")
                     ]
                 else:
-                    plant = re.compile(
-                        re.escape("#f-" + rid.removeprefix("vault.")) + r"(?![\w-])"
-                    )
+                    plant = plant_at("f-" + rid.removeprefix("vault."))
                     hit = [s for s in subjects if plant.search(s)]
                 self.assertTrue(hit, f"no miss on its plant: {subjects[:5]}")
                 self.assertIn(f"{rid}: fail", proc.stdout)
         self.assertIn("every finding: ", proc.stdout)
 
-    def test_dense_text_fails_type_size_on_each_floor_alone(self):
-        """#479. Pass pair: test_the_clean_page_reports_nothing."""
+    def test_type_size_fails_each_plant_on_the_one_floor_it_breaks(self):
+        """#479, #514. Pass pair: test_the_clean_page_reports_nothing."""
         _, found = RAN["fault"]
         (f,) = [f for f in found if f["id"] == "vault.type-size"]
         for plant, read in (
-            ("#f-type-size-tall", "style:font-size"),
-            ("#f-type-size-short", "style:font-size times xheight"),
+            ("f-type-size-tall", "style:font-size"),
+            ("f-type-size-short", "style:font-size times xheight"),
+            ("f-type-size-nearest", "style:font-size times xheight"),
+            ("f-type-size-nearest-dense", "style:font-size times xheight"),
         ):
             with self.subTest(plant):
-                reads = {m["read"] for m in f["misses"] if plant in m["subject"]}
+                at = plant_at(plant)
+                reads = {m["read"] for m in f["misses"] if at.search(m["subject"])}
                 self.assertEqual(reads, {read})
 
     def test_every_block_of_the_table_misses_on_the_fault_page(self):
@@ -195,19 +218,38 @@ class Pages(unittest.TestCase):
 
 class Records(unittest.TestCase):
     def test_every_record_the_table_answers_names_this_script(self):
-        records = {}
-        for name in os.listdir(RULES):
-            with open(os.path.join(RULES, name), encoding="utf8") as fh:
-                for chunk in re.split(r"^### ", fh.read(), flags=re.M)[1:]:
-                    rid, _, body = chunk.partition("\n")
-                    records[rid.strip()] = dict(
-                        re.findall(r"^- ([\w-]+): (.*)$", body, flags=re.M)
-                    )
+        records = read_records()
         for rid in table_ids():
             with self.subTest(rid):
                 self.assertIn(rid, records)
                 self.assertEqual(records[rid].get("answered-by"), "script")
                 self.assertRegex(records[rid].get("script", ""), r"^check-style\.py ")
+
+    def test_type_size_prescribes_a_size_its_x_height_rows_pass(self):
+        """#514."""
+        output = read_records()["vault.type-size"]["output"]
+        with open(TABLE, encoding="utf8") as fh:
+            table = fh.read()
+
+        def floor(role, read):
+            (px,) = re.findall(
+                rf"^vault\.type-size \| \${role} \| {read} \| >= ([\d.]+)px$",
+                table,
+                flags=re.M,
+            )
+            return float(px)
+
+        for role in ("prose", "dense"):
+            base = floor(role, "style:font-size")
+            least = floor(role, "style:font-size times xheight")
+            ratio = least / base
+            self.assertIn(
+                f"max({base:g}, {base:g} × {ratio:g} ÷ xheight) px, rounded up", output
+            )
+            for xheight in UNDER_REFERENCE_XHEIGHTS:
+                with self.subTest(role=role, xheight=xheight):
+                    size = max(base, math.ceil(base * ratio / xheight))
+                    self.assertGreaterEqual(size * xheight, least)
 
 
 class Table(unittest.TestCase):
