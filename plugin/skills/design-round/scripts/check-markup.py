@@ -254,19 +254,7 @@ def parse_args(argv):
     )
     p.add_argument("url", help="an http(s) URL, or a local HTML file")
     p.add_argument("--out", required=True, metavar="DIR", help="where markup.json goes")
-    p.add_argument(
-        "--parts",
-        dest="declaration",
-        metavar="FILE",
-        help=f"the building session's parts declaration, {probe.DECLARATION}",
-    )
-    p.add_argument(
-        "--part",
-        action="append",
-        default=[],
-        metavar="NAME=SELECTOR",
-        help="a declared part's name and its CSS selector, for part: lines",
-    )
+    probe.part_arguments(p)
     p.add_argument("--table", default=TABLE, metavar="FILE", help="the rule table")
     p.add_argument(
         "--timeout",
@@ -276,20 +264,7 @@ def parse_args(argv):
         help="for each load",
     )
     at = p.parse_args(argv)
-    at.parts = {}
-    if at.declaration:
-        try:
-            with open(at.declaration, encoding="utf8") as fh:
-                at.parts, _ = probe.declared_parts(fh.read())
-        except OSError as exc:
-            p.error(f"cannot read --parts {at.declaration}: {exc.strerror}")
-        except probe.DeclarationError as exc:
-            p.error(f"--parts {at.declaration}: {exc}")
-    for given in at.part:
-        name, eq, selector = given.partition("=")
-        if not eq or not name.strip() or not selector.strip():
-            p.error(f"--part wants NAME=SELECTOR, got {given!r}")
-        at.parts[name.strip()] = selector.strip()
+    at.parts, _ = probe.part_options(p, at)
     try:
         with open(at.table, encoding="utf8") as fh:
             at.table = parse(fh.read())

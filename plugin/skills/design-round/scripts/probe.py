@@ -1391,6 +1391,41 @@ def declared_parts(text):
     )
 
 
+def part_arguments(p):
+    p.add_argument(
+        "--parts",
+        dest="declaration",
+        metavar="FILE",
+        help=f"the building session's parts declaration, {DECLARATION}",
+    )
+    p.add_argument(
+        "--part",
+        action="append",
+        default=[],
+        metavar="NAME=SELECTOR",
+        help="a declared part's name and its CSS selector, for part: lines",
+    )
+
+
+def part_options(p, at):
+    parts, unselected = {}, set()
+    if at.declaration:
+        try:
+            with open(at.declaration, encoding="utf8") as fh:
+                parts, unselected = declared_parts(fh.read())
+        except OSError as exc:
+            p.error(f"cannot read --parts {at.declaration}: {exc.strerror}")
+        except DeclarationError as exc:
+            p.error(f"--parts {at.declaration}: {exc}")
+    for given in at.part:
+        name, eq, selector = given.partition("=")
+        if not eq or not name.strip() or not selector.strip():
+            p.error(f"--part wants NAME=SELECTOR, got {given!r}")
+        parts[name.strip()] = selector.strip()
+        unselected.discard(name.strip())
+    return parts, unselected
+
+
 def parse_args(argv):
     p = argparse.ArgumentParser(
         prog="probe.py",
@@ -1437,19 +1472,7 @@ def page_arguments(p, out_file):
     where `out_file` goes, the parts, the widths and the load timeout."""
     p.add_argument("url", help="an http(s) URL, or a local HTML file")
     p.add_argument("--out", required=True, metavar="DIR", help=f"where {out_file} goes")
-    p.add_argument(
-        "--parts",
-        dest="declaration",
-        metavar="FILE",
-        help=f"the building session's parts declaration, {DECLARATION}",
-    )
-    p.add_argument(
-        "--part",
-        action="append",
-        default=[],
-        metavar="NAME=SELECTOR",
-        help="a declared part's name and its CSS selector, for part: lines",
-    )
+    part_arguments(p)
     p.add_argument("--step", type=int, default=layout.GATE_STEP, metavar="PX")
     p.add_argument(
         "--widths",
@@ -1477,21 +1500,7 @@ def page_options(p, at):
         p.error(
             f"--widths wants LOW-HIGH within {layout.LOW}-{layout.HIGH}, e.g. 1100-1340 — got {at.widths!r}"
         )
-    at.parts, unselected = {}, set()
-    if at.declaration:
-        try:
-            with open(at.declaration, encoding="utf8") as fh:
-                at.parts, unselected = declared_parts(fh.read())
-        except OSError as exc:
-            p.error(f"cannot read --parts {at.declaration}: {exc.strerror}")
-        except DeclarationError as exc:
-            p.error(f"--parts {at.declaration}: {exc}")
-    for given in at.part:
-        name, eq, selector = given.partition("=")
-        if not eq or not name.strip() or not selector.strip():
-            p.error(f"--part wants NAME=SELECTOR, got {given!r}")
-        at.parts[name.strip()] = selector.strip()
-        unselected.discard(name.strip())
+    at.parts, unselected = part_options(p, at)
     return unselected
 
 
