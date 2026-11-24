@@ -375,7 +375,7 @@ class Slides(unittest.TestCase):  # #427
 
 
 class SlidePassErrors(unittest.TestCase):  # #528
-    def answer(self, fresh):
+    def photo_answer(self, fresh):
         from playwright.sync_api import sync_playwright
 
         access = library("check-access.py")
@@ -407,7 +407,7 @@ class SlidePassErrors(unittest.TestCase):  # #528
         def fresh():
             raise PlaywrightError("Timeout 30000ms exceeded.\n=== logs ===")
 
-        photo = self.answer(fresh)
+        photo = self.photo_answer(fresh)
         self.assertEqual(photo.faults, [])
         (why,) = photo.unmeasured
         self.assertIn("slides could not be stepped through", why)
@@ -426,7 +426,9 @@ class SlidePassErrors(unittest.TestCase):  # #528
                 self.closed = True
 
         page = Page()
-        (why,) = self.answer(lambda: page).unmeasured
+        photo = self.photo_answer(lambda: page)
+        self.assertEqual(photo.faults, [])
+        (why,) = photo.unmeasured
         self.assertIn("Execution context was destroyed", why)
         self.assertTrue(page.closed)
 
