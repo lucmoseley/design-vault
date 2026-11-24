@@ -3,9 +3,7 @@
 // Loosen a rule and a change lands with its own tests unrun, or the slow suites run on every commit again.
 // And all.sh's --shard=k/n (#462): a suite in no shard is never run by the lander's whole run, one in two runs twice.
 require("./no-git-env");
-// A caller forcing every suite would select every suite in the commits below too; the one case that wants it sets it (#348).
-// Run under workflow-core's gate, this file would read as a gate run itself; the one case that wants it sets it (#457).
-// The gate hands every command it runs its merge parents, empty where it has none; the cases that want them set them.
+// #348 #457
 const { VAULT_ALL_SUITES, WFC_GATE_SEAT, WFC_MERGE_PARENTS, ...HAND_ENV } = process.env;
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
