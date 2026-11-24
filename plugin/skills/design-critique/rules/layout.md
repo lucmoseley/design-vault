@@ -256,7 +256,7 @@ Where things sit on the page: reflow across widths and the first screen. The for
 
 ### vault.alignment-lines
 - applies-when: web-surface; every top-level content container (text block, card, image, table, form) in the main content area
-- question: Does each top-level content container start and end on a column line of the page's grid, never in a gutter or margin, with the main text edge on one line in every section but a full-bleed part (header, hero, image band) or a centred section?
+- question: Does each top-level content container start and end on a column line of the page's grid, never in a gutter or margin, with the main text edge on one line in every section of a column, sections set side by side each keeping their own column's line, but a full-bleed part (header, hero, image band) or a centred section?
 - answered-by: script
 - writes: grid alignment
 - yields-to: level 2
@@ -264,7 +264,7 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - era: timeless
 - owner: vault
 - stage: treatment
-- target: Lay the main content on one column grid: each text block, card, image, table and form starts and ends on its column lines, and the main text edge stays on one line through every section.
+- target: Lay the main content on one column grid: each text block, card, image, table and form starts and ends on its column lines, and the main text edge stays on one line through every section of a column.
 - script: check-layout.py <page> --out <dir> --records
 - reasons: design-critique/references/alignment-and-width.md#alignment-lines-between-sections
 - ledger: LAY-24
