@@ -1,1 +1,1 @@
-{"declared": {"card": ".card", "logo": ".logo", "nav": "#main-nav", "hero": ".hero"}}
+{"declared": {"card": ".card", "logo": ".logo", "nav": "#main-nav", "hero": ".hero", "empty-state": ".empty", "category-tile": ".tile"}}

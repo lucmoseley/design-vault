@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout record checks #420 widened, each broken</title>
+<!-- One plant per check #420 added or widened, marked data-record and given an id f-<what it breaks>; test/check-layout.test.py sweeps it at 390, 700, 1010, 1320 and 1400 px with tier01-gaps-parts.json, and each record must fail on its plant. The half-width box at the top ends at the first screen's foot but spans no band, so vault.false-floor finds no fault. The page is in a dark colour scheme, so its canvas is dark. -->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 monospace; }
+  img, svg { display: block; }
+  .half { width: 50%; height: 100vh; background: #234; }
+  header { display: flex; gap: 8px; align-items: center; padding: 8px 24px; }
+  header button { flex: none; }
+  .logo { display: flex; gap: 8px; align-items: center; }
+  @media (min-width: 1000px) { .logo .name { display: none; } }
+  .narrow { max-width: 800px; margin-inline: auto; padding: 0 24px; }
+  p { max-width: 36em; }
+  .cols { display: flex; width: 100px; }
+  .cols div { flex: 1; height: 40px; background: #fff; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 16px; }
+  @media (max-width: 599px) { .cards { grid-template-columns: 1fr; } }
+  .card h3, .card p { margin: 0; }
+  #f-card-alignment { padding-top: 10px; }
+  .two { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .halves { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  #f-grid-lines { justify-self: start; width: 40%; }
+  .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0; list-style: none; }
+  #f-empty-width p { max-width: none; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; min-height: 8vh; }
+</style>
+</head>
+<body>
+<div class="half"></div>
+<header id="f-bar-fit" data-record="vault.bar-fit">
+  <a class="logo" href="/" id="f-logo-version" data-record="vault.logo-version"><svg width="32" height="32" aria-hidden="true"><rect width="32" height="32" fill="#9ab"/></svg><span class="name">Vault Hostel</span></a>
+  <button>Search</button><button>Saved</button><button>Basket</button><button>Account</button><button>Language</button>
+</header>
+<div class="narrow" id="f-content-width" data-record="vault.content-width">
+<main>
+  <section>
+    <h2>Fills</h2>
+    <div class="cols" id="f-joined-fills" data-record="vault.joined-fills"><div></div><div></div><div></div></div>
+  </section>
+  <section>
+    <h2>Cards</h2>
+    <div class="cards">
+      <article class="card"><h3 id="f-card-alignment" data-record="vault.card-alignment">Dorm</h3><p>Six beds.</p></article>
+      <article class="card"><h3>Room</h3><p>Two beds.</p></article>
+    </div>
+    <div class="two" id="f-content-columns" data-record="vault.content-columns">
+      <article class="card"><h3>Bunk</h3></article><article class="card"><h3>Twin</h3></article><article class="card"><h3>Suite</h3></article><article class="card"><h3>Tent</h3></article>
+    </div>
+    <ul class="cats" id="f-tile-columns" data-record="vault.content-columns"><li class="tile">Dorms</li><li class="tile">Rooms</li><li class="tile">Tents</li></ul>
+  </section>
+  <section>
+    <h2>Getting here</h2>
+    <div class="halves"><div id="f-grid-lines" data-record="vault.alignment-lines"><p>By train.</p></div><div><p>By bus.</p></div></div>
+  </section>
+  <section>
+    <div class="empty" id="f-empty-width" data-record="vault.content-width"><p>No bookings yet. Book a bed from the rooms page, or ask the front desk and we will hold one for you until the evening.</p></div>
+  </section>
+</main>
+</div>
+<div class="bar" id="f-bottom-safe-area" data-record="vault.bottom-safe-area"><button>Book now</button></div>
+</body>
+</html>

@@ -11,20 +11,22 @@ vault.fluid-zoom | fluid-zoom | zoom 5, grow 2
 vault.joined-fills | seams | scales 1.25, 1.5, 1.75
 vault.safe-centre | safe-centre | none
 vault.card-alignment | card-rows | none
-# 34 px: the bottom inset a Face ID iPhone keeps in portrait, which no record gives.
 vault.bottom-safe-area | safe-bottom | inset 34
 vault.alignment-lines | text-edge | none
-vault.content-width | content-width | reading 864, default 1300
+vault.alignment-lines | grid-lines | none
+vault.content-width | content-width | reading 864 or text in 2/3, default 1020-1300
+vault.content-width | empty-width | 464, or 304 under 464
 vault.content-width | footer-bands | none
 vault.capped-centre | capped-centre | none
-vault.line-length | line-length | body 50-75, columns 40-50, large 75, short 80
+vault.line-length | line-length | body 50-75, columns 40-50, large 75, short 80 to 3 lines
 vault.optical-alignment | optical | none
 vault.table-width | table-width | none
 vault.table-narrow | table-narrow | none
 vault.button-group-stack | button-stack | none
 vault.content-columns | card-columns | one under 600, minimum 15em
+vault.content-columns | tile-columns | 2 under 600
 vault.content-columns | phone-width | under 600
-vault.panes-by-width | panes | one under 840 or under 480 tall
+vault.panes-by-width | panes | 1 under 840 or under 480 tall, else 2
 vault.side-pane | side-pane | one under 840 or under 480 tall
 vault.popover-sheet | popover-sheet | under 600
 vault.bar-fit | bar-fit | none

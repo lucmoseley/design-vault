@@ -93,7 +93,7 @@ for size the default text sizes set, proportional and monospace, in px.
 (its CHECKS), at every width and on loads of its own: zoomed and with a larger
 default text size, script off, an emulated safe-area inset and each popover
 or menu opened. --parts is the round's parts declaration, which names the
-card and the logo; --brief gives the brief's facts a check reads. A record
+card, the logo, the empty state and the category tile; --brief gives the brief's facts a check reads. A record
 answers fail where any of its checks found a fault at any width, not judged
 where a check lacks a part or fact, pass where a check found something it
 applies to, else no match; layout.json's "records" holds the answers, what
@@ -1106,12 +1106,18 @@ def read_records(page, at, width, rec, *, page_as, raised, safe):
 
 def records_after(browser, at, rec, page_as):
     """The record checks read once the sweep ends: across its widths
-    (vault.card-media-stack, vault.logo-version), and at the screenshot widths
-    a phone or a narrow window takes, the tab panels with script on and off
-    (vault.tabs-narrow) and each popover and menu opened
-    (vault.popover-sheet). Adds what it finds to `rec`."""
+    (vault.card-media-stack, vault.logo-version), and at narrow widths the
+    tab panels with script on and off (vault.tabs-narrow) and each popover
+    and menu opened (vault.popover-sheet). Adds what it finds to `rec`."""
     checks = rec.checks
     widths = [w for w, _ in rec.notes]
+
+    def narrow(under, mode):
+        held = [w for w in widths if w < under]
+        if not held:
+            rec.unmet[mode] = f"the sweep holds no width under {under:g} px"
+        return [w for w in SHOT_WIDTHS if w in held] or held[:1]
+
     if "card-media" in checks:
         cards = [(w, n.get("cards", [])) for w, n in rec.notes]
         if any(c for _, c in cards):
@@ -1126,12 +1132,11 @@ def records_after(browser, at, rec, page_as):
             rec.seen.add("logo-version")
         for w, faults in records.logo_faults(logos):
             rec.add(w, faults)
-    shots = [w for w in SHOT_WIDTHS if w in widths]
     if "tabs-narrow" in checks:
         off = browser.new_context(java_script_enabled=False, **PHONE)
         off.set_default_timeout(at.timeout)
         bare = off.new_page()
-        for w in [w for w in shots if rec.phone(w)]:
+        for w in narrow(rec.phone_under, "tabs-narrow"):
             page = page_as(device(w))
             load(page, at.url, w, at.heights)
             panels = page.evaluate(records.TABS_JS, None)
@@ -1149,7 +1154,7 @@ def records_after(browser, at, rec, page_as):
     if "popover-sheet" in checks:
         overlay = _load("drive_overlay", "drive-overlay.py")
         under = checks["popover-sheet"].value["under"]
-        for w in [w for w in shots if w < under]:
+        for w in narrow(under, "popover-sheet"):
             page = page_as(device(w))
             load(page, at.url, w, at.heights)
             faults = []

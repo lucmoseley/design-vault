@@ -1574,7 +1574,27 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/layout/tier01-gaps-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-gaps.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-main-grid.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/layout/tier01-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-reading-column.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-reading-wide.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
