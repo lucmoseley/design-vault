@@ -381,11 +381,15 @@ def _read(text):
     return read._replace(distinct=distinct, excepts=excepts, text=text, within=within)
 
 
+def _scope_led(text):
+    first, _, rest = text.partition(" ")
+    return first in SCOPES and bool(rest)
+
+
 def _simple(text):
     body, scope = text.strip(), "self"
-    first, _, rest = body.partition(" ")
-    if first in SCOPES and rest:
-        scope, body = first, rest
+    if _scope_led(body):
+        scope, _, body = body.partition(" ")
     body, _, lens = body.partition(" as ")
     lens = lens.strip() or None
     body, _, pseudo = body.partition(" of ")
@@ -484,8 +488,7 @@ def _ref(text, required=False):
                     raise TableError("all of reads each element, not distinct or count")
                 return Ref(select, read, text)
         raise TableError("all of ( wants its closing )")
-    scope, _, rest = text.partition(" ")
-    if scope in SCOPES and rest:
+    if _scope_led(text):
         read = _read(text)
         if read.distinct or read.kind == "count":
             raise TableError("a compared read is one element's, not distinct or count")

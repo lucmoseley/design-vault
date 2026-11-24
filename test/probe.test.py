@@ -582,6 +582,7 @@ class Grammar(unittest.TestCase):
         )
 
     def test_a_scope_word_alone_is_a_value_not_a_read(self):
+        """check-dom.table's vault.enter-key MUST `= next` is a value (#520)."""
         must = probe.parse("A | css:input | attr:enterkeyhint | = next")[0].must
         self.assertEqual((must.values, must.ref), (("next",), None))
         must = probe.parse("A | css:p | style:color | = next style:color")[0].must
