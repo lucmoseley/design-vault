@@ -269,6 +269,13 @@ class Settle(OnThePage):
         self.assertFalse(pointer.hover(self.page, "#crawler").settled)
         self.assertTrue(pointer.hover(self.page, "#count").settled)
 
+    def test_a_target_under_an_animation_that_waits_for_ever_to_start_reads_settled(
+        self,
+    ):
+        self.addCleanup(setattr, pointer, "SETTLE_CAP_MS", pointer.SETTLE_CAP_MS)
+        pointer.SETTLE_CAP_MS = 1500
+        self.assertTrue(pointer.hover(self.page, "#pinned").settled)
+
     def test_a_page_still_moving_at_the_cap_reads_unsettled(self):
         self.page.evaluate(
             "() => setInterval(() => { document.body.dataset.tick = performance.now(); }, 100)"

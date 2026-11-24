@@ -136,7 +136,7 @@ function repoOf(file) {
   return git;
 }
 
-/** A commit time git gives as `%ct`, as an ISO time in UTC: git's own `%cI` prints a zero offset as `+00:00` before 2.45 and `Z` from it. */
+// Not %cI: git 2.45 changed its zero offset from +00:00 to Z (Documentation/RelNotes/2.45.0.txt), so it printed differently by machine (#532).
 const commitTime = (seconds) => new Date(Number(seconds) * 1000).toISOString().replace(".000Z", "Z");
 
 /** When `file` was last committed, as an ISO time, or null where git holds no commit of it. Throws where git cannot read it. */
