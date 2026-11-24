@@ -63,6 +63,8 @@ So a locked-palette mascot stays on GPT (rule 3), and a locked palette with the 
 
 ## Cut-out (design-vault#54)
 
+Record: `vault.render-checkerboard`.
+
 For brand art that needs a transparent background, such as a mascot or a spot illustration placed on a page.
 
 | Tool | Purpose | Asset class | Free or paid | House disposition | Fact | Dialect |

@@ -8,7 +8,9 @@ A project's rules file wins over every record here except a floor WCAG or the la
 
 ### The step between neighbouring grounds
 
-Record: `vault.ground-step`. The levels themselves are `vault.surface-layers`'s.
+Record: `vault.ground-step`.
+
+The levels themselves are `vault.surface-layers`'s, in [named surface levels](surface-styling.md#named-surface-levels).
 
 - **Why.** The systems that publish their surface tones keep the steps small. Material's light containers span tones 100 to 90, about 1.29:1 in all. Carbon's first layer, #f4f4f4 on white, is 1.10:1, and its next layer returns to white, so the set alternates rather than darkening. A step that small groups without drawing a line. The house asks more per step than either: the founder's 3 ΔE00 for large greys that meet (`vault.colour-distance`), about 1.14:1 near white, against Carbon's 2.2 ΔE00 and Material's 1.2. Two such steps reach the 1.3:1 span, so a third level alternates.
 - **Trade-off.** A small step can vanish on a poor screen or in sunlight, which is where `vault.border-fill` keeps a border. A bigger span makes the page look striped.

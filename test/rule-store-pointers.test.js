@@ -1,7 +1,4 @@
 "use strict";
-// The pointers into the vault's store of rule records (#265): gate.md is gone, so nothing a round reads may still send
-// an agent to it; every record's `reasons` names a heading that exists; every link the plugin makes into the store
-// lands on a file there; and each reference section's Records line names every record whose `reasons` points at it.
 // It reads the live plugin tree, not fixtures, so the commit that adds a stale pointer is the one refused.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -23,20 +20,29 @@ function walk(dir, pattern) {
 
 /** A heading's anchor as GitHub renders it: lower-cased, punctuation but hyphens dropped, spaces as hyphens. */
 const anchor = (heading) => heading.trim().toLowerCase().replace(/[^\p{L}\p{N} -]/gu, "").replace(/ /g, "-");
-const sectionRecords = new Map();
-function readSectionRecords(file) {
-  if (sectionRecords.has(file)) return sectionRecords.get(file);
-  const named = new Map();
+const parseTicked = (line) => [...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+const parseReasons = (q) => {
+  const [file, hash] = q.fields.reasons.value.split("#");
+  return { file, hash };
+};
+const sections = new Map();
+function readSections(file) {
+  if (sections.has(file)) return sections.get(file);
+  const bySection = new Map();
   let section;
   for (const line of fs.readFileSync(file, "utf8").split("\n")) {
     const heading = line.match(/^#{1,6} (.*)$/);
-    if (heading) named.set((section = anchor(heading[1])), []);
-    else if (section && /^Records?: /.test(line)) named.get(section).push(...[...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
+    if (heading) bySection.set(anchor(heading[1]), (section = { recordsLine: [], mentioned: new Set() }));
+    else if (section) {
+      if (/^Records?: /.test(line)) section.recordsLine.push(...parseTicked(line));
+      for (const t of parseTicked(line)) section.mentioned.add(t);
+    }
   }
-  sectionRecords.set(file, named);
-  return named;
+  sections.set(file, bySection);
+  return bySection;
 }
-const anchors = (file) => new Set(readSectionRecords(file).keys());
+const anchors = (file) => new Set(readSections(file).keys());
+const REFERENCE = /\/references\/[^/]+\.md$/;
 
 // The old home's name, not a project's fit-gate.md.
 const OLD_HOME = /(?<![\w-])gate\.md\b/;
@@ -56,27 +62,46 @@ test("every record's reasons names a heading that exists in a file under the plu
   const records = storeRecords();
   assert.equal(records.length, RECORD_COUNT);
   for (const q of records) {
-    const [file, hash] = q.fields.reasons.value.split("#");
+    const { file, hash } = parseReasons(q);
     const target = path.join(SKILLS, file);
     assert.ok(fs.existsSync(target), `${q.id}: ${file} does not exist`);
     assert.ok(hash && anchors(target).has(hash), `${q.id}: ${file} has no heading #${hash}`);
   }
 });
 
-test("a reference section's Records line names every record whose reasons point at it", () => {
+test("a reference section names every record whose reasons point at it, on its Records line where it has one, listing each omission", () => {
   const drift = [];
   let checked = 0;
   for (const q of storeRecords()) {
-    const [file, hash] = q.fields.reasons.value.split("#");
-    if (!/\/references\/[^/]+\.md$/.test(file)) continue;
-    const ids = readSectionRecords(path.join(SKILLS, file)).get(hash);
-    // #540
-    if (!ids?.length) continue;
+    const { file, hash } = parseReasons(q);
+    if (!REFERENCE.test(file)) continue;
+    const section = readSections(path.join(SKILLS, file)).get(hash);
+    assert.ok(section, `${q.id}: ${file} has no heading #${hash}`);
     checked++;
-    if (!ids.includes(q.id)) drift.push(`${file}#${hash} omits ${q.id}`);
+    const { recordsLine, mentioned } = section;
+    if (recordsLine.length ? !recordsLine.includes(q.id) : !mentioned.has(q.id)) drift.push(`${file}#${hash} omits ${q.id}`);
   }
-  // measured 397 at #511; 350 a guess under it
-  assert.ok(checked > 350, `only ${checked} records checked`);
+  // measured 469 at #540; 430 a guess under it
+  assert.ok(checked > 430, `only ${checked} records checked`);
+  assert.deepEqual(drift, []);
+});
+
+test("a reference section's Records line names only records whose reasons point at that section, listing each misplaced id", () => {
+  const reasons = new Map(storeRecords().map((q) => [q.id, parseReasons(q)]));
+  const drift = [];
+  let lines = 0;
+  for (const file of walk(SKILLS, /\.md$/).filter((f) => REFERENCE.test(f))) {
+    const rel = path.relative(SKILLS, file);
+    for (const [hash, { recordsLine }] of readSections(file)) {
+      if (recordsLine.length) lines++;
+      for (const id of recordsLine) {
+        const r = reasons.get(id);
+        if (r?.file !== rel || r.hash !== hash) drift.push(`${rel}#${hash} names ${id}, whose reasons are ${r ? `${r.file}#${r.hash}` : "absent"}`);
+      }
+    }
+  }
+  // measured 283 at #540; 250 a guess under it
+  assert.ok(lines > 250, `only ${lines} Records lines read`);
   assert.deepEqual(drift, []);
 });
 
