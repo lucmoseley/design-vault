@@ -153,13 +153,30 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 - question: Are alternating row fills used only on a wide table of many columns, or a label-and-value spec table, where the eye must track along a row, each stripe a subtle tint in the direction of reading, and every other table read by alignment, space and rules alone?
 - answered-by: look
 - writes: row striping
-- yields-to: vault.table-headers, level 2
+- yields-to: vault.zebra-tint, vault.table-headers, level 2
 - source: Apple HIG Lists and tables: "Consider using alternating row colors in a multicolumn table ... especially in a wide table"; USWDS Table, striped variant, "to help the eye track across table rows", paired "with the scrollable variant for tables with many columns"; Baymard, product spec sheets (2026): "alternating backgrounds or subtle borders ... to connect labels directly to their values"; Richard Rutter, Web Typography (2017), "Keep table furniture and fills to a minimum": "Avoid zebra striping ... Only use tints as a subtle means of guiding your reader's eyes, and then only if you cannot arrange the data to that end"; strength: design-system guidance
 - era: timeless
 - owner: vault
 - stage: treatment
 - target: Stripe the rows of a wide many-column table or a spec sheet with a subtle tint; set narrower tables by alignment, space and light rules.
 - parts: table
+- reasons: design-critique/references/layout-and-data.md#striped-rows
+- ledger: SUR-16
+- status: staged
+
+### vault.zebra-tint
+- applies-when: web-surface; every filled row or cell in a table body
+- question: Does each striped row's or cell's fill hold within 1.32:1 WCAG contrast of the table's ground beneath it on a light ground, and 1.48:1 on a dark one?
+- answered-by: script
+- writes: row stripe tint
+- yields-to: vault.ground-step, level 2
+- source: design systems' stripe tokens against their plain rows, contrast computed from each (as read Nov 2026): USWDS `usa-table--striped`, gray-5 #f0f0f0 on white, 1.14:1; IBM Carbon `--data-table--zebra`, layer-accent on layer, 1.20:1 (White), 1.32:1 (g10), 1.31:1 (g100), 1.48:1 (g90); Bootstrap 5.3 `.table-striped`, 5% black, 1.12:1, and 5% white on #212529, 1.16:1; Shopify Polaris DataTable, #f7f7f7 on white, 1.07:1; GitHub Primer Markdown tables, #f6f8fa on white, 1.07:1; the ceilings are the highest of them on each ground, Carbon g10 on light and g90 on dark; strength: design-system guidance
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: Tint a striped row no further than 1.32:1 from the table's ground on a light ground, or 1.48:1 on a dark one.
+- parts: table
+- script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/layout-and-data.md#striped-rows
 - ledger: SUR-16
 - status: staged
