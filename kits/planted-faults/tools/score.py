@@ -29,16 +29,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import runner
 
 ROOT, WORK = runner.ROOT, runner.WORK
-RUNS = [1, 2, 3]
+RUNS = []
 
 
-def add_runs(ap):
-    """Give a readout or scorer the --runs flag that use_runs reads."""
-    ap.add_argument("--runs", default=",".join(map(str, RUNS)))
-
-
-def use_runs(spec):
-    RUNS[:] = [int(r) for r in spec.split(",")]
+def use_runs(runs):
+    RUNS[:] = runs
 
 
 # {gate load: the passes scored}, from --passes as runner.py gate takes it.
@@ -631,7 +626,7 @@ def main():
     ap.add_argument("mode", choices=["match", "judge", "third", "tally"])
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--critics", default=",".join(CRITICS), help="the critics that ran")
-    add_runs(ap)
+    runner.add_runs(ap)
     ap.add_argument("--cands", help="candidate names; default all")
     ap.add_argument("--passes", help="the gate passes that ran; default every pass")
     a = ap.parse_args()

@@ -10,7 +10,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import score
 
 ap = argparse.ArgumentParser()
-score.add_runs(ap)
+score.runner.add_runs(ap)
 score.use_runs(ap.parse_args().runs)
 WORK = score.WORK
 hit = {}

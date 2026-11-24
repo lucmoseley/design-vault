@@ -14,7 +14,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("critic")
 ap.add_argument("want", nargs="?", default="real")
 ap.add_argument("rows", nargs="?", type=int, default=12)
-score.add_runs(ap)
+score.runner.add_runs(ap)
 args = ap.parse_args()
 score.use_runs(args.runs)
 WORK = score.WORK
