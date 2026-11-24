@@ -14,6 +14,7 @@ v1.0 · 28 September 2026
 |---|---|---|---|---|
 | `AGENTS.md` | AGENTS.md | `source-of-truth` | Direct | — |
 | `CLAUDE.md` | CLAUDE.md | `source-of-truth` | Direct | — |
+| `GLOSSARY.md` | Domain glossary — the vault's settled vocabulary, each term with its _Avoid_ list | `source-of-truth` | Direct, or through the `domain-modeling` skill when a term is contested | — |
 
 ### Governance & process docs
 
