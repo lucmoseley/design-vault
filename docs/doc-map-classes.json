@@ -58,6 +58,15 @@
 		"consumes": null,
 		"reader": "agent"
 	},
+	"GLOSSARY.md": {
+		"section": "Repo-root contracts",
+		"class": "source-of-truth",
+		"classQualifier": null,
+		"role": "Domain glossary — the vault's settled vocabulary, each term with its _Avoid_ list",
+		"route": "Direct, or through the `domain-modeling` skill when a term is contested",
+		"consumes": null,
+		"reader": "agent"
+	},
 	"docs/clobber-reviewed.json": {
 		"section": "Governance & process docs",
 		"class": "source-of-truth",
