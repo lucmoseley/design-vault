@@ -351,7 +351,6 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 - era: dated 2027-10-19
 - owner: vault
 - stage: value
-- target: Link an SVG favicon with `sizes="any"`, a 48 × 48 `favicon.ico` and a 180 × 180 PNG `apple-touch-icon` from every page's head.
 - script: check-dom.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/platform-defaults.md#favicon-and-touch-icon
 - ledger: IMG-37

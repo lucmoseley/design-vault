@@ -72,7 +72,7 @@
 const fs = require("node:fs");
 const { parseArgs } = require("node:util");
 const path = require("node:path");
-const { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion } = require("./gate-form.js");
+const { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, builderLoads, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion } = require("./gate-form.js");
 
 // gate-form.js's LEVELS: #154 §The gate list's levels, of which these three a question's own source can set.
 const [LAW_LEVEL, PROJECT_LEVEL, EVIDENCE_LEVEL] = [1, 2, 3];
@@ -207,7 +207,7 @@ function pickRecords(records, reader, stage, partsPresent) {
   const forParts = (q) => !q.fields.parts || q.fields.parts.value.split(",").some((p) => partsPresent.includes(p.trim()));
   const pick = {
     direction: (q) => atStage(q, "function", "role"),
-    build: (q) => atStage(q, "function", "role") || (atStage(q, "treatment") && forParts(q)) || (answererOf(q) === "builder" && !atStage(q, "function", "role", "treatment")),
+    build: (q) => builderLoads(q) && (!atStage(q, "treatment") || forParts(q)),
     finish: (q) => answererOf(q) === "script",
   };
   const kept = reader === "builder" ? records.filter(pick[stage]) : records.filter((q) => answererOf(q) === reader);

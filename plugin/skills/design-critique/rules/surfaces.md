@@ -358,7 +358,6 @@ How boxes and layers look: borders and dividers, corner radius, shadows and elev
 - stage: value
 - inputs: the element's class (detail part, tag, control, container, large container or modal), the project's radius scale
 - output: each class one step of a 3–5 step scale, the step never falling as the class grows; the values are the project's
-- target: Keep one radius scale of three to five steps and give each element class one step, larger elements never a smaller step than smaller ones.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/surface-styling.md#a-radius-scale-by-element-size
 - ledger: OTH-11, SUR-22, SUR-27, SUR-28
