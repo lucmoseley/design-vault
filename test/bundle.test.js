@@ -119,3 +119,24 @@ test("pre-commit.local ends the hook on a refusing gate, under plain sh with mor
   assert.notEqual(malformed.status, 0, "a malformed gallery let the hook go on");
   assert.doesNotMatch(malformed.stdout, /HOOK-WENT-ON/);
 });
+
+// A checker that could not run exits 2 (BROKEN), one that found a fault exits 1;
+// each gate hands its checker's own code on, so the hook keeps them apart (#518).
+test("each pre-commit.local gate exits with its checker's own code", () => {
+  const gates = [
+    ["validate.js", "data/styles.json"],
+    ["bundle.js", "data/vault-data.js"],
+    ["round-log.js", "data/round-log.jsonl"],
+    ["corrections-log.js", "data/corrections-log.jsonl"],
+    ["calibration-log.js", "data/calibration-log.jsonl"],
+  ];
+  const repo = makeRepo(["bundle.js", "git-read.js", ".husky/pre-commit.local"]);
+  for (const [checker] of gates) fs.writeFileSync(path.join(repo.dir, checker), "process.exit(2);\n");
+  for (const [checker, file] of gates) {
+    repo.stage(file, "x\n");
+    const result = spawnSync("sh", ["-c", ". ./.husky/pre-commit.local; echo HOOK-WENT-ON"], { cwd: repo.dir, encoding: "utf8" });
+    assert.equal(result.status, 2, `${checker}'s gate did not pass its exit code on`);
+    assert.doesNotMatch(result.stdout, /HOOK-WENT-ON/);
+    repo.git("reset", "-q", "--", file);
+  }
+});

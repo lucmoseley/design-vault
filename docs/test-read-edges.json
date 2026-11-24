@@ -31,6 +31,7 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"calibration-log.js": [
+			"test/bundle.test.js",
 			"test/calibration-log.test.js",
 			"test/calibration-score.test.js",
 			"test/rule-store-pointers.test.js"
@@ -46,12 +47,16 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"corrections-log.js": [
+			"test/bundle.test.js",
 			"test/corrections-log.test.js",
 			"test/rule-store-pointers.test.js"
 		],
 		"critic-examples.js": [
 			"test/critic-examples.test.js",
 			"test/rule-store-pointers.test.js"
+		],
+		"data/corrections-log.jsonl": [
+			"test/bundle.test.js"
 		],
 		"data/gallery.json": [
 			"test/bundle.test.js",
@@ -60,6 +65,7 @@
 			"test/validate.test.js"
 		],
 		"data/round-log.jsonl": [
+			"test/bundle.test.js",
 			"test/round-log.test.js"
 		],
 		"data/styles.json": [
@@ -301,6 +307,7 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"round-log.js": [
+			"test/bundle.test.js",
 			"test/round-log.test.js",
 			"test/rule-store-pointers.test.js"
 		],
