@@ -37,6 +37,7 @@ v1.0 · 28 September 2026
 | Path | Role | Class | Update route | Consumes |
 |---|---|---|---|---|
 | `.claude/guard-registry-anchors.json` | Guard registry anchors — data file | `generated-only` | `node scripts/check-guard-registry.js --review`, which re-anchors a guard whose annotation has been read | — |
+| `.claude/implicit-behaviours.json` | Implicit behaviours — what each wired script of this repo's own does to a session unasked, why, and its escape | `source-of-truth` | Direct | — |
 | `.claude/settings.json` | Settings — data file | `free-edit` | Direct | — |
 | `.claude/workflow-core.json` | The adopter's config — contract, modules, commands, categories | `source-of-truth` | Direct | — |
 | `.claude/workflow-core.md` | Workflow core | `generated-only` | workflow-core's `init` only, which rewrites it on every bump; override through `.claude/workflow-core.json` | — |

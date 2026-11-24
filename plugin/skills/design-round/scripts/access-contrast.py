@@ -7,7 +7,9 @@ check-access.py calls, at each width:
 
     contrasts.parse_table(text)                       # check-access-contrast.table's figures, once
     contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts)  # the page at rest, after its own contrast shots: the answers,
-                                                                                  # and vault.carousel-focus's for undeclared page dots
+                                                                                  # and vault.carousel-focus's for undeclared page dots, and the Readings
+    contrasts.scheme_table(name, table)               # the figures a scheme's pass holds each role to
+    contrasts.rung_drops(light, dark, table)          # vault.theme-contrast's faults for a part a rung lower in dark
     contrasts.signature(page, js)                     # the colours the page draws in, to tell a scheme it ships
     contrasts.scheme(name, judged, measured, light)   # one scheme's vault.theme-contrast, from its own judge() and measure()
 
@@ -42,6 +44,7 @@ def _sibling(name):
 answering = _sibling("access-answers.py")
 maths = _sibling("access-pixels.py")
 face = _sibling("face-profile.py")
+rule_table = _sibling("rule-table.py")
 
 TABLE = os.path.join(HERE, "check-access-contrast.table")
 SEP = "|"
@@ -54,6 +57,7 @@ LINES = {
     ("vault.contrast-ladder", "state"): 1,
     ("vault.contrast-ladder", "thin"): 2,
     ("vault.contrast-ladder", "aim"): 2,
+    ("vault.contrast-ladder", "more"): 1,
     ("vault.controls-on-photo", "edge"): 1,
     ("vault.fill-text", "split"): 1,
     ("vault.fill-text", "gap"): 2,
@@ -64,7 +68,7 @@ NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 Table = collections.namedtuple(
     "Table",
-    "floors edge icon state thin_stem thin_weight aim photo split gap gap_large mark hued",
+    "floors edge icon state thin_stem thin_weight aim more photo split gap gap_large mark hued",
 )
 
 QUESTIONS = (
@@ -93,17 +97,13 @@ ADJ_PX = 2
 ID_BLUE = 167
 
 
-class TableError(Exception):
-    """A table line check-access cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_table(text):
     """The Table check-access-contrast.table's lines give."""
     got = {}
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         key = tuple(fields[:2])
         if len(fields) != 3 or key not in LINES:
@@ -141,6 +141,7 @@ def parse_table(text):
         maths.Floors(
             *got["vault.contrast-ladder", "aim"], large_px, large_bold_px, bold
         ),
+        got["vault.contrast-ladder", "more"][0],
         got["vault.controls-on-photo", "edge"][0],
         got["vault.fill-text", "split"][0],
         gap,
@@ -150,11 +151,78 @@ def parse_table(text):
     )
 
 
-def scheme_floors(name, table):
-    """The text floors a scheme's pass holds text to: under more contrast, the ladder's next rung up."""
+def scheme_table(name, table):
+    """The Table a scheme's pass holds every part to: under more contrast, each role on its top rung, text on the
+    ladder's aim and every other role on the non-text more-contrast rung; in dark, the floors."""
     if name == "more contrast":
-        return table.aim
-    return table.floors
+        more = table.more
+        return table._replace(
+            floors=table.aim, edge=more, icon=more, state=more, photo=more, mark=more
+        )
+    return table
+
+
+Reading = collections.namedtuple("Reading", "subject role ratio")
+_ROLES = (
+    "text",
+    "large text",
+    "control edge",
+    "icon",
+    "state mark",
+    "control on a photo",
+    "chart mark",
+)
+
+
+def _role_rungs(role, table):
+    """(floor rung, top rung) of `role`, from the light page's `table`: the top is also its more-contrast rung."""
+    return {
+        "text": (table.floors.body, table.aim.body),
+        "large text": (table.floors.large, table.aim.large),
+        "control edge": (table.edge, table.more),
+        "icon": (table.icon, table.more),
+        "state mark": (table.state, table.more),
+        "control on a photo": (table.photo, table.more),
+        "chart mark": (table.mark, table.more),
+    }[role]
+
+
+def rung(ratio, role, table):
+    """The highest ladder rung from `role`'s floor up that `ratio` clears, capped at its top rung; None under its
+    floor."""
+    floor, top = _role_rungs(role, table)
+    ladder = {r for each in _ROLES for r in _role_rungs(each, table)}
+    cleared = [r for r in ladder if floor <= r <= ratio]
+    return min(max(cleared), top) if cleared else None
+
+
+def _worst(readings):
+    out = {}
+    for r in readings:
+        key = r.subject, r.role
+        out[key] = min(out.get(key, r.ratio), r.ratio)
+    return out
+
+
+def rung_drops(light, dark, table):
+    """vault.theme-contrast's {subject, detail} faults for each part, by subject and role, read in both `light` and
+    `dark`, each a list of Readings, whose worst ratio sits on a lower rung in dark."""
+    lit, dim = _worst(light), _worst(dark)
+    out = []
+    for key, was in lit.items():
+        if key not in dim:
+            continue
+        now = dim[key]
+        held, onto = rung(was, key[1], table), rung(now, key[1], table)
+        if onto < held:
+            out.append(
+                {
+                    "subject": key[0],
+                    "detail": f"in the dark scheme, is {now:.2f}:1, down from {was:.2f}:1 on the light page: off the "
+                    f"{held:g}:1 rung it holds there, onto {onto:g}:1 (vault.contrast-ladder)",
+                }
+            )
+    return out
 
 
 # Takes the marks MARK_JS sets off every element.
@@ -662,8 +730,8 @@ def _ids(shot):
 
 
 def chart_faults(chart, ids_shot, ground, table):
-    """vault.chart-contrast's {subject, detail} faults for one chart, from its id shot and its shot with every mark
-    hidden. A filled mark is read against the ground, its own border and the filled marks it touches; a line, a
+    """vault.chart-contrast's {subject, detail} faults for one chart, and a Reading for each mark it read and did not
+    fault, from its id shot and its shot with every mark hidden. A filled mark is read against the ground, its own border and the filled marks it touches; a line, a
     mark with a stroke and no fill, only against the ground, as lines need not contrast with each other."""
     left, top, right, bottom = _clip(ids_shot.shape, chart["rect"], 1)
     ids = _ids(ids_shot[top:bottom, left:right])
@@ -676,7 +744,7 @@ def chart_faults(chart, ids_shot, ground, table):
     marks = {m["index"]: m for m in chart["marks"]}
     owner, part = ids // 2, ids % 2
     owner[ids < 0] = -1
-    out = []
+    out, readings = [], []
     for k, mark in marks.items():
         filled = mark["fill"] is not None
         region = (owner == k) & (part == (0 if filled else 1))
@@ -724,7 +792,9 @@ def chart_faults(chart, ids_shot, ground, table):
                     f"to it; {table.mark:g}:1 needed",
                 }
             )
-    return out
+        else:
+            readings.append(Reading(mark["subject"], "chart mark", ratio))
+    return out, readings
 
 
 def _thin_notes(page, js, table, texts):
@@ -769,7 +839,8 @@ def _thin_notes(page, js, table, texts):
 
 def measure(page, js, table, *, parts, absent, texts):
     """The page's {question id: Judged} for QUESTIONS, at rest, and vault.carousel-focus's cannot-measure reason for
-    each row of page dots where no carousel was declared."""
+    each row of page dots where no carousel was declared; and a Reading for each part they read and did not fault."""
+    readings = []
     out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
     charts = [parts["chart"]] if "chart" in parts else []
     carousels = [parts["carousel"]] if "carousel" in parts else []
@@ -787,7 +858,7 @@ def measure(page, js, table, *, parts, absent, texts):
         },
     )
     if "bad" in got:
-        return got
+        return got, readings
     photo, ladder, fills, chart_q, forced = (
         out[q]
         for q in (
@@ -867,6 +938,10 @@ def measure(page, js, table, *, parts, absent, texts):
                             "halo or shadow of its own",
                         }
                     )
+                else:
+                    readings.append(
+                        Reading(c["subject"], "control on a photo", best.ratio)
+                    )
             for c in got["iconOnly"]:
                 f = glyph_figure(drawn, glyph, c["rect"])
                 if f is None:
@@ -881,6 +956,8 @@ def measure(page, js, table, *, parts, absent, texts):
                             f"{maths.hexed(f.next)} next to it); {table.icon:g}:1 needed",
                         }
                     )
+                else:
+                    readings.append(Reading(c["subject"], "icon", f.ratio))
 
     if got["states"]:
         on = _shoot(page)
@@ -901,6 +978,8 @@ def measure(page, js, table, *, parts, absent, texts):
                         f"{table.state:g}:1 needed",
                     }
                 )
+            else:
+                readings.append(Reading(s["subject"], "state mark", ratio))
 
     if texts is not None:
         ladder.notes.extend(_thin_notes(page, js, table, texts))
@@ -936,7 +1015,9 @@ def measure(page, js, table, *, parts, absent, texts):
                     f"{c['subject']} changed size between its shots"
                 )
                 continue
-            chart_q.faults.extend(chart_faults(c, ids_shot, ground, table))
+            faults, read = chart_faults(c, ids_shot, ground, table)
+            chart_q.faults.extend(faults)
+            readings.extend(read)
 
     if got["forced"]:
         page.emulate_media(forced_colors="active")
@@ -954,7 +1035,7 @@ def measure(page, js, table, *, parts, absent, texts):
                     }
                 )
     page.evaluate(STRIP_JS)
-    return out
+    return out, readings
 
 
 def signature(page, js):

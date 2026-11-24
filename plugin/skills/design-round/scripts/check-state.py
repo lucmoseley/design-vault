@@ -140,7 +140,6 @@ wrong / 3 Playwright or its browser is missing / 4 the page did not load in time
 """
 
 import argparse
-import collections
 import colorsys
 import contextlib
 import datetime
@@ -169,12 +168,12 @@ flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
 form = _load("drive_form", os.path.join(HERE, "drive-form.py"))
 pointer = _load("drive_pointer", os.path.join(HERE, "drive-pointer.py"))
 overlay = _load("drive_overlay", os.path.join(HERE, "drive-overlay.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
 markup = _load("check_markup", os.path.join(HERE, "check-markup.py"))
 probe = _load("probe", os.path.join(HERE, "probe.py"))
 
 TABLE = os.path.join(HERE, "check-state.table")
-SEP = " | "
 ITEMS = "; "
 VIEWPORT = dict(
     zip(("width", "height"), map(int, flow.DESKTOP.split("x")), strict=True)
@@ -245,7 +244,6 @@ CHECKS = {
     + NUM.format("horizon"),
 }
 
-Line = collections.namedtuple("Line", "id check value text")
 # The text a paste check writes to the clipboard: digits, so a number, phone
 # or code field takes it as readily as a text field.
 PASTED = "4242"
@@ -499,99 +497,26 @@ TAP_JS = r"""
 """
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 def parse(text):
     """The table's lines as Line records, in order, each value a dict."""
-    out = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        fields = [f.strip() for f in line.split(SEP)]
-        if len(fields) not in (2, 3) or not all(fields):
-            raise TableError(f"line {n}: want ID | CHECK [| VALUE], got {line!r}")
-        check = fields[1]
-        if check not in CHECKS:
-            raise TableError(
-                f"line {n}: no check {check!r}; the checks are {', '.join(CHECKS)}"
-            )
-        shape, given = CHECKS[check], fields[2] if len(fields) == 3 else None
-        if shape is None and given is not None:
-            raise TableError(f"line {n}: {check} reads no value, got {given!r}")
-        value = {}
-        if shape is not None:
-            m = re.fullmatch(shape, given or "")
-            if not m:
-                raise TableError(
-                    f"line {n}: {check} wants a value like {shape!r}, got {given!r}"
-                )
-            for key, got in m.groupdict().items():
-                if key.startswith("n_"):
-                    value[key[2:]] = float(got)
-                elif key == "words":
-                    value[key] = [
-                        w.strip().lower() for w in got.split(",") if w.strip()
-                    ]
-                elif key == "rules":
-                    value[key] = tuple(got.split())
-                else:
-                    value[key] = got
-        out.append(Line(fields[0], check, value, line))
-    if not out:
-        raise TableError("the table has no lines")
-    return out
+    return rule_table.parse(text, CHECKS, _line_value)
 
 
-class Answers:
-    """The findings being gathered, one per record id in table order."""
-
-    def __init__(self, table):
-        self.found = {
-            line.id: {
-                "id": line.id,
-                "answer": "no match",
-                "misses": [],
-                "unjudged": [],
-                "review": [],
-            }
-            for line in table
-        }
-        self.judged = set()
-
-    def _entry(self, line, at, what):
-        at = at or {}
-        return {
-            "check": line.check,
-            "where": at.get("where"),
-            "fault": at.get("fault"),
-            "what": what,
-        }
-
-    def miss(self, line, at, what):
-        self.judged.add(line.id)
-        self.found[line.id]["misses"].append(self._entry(line, at, what))
-
-    def unjudged(self, line, at, what):
-        self.found[line.id]["unjudged"].append(self._entry(line, at, what))
-
-    def review(self, line, at, what):
-        self.found[line.id]["review"].append(self._entry(line, at, what))
-
-    def met(self, line):
-        self.judged.add(line.id)
-
-    def done(self):
-        for f in self.found.values():
-            if f["misses"]:
-                f["answer"] = "fail"
-            elif f["unjudged"]:
-                f["answer"] = "not judged"
-            elif f["id"] in self.judged:
-                f["answer"] = "pass"
-        return list(self.found.values())
+def _line_value(n, check, m):
+    value = {}
+    for key, got in (m.groupdict() if m else {}).items():
+        if key.startswith("n_"):
+            value[key[2:]] = float(got)
+        elif key == "words":
+            value[key] = [w.strip().lower() for w in got.split(",") if w.strip()]
+        elif key == "rules":
+            value[key] = tuple(got.split())
+        else:
+            value[key] = got
+    return value
 
 
 def _off_site(page_url, href):
@@ -2901,7 +2826,7 @@ def findings(run, table):
     "unjudged", "review"}, each entry {"check", "where", "fault", "what"}."""
     from playwright.sync_api import Error as PlaywrightError
 
-    ans = Answers(table)
+    ans = rule_table.Answers(table, "where", "fault", review=True)
     for line in table:
         run.popups.clear()
         try:

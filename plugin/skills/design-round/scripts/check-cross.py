@@ -92,9 +92,9 @@ def _load(name, path):
 
 flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
 form = _load("drive_form", os.path.join(HERE, "drive-form.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 
 TABLE = os.path.join(HERE, "check-cross.table")
-SEP = " | "
 # Each check and the shape of the value its line gives: None for no value.
 CHECKS = {
     "phone": re.compile(r"\S.*"),
@@ -106,7 +106,6 @@ CHECKS = {
 }
 WAYS = ("navigation", "links", "search")
 
-Line = collections.namedtuple("Line", "id check value text")
 # One flow's walk: each step's URL, what was typed into it, what its fields
 # held on arrival with their autocomplete tokens, and what Back showed.
 Step = collections.namedtuple("Step", "url typed arrived back")
@@ -116,39 +115,18 @@ Walk = collections.namedtuple("Walk", "start steps ended")
 LAST_SUBMIT = "the last step's submit, after which Back is not pressed"
 
 
-class TableError(Exception):
-    """A table line the probe cannot run."""
+TableError = rule_table.TableError
 
 
 def parse(text):
     """The table's lines as Line records, in order."""
-    out = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        fields = [f.strip() for f in line.split(SEP)]
-        if len(fields) not in (2, 3) or not all(fields):
-            raise TableError(f"line {n}: want ID | CHECK [| VALUE], got {line!r}")
-        check = fields[1]
-        if check not in CHECKS:
-            raise TableError(
-                f"line {n}: no check {check!r}; the checks are {', '.join(CHECKS)}"
-            )
-        shape, given = CHECKS[check], fields[2] if len(fields) == 3 else None
-        if shape is None and given is not None:
-            raise TableError(f"line {n}: {check} reads no value, got {given!r}")
-        if shape is not None:
-            m = shape.fullmatch(given or "")
-            if not m:
-                raise TableError(
-                    f"line {n}: {check} wants a value like {shape.pattern!r}, got {given!r}"
-                )
-            given = int(m[1]) if m.groups() else given
-        out.append(Line(fields[0], check, given, line))
-    if not out:
-        raise TableError("the table has no lines")
-    return out
+    return rule_table.parse(text, CHECKS, _line_value)
+
+
+def _line_value(n, check, m):
+    if m is None:
+        return None
+    return int(m[1]) if m.groups() else m[0]
 
 
 PAGE_JS = r"""
@@ -301,47 +279,12 @@ def _token(token):
     return words if form.name_of(words) else None
 
 
-class _Answers:
-    """The findings being gathered, one per record id in table order."""
-
-    def __init__(self, table):
-        self.found = {
-            line.id: {"id": line.id, "answer": "no match", "misses": [], "unjudged": []}
-            for line in table
-        }
-        self.compared = set()
-
-    def miss(self, line, page, what):
-        self.compared.add(line.id)
-        self.found[line.id]["misses"].append(
-            {"check": line.check, "page": page, "what": what}
-        )
-
-    def unjudged(self, line, page, what):
-        self.found[line.id]["unjudged"].append(
-            {"check": line.check, "page": page, "what": what}
-        )
-
-    def met(self, line):
-        self.compared.add(line.id)
-
-    def done(self):
-        for f in self.found.values():
-            if f["misses"]:
-                f["answer"] = "fail"
-            elif f["unjudged"]:
-                f["answer"] = "not judged"
-            elif f["id"] in self.compared:
-                f["answer"] = "pass"
-        return list(self.found.values())
-
-
 def findings(table, pages, walks, *, phones, home):
     """One finding per record id, in table order: {"id", "answer", "misses",
     "unjudged"}, each miss and unjudged entry {"check", "page", "what"}.
     `walks` holds a Walk for each flow; `phones` is phone_urls()'s result, or
     None where the table has no phone line."""
-    answers = _Answers(table)
+    answers = rule_table.Answers(table, "page")
     lines = {line.check: line for line in table}
     if "phone" in lines and phones is not None:
         _phone(answers, lines["phone"], phones)

@@ -114,6 +114,7 @@ def _load(name, path):
 flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
 fontfile = _load("font_file", os.path.join(HERE, "font-file.py"))
 probe = _load("probe", os.path.join(HERE, "probe.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 
 # web.dev's "good" LCP, at the 75th percentile of page loads.
 LIMIT_MS = 2500
@@ -266,7 +267,6 @@ def one_run(browser, url, timeout):
 # The files mode (#313). Its table, and each check's value shape: None reads
 # no value; a pattern's groups are the value.
 TABLE = os.path.join(HERE, "check-load.table")
-SEP = " | "
 CHECKS = {
     "coverage": None,
     "distinct": re.compile(r">=\s*(0?\.\d+|[01])"),
@@ -279,7 +279,6 @@ CHECKS = {
     "banner": re.compile(r"(\S.*)"),
     "cookies-page": re.compile(r"(\S.*)"),
 }
-Line = collections.namedtuple("Line", "id check value text")
 # CSS Fonts 4's generic families and the system-font keywords browsers read
 # as one: the face behind each is the browser's pick.
 GENERIC = {
@@ -333,43 +332,18 @@ RASTER = (
 )
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 def parse_table(text):
     """The table's lines as Line records, in order."""
-    out = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        fields = [f.strip() for f in line.split(SEP)]
-        if len(fields) not in (2, 3) or not all(fields):
-            raise TableError(f"line {n}: want ID | CHECK [| VALUE], got {line!r}")
-        check = fields[1]
-        if check not in CHECKS:
-            raise TableError(
-                f"line {n}: no check {check!r}; the checks are {', '.join(CHECKS)}"
-            )
-        shape, given = CHECKS[check], fields[2] if len(fields) == 3 else None
-        if shape is None:
-            if given is not None:
-                raise TableError(f"line {n}: {check} reads no value, got {given!r}")
-        else:
-            m = shape.fullmatch(given or "")
-            if not m:
-                raise TableError(
-                    f"line {n}: {check} wants a value like {shape.pattern!r}, got {given!r}"
-                )
-            given = _value(n, check, m[1])
-        out.append(Line(fields[0], check, given, line))
-    if not out:
-        raise TableError("the table has no lines")
-    return out
+    return rule_table.parse(text, CHECKS, _line_value)
 
 
-def _value(n, check, raw):
+def _line_value(n, check, m):
+    if m is None:
+        return None
+    raw = m[1]
     if check in ("distinct", "opsz", "vector"):
         return float(raw)
     if check == "variable":
@@ -676,41 +650,6 @@ def _css_family(family):
     )
 
 
-class _Answers:
-    """The findings being gathered, one per record id in table order."""
-
-    def __init__(self, table):
-        self.found = {
-            line.id: {"id": line.id, "answer": "no match", "misses": [], "unjudged": []}
-            for line in table
-        }
-        self.compared = set()
-
-    def miss(self, line, where, what):
-        self.compared.add(line.id)
-        self.found[line.id]["misses"].append(
-            {"check": line.check, "where": where, "what": what}
-        )
-
-    def unjudged(self, line, where, what):
-        self.found[line.id]["unjudged"].append(
-            {"check": line.check, "where": where, "what": what}
-        )
-
-    def met(self, line):
-        self.compared.add(line.id)
-
-    def done(self):
-        for f in self.found.values():
-            if f["misses"]:
-                f["answer"] = "fail"
-            elif f["unjudged"]:
-                f["answer"] = "not judged"
-            elif f["id"] in self.compared:
-                f["answer"] = "pass"
-        return list(self.found.values())
-
-
 class _Faces:
     """The loaded font files behind the faces CDP names, by PostScript name,
     and the @font-face families and styles each file is loaded as."""
@@ -760,7 +699,7 @@ def findings(table, read, *, declared, undeclared):
     "unjudged"}, each miss and unjudged entry {"check", "where", "what"}.
     `declared` and `undeclared` are the parts declaration's
     (probe.declared_parts())."""
-    answers = _Answers(table)
+    answers = rule_table.Answers(table, "where")
     faces = _Faces(read)
     checks = {
         "coverage": _coverage,

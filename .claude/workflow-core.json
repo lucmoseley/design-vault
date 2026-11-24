@@ -4,7 +4,7 @@
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
 	"modules": [],
-	"walkedTo": "v3.0.0",
+	"walkedTo": "v3.1.0",
 	"refillPanel": true,
 	"commands": {
 		"test": "bash test/all.sh",
@@ -364,6 +364,7 @@
 		"plugin/skills/design-round/scripts/access-pixels.py": "library",
 		"plugin/skills/design-round/scripts/access-answers.py": "library",
 		"plugin/skills/design-round/scripts/access-boxes.py": "library",
+		"plugin/skills/design-round/scripts/rule-table.py": "library",
 		"plugin/skills/design-round/scripts/probe.py": "library",
 		"plugin/skills/design-round/scripts/conditions.py": "library",
 		"plugin/skills/design-round/scripts/drive-overlay.py": "library",

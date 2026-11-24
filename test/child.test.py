@@ -59,7 +59,6 @@ SAID = {
     "Page.goto: Page crashed": "Page crashed",
     "Navigation failed because page crashed!": "Navigation failed because page crashed!",
 }
-# What a case fails with where it names nothing else; the per-wording cases run the rest.
 DEFAULT_SAID = next(iter(SAID))
 OTHER_SAID = {said: wording for said, wording in SAID.items() if said != DEFAULT_SAID}
 # A run that starts a grandchild, as a browser starts its renderer, and holds it for HELD_S. On each run argv[2]
@@ -91,7 +90,7 @@ class Kills:
         self.addCleanup(os.unlink, self.runs)
 
     def forget(self):
-        """Empties the kill file, for a case that runs more than once."""
+        """Empties the kill file."""
         open(self.runs, "w", encoding="utf8").close()
 
     def killed(self):

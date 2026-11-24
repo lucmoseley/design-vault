@@ -25,14 +25,20 @@ this script or check-access.py's --pointer-table FILE: the line `vault.coarse-ta
 floor.
 """
 
+import importlib.util
 import json
 import os
 import re
 
-# The --pointer coarse floor, from vault.coarse-target's record.
-TABLE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "check-access-pointer.table"
+HERE = os.path.dirname(os.path.abspath(__file__))
+_spec = importlib.util.spec_from_file_location(
+    "rule_table", os.path.join(HERE, "rule-table.py")
 )
+rule_table = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(rule_table)
+
+# The --pointer coarse floor, from vault.coarse-target's record.
+TABLE = os.path.join(HERE, "check-access-pointer.table")
 SEP = " | "
 FLOOR = re.compile(r"(\d+(?:\.\d+)?)px")
 QUESTION = (
@@ -41,18 +47,14 @@ QUESTION = (
 )
 
 
-class TableError(Exception):
-    """A table line --pointer cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_table(text, least):
     """The coarse floor in px from the table's one line, vault.coarse-target's,
     `least` px or more."""
     found = None
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         if len(fields) != 3 or fields[:2] != [QUESTION[0], "coarse"]:
             raise TableError(

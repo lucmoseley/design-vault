@@ -148,6 +148,7 @@ def _load(name, path):
 
 probe = _load("probe", os.path.join(HERE, "probe.py"))
 conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 flow, layout = probe.flow, probe.layout
 
 TABLE = os.path.join(HERE, "check-dom.table")
@@ -161,8 +162,7 @@ NOTHING = ":not(*)"
 Block = collections.namedtuple("Block", "load when rules")
 
 
-class TableError(Exception):
-    """A table check-dom.py cannot read: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse(text):
@@ -179,10 +179,7 @@ def parse(text):
             blocks.append(Block(load, when, rules))
         pending.clear()
 
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         if line.startswith("define "):
             m = DEFINE.fullmatch(line)
             if not m:

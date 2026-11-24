@@ -32,7 +32,7 @@ Records: `vault.depth`, `vault.shadow-levels`, `vault.border-shadow`, `vault.gro
 
 ### Elevation on a dark ground
 
-Record: `vault.dark-elevation`.
+Records: `vault.dark-elevation`, `vault.dark-raise`.
 
 - **Why.** A shadow on a dark ground has almost no visible effect.
 - **Trade-off.** One more surface token per level on dark.

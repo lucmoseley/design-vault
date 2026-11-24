@@ -665,7 +665,7 @@ class Pages(unittest.TestCase):
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
     def test_late_input_is_not_read_into_the_clean_pages_fling(self):
-        """#478. Its pair is the fault
+        """#478, #510. Its pair is the fault
         page's drag-release, failed in test_the_fault_page_names_every_plant."""
         code, got, out = self.runs["late"]
         self.assertEqual(code, 0, out)

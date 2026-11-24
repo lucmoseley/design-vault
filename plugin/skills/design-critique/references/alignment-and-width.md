@@ -12,7 +12,7 @@ Record: `vault.line-length`.
 
 - **Why.** Very long lines tire readers and make the next line hard to find; very short ones break the reading rhythm (Baymard 2022). The 45–75 range was set for a single column of a serif text face at text size (Bringhurst), so other roles take their own: columns narrower (40–50), large text shorter, since it fills the width with fewer characters (USWDS), and short passages are read too briefly for the range to matter (USWDS). The count is of characters as set, so a wide or narrow face is already in it; line height rises with the count by `vault.type-leading`.
 - **Trade-off.** A phone column cannot reach 50 characters at a readable size; a short line beats sideways scrolling (Typography Handbook 2026), so the floor lifts there.
-- **Clash.** Butterick allows 45–90 and WCAG's AAA ceiling is 80; the house holds body text to Baymard's 50–75, inside both. Typography Handbook wants captions at 35–50 where USWDS lets them run longer; the house sets only WCAG's 80 ceiling on them, and its three-line bound for a short passage follows USWDS's "captions of fewer than three lines" loosely. Butterick keeps the range on small screens by scaling size and width together; the house leaves size to `vault.type-size` and lets the phone line run short. Supersedes the live `vault.measure`'s one range for every role when tier 1 goes live (#293).
+- **Clash.** Butterick allows 45–90 and WCAG's AAA ceiling is 80; the house holds body text to Baymard's 50–75, inside both. Typography Handbook wants captions at 35–50 where USWDS lets them run longer; the house sets only WCAG's 80 ceiling on them, and its three-line bound for a short passage follows USWDS's "captions of fewer than three lines" loosely. Butterick keeps the range on small screens by scaling size and width together; the house leaves size to `vault.type-size` and lets the phone line run short. Supersedes the live `vault.measure`'s one range for every role when this record goes live (#416).
 
 ### Cap the measure in a font-relative unit
 
@@ -28,7 +28,7 @@ Record: `vault.text-align`.
 
 - **Why.** Browsers justify by stretching word spaces line by line, which opens rivers of white that slow readers, those with some cognitive disabilities most (WCAG 2.2 F88); good justification needs hyphenation the web does unevenly (Butterick, Rutter). Narrow columns and sans faces look best ragged (Bringhurst).
 - **Trade-off.** A ragged edge looks less formal than a justified block, which some editorial brands want.
-- **Clash.** Butterick calls justification "personal preference"; GOV.UK, USWDS and WCAG 1.4.8 all set ragged text on the web, so the house does, and a project that wants a justified block names it in its rules file. Supersedes the live `vault.no-justify` when tier 1 goes live (#293).
+- **Clash.** Butterick calls justification "personal preference"; GOV.UK, USWDS and WCAG 1.4.8 all set ragged text on the web, so the house does, and a project that wants a justified block names it in its rules file. Supersedes the live `vault.no-justify` when this record goes live (#416).
 
 ### Where justification is allowed
 

@@ -1547,6 +1547,18 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/layout/tier01-columns-beside.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-columns-clean.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-columns-fault.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/layout/tier01-fault.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -2247,6 +2259,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/load/renderer-kill.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/load/sibling-shots.py": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -2316,6 +2332,10 @@
 			"test/gate.test.js",
 			"test/ledger-check.test.js",
 			"test/rule-store-pointers.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/rule-table.test.py": [
+			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/run-lanes.sh": [

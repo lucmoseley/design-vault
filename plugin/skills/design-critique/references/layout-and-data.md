@@ -60,7 +60,6 @@ Record: `vault.card-alignment`.
 
 - **Why.** Cards set side by side are read across as well as down; when one card's longer title pushes its price lower, the eye has to hunt for the matching value (Manta's comparison cards, #280). Each card sized on its own grid cannot line up with its neighbours; `subgrid` lets them share the row's tracks (MDN).
 - **Trade-off.** Every card takes the height of the tallest one's part, so a short card shows blank space.
-- **Clash.** The project's own layout wins.
 
 ### Chart marks
 

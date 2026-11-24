@@ -17,7 +17,16 @@ else no match.
 """
 
 import collections
+import importlib.util
+import os
 import re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+_spec = importlib.util.spec_from_file_location(
+    "rule_table", os.path.join(HERE, "rule-table.py")
+)
+rule_table = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(rule_table)
 
 NUMBER = r"(\d+(?:\.\d+)?)"
 Check = collections.namedtuple("Check", "pattern parse needs")
@@ -338,7 +347,6 @@ READ_JS = (
     }
   }
 
-  // vault.alignment-lines: each section's main text edge against the edge most sections share.
   if (on('text-edge')) {
     const main = document.querySelector('main, [role="main"]') || document.body;
     const edges = [];
@@ -352,12 +360,29 @@ READ_JS = (
       if (Math.abs((tr.left - sr.left) - (sr.right - tr.right)) <= EDGE && tr.width < sr.width - EDGE && css(t).textAlign !== 'start' && css(t).textAlign !== 'left') continue;
       edges.push([s, Math.round(tl)]);
     }
-    if (edges.length >= 2) {
+    const kids = [...main.children].filter(drawn);
+    const boxes = new Map(kids.map((k) => [k, box(k)]));
+    const PAGE = 'page';
+    const place = (s) => {
+      const row = kids.filter((k) => vOverlap(boxes.get(k), boxes.get(s))).sort((a, b) => boxes.get(a).left - boxes.get(b).left);
+      const at = row.indexOf(s);
+      return { left: boxes.get(s).left, key: at === 0 ? PAGE : `${row.length}:${at}` };
+    };
+    const placed = edges.map(([s, e]) => [s, e, place(s)]);
+    const columns = new Map();
+    for (const [s, e, { left, key }] of placed) {
+      const beside = key === PAGE && placed.find(([, , o]) => o.key !== PAGE && Math.abs(o.left - left) <= EDGE);
+      const column = beside ? beside[2].key : key;
+      columns.set(column, [...(columns.get(column) || []), [s, e]]);
+    }
+    for (const [key, column] of columns) {
+      if (column.length < 2) continue;
       seen.add('text-edge');
       const count = new Map();
-      for (const [, e] of edges) count.set(e, (count.get(e) || 0) + 1);
+      for (const [, e] of column) count.set(e, (count.get(e) || 0) + 1);
       const common = [...count].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
-      for (const [s, e] of edges) if (Math.abs(e - common) > EDGE) fault('text-edge', label(s), `starts its text at ${px(e)}, off the ${px(common)} edge the page's other sections share`);
+      const whose = key === PAGE ? "the page's other sections" : 'the other sections in its column';
+      for (const [s, e] of column) if (Math.abs(e - common) > EDGE) fault('text-edge', label(s), `starts its text at ${px(e)}, off the ${px(common)} edge ${whose} share`);
     }
   }
 
@@ -998,12 +1023,9 @@ def answers(lines, faults_by_mode, seen, unmet):
         by_record[mode.id].append(mode.name)
     out = {}
     for record, modes in by_record.items():
-        if any(faults_by_mode.get(m) for m in modes):
-            out[record] = "fail"
-        elif any(m in unmet for m in modes):
-            out[record] = "not judged"
-        elif any(m in seen for m in modes):
-            out[record] = "pass"
-        else:
-            out[record] = "no match"
+        out[record] = rule_table.answer(
+            misses=any(faults_by_mode.get(m) for m in modes),
+            unjudged=any(m in unmet for m in modes),
+            judged=any(m in seen for m in modes),
+        )
     return out

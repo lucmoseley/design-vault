@@ -97,6 +97,7 @@ class Table(unittest.TestCase):
         self.assertEqual((TABLE.gap, TABLE.gap_large), (0.5, 0.4))
         self.assertEqual(TABLE.aim[:2], (7, 4.5))
         self.assertEqual(TABLE.hued, 0.05)
+        self.assertEqual(TABLE.more, 4.5)
 
     def test_a_missing_doubled_or_malformed_line_is_refused(self):
         lines = TABLE_TEXT.splitlines()
@@ -112,15 +113,87 @@ class Table(unittest.TestCase):
             ),
             "want one of": TABLE_TEXT + "vault.contrast | made-up | 3\n",
         }
+        more = next(line for line in lines if "| more |" in line)
+        cases |= {
+            "no vault.contrast-ladder | more line": "\n".join(
+                line for line in lines if line != more
+            ),
+            "| more wants 1 number(s) over 0, got '4.5, 7'": TABLE_TEXT.replace(
+                more, more + ", 7"
+            ),
+            "| more wants numbers over 0": TABLE_TEXT.replace(
+                more, more.replace("| 4.5", "| 0")
+            ),
+            "| more wants 1 number(s) over 0, got 'high'": TABLE_TEXT.replace(
+                more, more.replace("| 4.5", "| high")
+            ),
+        }
         for why, text in cases.items():
             with self.subTest(why), self.assertRaises(contrasts.TableError) as caught:
                 contrasts.parse_table(text)
             self.assertIn(why, str(caught.exception))
 
-    def test_more_contrast_raises_the_text_floors_alone(self):
-        more = contrasts.scheme_floors("more contrast", TABLE)
-        self.assertEqual((more.body, more.large), (7, 4.5))
-        self.assertEqual(contrasts.scheme_floors("dark", TABLE), TABLE.floors)
+    def test_more_contrast_raises_every_role_and_dark_keeps_the_floors(self):
+        more = contrasts.scheme_table("more contrast", TABLE)
+        self.assertEqual((more.floors.body, more.floors.large), (7, 4.5))
+        self.assertEqual(
+            (more.edge, more.icon, more.state, more.photo, more.mark), (4.5,) * 5
+        )
+        self.assertEqual(contrasts.scheme_table("dark", TABLE), TABLE)
+
+
+class Rungs(unittest.TestCase):
+    def test_a_rung_is_the_highest_its_role_clears_capped_at_its_top(self):
+        cases = {
+            ("text", 4.49): None,
+            ("text", 4.5): 4.5,
+            ("text", 6.99): 4.5,
+            ("text", 7): 7,
+            ("text", 15): 7,
+            ("large text", 2.99): None,
+            ("large text", 3): 3,
+            ("large text", 4.49): 3,
+            ("large text", 4.5): 4.5,
+            ("icon", 3): 3,
+            ("icon", 4.5): 4.5,
+            ("icon", 7): 4.5,
+            ("chart mark", 6.99): 4.5,
+        }
+        for (role, ratio), want in cases.items():
+            with self.subTest(role=role, ratio=ratio):
+                self.assertEqual(contrasts.rung(ratio, role, TABLE), want)
+
+    def test_a_drop_is_reported_and_a_rise_or_a_move_above_the_top_is_not(self):
+        light = [
+            contrasts.Reading("p#drop", "text", 7.31),
+            contrasts.Reading("p#rise", "text", 5),
+            contrasts.Reading("p#top", "text", 15),
+            contrasts.Reading("button#icon", "icon", 18),
+            contrasts.Reading("p#light-only", "text", 8),
+        ]
+        dark = [
+            contrasts.Reading("p#drop", "text", 4.62),
+            contrasts.Reading("p#drop", "text", 9),
+            contrasts.Reading("p#rise", "text", 8),
+            contrasts.Reading("p#top", "text", 12),
+            contrasts.Reading("button#icon", "icon", 5),
+            contrasts.Reading("p#dark-only", "text", 4.6),
+        ]
+        (fault,) = contrasts.rung_drops(light, dark, TABLE)
+        self.assertEqual(fault["subject"], "p#drop")
+        self.assertEqual(
+            fault["detail"],
+            "in the dark scheme, is 4.62:1, down from 7.31:1 on the light page: off the 7:1 rung it holds there, "
+            "onto 4.5:1 (vault.contrast-ladder)",
+        )
+
+    def test_a_part_is_compared_within_its_role(self):
+        light = [
+            contrasts.Reading("button#go", "text", 8),
+            contrasts.Reading("button#go", "control edge", 5),
+        ]
+        dark = [contrasts.Reading("button#go", "control edge", 8)]
+        self.assertEqual(contrasts.rung_drops(light, dark, TABLE), [])
 
     def test_a_bad_table_stops_the_run_with_exit_2(self):
         with tempfile.NamedTemporaryFile("w", suffix=".table", delete=False) as fh:
@@ -240,11 +313,15 @@ class Chart(unittest.TestCase):
         )
 
     def test_a_filled_mark_takes_the_mark_figure_against_the_ground(self):
-        (fault,) = self.chart([0xDD] * 3)
+        (fault,), readings = self.chart([0xDD] * 3)
         self.assertEqual(fault["subject"], "rect#bar")
         self.assertIn("against the chart's ground (#ffffff)", fault["detail"])
         self.assertIn("3:1 needed", fault["detail"])
-        self.assertEqual(self.chart([0x33] * 3), [])
+        self.assertEqual(readings, [])
+        faults, (reading,) = self.chart([0x33] * 3)
+        self.assertEqual(faults, [])
+        self.assertEqual(reading[:2], ("rect#bar", "chart mark"))
+        self.assertAlmostEqual(reading.ratio, 12.63, places=2)
 
 
 PLANT = re.compile(
@@ -260,7 +337,7 @@ class EndToEnd(unittest.TestCase):
             os.path.join(FIXTURES, "contrast-tier01-fault.html"), encoding="utf8"
         ) as fh:
             plants = [(m[0] or m[3], m[1] or m[2]) for m in PLANT.findall(fh.read())]
-        self.assertEqual(len(plants), 11)
+        self.assertEqual(len(plants), 13)
         for plant, record in plants:
             with self.subTest(plant):
                 subjects = [f["subject"] for f in found["answers"][record]["faults"]]
@@ -297,6 +374,40 @@ class EndToEnd(unittest.TestCase):
         self.assertNotIn("p#contrast-plant", theme)
         light = {f["subject"] for f in answers["vault.contrast"]["faults"]}
         self.assertFalse({"p#theme-plant", "p#more-plant"} & light)
+
+    def test_a_part_a_rung_lower_in_dark_is_a_theme_fault_and_no_contrast_fault(self):
+        answers = DONE["fault"][3]["answers"]
+        theme = {
+            f["subject"]: f["detail"] for f in answers["vault.theme-contrast"]["faults"]
+        }
+        detail = theme["p#rung-plant"]
+        self.assertRegex(
+            detail,
+            r"^in the dark scheme, is 5\.5\d:1, down from 18\.8\d:1 on the light page: off the 7:1 rung it "
+            r"holds there, onto 4\.5:1 \(vault\.contrast-ladder\)",
+        )
+        self.assertNotIn(
+            "p#rung-plant", {f["subject"] for f in answers["vault.contrast"]["faults"]}
+        )
+        self.assertNotIn("down from", theme["p#theme-plant"])
+
+    def test_more_contrast_holds_an_icon_to_its_raised_rung(self):
+        answers = DONE["fault"][3]["answers"]
+        (detail,) = [
+            f["detail"]
+            for f in answers["vault.theme-contrast"]["faults"]
+            if f["subject"].endswith("#more-icon-plant")
+        ]
+        self.assertIn("in the more contrast scheme, ", detail)
+        self.assertIn("4.5:1 needed", detail)
+        for qid in ("vault.contrast-ladder", "vault.contrast"):
+            with self.subTest(qid):
+                self.assertFalse(
+                    any(
+                        f["subject"].endswith("#more-icon-plant")
+                        for f in answers[qid]["faults"]
+                    )
+                )
 
     def test_the_clean_page_meets_every_record(self):
         code, out, err, found = DONE["clean"]

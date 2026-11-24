@@ -78,6 +78,8 @@ RULES = {
     "WN": None,
     "TN": None,
     "WM": None,
+    "WV0": None,
+    "WV1": None,
 }
 # A load-change test's loads: each one's rule files, made by store-refs.py from the rule store, in its own folder.
 # #292: WL is W1 with today's house-principles.md, the old load beside TT1; WS and TS, whole-page and type with tier 0's
@@ -96,9 +98,19 @@ REFS = {
     "WN": "refs-294/new-w",
     "TN": "refs-292/new-t",
     "WM": "refs-294/new-w",
+    "WV0": "refs-502/old-w",
+    "WV1": "refs-502/new-w",
 }
-PROMPT = {"WL": "W1", "WS": "W1", "TS": "TT1", "WT": "W1", "TN": "TT1"}
-BRIEF = {"WN": "brief-tone.md", "TN": "brief-tone.md", "WM": "brief-tone.md"}
+PROMPT = {
+    "WL": "W1",
+    "WS": "W1",
+    "TS": "TT1",
+    "WT": "W1",
+    "TN": "TT1",
+    "WV0": "WM",
+    "WV1": "WM",
+}
+BRIEF = {c: "brief-tone.md" for c in ("WN", "TN", "WM", "WV0", "WV1")}
 # #415: the gate trio on the look list cut from the rule store with the live records alone (G-old) and with the held
 # records too (G-new), each pass to a fresh trio, as gate-check.md runs it. `gate-lists` freezes both lists in
 # prompts/gate-415/, so a later change to the store does not change what a test's runs were asked.

@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sea Hostel: book a bed</title>
-<!-- Each planted fault is marked by a comment naming its record, one for each table line it breaks. dom-fault-one.html and dom-missing-fault.html hold the faults that need a page of their own. -->
+<!-- Each planted fault is named by a comment and marked by a data-fault token, <record>:<n>, on the element its miss names, n being the line's place among its record's lines in check-dom.table; a miss that names no element, as an absence's does, is marked data-fault-absent on the element it is missing from. dom-fault-one.html and dom-missing-fault.html hold the faults that need a page of their own. -->
 <!-- fault: vault.favicon: the .ico file is declared 16 by 16, not 48 -->
-<link rel="icon" href="dom-icons/favicon.ico" sizes="16x16">
+<link rel="icon" href="dom-icons/favicon.ico" sizes="16x16" data-fault="vault.favicon:3">
 <link rel="icon" href="dom-icons/favicon.svg" sizes="any" type="image/svg+xml">
 <!-- fault: vault.favicon: the touch icon is 120 by 120, not 180 -->
-<link rel="apple-touch-icon" href="dom-icons/touch-120.png">
+<link rel="apple-touch-icon" href="dom-icons/touch-120.png" data-fault="vault.favicon:6">
 <!-- fault: vault.favicon: a touch icon that is not a png -->
 <!-- fault: vault.favicon: an icon file that does not load -->
-<link rel="apple-touch-icon" href="dom-icons/touch-180.jpg">
+<link rel="apple-touch-icon" href="dom-icons/touch-180.jpg" data-fault="vault.favicon:5 vault.favicon:7">
 <style>
 body { font: 16px/1.5 sans-serif; margin: 0 16px; }
 nav a { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; color: #123; }
@@ -31,118 +31,118 @@ label, input, select, textarea { display: block; }
 .code .ln::before { counter-increment: line; content: counter(line); margin-right: 8px; }
 </style>
 </head>
-<body>
+<body data-fault-absent="vault.motion-control:1">
 <header>
 <!-- fault: vault.logo-link-words: the home logo's name does not say home -->
 <!-- fault: vault.logo-link-words: the home logo is named by its file -->
-<a href="/" class="logo"><img src="dom-icons/touch-120.png" alt="logo.png" width="40" height="40"></a>
+<a href="/" class="logo" data-fault="vault.logo-link-words:1 vault.logo-link-words:2"><img src="dom-icons/touch-120.png" alt="logo.png" width="40" height="40"></a>
 <!-- fault: vault.logo-link-words: a home logo whose name leaves out the hostel's -->
-<a href="/" class="logo">Home</a>
+<a href="/" class="logo" data-fault="vault.logo-link-words:3">Home</a>
 <!-- fault: vault.landmark-elements: a list of links in the banner outside a nav -->
-<ul class="quick"><li><a href="/offers">Offers</a></li></ul>
+<ul class="quick" data-fault="vault.landmark-elements:4"><li><a href="/offers">Offers</a></li></ul>
 <!-- fault: vault.badge-name: a count badge read as a bare number -->
-<button type="button"><svg class="icon bell" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg><span class="badge">3</span></button>
+<button type="button"><svg class="icon bell" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg><span class="badge" data-fault="vault.badge-name:1">3</span></button>
 <nav aria-label="Main">
 <!-- fault: vault.current-icon: the current item's icon is the outline, as the others are -->
-<a href="/" aria-current="page"><svg class="icon home" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Home</a>
+<a href="/" aria-current="page"><svg class="icon home" data-fault="vault.current-icon:1" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Home</a>
 <a href="/rooms"><svg class="icon bed" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Rooms</a>
 <a href="/map"><svg class="icon pin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Map</a>
 </nav>
 <!-- fault: vault.field-keyboard: a search field typed as text -->
 <!-- fault: vault.enter-key: a search field whose Enter key says Go -->
-<form role="search" action="/search"><label for="q2">Search rooms</label><input id="q2" name="q2" enterkeyhint="go"></form>
-<search><form action="/search"><label for="q">Search the site</label><input type="search" id="q" name="q" enterkeyhint="search"><button><svg class="icon search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="15" y1="15" x2="21" y2="21"/></svg>Search</button></form></search>
+<form role="search" action="/search"><label for="q2">Search rooms</label><input id="q2" data-fault="vault.field-keyboard:6 vault.enter-key:3" name="q2" enterkeyhint="go"></form>
+<search><form action="/search"><label for="q">Search the site</label><input type="search" id="q" name="q" enterkeyhint="search"><button><svg class="icon search" data-fault="vault.rtl-fixed-icons:1" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="15" y1="15" x2="21" y2="21"/></svg>Search</button></form></search>
 <button type="button">Help</button>
 <!-- fault: vault.help-button: a second help button in the one view -->
-<button type="button" aria-label="Help">?</button>
+<button type="button" aria-label="Help" data-fault="vault.help-button:1">?</button>
 </header>
 <main>
 <p>Dorms and private rooms a short walk from the beach.</p>
 <!-- fault: vault.list-markup: a typed bullet in a paragraph -->
-<p>• Free wifi</p>
+<p data-fault="vault.list-markup:1">• Free wifi</p>
 <!-- fault: vault.typed-rules: a line typed from box-drawing characters -->
-<p>──────────</p>
+<p data-fault="vault.typed-rules:1">──────────</p>
 <!-- fault: vault.list-markup: a list item drawn by CSS outside a list -->
-<div style="display: list-item; margin-left: 20px">Lockers</div>
+<div style="display: list-item; margin-left: 20px" data-fault="vault.list-markup:2">Lockers</div>
 <!-- fault: vault.native-html: a div made a button by ARIA -->
-<div role="button" tabindex="0">Book now</div>
+<div role="button" tabindex="0" data-fault="vault.native-html:1">Book now</div>
 <!-- fault: vault.native-html: a list restating its own role -->
-<ul role="list"><li>Towels</li></ul>
+<ul role="list" data-fault="vault.native-html:2"><li>Towels</li></ul>
 <!-- fault: vault.native-html: a link overridden as a button -->
-<a href="/book" role="button">Book</a>
+<a href="/book" role="button" data-fault="vault.native-html:3">Book</a>
 <!-- fault: vault.landmark-elements: a navigation block marked by a role on a div -->
-<div role="navigation" aria-label="Footer links"><a href="/about">About</a></div>
+<div role="navigation" aria-label="Footer links" data-fault="vault.landmark-elements:1"><a href="/about">About</a></div>
 <!-- fault: vault.progress-element-name: a progress bar with no name -->
-<progress value="40" max="100">40%</progress>
+<progress value="40" max="100" data-fault="vault.progress-element-name:1">40%</progress>
 <!-- fault: vault.table-use: a table placing a heading and its text -->
-<table><tr><td><h2>Our rooms</h2></td><td><p>Bright dorms.</p></td></tr></table>
+<table data-fault="vault.table-use:1"><tr><td><h2>Our rooms</h2></td><td><p>Bright dorms.</p></td></tr></table>
 <!-- fault: vault.table-use: a layout table with a caption -->
-<table role="presentation"><caption>Layout</caption><tr><td>Beach</td></tr></table>
+<table role="presentation" data-fault="vault.table-use:2"><caption>Layout</caption><tr><td>Beach</td></tr></table>
 <!-- fault: vault.table-header-cells: a data table with no thead -->
 <!-- fault: vault.table-header-cells: a row heading without scope="row" -->
-<table class="rates"><tbody><tr><th>Dorm</th><td>£20</td></tr></tbody></table>
+<table class="rates" data-fault="vault.table-header-cells:1 vault.table-header-cells:3"><tbody><tr><th>Dorm</th><td>£20</td></tr></tbody></table>
 <!-- fault: vault.table-header-cells: a column heading as a td -->
-<table class="rates"><thead><tr><td>Room</td><th scope="col">Price</th></tr></thead><tbody><tr><td>Twin</td><td>£45</td></tr></tbody></table>
+<table class="rates" data-fault="vault.table-header-cells:2"><thead><tr><td>Room</td><th scope="col">Price</th></tr></thead><tbody><tr><td>Twin</td><td>£45</td></tr></tbody></table>
 <!-- fault: vault.table-markup: prices aligned into columns by spaces -->
-<pre>Dorm    £20
+<pre data-fault="vault.table-markup:1">Dorm    £20
 Twin    £45</pre>
 <!-- fault: vault.generated-content: code line numbers a screen reader announces -->
-<pre class="code"><code><span class="ln">let beds = 12;</span><span class="ln">let rooms = 4;</span></code></pre>
+<pre class="code"><code><span class="ln" data-fault="vault.generated-content:1">let beds = 12;</span><span class="ln">let rooms = 4;</span></code></pre>
 <!-- fault: vault.heading-markup-div: a div drawn larger than the text it heads -->
-<div style="font-size: 24px">Our rooms</div>
+<div style="font-size: 24px" data-fault="vault.heading-markup-div:1">Our rooms</div>
 <p>Bright dorms by the sea.</p>
 <!-- fault: vault.heading-markup-div: a div drawn bolder than the text it heads -->
-<div style="font-weight: 700">Getting here</div>
+<div style="font-weight: 700" data-fault="vault.heading-markup-div:2">Getting here</div>
 <p>Ten minutes from the station.</p>
 <!-- fault: vault.heading-markup-div: a div drawn in italic over the text it heads -->
-<div style="font-style: italic">House rules</div>
+<div style="font-style: italic" data-fault="vault.heading-markup-div:3">House rules</div>
 <p>Quiet after eleven.</p>
 <!-- fault: vault.video-captions: a video with sound and no captions track -->
-<video controls width="160" height="90"></video>
+<video controls width="160" height="90" data-fault="vault.video-captions:1"></video>
 <span role="img" aria-label="Rated five stars">★★★★★</span>
 <!-- fault: vault.background-image-role: a picture announced as an image but drawn as a CSS background -->
-<div role="img" aria-label="The dorm at dusk" style="width: 120px; height: 80px; background-image: url(dom-icons/touch-180.png)"></div>
+<div role="img" aria-label="The dorm at dusk" data-fault="vault.background-image-role:1" style="width: 120px; height: 80px; background-image: url(dom-icons/touch-180.png)"></div>
 
 <!-- fault: vault.drag-buttons: a carousel with only a Next button -->
-<div class="carousel"><img src="dom-icons/touch-180.png" alt="The dorm" width="180" height="180"><button type="button">Next</button></div>
+<div class="carousel" data-fault="vault.drag-buttons:2"><img src="dom-icons/touch-180.png" alt="The dorm" width="180" height="180"><button type="button">Next</button></div>
 <!-- fault: vault.drag-buttons: a map with only a Zoom in button -->
-<div class="map"><img src="dom-icons/touch-120.png" alt="Map of the bay" width="120" height="120"><button type="button">Zoom in</button></div>
+<div class="map" data-fault="vault.drag-buttons:3"><img src="dom-icons/touch-120.png" alt="Map of the bay" width="120" height="120"><button type="button">Zoom in</button></div>
 <ol class="rooms">
 <!-- fault: vault.drag-buttons: a list item moved only by dragging -->
-<li class="drag-item" draggable="true">Dorm</li>
+<li class="drag-item" draggable="true" data-fault="vault.drag-buttons:4">Dorm</li>
 <li class="drag-item" draggable="true">Twin <button type="button">Move up</button></li>
 </ol>
 <!-- fault: vault.drag-buttons: a pull-to-refresh feed with no Refresh button -->
-<section class="feed"><h2>Latest news</h2><p>The roof terrace opens in May.</p></section>
+<section class="feed" data-fault-absent="vault.drag-buttons:5"><h2>Latest news</h2><p>The roof terrace opens in May.</p></section>
 <!-- fault: vault.grabber: the resize button sits under the sheet's heading, not at its top -->
-<div class="sheet"><h2>Filters</h2><p>Price, beds and dates.</p><button type="button" class="grabber" aria-label="Resize filters"></button></div>
+<div class="sheet" data-fault="vault.grabber:1"><h2>Filters</h2><p>Price, beds and dates.</p><button type="button" class="grabber" aria-label="Resize filters"></button></div>
 <!-- fault: vault.motion-control: the page listens for device motion and shows no control doing the same -->
 <!-- fault: vault.button-icon-side: this icon sits after its label, the others before -->
-<button type="button">Save<svg class="icon save" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg></button>
+<button type="button" data-fault="vault.button-icon-side:1">Save<svg class="icon save" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg></button>
 <!-- fault: vault.icon-optical-size: a 24 px drawing shown at 48 px, its stroke drawn 4 px against the others' 2 -->
-<button type="button"><svg class="icon print" viewBox="0 0 24 24" aria-hidden="true" style="width: 48px; height: 48px"><rect x="5" y="8" width="14" height="8"/></svg>Print</button>
+<button type="button"><svg class="icon print" data-fault="vault.icon-optical-size:1" viewBox="0 0 24 24" aria-hidden="true" style="width: 48px; height: 48px"><rect x="5" y="8" width="14" height="8"/></svg>Print</button>
 <!-- fault: vault.button-icon-side: a forward arrow before its label -->
-<button type="button"><svg class="icon arrow-right" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/></svg>Continue</button>
+<button type="button" data-fault="vault.button-icon-side:2"><svg class="icon arrow-right" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="12" x2="20" y2="12"/></svg>Continue</button>
 
 <!-- fault: vault.drag-buttons: a drop zone with no Choose file button -->
-<div class="drop" id="drop">Drop a photo here</div>
+<div class="drop" id="drop" data-fault="vault.drag-buttons:1">Drop a photo here</div>
 
 <form action="/sign-in">
 <label for="user">Email or username</label><input id="user" name="user" autocomplete="username" enterkeyhint="next">
 <!-- fault: vault.paste-allowed: the password field cancels a paste -->
-<label for="pass">Password</label><input id="pass" name="pass" type="password" autocomplete="current-password" enterkeyhint="done" onpaste="return false">
+<label for="pass">Password</label><input id="pass" data-fault="vault.paste-allowed:1" name="pass" type="password" autocomplete="current-password" enterkeyhint="done" onpaste="return false">
 <button>Sign in</button>
 </form>
 
-<form class="long" action="/book">
+<form class="long" action="/book" data-fault="vault.same-address:1 vault.same-address:2 vault.form-help-link:1">
 <!-- fault: vault.question-heading: on a page of several questions the h1 sits in a label -->
 <!-- fault: vault.questions-per-page: a page of several questions is headed by a question -->
-<label for="first-name"><h1>What are your details?</h1></label>
+<label for="first-name"><h1 data-fault="vault.question-heading:3 vault.questions-per-page:1">What are your details?</h1></label>
 <label for="first-name">First name</label><input id="first-name" name="first-name" autocomplete="given-name" enterkeyhint="next">
 <!-- fault: vault.enter-key: a field followed by another has no enterkeyhint -->
-<label for="last-name">Last name</label><input id="last-name" name="last-name" autocomplete="family-name">
+<label for="last-name">Last name</label><input id="last-name" data-fault="vault.enter-key:1" name="last-name" autocomplete="family-name">
 <label for="email">Email</label><!-- fault: vault.autocomplete: an email field turns autocomplete off -->
-<input id="email" name="email" type="email" autocomplete="off" enterkeyhint="next">
+<input id="email" data-fault="vault.autocomplete:2" name="email" type="email" autocomplete="off" enterkeyhint="next">
 <label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel" enterkeyhint="next">
 <label for="ship-street">Delivery street</label><input id="ship-street" name="ship-street" autocomplete="shipping street-address" enterkeyhint="next">
 <label for="ship-postcode">Delivery postcode</label><input id="ship-postcode" name="ship-postcode" autocomplete="shipping postal-code" enterkeyhint="next">
@@ -152,21 +152,21 @@ Twin    £45</pre>
 <label for="bill-postcode">Billing postcode</label><input id="bill-postcode" name="bill-postcode" autocomplete="billing postal-code" enterkeyhint="next">
 <label for="new-pass">Choose a password</label><!-- fault: vault.password-empty: the password field is written filled -->
 <!-- fault: vault.password-empty: the password field loads filled -->
-<input id="new-pass" name="new-pass" type="password" autocomplete="new-password" enterkeyhint="next" value="sunrise42">
+<input id="new-pass" data-fault="vault.password-empty:1 vault.password-empty:2" name="new-pass" type="password" autocomplete="new-password" enterkeyhint="next" value="sunrise42">
 <label for="card">Card number</label><!-- fault: vault.field-keyboard: a card number brings up the letter keyboard -->
-<input id="card" name="card" autocomplete="cc-number" enterkeyhint="next">
+<input id="card" data-fault="vault.field-keyboard:4" name="card" autocomplete="cc-number" enterkeyhint="next">
 <!-- fault: vault.autocomplete: a token the standard does not name -->
-<label for="promo">Promo code</label><input id="promo" name="promo" autocomplete="promo-code" enterkeyhint="next">
+<label for="promo">Promo code</label><input id="promo" data-fault="vault.autocomplete:1" name="promo" autocomplete="promo-code" enterkeyhint="next">
 <!-- fault: vault.field-keyboard: an email field typed as text -->
-<label for="contact-email">Email for the receipt</label><input id="contact-email" name="contact-email" autocomplete="email" enterkeyhint="next">
+<label for="contact-email">Email for the receipt</label><input id="contact-email" data-fault="vault.field-keyboard:1" name="contact-email" autocomplete="email" enterkeyhint="next">
 <!-- fault: vault.field-keyboard: a phone field typed as text -->
-<label for="alt-phone">Second phone</label><input id="alt-phone" name="alt-phone" autocomplete="tel-national" enterkeyhint="next">
+<label for="alt-phone">Second phone</label><input id="alt-phone" data-fault="vault.field-keyboard:2" name="alt-phone" autocomplete="tel-national" enterkeyhint="next">
 <!-- fault: vault.field-keyboard: a web address typed as text -->
-<label for="site">Your website</label><input id="site" name="site" autocomplete="url" enterkeyhint="next">
+<label for="site">Your website</label><input id="site" data-fault="vault.field-keyboard:3" name="site" autocomplete="url" enterkeyhint="next">
 <!-- fault: vault.field-keyboard: a postcode typed as a number -->
-<label for="zip">Postcode for the invoice</label><input id="zip" name="zip" type="number" autocomplete="postal-code" enterkeyhint="next">
+<label for="zip">Postcode for the invoice</label><input id="zip" data-fault="vault.field-keyboard:5" name="zip" type="number" autocomplete="postal-code" enterkeyhint="next">
 <!-- fault: vault.enter-key: the last field's Enter key says Next -->
-<label for="csc">Security code</label><input id="csc" name="csc" autocomplete="cc-csc" inputmode="numeric" enterkeyhint="next">
+<label for="csc">Security code</label><input id="csc" data-fault="vault.enter-key:2" name="csc" autocomplete="cc-csc" inputmode="numeric" enterkeyhint="next">
 <!-- fault: vault.form-help-link: a form taller than the screen with no help route in it -->
 <button>Pay now</button>
 </form>
