@@ -375,7 +375,10 @@ MARK_JS = r"""
     const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => step.test(nameOf(e)))) || [];
     const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && ahead.test(nameOf(e))) || null;
     window.__contrastCarousels.push({ el: c, dots: row, next });
-    slides.push({ subject: label(c), dots: row.length, next: !!next });
+    // Whether any slide, shown or not, holds an image, video or canvas a control could lie over.
+    const media = [c, ...c.querySelectorAll('*')].some((e) => ['img', 'video', 'canvas'].includes(e.localName)
+      || /url\(/.test(getComputedStyle(e).backgroundImage));
+    slides.push({ subject: label(c), dots: row.length, next: !!next, media });
   }
 
   // Custom checkboxes, radios and switches, each with the box its state is drawn in: its own, or its labels' where
@@ -992,6 +995,8 @@ def _slide_readings(page, js, mark, *, readings, unread):
     decks = mark()["slides"]
     page.evaluate(KEEP_DECKS_JS)
     for n, deck in enumerate(decks):
+        if not deck["media"]:
+            continue
         subject = deck["subject"]
         handle = page.evaluate_handle(
             "(n) => window.__contrastDecks[n].el", n
@@ -1222,7 +1227,7 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
                 )
     page.evaluate(STRIP_JS)
 
-    if got["slides"]:
+    if any(d["media"] for d in got["slides"]):
         more, unread = _slide_pass(fresh, js, parts, absent)
         on_photo += more
         photo.unmeasured.extend(unread)
