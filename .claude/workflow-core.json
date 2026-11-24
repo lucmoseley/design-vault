@@ -11,6 +11,7 @@
 		"testCanary": "test/verdict-canary.test.js"
 	},
 	"fullTestShards": 4,
+	"landingTester": "local",
 	"corpus": [
 		"lucmoseley/design-vault-tracker",
 		"lucmoseley/workflow-core-tracker",
