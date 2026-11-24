@@ -10,7 +10,7 @@ import score
 
 WORK = score.WORK
 hit = {}
-for cand in score.PLANTED + [c for c in score.FOUNDER if c not in score.PLANTED]:
+for cand in score.scored_cands():
     for run in score.RUNS:
         per = []
         for s in (1, 2, 3):
@@ -29,7 +29,7 @@ for cand in score.PLANTED + [c for c in score.FOUNDER if c not in score.PLANTED]
         for (fault, src), n in Counter(p for s in per for p in s).items():
             if n >= 2:
                 hit.setdefault((cand, run, fault), set()).add(src.split("#")[0])
-for cand in score.PLANTED + [c for c in score.FOUNDER if c not in score.PLANTED]:
+for cand in score.scored_cands():
     for fid, _what, kind in score.known(cand):
         row = []
         for run in score.RUNS:

@@ -20,7 +20,7 @@ Finding the way: the header, nav bars, menus and links that take a visitor somew
 ### vault.visible-nav
 - applies-when: web-surface; the main navigation at phone width
 - question: At phone width, do four main navigation links or fewer stay in view, a menu hiding them only where there are more than four?
-- answered-by: script
+- answered-by: whole-page
 - writes: phone navigation
 - yields-to: none
 - source: NN/g 2016, "Hamburger Menus and Hidden Navigation Hurt UX Metrics"; strength: domain evidence
@@ -28,7 +28,6 @@ Finding the way: the header, nav bars, menus and links that take a visitor somew
 - owner: vault
 - stage: role
 - target: Keep up to four main links in view on a phone; put them behind a menu only past four.
-- script: check-layout.py <page> --out <dir> --records
 - reasons: design-round/references/impeccable.md#conditions-added
 - ledger: LAY-70, NAV-169, NAV-211, NAV-212
 - status: live
