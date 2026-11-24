@@ -114,6 +114,7 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.axis-properties": "script",
     "vault.border-shadow": "script",
     "vault.calm-colour-share": "script",
+    "vault.caption-colours": "script",
     "vault.caret-shape": "script",
     "vault.dark-raise": "script",
     "vault.edit-wrap": "script",

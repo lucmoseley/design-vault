@@ -18,8 +18,9 @@ const STORE = path.join(__dirname, "..", "plugin", "skills", "design-critique", 
 // records, six look halves and the builder half of vault.drag-tracking, #316's vault.chart-carried, #333's
 // vault.fall-script, #315's focus-colour split, #332's vault.render-checkerboard, #334's
 // vault.focal-crop, #336's vault.clip-loop, #341's vault.contacts-seam, #344's two look records and #318's
-// vault.motion-frequency-look, #428's vault.drag-release-spring-code and #420's three splits; a record added or removed changes it on purpose.
-const RECORD_COUNT = 485;
+// vault.motion-frequency-look, #428's vault.drag-release-spring-code, #420's three splits, and #410's
+// vault.caption-settings and vault.zebra-tint; a record added or removed changes it on purpose.
+const RECORD_COUNT = 487;
 
 const storeRecords = () =>
   fs.readdirSync(STORE).filter((n) => n.endsWith(".md")).sort().flatMap((n) => parseGate(fs.readFileSync(path.join(STORE, n), "utf8")).questions);

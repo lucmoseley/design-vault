@@ -612,6 +612,14 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/contrast-tier01-later-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/access/contrast-tier01-later.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/contrast-tier01-parts.json": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1895,6 +1903,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/text/countdown.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/text/quicksand.ttf": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
