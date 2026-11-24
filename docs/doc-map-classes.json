@@ -11,8 +11,8 @@
 		"section": "Skills & settings",
 		"class": "source-of-truth",
 		"classQualifier": null,
-		"role": "What each script git or a hook runs unasked does, why, and its escape, one row per wired path; check-guard-registry.js reads it",
-		"route": "Direct, then `node scripts/check-guard-registry.js --review <path>`",
+		"role": "Implicit behaviours — what each wired script of this repo's own does to a session unasked, why, and its escape",
+		"route": null,
 		"consumes": null
 	},
 	".claude/settings.json": {

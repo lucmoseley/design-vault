@@ -1,4 +1,6 @@
 # shellcheck shell=sh
+# .husky/pre-commit.local — the vault's own gate, sourced last by the core's .husky/pre-commit (#1).
+# Each gate ends in `|| exit 1`: git runs .husky/pre-commit here as plain sh, without -e (#33).
 if git diff --cached --name-only --no-renames | grep -qE '^(data/(gallery|styles)\.json|images/)'; then node validate.js --staged || exit 1; fi
 
 if git diff --cached --name-only --no-renames | grep -qE '^data/(gallery\.json|styles\.json|vault-data\.js)$'; then node bundle.js --staged || exit 1; fi

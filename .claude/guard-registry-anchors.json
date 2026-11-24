@@ -1,12 +1,12 @@
 {
-	".husky/commit-msg": "bc40243effa3df37",
-	".husky/post-checkout": "a83fbc1264f60e68",
-	".husky/post-commit": "d129aa1bbe3e27ef",
-	".husky/post-merge": "2ae0f587e3e4973b",
-	".husky/pre-applypatch": "9fab2227f71e60e9",
-	".husky/pre-commit": "5f8a19f5218a4630",
-	".husky/pre-commit.local": "786f05bd1747ac19",
-	".husky/pre-merge-commit": "7b99d0e2f39a7ee1",
-	".husky/pre-push": "f6e0ebf0aa7396fd",
-	".husky/prepare-commit-msg": "b562f19c52c36e19"
+	".husky/commit-msg": "32ff7a89a02bf4bb",
+	".husky/post-checkout": "e9e014205410da16",
+	".husky/post-commit": "f59a8c0b07aba331",
+	".husky/post-merge": "ed7a46a847a18976",
+	".husky/pre-applypatch": "a42988b25b763e0c",
+	".husky/pre-commit": "de9a257fd6038cf2",
+	".husky/pre-commit.local": "541f6e32319506d3",
+	".husky/pre-merge-commit": "5c3378f34d996d09",
+	".husky/pre-push": "4d5058886dd2dd7b",
+	".husky/prepare-commit-msg": "557f5902c6ce609c"
 }

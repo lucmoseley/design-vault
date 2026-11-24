@@ -4,7 +4,7 @@
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
 	"modules": [],
-	"walkedTo": "v3.0.0",
+	"walkedTo": "v3.1.0",
 	"refillPanel": true,
 	"commands": {
 		"test": "bash test/all.sh",
