@@ -32,7 +32,7 @@ Record: `vault.bottom-safe-area`.
 
 ### Counts and progress are named
 
-Records: `vault.badge-name`, `vault.progress-name`.
+Records: `vault.badge-name`, `vault.progress-name`, `vault.progress-element-name`.
 
 - **Why.** A screen reader reads a badge's number with nothing to say what it counts, "Inbox 4", and a progress bar with no name as a bare percentage; the words a sighted visitor gets from the layout must be in the markup.
 - **Trade-off.** Hidden words must be kept true as the count or task changes, and words added where the label already names the count are read twice.
@@ -56,7 +56,7 @@ Record: `vault.status-no-focus`.
 
 ### A cookie banner only for consent
 
-Record: `vault.cookie-banner`.
+Records: `vault.cookie-banner`, `vault.cookies-page`.
 
 - **Why.** UK and EU law ask for consent before most storage on a visitor's device, and exempt what is strictly necessary for the service the visitor asked for; a banner where nothing needs consent asks a question with no answer. Since the Data (Use and Access) Act 2025, the UK also exempts storage for statistics and for remembering a visitor's chosen appearance, provided the site says what it does and lets visitors object; the EU does not, so a site serving EU visitors still asks for analytics.
 - **Trade-off.** No banner leaves the cookies page as the only place a visitor learns what is stored.
@@ -88,7 +88,7 @@ Record: `vault.count-badge`.
 
 ### Destructive actions
 
-Record: `vault.destructive-action`.
+Records: `vault.destructive-action`, `vault.destructive-fill`.
 
 - **Why.** People press a prominent button without reading it, so a destructive action given the primary style gets pressed by mistake (Apple). The danger hue warns only where the loss is the step's whole point, the final confirmation, and red alone is missed by some visitors, so the label names the loss (GOV.UK).
 - **Trade-off.** A delete button kept quiet on its first appearance takes a second step to reach.
@@ -96,7 +96,7 @@ Record: `vault.destructive-action`.
 
 ### Button size by place
 
-Record: `vault.button-size`.
+Records: `vault.button-size`, `vault.button-place`.
 
 - **Why.** A standalone key action may be larger: GOV.UK gives its start button larger type, and USWDS offers a big button for the important action. Dense rows take a compact size (Atlassian).
 - **Trade-off.** Few size steps are easy to keep consistent; a project that needs more names them in its rules file.

@@ -16,7 +16,7 @@ Records: `vault.border-roles`, `vault.control-edges`.
 
 ### Hover signals
 
-Records: `vault.hover-signal`, `vault.press-state`.
+Records: `vault.hover-signal`, `vault.press-state`, `vault.control-states`.
 
 - **Why.** An overlay is already at the top level, so it cannot rise further. A shadow on a small part is too small to read as a raise. A ripple is one design system's pressed-state value, and a value comes from the project ([dependency order](house-principles.md#dependency-order), step 4).
 - **Trade-off.** One signal is calm and suits a dense tool; two are stronger, but double the motion and can read as noise.
@@ -24,7 +24,7 @@ Records: `vault.hover-signal`, `vault.press-state`.
 
 ### Depth only for what floats or acts
 
-Records: `vault.depth`, `vault.shadow-levels`, `vault.border-shadow`, `vault.grouping`.
+Records: `vault.depth`, `vault.shadow-levels`, `vault.border-shadow`, `vault.grouping`, `vault.surface-shadow`.
 
 - **Why.** A shadow means "above other content" or "you can act on this", and nothing else says "above". Atlassian ships three shadows, enough for a page with no drag and no nested overlays.
 - **Trade-off.** A rest shadow on every clickable card makes the cue strong, then worthless once everything has it.
@@ -95,7 +95,7 @@ Record: `vault.tag-fill`.
 
 ### Inverse surfaces for passing messages
 
-Record: `vault.inverse-surface`.
+Records: `vault.inverse-surface`, `vault.inverse-surface-look`.
 
 - **Why.** A message that floats briefly over the page must stand apart from every surface below it, whatever that surface is; the theme's opposite neutral does that on any page.
 - **Trade-off.** A dark toast on a light page is loud for a routine confirmation; a light toast with a coloured edge is quieter but can merge with cards.
@@ -127,7 +127,7 @@ Record: `vault.button-group-size`.
 
 ### Icons on buttons
 
-Record: `vault.button-icon`.
+Records: `vault.button-icon`, `vault.button-icon-side`.
 
 - **Why.** Most buttons need no icon (Atlassian); one with a known meaning helps a visitor find the action faster. Design systems differ on the side (Material before the label, Carbon after), so what matters is one side across a site, with a forward arrow after the label, where reading goes.
 - **Trade-off.** An icon on every button adds noise and weakens the ones that help.
@@ -135,7 +135,7 @@ Record: `vault.button-icon`.
 
 ### Edges that survive forced colours
 
-Record: `vault.forced-colour-edges`.
+Records: `vault.forced-colour-edges`, `vault.shadow-meaning`.
 
 - **Why.** Windows high-contrast mode, and any forced-colours mode, removes every shadow but keeps borders and outlines in the user's colours (MDN). An edge drawn only as a shadow disappears there, and so does the meaning it carried.
 - **Trade-off.** A shadow takes no layout space; a real border does, so a ring that thickens on hover needs its space set aside from the start.
@@ -175,7 +175,7 @@ Record: `vault.surface-layers`.
 
 ### One card type per set
 
-Record: `vault.card-type`.
+Records: `vault.card-type`, `vault.card-treatment`.
 
 - **Why.** Material 3 makes outline, fill and shadow equal in function, so the choice is style. Within one set, a card that looks different is read as a different kind (NN/g on similarity).
 - **Trade-off.** One treatment across a long list can feel flat; emphasis then comes from content and size, not a second treatment.
@@ -191,7 +191,7 @@ Record: `vault.glass-dimming`.
 
 ### Outline and filled icons
 
-Record: `vault.icon-fill`.
+Records: `vault.icon-fill`, `vault.current-icon`.
 
 - **Why.** Outline icons sit lightly beside text; a filled one carries more weight, so filling the current tab marks it without colour alone (Apple SF Symbols, Material Symbols).
 - **Trade-off.** Filling too many icons spends that weight (Atlassian). Some craft sites fill icons on dark mode to hold their weight there (Devouring Details); a project may choose that.
@@ -232,7 +232,7 @@ Records: `vault.caption-colours`, `vault.caption-settings`.
 
 ### hr for a thematic break
 
-Record: `vault.hr-break`.
+Records: `vault.hr-break`, `vault.typed-rules`.
 
 - **Why.** An `hr` means a thematic break in the HTML standard, so a decorative line drawn with it marks a break in the content that is not there. A line typed from dashes or underscores is text: it wraps or overflows at a narrow width, and Butterick rules it out.
 - **Trade-off.** None worth naming.

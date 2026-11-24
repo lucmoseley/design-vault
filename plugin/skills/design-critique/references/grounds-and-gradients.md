@@ -16,7 +16,7 @@ Record: `vault.ground-step`. The levels themselves are `vault.surface-layers`'s.
 
 ### Regions in an app
 
-Record: `vault.region-ground`.
+Records: `vault.region-ground`, `vault.region-fill`.
 
 - **Why.** Polaris lets several backgrounds share a view "only if they exist side by side", as the admin and its side navigation do. In Material, the navigation rail on a wide screen sits on the same surface as the content, and the bottom bar that replaces it on a phone takes a container tone. A drawer takes a tone of its own. So a region's ground follows the component it is, not the screen width. impeccable gives sidebars, toolbars and panels "a second neutral layer". Polaris bans bright or contrasting container fills in working areas because they pull the eye from the work.
 - **Trade-off.** A region on the content's own ground behind a divider looks calmer but reads less as a separate place. A second neutral layer marks the shell but adds one more tone to keep in step across themes.
@@ -76,7 +76,7 @@ Record: `vault.card-image-tint`.
 
 ### When a gradient has a function
 
-Records: `vault.gradient-function`, `vault.gradient-kind`.
+Records: `vault.gradient-function`, `vault.gradient-kind`, `vault.gradient-place`.
 
 - **Why.** A gradient does a job when it is a scrim under text on a photo (NN/g's fade), a light cue on a surface (Krehel's "depth lighting"), the brand's colour where the page may go committed (`vault.tone-colour-share`), an ambient pattern on a promotion (Atlassian), or a chart or ring (conic). Each kind suits one of these jobs. impeccable's detector flags the radial halo and spotlight glow behind a hero, and its quieter pass removes any gradient "that don't serve purpose".
 - **Clash.** A gradient behind a working region is `vault.decoration-place`'s to refuse. Where one is earned back, `vault.ai-look` decides.

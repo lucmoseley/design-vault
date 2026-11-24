@@ -21,7 +21,7 @@ Record: `vault.busy-density`.
 
 ## Coloured boxes
 
-Record: `vault.box-fills`.
+Records: `vault.box-fills`, `vault.heading-fill`.
 
 - **Why.** A filled, labelled rectangle reads as a button: "giving headings a background color will make them resemble buttons when they're not", and "Avoid having many colorful boxes of different sizes on a page", since people "have difficulty picking out the clickable elements when similar-looking items compete" (NN/g, Loranger 2015). Polaris keeps vibrant fills for "smaller surface areas" such as buttons and badges, and calls bright or contrasting container colours "a cluttered UI"; a grey ground "visually recedes".
 - **Trade-off.** No source gives a count of coloured boxes a page may hold; the record judges competition with the controls, not a number. A marketing hero may take a coloured ground on purpose (`docs/research/surface-styling.md` B5.3); Polaris's lines are admin guidance, so the large-container clause binds working views only.

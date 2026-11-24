@@ -8,7 +8,7 @@ A project's rules file wins over every record here except a floor WCAG or the la
 
 ### Native elements carry their role
 
-Records: `vault.native-html`, `vault.landmarks`.
+Records: `vault.native-html`, `vault.landmarks`, `vault.landmark-elements`.
 
 - **Why.** A `button`, a link or a `main` element brings its role, its keyboard behaviour and its place in a screen reader's list of regions for free; a `div` given the role by ARIA brings the role alone, and the rest must be written and kept working by hand (W3C, Using ARIA).
 - **Trade-off.** A native control is harder to restyle than a `div`, so a custom look costs more CSS.
@@ -16,7 +16,7 @@ Records: `vault.native-html`, `vault.landmarks`.
 
 ### Names match what is shown
 
-Records: `vault.label-in-name`, `vault.logo-link-name`.
+Records: `vault.label-in-name`, `vault.logo-link-name`, `vault.logo-link-words`.
 
 - **Why.** A visitor who controls the page by voice says the words they see; a control whose accessible name does not hold its visible label cannot be reached that way (WCAG 2.2 SC 2.5.3). A logo that links home is a link, so its name says where it goes, not that it is a logo (W3C WAI Images Tutorial).
 - **Trade-off.** Words added to a name to make it clearer must come after the visible label, which limits how the name can be phrased.
@@ -24,7 +24,7 @@ Records: `vault.label-in-name`, `vault.logo-link-name`.
 
 ### Decorative generated content
 
-Record: `vault.generated-content`.
+Records: `vault.generated-content`, `vault.generated-content-look`.
 
 - **Why.** A screen reader reads most text CSS adds, so a decorative arrow or a column of line numbers is read aloud as noise; text that carries information must not live in CSS alone, which some readers skip (WCAG 2.2 F87).
 - **Trade-off.** The empty alternative after `/` reaches only browsers from 2024 on (Firefox 128, Safari 17.4); an older one reads the symbol, so a symbol that must stay silent everywhere goes on an `aria-hidden` element instead.
