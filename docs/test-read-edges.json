@@ -1149,6 +1149,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/tier01-rest-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/touch-map.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"

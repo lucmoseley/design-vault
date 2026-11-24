@@ -18,7 +18,7 @@ const STORE = path.join(__dirname, "..", "plugin", "skills", "design-critique", 
 // records, six look halves and the builder half of vault.drag-tracking, #316's vault.chart-carried, #333's
 // vault.fall-script, #315's focus-colour split, #332's vault.render-checkerboard, #334's
 // vault.focal-crop, #336's vault.clip-loop, #341's vault.contacts-seam, #344's two look records and #318's
-// vault.motion-frequency-look and vault.drag-release-spring-look; a record added or removed changes it on purpose.
+// vault.motion-frequency-look and #428's vault.drag-release-spring-code; a record added or removed changes it on purpose.
 const RECORD_COUNT = 482;
 
 const storeRecords = () =>
