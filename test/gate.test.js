@@ -94,7 +94,7 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.hover-content": "script",
     "vault.native-scroll": "script",
     "vault.drag-release": "script",
-    "vault.drag-release-spring-look": "look",
+    "vault.drag-release-spring-code": "code",
     "vault.dialog-default": "script",
     "vault.dialog-default-look": "look",
     "vault.menu-click": "script",
