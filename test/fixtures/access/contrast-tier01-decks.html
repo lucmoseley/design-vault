@@ -3,9 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>contrast tier 0 and 1, carousels the slide pass reads only in part</title>
-<!-- #512: with .deck declared as carousel, each deck reaches one slide-pass branch that leaves slides unread.
-     #deck-endless holds 14 slides, more than the check presses its next button. #deck-restless stays last, so its
-     endless motion starts only once the other decks are read. -->
+<!-- #512. #deck-restless stays last, so its endless motion starts only once the other decks are read. -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
   .deck { position: relative; max-width: 320px; height: 120px; margin: 16px 0; overflow: hidden }

@@ -375,8 +375,6 @@ class Slides(unittest.TestCase):  # #427
 
 
 def photo_answer(fixture, carousel, fresh=None):
-    """vault.controls-on-photo's answer on `fixture`, with `carousel` declared. Without `fresh`, the slide pass
-    reads a new page on the fixture from the same browser."""
     from playwright.sync_api import sync_playwright
 
     access = library("check-access.py")
