@@ -10,6 +10,8 @@ Every record carries both: its `stage` is its step in the dependency order, and 
 
 ### Dependency order
 
+Record: `vault.token-roles`.
+
 - **Rule.** Decide each part in four steps. An earlier step wins a clash with a later one by default:
 
   | Step | Decides | Reads | Decided by |
@@ -26,6 +28,8 @@ Every record carries both: its `stage` is its step in the dependency order, and 
 - **Source.** House synthesis over WAI-ARIA 1.2, Material 3 and Apple HIG for step 1, and the sources of each later step (`principle-interactions.md` §1, #121; confidence 0.7). The direction, abstract before concrete, is Garrett's (The Elements of User Experience, 2000) and Material 3's token tiers (a role named once, a value filling it). Garrett also names "a ripple effect up and down the planes" (#183 item 1).
 
 ### Source precedence
+
+Record: `vault.wcag-aa`.
 
 - **Rule.** Inside one step, a higher level wins. The levels, highest first:
   1. law and WCAG 2.2 AA;
@@ -88,11 +92,11 @@ Each function's carriers, and the properties it keeps for itself, are its record
 For each part, in this order, the whole-page critic answers:
 
 1. its function code: `vault.function-code`;
-2. whether a visitor can act on it and whether it looks as if they can: `vault.affordance`. Its cell is perceptible (both), hidden (acts, looks static), false (static, looks actable) or correct rejection (neither); hidden or false is a fault;
+2. whether a visitor can act on it and whether it looks as if they can: `vault.affordance`. Its cell is perceptible (both), hidden (acts, looks static), false (static, looks actable) or correct rejection (neither); hidden or false is a fault; and whether the Tab key reaches it: `vault.keyboard`;
 3. whether a visitor will know the action they want is here: `vault.findable-action`;
 4. which properties carry its function, and whether it takes one reserved for another: the carrier records above and `vault.borrowing`;
 5. whether each look on the page and the site means one function: `vault.borrowing`;
-6. its rank by visual weight against its rank by task priority, with one primary action: `vault.weight-order`, `vault.primary-action`;
+6. its rank by visual weight against its rank by task priority, with one primary action and no button colour past the action colour and the danger hue: `vault.weight-order`, `vault.primary-action`, `vault.action-colour`;
 7. whether decoration sits where the visitor works: `vault.decoration-place`;
 8. on a surface a visitor taps, whether each target has one action: `vault.one-target`;
 9. whether the moment is high-stakes, and its signifiers conventional: `vault.high-stakes`, `vault.brand-layer`.
