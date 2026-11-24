@@ -100,8 +100,8 @@ EXITS 0 measured, no pause, jolt, jump or step / 1 measured, one or more (each
 printed) / 2 the arguments are wrong / 3 Playwright or its browser is missing,
 or, for --records, numpy or Pillow /
 4 the page did not render in time / 5 the browser refused the page / 6 the page
-cannot be measured / 7 a call hung that would never return. Exits 0, 1 and 6 are
-results and print on stdout; the rest print on stderr.
+cannot be measured / 7 a call hung that would never return, or its renderer
+died. Exits 0, 1 and 6 are results and print on stdout; the rest print on stderr.
 """
 
 import argparse
@@ -121,6 +121,7 @@ import statistics
 import sys
 import threading
 import time
+import traceback
 import typing
 
 # The craft gate's pause limit: a still spell longer than this, in ms, is a pause
@@ -1300,7 +1301,8 @@ class UnmeasurableError(Exception):
 
 
 class HungCallError(Exception):
-    """A call the watch took as hung: exit 7."""
+    """A call the watch took as hung, or one that raised once its renderer died:
+    exit 7."""
 
 
 def size_arg(p, flag, value, *, number=int, example=DESKTOP):
@@ -1386,30 +1388,41 @@ class WaitingCall(typing.NamedTuple):
     frame: object
 
 
-def waiting_call(main, package_dir):
-    """The WaitingCall the greenlet `main` is suspended in, naming the line
-    outside `package_dir`, Playwright's own, that made it; None while it runs or
-    waits on nothing of Playwright's.
-    Read from another thread: `gr_frame` and `f_locals` of a suspended greenlet
-    are read, not changed, and a resume mid-walk at worst names the wrong call."""
-    stack = []
-    frame = main.gr_frame
-    while frame is not None:
-        stack.append(frame)
-        frame = frame.f_back
-    stack.reverse()
-    for caller, frame in itertools.pairwise(stack):
+def playwright_call(stack, package_dir):
+    """The WaitingCall `stack`, (frame, line) pairs outermost first, is inside:
+    the first frame in `package_dir`, Playwright's own, and the line outside it
+    that made the call; None where no frame is Playwright's."""
+    for (caller, line), (frame, _) in itertools.pairwise(stack):
         if frame.f_code.co_filename.startswith(package_dir):
             owner = frame.f_locals.get("self")
             name = frame.f_code.co_name
             if owner is not None:
                 name = f"{type(owner).__name__}.{name}"
             return WaitingCall(
-                name,
-                f"{os.path.basename(caller.f_code.co_filename)}:{caller.f_lineno}",
-                frame,
+                name, f"{os.path.basename(caller.f_code.co_filename)}:{line}", frame
             )
     return None
+
+
+def waiting_call(main, package_dir):
+    """The WaitingCall the greenlet `main` is suspended in; None while it runs or
+    waits on nothing of Playwright's.
+    Read from another thread: `gr_frame` and `f_locals` of a suspended greenlet
+    are read, not changed, and a resume mid-walk at worst names the wrong call."""
+    stack = []
+    frame = main.gr_frame
+    while frame is not None:
+        stack.append((frame, frame.f_lineno))
+        frame = frame.f_back
+    stack.reverse()
+    return playwright_call(stack, package_dir)
+
+
+def raising_call(exc, package_dir):
+    """The WaitingCall `exc` was raised from; None where it left no Playwright
+    frame. A caller still handling it sits at its own `with` line, so each
+    frame's line is the traceback's."""
+    return playwright_call(list(traceback.walk_tb(exc.__traceback__)), package_dir)
 
 
 class CallWatch:
@@ -1487,6 +1500,27 @@ class CallWatch:
                     time.sleep(WATCH_POLL_S)
                 return
 
+    def renderer_death(self, exc, page_open):
+        """Why the Playwright error `exc` came of a renderer's death, or None:
+        the browser runs no renderer as it raises, and a page was open or the
+        call was opening one. A renderer killed while new_page sets its page up
+        makes it raise instead of wait (#472); a browser that died has closed
+        its pages first.
+        Residual: a call refused for another reason whose renderer then dies
+        before this reads /proc is reported as the renderer's death. Residual:
+        a call that opens a page under another name than new_page is not
+        recognised as opening one."""
+        call = raising_call(exc, self.package_dir)
+        if call is None or self._rendering():
+            return None
+        if not page_open and not call.name.endswith(".new_page"):
+            return None
+        return (
+            f"{call.name} at {call.where} raised {first_line(exc)!r} with the "
+            "browser running no renderer; an out-of-memory kill of the page's "
+            "renderer causes this (#430), so run it again once memory is free"
+        )
+
     def stop(self):
         self._stop.set()
         self._thread.join()
@@ -1496,8 +1530,9 @@ class CallWatch:
 def chromium(args=()):
     """A launched Chromium, closed on leaving. Playwright's failures leave as
     NoBrowserError at launch, and as PageTimeoutError or RefusedError after. A
-    call CallWatch takes as hung leaves as HungCallError, whatever the script
-    raised from it, where /proc shows exactly one new browser process.
+    call CallWatch takes as hung, or a Playwright error it puts down to a dead
+    renderer, leaves as HungCallError, whatever the script raised from it,
+    where /proc shows exactly one new browser process.
     Residual: with no /proc, as on macOS, or with no task `children` file, as
     in some containers, no watch runs, which it says on stderr, and the call
     can wait for ever."""
@@ -1532,6 +1567,17 @@ def chromium(args=()):
         except Exception as exc:
             if watch and watch.fired:
                 raise HungCallError(watch.fired) from exc
+            if (
+                watch
+                and isinstance(exc, PlaywrightError)
+                and not isinstance(exc, PlaywrightTimeout)
+                and (
+                    why := watch.renderer_death(
+                        exc, any(c.pages for c in browser.contexts)
+                    )
+                )
+            ):
+                raise HungCallError(why) from exc
             if isinstance(exc, PlaywrightTimeout):
                 raise PageTimeoutError(first_line(exc)) from exc
             if isinstance(exc, PlaywrightError):
@@ -1551,7 +1597,7 @@ def chromium(args=()):
 def run_browser(work, timeout, url=None, unmeasurable=None):
     """work()'s result and None, or None and the exit code of the failure it
     raised, printed: 3 no Playwright or no Chromium, 5 a refused load, 4 a
-    timeout, 7 a hung call, and 6 an UnmeasurableError,
+    timeout, 7 a hung call or a dead renderer, and 6 an UnmeasurableError,
     its reasons on stdout between the two lines of `unmeasurable`. With no `url`, a refusal names what failed to draw."""
     try:
         return work(), None
@@ -1579,8 +1625,9 @@ def run_browser(work, timeout, url=None, unmeasurable=None):
         )
         return None, 4
     except HungCallError as exc:
-        # The watch already killed the browser and its driver; its message names
-        # the call and why, and exit 7 is the result (#432, #459, #464).
+        # The watch already killed the browser and its driver, or the renderer
+        # had died; its message names the call and why, and exit 7 is the
+        # result (#432, #459, #464, #472).
         print(exc, file=sys.stderr)
         return None, 7
     except UnmeasurableError as exc:

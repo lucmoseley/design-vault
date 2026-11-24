@@ -2263,6 +2263,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/load/renderer-kill.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/load/sibling-shots.py": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
