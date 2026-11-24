@@ -127,7 +127,7 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 
 ### vault.type-size
 - applies-when: web-surface; running body text, and text in a dense working role (tables, tool panels)
-- question: Is running body text at least 16 px × 0.52 ÷ the body face's x-height, and never under 16 px, and dense-role text at least 14 px × 0.52 ÷ its face's x-height?
+- question: Is running body text at least 16 px × 0.52 ÷ the body face's x-height, and never under 16 px, and dense-role text at least 14 px × 0.52 ÷ its face's x-height, and never under 14 px?
 - answered-by: script
 - writes: body size
 - yields-to: level 2

@@ -4,7 +4,8 @@ It is a suite of the commit gate (test/all.sh): loosening it lets a page pass
 a computed-style record it misses, or fail one it meets.
 test/fixtures/probe/style-fault.html plants one fault per record, on an
 element whose id is f- and the record's name, and every record must fail on
-its plant, or on the whole selection where WHOLE names it.
+its plant, or on the whole selection where WHOLE names it. A record's
+extra plants take f-<record>-<variant>.
 test/fixtures/probe/style-clean.html meets every record but those UNMET names,
 and nothing may fail or go unjudged there.
 """
@@ -141,6 +142,18 @@ class Pages(unittest.TestCase):
                 self.assertTrue(hit, f"no miss on its plant: {subjects[:5]}")
                 self.assertIn(f"{rid}: fail", proc.stdout)
         self.assertIn("every finding: ", proc.stdout)
+
+    def test_dense_text_fails_type_size_on_each_floor_alone(self):
+        """#479. Pass pair: test_the_clean_page_reports_nothing."""
+        _, found = RAN["fault"]
+        (f,) = [f for f in found if f["id"] == "vault.type-size"]
+        for plant, read in (
+            ("#f-type-size-tall", "style:font-size"),
+            ("#f-type-size-short", "style:font-size times xheight"),
+        ):
+            with self.subTest(plant):
+                reads = {m["read"] for m in f["misses"] if plant in m["subject"]}
+                self.assertEqual(reads, {read})
 
     def test_every_block_of_the_table_misses_on_the_fault_page(self):
         _, found = RAN["fault"]

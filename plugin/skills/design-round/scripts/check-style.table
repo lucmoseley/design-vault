@@ -5,6 +5,7 @@
 define $prose = css:p, li, dd, blockquote
 define $copy = css:p, li, dd, dt, blockquote, figcaption, caption, td, th, label, small, h1, h2, h3, h4, h5, h6
 define $text = css:p, li, dd, dt, blockquote, figcaption, caption, td, th, label, small, h1, h2, h3, h4, h5, h6, a, button, span, strong, em, b, i, code
+define $dense = css:td, th
 define $headings = css:h1, h2, h3, h4, h5, h6
 define $controls = css:input, select, textarea, button
 define $not-pill = where style:border-top-left-radius per height < 0.5
@@ -98,6 +99,8 @@ vault.emphasis-cue | $copy | distinct contrast within ground | <= 3
 vault.type-size | $prose | style:font-size | >= 16px
 vault.type-size | $prose | style:font-size times xheight | >= 8.32px
 vault.type-size | $prose where webfont = 1 | style:font-size-adjust | != none
+vault.type-size | $dense | style:font-size | >= 14px
+vault.type-size | $dense | style:font-size times xheight | >= 7.28px
 vault.type-floor | $text | style:font-size | >= 11px
 vault.type-floor | $text | style:font-size times xheight | >= 5.72px
 vault.type-floor | css:small, figcaption, caption | style:font-size | >= 12px
