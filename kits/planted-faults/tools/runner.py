@@ -729,7 +729,6 @@ def main():
     if a.mode == "packets":
         return render_packets()
     require_canary()
-    runs = a.runs
     gate_pages = {CID[n] for n in META["gate_pages"]}
     cands = (
         [c if c in NAME else CID.get(c, c) for c in a.cands.split(",")]
@@ -752,7 +751,7 @@ def main():
         if a.mode == "critics":
             jobs = [
                 ex.submit(critic_job, r, c, cid)
-                for r in runs
+                for r in a.runs
                 for c in a.critics.split(",")
                 for cid in cands
             ]
@@ -761,14 +760,14 @@ def main():
                 parts_key(NAME[cid])
             jobs = [
                 ex.submit(gate_job, r, load, n, critic=critic, group=group)
-                for r in runs
+                for r in a.runs
                 for load, passes in plan.items()
                 for n in passes
                 for critic in GATE_CRITICS
                 for group in gate_groups(cands)
             ]
         else:
-            jobs = [ex.submit(chain_job, r, cid) for r in runs for cid in cands]
+            jobs = [ex.submit(chain_job, r, cid) for r in a.runs for cid in cands]
         results = [j.result() for j in jobs]
     print(
         f"{sum(results)} of {len(results)} finished"
