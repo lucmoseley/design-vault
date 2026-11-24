@@ -9,6 +9,7 @@ import concurrent.futures
 import importlib.util
 import json
 import os
+import pathlib
 import re
 import sys
 import tempfile
@@ -76,6 +77,9 @@ def setUpModule():
         "clean": lambda: run("clean"),
         "undeclared": lambda: run("clean", parts=None, key="undeclared"),
         "absent": lambda: run("clean", parts=ABSENT, key="absent"),
+        "later": lambda: run(
+            "later", parts=os.path.join(FIXTURES, "contrast-tier01-later-parts.json")
+        ),
     }
     with concurrent.futures.ThreadPoolExecutor(2) as pool:
         DONE.update(zip(runs, pool.map(lambda go: go(), runs.values()), strict=True))
@@ -370,6 +374,65 @@ class Slides(unittest.TestCase):  # #427
         self.assertEqual(photo.unmeasured, [f"a#play {why}"])
 
 
+class SlidePassErrors(unittest.TestCase):  # #528
+    def photo_answer(self, fresh):
+        from playwright.sync_api import sync_playwright
+
+        access = library("check-access.py")
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page()
+                page.goto(
+                    pathlib.Path(FIXTURES, "contrast-tier01-later.html")
+                    .resolve()
+                    .as_uri()
+                )
+                out, _ = contrasts.measure(
+                    page,
+                    access.contrast_js,
+                    TABLE,
+                    parts={"carousel": "#deck"},
+                    absent={"chart"},
+                    texts=None,
+                    fresh=fresh,
+                )
+            finally:
+                browser.close()
+        return out["vault.controls-on-photo"]
+
+    def test_a_load_that_throws_is_a_reason_naming_the_error(self):
+        from playwright.sync_api import Error as PlaywrightError
+
+        def fresh():
+            raise PlaywrightError("Timeout 30000ms exceeded.\n=== logs ===")
+
+        photo = self.photo_answer(fresh)
+        self.assertEqual(photo.faults, [])
+        (why,) = photo.unmeasured
+        self.assertIn("slides could not be stepped through", why)
+        self.assertTrue(why.endswith("(Error: Timeout 30000ms exceeded.)"), why)
+
+    def test_a_page_that_throws_mid_pass_is_closed_and_a_reason(self):
+        from playwright.sync_api import Error as PlaywrightError
+
+        class Page:
+            closed = False
+
+            def evaluate(self, *_):
+                raise PlaywrightError("Execution context was destroyed")
+
+            def close(self):
+                self.closed = True
+
+        page = Page()
+        photo = self.photo_answer(lambda: page)
+        self.assertEqual(photo.faults, [])
+        (why,) = photo.unmeasured
+        self.assertIn("Execution context was destroyed", why)
+        self.assertTrue(page.closed)
+
+
 PLANT = re.compile(
     r'id="([^"]+)" data-record="([^"]+)"|data-record="([^"]+)"[^>]*id="([^"]+)"'
 )
@@ -415,6 +478,18 @@ class EndToEnd(unittest.TestCase):
         self.assertIn(
             "at best on div#deck-swap's slide 2, reached by its next button (",
             faults["button#swap-plant"],
+        )
+
+    def test_a_control_on_a_photo_only_from_slide_2_is_read_past_a_submitting_next(
+        self,
+    ):  # #528
+        photo = DONE["later"][3]["answers"]["vault.controls-on-photo"]
+        (fault,) = photo["faults"]
+        self.assertEqual(photo["unmeasured"], [])
+        self.assertTrue(fault["subject"].endswith("#later-plant"), fault)
+        self.assertIn(
+            "at best on div#deck's slide 2, reached by its next button (",
+            fault["detail"],
         )
 
     def test_a_thin_face_short_of_the_ladders_aim_is_a_note_not_a_fault(self):

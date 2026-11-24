@@ -235,10 +235,13 @@ STRIP_JS = """
 """
 
 STAY_ON_PAGE_JS = """
-() => addEventListener('click', (e) => {
-  const a = e.target.closest && e.target.closest('a[href]');
-  if (a && a.href.split('#')[0] !== location.href.split('#')[0]) e.preventDefault();
-}, true)
+() => {
+  addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (a && a.href.split('#')[0] !== location.href.split('#')[0]) e.preventDefault();
+  }, true);
+  addEventListener('submit', (e) => e.preventDefault(), true);
+}
 """
 KEEP_DECKS_JS = "() => { window.__contrastDecks = window.__contrastCarousels; }"
 PRESS_JS = """
@@ -372,7 +375,10 @@ MARK_JS = r"""
     const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => step.test(nameOf(e)))) || [];
     const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && ahead.test(nameOf(e))) || null;
     window.__contrastCarousels.push({ el: c, dots: row, next });
-    slides.push({ subject: label(c), dots: row.length, next: !!next });
+    // Whether any slide, shown or not, holds an image, video or canvas a control could lie over.
+    const media = [c, ...c.querySelectorAll('*')].some((e) => ['img', 'video', 'canvas'].includes(e.localName)
+      || /url\(/.test(getComputedStyle(e).backgroundImage));
+    slides.push({ subject: label(c), dots: row.length, next: !!next, media });
   }
 
   // Custom checkboxes, radios and switches, each with the box its state is drawn in: its own, or its labels' where
@@ -942,9 +948,34 @@ def _press(page, js, handle, *, deck, dot):
     return settled
 
 
-def _slide_readings(page, js, mark):
-    page.evaluate(STAY_ON_PAGE_JS)
+def _slide_pass(fresh, js, parts, absent):
+    from playwright.sync_api import Error as PlaywrightError
+
     readings, unread = [], []
+    deck_page = None
+    try:
+        deck_page = fresh()
+        _slide_readings(
+            deck_page,
+            js,
+            functools.partial(_mark, deck_page, js, parts, absent),
+            readings=readings,
+            unread=unread,
+        )
+    except PlaywrightError as err:
+        first = (str(err).strip().splitlines() or [""])[0]
+        unread.append(
+            "the declared carousel's slides could not be stepped through, so its slides past those already read "
+            f"were not read ({type(err).__name__}: {first})"
+        )
+    finally:
+        if deck_page is not None:
+            deck_page.close()
+    return readings, unread
+
+
+def _slide_readings(page, js, mark, *, readings, unread):
+    page.evaluate(STAY_ON_PAGE_JS)
 
     def read(subject, where, held):
         if not held:
@@ -964,6 +995,8 @@ def _slide_readings(page, js, mark):
     decks = mark()["slides"]
     page.evaluate(KEEP_DECKS_JS)
     for n, deck in enumerate(decks):
+        if not deck["media"]:
+            continue
         subject = deck["subject"]
         handle = page.evaluate_handle(
             "(n) => window.__contrastDecks[n].el", n
@@ -1015,7 +1048,6 @@ def _slide_readings(page, js, mark):
                 f"{subject} shows no page dots or next button the check can press, so only the slide it shows at load "
                 "was read"
             )
-    return readings, unread
 
 
 def _photo_verdict(photo, readings, table):
@@ -1195,14 +1227,8 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
                 )
     page.evaluate(STRIP_JS)
 
-    if got["photo"] and got["slides"]:
-        deck_page = fresh()
-        try:
-            more, unread = _slide_readings(
-                deck_page, js, functools.partial(_mark, deck_page, js, parts, absent)
-            )
-        finally:
-            deck_page.close()
+    if any(d["media"] for d in got["slides"]):
+        more, unread = _slide_pass(fresh, js, parts, absent)
         on_photo += more
         photo.unmeasured.extend(unread)
     readings += _photo_verdict(photo, on_photo, table)
