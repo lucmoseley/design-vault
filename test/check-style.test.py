@@ -14,6 +14,7 @@ import collections
 import concurrent.futures
 import importlib.util
 import json
+import math
 import os
 import re
 import shutil
@@ -155,6 +156,21 @@ class Pages(unittest.TestCase):
                 reads = {m["read"] for m in f["misses"] if plant in m["subject"]}
                 self.assertEqual(reads, {read})
 
+    def test_a_size_rounded_to_the_nearest_pixel_fails_its_x_height_row(self):
+        """#514: Georgia's x-height at 17 px and 15 px, type-size's sizes
+        rounded to the nearest pixel. Pass pair: test_the_clean_page_reports_nothing,
+        whose ok-type-size-up plants take the rounded-up 18 px and 16 px."""
+        _, found = RAN["fault"]
+        (f,) = [f for f in found if f["id"] == "vault.type-size"]
+        for plant in ("#f-type-size-nearest", "#f-type-size-nearest-dense"):
+            with self.subTest(plant):
+                reads = {
+                    m["read"]
+                    for m in f["misses"]
+                    if re.search(re.escape(plant) + r"(?![\w-])", m["subject"])
+                }
+                self.assertEqual(reads, {"style:font-size times xheight"})
+
     def test_every_block_of_the_table_misses_on_the_fault_page(self):
         _, found = RAN["fault"]
         with open(TABLE, encoding="utf8") as fh:
@@ -208,6 +224,31 @@ class Records(unittest.TestCase):
                 self.assertIn(rid, records)
                 self.assertEqual(records[rid].get("answered-by"), "script")
                 self.assertRegex(records[rid].get("script", ""), r"^check-style\.py ")
+
+    def test_type_size_prescribes_a_size_its_x_height_rows_pass(self):
+        """#514: the output rounds up, so a face under 0.52 meets its row."""
+        with open(os.path.join(RULES, "typography.md"), encoding="utf8") as fh:
+            chunk = fh.read().split("### vault.type-size\n")[1].split("\n### ")[0]
+        (output,) = re.findall(r"^- output: (.*)$", chunk, flags=re.M)
+        with open(TABLE, encoding="utf8") as fh:
+            rows = {
+                r.group(1): float(r.group(2))
+                for r in re.finditer(
+                    r"^vault\.type-size \| \$(\w+) \| style:font-size times xheight"
+                    r" \| >= ([\d.]+)px$",
+                    fh.read(),
+                    flags=re.M,
+                )
+            }
+        for role, base in (("prose", 16), ("dense", 14)):
+            self.assertIn(
+                f"max({base}, {base} × 0.52 ÷ xheight) px, rounded up", output
+            )
+            # Georgia and Times (docs/research/typeface-traits.md R5).
+            for xheight in (0.481, 0.447):
+                with self.subTest(role=role, xheight=xheight):
+                    size = max(base, math.ceil(base * 0.52 / xheight))
+                    self.assertGreaterEqual(size * xheight, rows[role])
 
 
 class Table(unittest.TestCase):
