@@ -62,6 +62,7 @@ def _load(name, path):
 flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
 layout = _load("check_layout", os.path.join(HERE, "check-layout.py"))
 probe = _load("probe", os.path.join(HERE, "probe.py"))
+rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
 
 TABLE = os.path.join(HERE, "check-markup.table")
 SEP = " | "
@@ -80,8 +81,7 @@ Line = collections.namedtuple("Line", "id rules part text")
 Table = collections.namedtuple("Table", "lines off")
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 def _rule_ids(n, given):
@@ -94,10 +94,7 @@ def _rule_ids(n, given):
 
 def parse(text):
     lines, off = [], ()
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         if len(fields) not in (2, 3) or not all(fields):
             raise TableError(f"line {n}: want ID | RULE, … [| part:NAME], got {line!r}")
@@ -222,12 +219,9 @@ def findings(table, swept):
             f["misses"] += [{"width": width, **n} for n in got["violations"]]
             f["review"] += [{"width": width, **n} for n in got["incomplete"]]
             applied = applied or bool(set(got["applied"]) & set(line.rules))
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif applied:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=applied
+        )
         out.append(f)
     return out
 

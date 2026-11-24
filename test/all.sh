@@ -40,6 +40,7 @@ python3 test/check-access.test.py	images chromium
 python3 test/check-access-contrast.test.py	images chromium
 python3 test/check-access-pointer.test.py	images chromium
 python3 test/palette.test.py
+python3 test/rule-table.test.py
 python3 test/child.test.py	chromium
 python3 test/probe.test.py	chromium
 python3 test/parts-map.test.py	images chromium

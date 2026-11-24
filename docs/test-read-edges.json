@@ -2330,6 +2330,10 @@
 			"test/rule-store-pointers.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/rule-table.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/run-lanes.sh": [
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
