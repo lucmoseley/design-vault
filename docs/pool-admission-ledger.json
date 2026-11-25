@@ -1,0 +1,258 @@
+{
+	"entries": [
+		{
+			"file": "CLAUDE.md",
+			"headline": "`bash test/all.sh` runs every vault suite; while its verdict proof stands the lander's run before `main` moves is the gate and commits run none (#491); while the proof is stale or failed the pre-commit gate runs it and refuses a red (#85), running there only the suites the staged files can break — `VAULT_ALL_SUITES=1` forces all (#146, README §Validating the library).",
+			"claim": "A session runs `node --test` alone and calls the vault green, or forces every suite at each commit instead of the staged subset.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "CLAUDE.md",
+			"headline": "Two readers, two registers.",
+			"claim": "A session writes a founder-read field in design jargon, or an AI-read field such as `image_recipe` in loose plain English.",
+			"route": "trigger",
+			"ticket": 593
+		},
+		{
+			"file": "CLAUDE.md",
+			"headline": "A `note` carries the founder's intent, not the picture's contents.",
+			"claim": "A session drafts a `note` describing what the picture shows, or invents the founder's reason for saving it, instead of quoting his intent or saying none was found.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "CLAUDE.md",
+			"headline": "A session that lands a commit touching `plugin/` releases it before it ends",
+			"claim": "A session lands a `plugin/` change and ends without moving the marketplace pin, so no project gets the fix.",
+			"route": "trigger",
+			"ticket": 593
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "A credential that bypasses access control (an admin or service-role key, a payment or mail provider key) is server-only: never in client-side code, never in a public build variable, never in a client bundle, never committed.",
+			"claim": "A session puts an admin, service-role, payment or mail key into client code, a public build variable or a commit.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "If a key is needed in code that could run client-side, that is the signal the logic belongs on the server — move it, don't expose the key.",
+			"claim": "A session exposes a key to client-reachable code instead of moving the logic server-side.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "Anything reachable from a client-side entry point is client-side.",
+			"claim": "A session wires a secret into a module it believes server-only without tracing that a client entry point imports it.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "Real credentials — an account password, a shared login, an API key used outside code — belong in a password manager, never in a repo file, gitignored or not.",
+			"claim": "A session writes a password, shared login or out-of-code API key into a repo file, gitignored ones included.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "A person who does not know this project holds a record of them — a cold prospect, an interviewee, someone named in a review — never goes into a tracked file, an issue body or an issue comment.",
+			"claim": "A session writes a stranger's record into a tracked file or an issue, or deletes a slipped line instead of reporting it.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "A person in a relationship with the project — a collaborator, contractor or partner — is written in full, name and role and what is outstanding.",
+			"claim": "A session strips a collaborator's name, role or outstanding items out of the record in the name of minimisation.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "Concentrate tests, docs and review effort on: auth and access boundaries, money paths, and anything that generates or redeems a credential or code.",
+			"claim": "A session spreads test and review effort evenly, or under-tests presentational code, and reads risk paths last.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "Mutation-test every new guarantee: break the fix, confirm that specific test fails, then reverse the break.",
+			"claim": "A session counts a guarantee as tested without breaking the fix to see its test fail, or counts an unreachable branch as covered.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "A red gate, a hung command or an unexplained failure takes `diagnosing-bugs` first — a feedback loop before any hypothesis.",
+			"claim": "A session meeting a red gate or a hang guesses a cause and edits before building a feedback loop.",
+			"route": "no-trigger"
+		},
+		{
+			"file": "AGENTS.md",
+			"headline": "Verify before you assert:",
+			"claim": "A session claims an absence, a config in force, a checker verdict or a passing mutation without the check verification.md names.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Where two rules conflict, the more specific wins, and a guard's deny text wins over any file.",
+			"claim": "A session reading two clashing rules follows the less specific one, or argues past a guard's deny on the strength of a file.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Claude model and effort policy: the core's `docs/effort-guide.md`, in the plugin root.",
+			"claim": "A session picks a dispatch's model or effort by guess instead of the core's effort guide.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Closed issues are corpus, not history — search every tracker in `corpus` before calling something unsourced (`rule:decisions-search-first`).",
+			"claim": "A session calls a figure, term or card unsourced without searching every corpus tracker's closed issues.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A push to your session's queue ref is your own act, never asked of Luc Moseley; after it, in an interactive session, run `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.1/scripts/landing-status.js --wait` in the background — it exits once each commit has landed on `main` or been dropped, so no timer is guessed. There `result:` never rests on a queue push alone; a background job ends on `result:` once its commits are queued, naming them as queued, not on `main`, and waits on the landing only where its next step needs them there.",
+			"claim": "A session asks Luc Moseley to push its queue ref, or ends its turn on a queue push as if the commit were on `main`.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Show the diff of each change before committing it.",
+			"claim": "A session commits without showing the change's diff.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Write scope is this repository.",
+			"claim": "A session writes to another repo or an external surface the instruction never named.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A script that writes a governed file must claim for itself (`rule:script-self-claim`).",
+			"claim": "A session writes a script that edits a governed file without claiming it, so the arbiter misses the write.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A background job never ends its turn on `waiting:`: it holds the turn until what it launched reports, working on with its waits backgrounded while work remains and waiting in the foreground only once idle",
+			"claim": "A background job ends its turn on `waiting:` and is listed completed while what it launched still runs.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Outside a background job, while something runs in the background, end the turn — with text and no tool call.",
+			"claim": "A session polls a background job with tool calls instead of ending the turn with a waiting line.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A turn ends only on a real question or a notification you are waiting for — never on a progress report.",
+			"claim": "A session ends its turn on a progress report, stranding the work.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A question round enumerates its answers as lettered, priced options",
+			"claim": "A session puts a choice to Luc as bare prose with no lettered, priced options.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Queue actionable items at the moment they're agreed — including recommendations buried in prose, not just explicit requests.",
+			"claim": "A session lets an agreed item or a recommendation buried in prose go untracked, and its close audits against nothing.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Test a blocker before it ends a turn",
+			"claim": "A session ends a turn on a blocker it inferred rather than tested.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Only a house decision reaches Luc Moseley",
+			"claim": "A session asks Luc a question research could answer, or asks approval for a delegated choice instead of making and recording it.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A value called house is unsourced until traced",
+			"claim": "A session treats an agent-advised ruling or an untraced value as a source and never reports where it departs from research.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Build for the repo's long-term health, not the task's quickest finish.",
+			"claim": "A session takes the quick workaround or a second copy of a path where a durable fix finishes the task.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Delegate whole jobs; a dispatch costs ~26k tokens before it does any work",
+			"claim": "A session dispatches a subagent for a lookup it could run in a few calls, paying ~26k tokens for nothing.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Domain terms: root `GLOSSARY.md` + `docs/adr/`, made lazily by `domain-modeling` when a term is first contested.",
+			"claim": "A session defines a contested term ad hoc instead of in GLOSSARY.md or docs/adr/ via domain-modeling.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "The doc-map gate SKIPs mid-merge, printing nothing — a silent pass is not a pass",
+			"claim": "A session reads the doc-map gate's silence mid-merge as a pass.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Leading practice.",
+			"claim": "A session does a task its own way without finding or using how leading professionals in that field do it.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "The practice gate.",
+			"claim": "A session starts a non-exempt task without reading or writing its craft's practice note, or declares no Practice line.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Nothing is reported or requested to Anthropic, of any kind",
+			"claim": "A session files any report or request with Anthropic, a harness gap included, instead of fixing or recording it in-repo.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "No paid research or data APIs.",
+			"claim": "A session buys a fact from a paid source or feed, or recommends a tool crippled without payment without saying so.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Check the architecture before suggesting a binary or a native dependency.",
+			"claim": "A session suggests a binary or native dependency built for the wrong architecture.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Never propose raising memory without a measured peak, and never propose raising swap.",
+			"claim": "A session proposes more memory on a guess rather than a measured peak, or proposes more swap at all.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "A build, test or session dying with no error of its own is probably the OOM killer.",
+			"claim": "A session chases a phantom bug when a silent death was the OOM killer.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Kill a background process as soon as nothing needs it.",
+			"claim": "A session leaves a background process running after nothing needs it, holding memory others need.",
+			"route": "no-trigger"
+		},
+		{
+			"file": ".claude/workflow-core.md",
+			"headline": "Count sessions with `claude agents --json`.",
+			"claim": "A session counts sessions by another means and gets a wrong count.",
+			"route": "no-trigger"
+		}
+	]
+}

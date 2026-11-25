@@ -254,6 +254,14 @@
 		"consumes": null,
 		"reader": "agent"
 	},
+	"docs/pool-admission-ledger.json": {
+		"section": "Skills & settings",
+		"class": "source-of-truth",
+		"classQualifier": null,
+		"role": "The admission ledger: one entry per top-level item in the always-loaded pool, keyed by file and headline, giving its removal claim and route — no-trigger, trigger with the ticket whose guard will print it, or pre-first-tool-call (#392). With `admissionGate` on, a commit adding a pool item with no entry is refused",
+		"route": "Direct, in the same commit that adds or rewords the pool item; a reworded headline moves its entry",
+		"consumes": null
+	},
 	"docs/practice/browser-testing-and-accessibility.md": {
 		"section": "Research notes",
 		"class": "free-edit",

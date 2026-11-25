@@ -6,6 +6,7 @@
 	"modules": [],
 	"walkedTo": "v3.2.1",
 	"refillPanel": true,
+	"admissionGate": true,
 	"commands": {
 		"test": "bash test/all.sh",
 		"testCanary": "test/verdict-canary.test.js"
