@@ -18,8 +18,8 @@ The saving #376 counted, about 100 s, comes almost all from the driver start. On
 
 - `chromium()` watches for a hung call by the one new browser process it sees under its own pid (`CallWatch`). A browser that outlives the case leaves nothing to watch.
 - `child.main()` reruns a test that crashed after earlyoom killed one of its renderers (#438). With a shared browser, one killed renderer or one crashed browser fails every case after it.
-- Launch flags differ by script (`HASH_ARGS`, `--disable-threaded-animation`, `--allow-file-access-from-files`), so a shared browser would be one per flag set, each a second copy of state that today starts empty for every case.
+- Launch flags differ by script (`HASH_ARGS`, `--disable-threaded-animation`, `--allow-file-access-from-files`), so sharing means one browser per flag set, each carrying state that today starts empty for every case.
 
-The issue stated a shared browser that lets state leak between cases is a regression. The only form of sharing that saves time is the one that loses that isolation.
+The one form of sharing that saves time loses that isolation, which #376 itself counted a regression.
 
-Running a script's logic in the test's own process is still the core-and-shell rule (lucmoseley/workflow-core#2186). It reaches design-vault only for new and changed code (lucmoseley/workflow-core#2243), one script at a time, with its own browser per case. That is not this request.
+Running a script's logic in the test's own process stays the core-and-shell rule (lucmoseley/workflow-core#2186), reaching design-vault only for new and changed code (lucmoseley/workflow-core#2243), with its own browser per case.
