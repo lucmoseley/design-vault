@@ -4,8 +4,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { inspect } = require("util");
+const { API, RefusalError, call, withRetry } = require("./higgsfield-api.js");
 
-const API = "https://api.higgsfield.ai";
 const LEDGER = "higgsfield-spend.jsonl";
 const LOCK = "higgsfield.lock";
 const ENV_FILE = path.join(os.homedir(), ".higgsfield.env");
@@ -17,24 +17,11 @@ const STILL_BRAND = /^(?:avif|avis|heic|heix|heim|heis|hevc|hevx|mif1|msf1)$/;
 const ENDPOINT_ID = /^[a-z0-9][a-z0-9.-]*(?:\/[a-z0-9][a-z0-9.-]*)*$/;
 const DOCTYPE_WITHIN_BYTES = 64; // #583 guess
 const PRICE_DECIMALS = 3; // #583 guess
-const QUOTED_BODY_CHARS = 200; // #583 guess
-const MAX_TRIES = 3; // #583 guess
-const FIRST_RETRY_WAIT_MS = 2000; // #583 guess
 const JOB_TIMEOUT_MS = 10 * 60 * 1000; // #183 guess
 // Higgsfield's recommended poll schedule: https://docs.higgsfield.ai/docs/concepts/polling.md
 const POLL_FIRST_WAIT_MS = 2000;
 const POLL_WAIT_GROWTH = 1.5;
 const POLL_LONGEST_WAIT_MS = 10000;
-const HINTS = {
-  401: " (check HIGGSFIELD_API_KEY)",
-  403: " (the balance is too low: top up at open.higgsfield.ai)",
-};
-class ApiError extends Error {
-  constructor(message, status) {
-    super(message);
-    this.status = status;
-  }
-}
 
 class BatchStoppedError extends Error {
   constructor(message, { stoppedAt, ran, notSubmitted, mayBeCharged, cause }) {
@@ -279,46 +266,6 @@ function unlockAll(held, log) {
   }
 }
 
-// #583
-async function call(ctx, method, url, body, headers = {}) {
-  const response = await ctx.fetch(url, {
-    method,
-    headers: { Authorization: `Key ${ctx.credentials}`, ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
-    body: body ? JSON.stringify(body) : undefined,
-    redirect: "error",
-  });
-  const text = await response.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    json = undefined;
-  }
-  if (!response.ok) {
-    const detail = json?.detail === undefined ? text.slice(0, QUOTED_BODY_CHARS) : typeof json.detail === "string" ? json.detail : JSON.stringify(json.detail);
-    throw new ApiError(`${method} ${new URL(url).pathname} answered ${response.status}: ${detail}${HINTS[response.status] ?? ""}`, response.status);
-  }
-  return json;
-}
-
-// #583
-async function withRetry(ctx, attempt) {
-  let faulted = false;
-  for (let tries = 1; ; tries++) {
-    try {
-      return await attempt();
-    } catch (error) {
-      const transient = !(error instanceof ApiError) || error.status >= 500;
-      if (!transient || tries >= MAX_TRIES) {
-        if (faulted && error instanceof Error) error.afterFault = true;
-        throw error;
-      }
-      faulted = true;
-      await ctx.sleep(FIRST_RETRY_WAIT_MS * 2 ** (tries - 1));
-    }
-  }
-}
-
 function readUsd(value) {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim()) return Number(value);
@@ -481,7 +428,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
       // #583
-      if (error instanceof ApiError && !error.afterFault) {
+      if (error instanceof RefusalError && !error.afterFault) {
         recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { submissionSent: false });
         throw batchStopped(error.message, priced, index, { submissionSent: false, cause: error });
       }

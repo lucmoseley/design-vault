@@ -13,6 +13,7 @@ const { runInProcessAsync } = require("./core-run-in-process.js");
 
 const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield.js");
 const { render, parseArgs, settings } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-client.js"));
+const { RefusalError, call, withRetry } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-api.js"));
 // The round's ledger, as higgsfield.js's header names it.
 const LEDGER = "higgsfield-spend.jsonl";
 
@@ -887,6 +888,29 @@ test("a submission that may have reached the API is recorded at its estimate and
       what,
     );
   }
+});
+
+test("a call to any URL off the API is refused, unretried and unsent, while one on the API is sent with the key (#588)", async () => {
+  const api = fakeApi();
+  const sleeps = [];
+  const ctx = { credentials: KEY, fetch: api.options().fetch, sleep: async (ms) => sleeps.push(ms) };
+  for (const url of [CDN, "https://api.higgsfield.ai:443/requests/req-1/status", "https://api.higgsfield.ai.example.com/requests/req-1/status", "http://api.higgsfield.ai/requests/req-1/status", "https://api.higgsfield.ai", "https://cdn.example.com/out.png?token=signed-secret", "https://cdn.example.com/out.png#token=signed-secret", "https://user:signed-secret@cdn.example.com/out.png", "https://cdn.example.com/signed-secret/out.png", undefined]) {
+    await assert.rejects(
+      withRetry(ctx, () => call(ctx, "GET", url)),
+      (error) => error instanceof RefusalError && error.name === "OffApiUrlError" && error.url === url && error.afterFault === undefined && !error.message.includes("signed-secret"),
+      String(url),
+    );
+  }
+  await assert.rejects(call(ctx, "GET", "https://api.higgsfield.ai:443/requests/req-1/status"), {
+    message: "GET to https://api.higgsfield.ai was not sent: only a string starting https://api.higgsfield.ai/ is",
+  });
+  assert.deepEqual(api.calls, []);
+  assert.deepEqual(sleeps, []);
+  await call(ctx, "GET", "https://api.higgsfield.ai/requests/req-1/status");
+  assert.deepEqual(
+    api.calls.map((sent) => [sent.url, sent.headers.Authorization]),
+    [["https://api.higgsfield.ai/requests/req-1/status", `Key ${KEY}`]],
+  );
 });
 
 test("every call to the API refuses to follow a redirect", async () => {
