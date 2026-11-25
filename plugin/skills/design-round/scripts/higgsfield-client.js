@@ -20,6 +20,8 @@ const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
 const STEM = /^v\d+-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUND = /^r\d+$/;
 const STILL_BRAND = /^(?:avif|avis|heic|heix|heim|heis|hevc|hevx|mif1|msf1)$/;
+// Linux's MAXSYMLINKS, the hops past which a path fails ELOOP: https://man7.org/linux/man-pages/man7/path_resolution.7.html
+const MAX_SYMLINK_HOPS = 40;
 const ENDPOINT_ID = /^[a-z0-9][a-z0-9.-]*(?:\/[a-z0-9][a-z0-9.-]*)*$/;
 const HINTS = {
   401: " (check HIGGSFIELD_API_KEY)",
@@ -125,11 +127,47 @@ function record(job, line) {
   fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
 }
 
+// #576
+function pathOnceMade(dir) {
+  const segments = (spelling) =>
+    spelling
+      .slice(path.parse(spelling).root.length)
+      .split(path.sep === "\\" ? /[\\/]+/ : /\/+/)
+      .filter((segment) => segment && segment !== ".");
+  let resolved = path.isAbsolute(dir) ? path.parse(dir).root : process.cwd();
+  const pending = segments(dir);
+  let hops = 0;
+  while (pending.length) {
+    const part = pending.shift();
+    if (part === "..") {
+      resolved = path.dirname(resolved);
+      continue;
+    }
+    const next = path.join(resolved, part);
+    let target;
+    try {
+      target = fs.readlinkSync(next);
+    } catch (error) {
+      // EINVAL: not a symlink. ENOENT: a folder the run will make, a plain one.
+      if (error.code === "EINVAL" || error.code === "ENOENT") {
+        resolved = next;
+        continue;
+      }
+      throw error;
+    }
+    if (++hops > MAX_SYMLINK_HOPS) throw Object.assign(new Error(`${dir} passes through too many symlinks`), { code: "ELOOP", path: dir });
+    if (path.isAbsolute(target)) resolved = path.parse(target).root;
+    pending.unshift(...segments(target));
+  }
+  return resolved;
+}
+
 function roundKey(roundDir) {
-  let existing = roundDir;
+  const madeAt = pathOnceMade(roundDir);
+  let existing = madeAt;
   while (!fs.existsSync(existing)) existing = path.dirname(existing);
   const { dev, ino } = fs.statSync(existing);
-  return `${dev}:${ino}/${path.relative(existing, roundDir)}`;
+  return `${dev}:${ino}/${path.relative(existing, madeAt)}`;
 }
 
 const asList = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
