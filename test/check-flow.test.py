@@ -237,11 +237,24 @@ class Jolts(unittest.TestCase):
     def test_a_move_starting_mid_frame_has_a_whole_first_frame(self):
         # A loaded machine starts one 1.5 ms before a frame, where a part
         # frame would carry its box 3 px and hide its jump (#326).
-        times = flow.sample_times(800, [48.5, 448.5], 60, [48.5])
+        times = flow.sample_times(800, [48.5, 448.5], 60, [(48.5, 48.5)])
         self.assertEqual(times[times.index(48.5) + 1], 48.5 + STEP)
         move = (48.5, 448.5, lambda p: 1 - (1 - p) ** 3)
         r = flow.analyse(sample(move, until=800, times=times))
         self.assertEqual([round(j["px"]) for j in r["jumps"]], [36])
+
+    def test_a_delay_ending_mid_frame_is_drawn_in_its_starts_phase(self):
+        # A loaded machine starts one 8.4 ms off the sampled frames and its
+        # delay ends 25 ms later, so its frames fall at 8.4 + 16.7 k and the
+        # first after the delay carries 8.3 ms of the move, not 16.7 (#411).
+        times = flow.sample_times(800, [8.4, 33.4, 483.4], 60, [(8.4, 33.4)])
+        self.assertAlmostEqual(times[times.index(33.4) + 1], 8.4 + 2 * STEP)
+        r = flow.analyse(sample((33.4, 483.4, linear), until=800, times=times))
+        self.assertEqual(r["jumps"], [])
+
+    def test_a_delay_ending_within_1_ms_of_its_frame_has_a_whole_first_frame(self):
+        times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
+        self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
 
     def test_no_two_sample_times_fall_within_1_ms(self):
         times = flow.sample_times(100, [16.9, 50, 99.5], 60)

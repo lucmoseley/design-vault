@@ -569,8 +569,9 @@ PREPARE_JS = (
     const t = x.a.effect.getComputedTiming();
     const off = x.start - t0;
     // Played on a frame; a delay can end mid-frame.
-    starts.push(off);
-    first = Math.min(first, off + Math.max(0, t.delay) / x.rate);
+    const move = off + Math.max(0, t.delay) / x.rate;
+    starts.push([off, move]);
+    first = Math.min(first, move);
     x.loops = t.endTime === Infinity;
     if (x.loops) {
       infinite = true;
@@ -701,17 +702,26 @@ def sample_times(end, edges, fps, starts=()):
     it, and at 0 reads as not yet started, its first keyframe unshown (#297).
     An animation starts at its timeline's time when it is ready, which a
     document timeline advances once a frame (Web Animations Level 1, "Playing
-    an animation", its pending play task), so each of `starts` is
-    followed by a whole frame, with no frame sampled inside it: a loaded
-    machine starts one off the sampled frames, and a part frame carries a jump
-    too short (#326). Residual: an edge inside that frame still cuts it, and a
-    move from rest after a delay, at a later keyframe or pass, keeps the
-    sampled frames' phase.
+    an animation", its pending play task), and its frames follow a frame
+    apart. So each of `starts`, (start, move) with `move` the end of its delay,
+    is followed by its first moving frame in its start's phase, with no frame
+    sampled between: a loaded machine starts one off the sampled frames, and a
+    frame in their phase carries a jump too short at the start (#326) or too
+    long after a delay ending mid-frame (#411). A move within 1 ms of that
+    frame takes its place and gets a whole frame. Residual: an edge inside that
+    frame still cuts it, and a move from rest at a later keyframe or pass keeps
+    the sampled frames' phase.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(1, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
-    spans = [(s, s + step) for s in starts if 0 <= s and s + step < end]
+    spans = []
+    for start, move in starts:
+        drawn = start + (math.floor((move - start) / step) + 1) * step
+        if drawn - move < 1:
+            drawn += step
+        if 0 <= move and drawn < end:
+            spans.append((move, drawn))
     for e in sorted(edges) + [b for _, b in spans]:
         if 0 < e < end and all(abs(e - t) >= 1 for t in exact):
             exact.append(e)
