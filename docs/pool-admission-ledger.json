@@ -17,7 +17,8 @@
 			"file": "CLAUDE.md",
 			"headline": "A `note` carries the founder's intent, not the picture's contents.",
 			"claim": "A session drafts a `note` describing what the picture shows, or invents the founder's reason for saving it, instead of quoting his intent or saying none was found.",
-			"route": "no-trigger"
+			"route": "trigger",
+			"ticket": 593
 		},
 		{
 			"file": "CLAUDE.md",
