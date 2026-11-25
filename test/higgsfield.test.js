@@ -7,6 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const { after, test } = require("node:test");
 const { runInProcessAsync } = require("./core-run-in-process.js");
 
@@ -278,6 +279,146 @@ test("a request that completes with no image is counted as failed", async () => 
   const api = fakeApi({ statuses: ["completed"], images: [] });
   assert.equal(await render([job(dir)], api.options()), 1);
   assert.equal(ledger(dir).length, 1);
+});
+
+test("a completed reply whose outputs are not objects with a URL is charged and counted failed, and the batch carries on (#559)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: [null] });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), 2);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.urls, entry.unreadable]),
+    [
+      ["r1/v1-dusk", "completed", 0.094, [], 1],
+      ["r1/v2-tide", "completed", 0.094, [], 1],
+    ],
+  );
+});
+
+test("a completed reply with one output unreadable saves the rest and is counted failed (#559)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: ["not-an-object", { url: CDN }] });
+  assert.equal(await render([job(dir)], api.options()), 1);
+  assert.deepEqual(fs.readFileSync(path.join(dir, "v1-dusk.png")), PNG);
+  assert.deepEqual(ledger(dir)[0].urls, [CDN]);
+});
+
+test("a completed reply whose images is one object rather than a list keeps its URL; one that is a string is unreadable (#559)", async () => {
+  const single = roundDir();
+  assert.equal(await render([job(single)], fakeApi({ statuses: ["completed"], images: { url: CDN } }).options()), 0);
+  assert.deepEqual(ledger(single)[0].urls, [CDN]);
+  const text = roundDir();
+  assert.equal(await render([job(text)], fakeApi({ statuses: ["completed"], images: CDN }).options()), 1);
+  assert.deepEqual([ledger(text)[0].urls, ledger(text)[0].unreadable], [[], 1]);
+});
+
+test("a job with an unreadable output whose download then fails is counted failed once (#559)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: [null, { url: CDN }], cdn: () => reply(500, "") });
+  assert.equal(await render([job(dir)], api.options()), 1);
+});
+
+function holdFirstPoll() {
+  let release;
+  let reached;
+  const polling = new Promise((resolve) => {
+    reached = resolve;
+  });
+  const sleep = () => {
+    if (release) return Promise.resolve();
+    reached();
+    return new Promise((resolve) => {
+      release = resolve;
+    });
+  };
+  return { sleep, polling, release: () => release() };
+}
+
+test("a second batch on a round whose batch is still running is refused, submitting nothing, and runs once it ends (#559)", async () => {
+  const dir = roundDir();
+  const held = holdFirstPoll();
+  const running = render([job(dir, "v1-dusk")], fakeApi().options({ sleep: held.sleep }));
+  await held.polling;
+
+  for (const stem of ["v1-dusk", "v2-tide"]) {
+    const second = fakeApi();
+    await assert.rejects(render([job(dir, stem)], second.options()), /r1 is held by another higgsfield\.js run \(process \d+, since .+\), so nothing was submitted; rerun once it ends, or delete .*higgsfield\.lock if process \d+ is no higgsfield\.js run$/);
+    assert.equal(second.calls.length, 0);
+  }
+
+  held.release();
+  assert.equal(await running, 0);
+  assert.equal(fs.existsSync(path.join(dir, "higgsfield.lock")), false);
+  const later = fakeApi();
+  assert.equal(await render([job(dir, "v2-tide")], later.options()), 0);
+  assert.equal(later.submissions().length, 1);
+});
+
+test("a batch refused at the ceiling leaves the round unlocked (#559)", async () => {
+  const dir = roundDir();
+  await assert.rejects(render([job(dir)], fakeApi().options({ ceiling: "0.05" })), /past its \$0\.050 ceiling/);
+  assert.equal(fs.existsSync(path.join(dir, "higgsfield.lock")), false);
+  assert.equal(await render([job(dir)], fakeApi().options()), 0);
+});
+
+test("a lock left by a run that ended, or one that cannot be read, is refused and left in place (#559)", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir);
+  const lockFile = path.join(dir, "higgsfield.lock");
+  const { pid } = spawnSync(process.execPath, ["-e", ""]);
+  const dead = JSON.stringify({ pid, at: "2026-01-01T00:00:00.000Z" });
+  for (const [content, why] of [
+    [dead, /r1 holds the lock of a higgsfield\.js run that ended without releasing it \(process \d+, since 2026-01-01T00:00:00\.000Z\), so nothing was submitted\. A job it submitted may be charged and missing from the ledger: check the Higgsfield console, then delete .*higgsfield\.lock/],
+    ["", /r1 holds a lock that cannot be read, .*higgsfield\.lock, so nothing was submitted; delete it once no higgsfield\.js run is working on the round/],
+  ]) {
+    fs.writeFileSync(lockFile, content);
+    const api = fakeApi();
+    await assert.rejects(render([job(dir)], api.options()), why);
+    assert.equal(api.calls.length, 0);
+    assert.equal(fs.readFileSync(lockFile, "utf8"), content);
+  }
+});
+
+test("one round reached by two spellings is held to its ceiling once, for the whole batch (#559)", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir);
+  const alias = path.join(path.dirname(dir), "alias");
+  fs.symlinkSync(path.dirname(dir), alias);
+  const api = fakeApi();
+  const twoSpellings = [job(dir, "v1-dusk"), job(path.join(alias, "r1"), "v2-tide")];
+  await assert.rejects(render(twoSpellings, api.options({ ceiling: "0.15" })), /past its \$0\.150 ceiling, so nothing was submitted/);
+  assert.equal(api.submissions().length, 0);
+  await assert.rejects(render([job(dir, "v1-dusk"), job(path.join(alias, "r1"), "v1-dusk")], api.options()), /r1\/v1-dusk appears twice in the batch/);
+});
+
+test("a round not yet made, reached by two spellings through a symlink to a folder not yet made, is one round (#559)", async () => {
+  const base = path.dirname(roundDir());
+  const alias = path.join(base, "alias");
+  fs.symlinkSync(path.join(base, "real"), alias);
+  const api = fakeApi();
+  const twoSpellings = [job(path.join(alias, "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v2-tide")];
+  await assert.rejects(render(twoSpellings, api.options({ ceiling: "0.15" })), /past its \$0\.150 ceiling, so nothing was submitted/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("a video answered as a list keeps its URL (#559)", async () => {
+  const dir = roundDir();
+  assert.equal(await render([job(dir)], fakeApi({ statuses: ["completed"], video: [{ url: CDN }] }).options()), 0);
+  assert.deepEqual(ledger(dir)[0].urls, [CDN]);
+});
+
+test("a lock that cannot be released is logged, and the batch's other locks and outcome stand (#559)", async () => {
+  const first = roundDir();
+  const second = roundDir();
+  const held = holdFirstPoll();
+  const lines = [];
+  const running = render([job(first, "v1-dusk"), job(second, "v1-dusk")], fakeApi().options({ sleep: held.sleep, log: (line) => lines.push(line) }));
+  await held.polling;
+  fs.rmSync(path.join(first, "higgsfield.lock"));
+  fs.mkdirSync(path.join(first, "higgsfield.lock"));
+  held.release();
+  assert.equal(await running, 0);
+  assert.equal(fs.existsSync(path.join(second, "higgsfield.lock")), false);
+  assert.ok(lines.some((line) => /^✗ could not release .*higgsfield\.lock: .*; delete it by hand$/.test(line)));
 });
 
 test("a network fault on submission is retried under the same idempotency key", async () => {
