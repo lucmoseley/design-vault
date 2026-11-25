@@ -127,7 +127,7 @@ def parse(text):
         if first.value != line.value:
             raise TableError(
                 f"{line.text!r}: {line.check} is already given a different value by "
-                f"{first.text!r}, and a check runs once, at one value"
+                f"{first.text!r}, and the table gives each check one value"
             )
     return lines
 
