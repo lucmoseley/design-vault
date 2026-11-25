@@ -18,12 +18,11 @@ after(() => fs.rmSync(dir, { recursive: true, force: true }));
 // A suite named as test/all.sh names a Python one, so the ps count reads it as a suite.
 // The pause, 1 s unless LANE_SLEEP says otherwise, is a guess: long enough that suites a run starts together still
 // overlap on a loaded machine; a 4th argument sets one suite's own. With LANE_KID set it first starts a child that sleeps
-// as long, as a suite starts a checker and a browser. A 5th argument holds that many MB, written, before the first note.
+// as long, as a suite starts a checker and a browser. A 5th argument holds that many MB, written, after the first note.
 const FAKE = path.join(dir, "lane.test.py");
 fs.writeFileSync(FAKE, `import os, subprocess, sys, time
 d, name, code = sys.argv[1], sys.argv[2], int(sys.argv[3])
 pause = float(sys.argv[4]) if len(sys.argv) > 4 else float(os.environ.get("LANE_SLEEP", "1"))
-held = b"\\x01" * (int(sys.argv[5]) * 1024 * 1024) if len(sys.argv) > 5 else b""
 run = os.path.join(d, "running")
 os.makedirs(run, exist_ok=True)
 open(os.path.join(run, name), "w").close()
@@ -31,6 +30,7 @@ def note():
     with open(os.path.join(d, "peaks"), "a") as fh:
         fh.write(f"{len(os.listdir(run))} {name}\\n")
 note()
+held = b"\\x01" * (int(sys.argv[5]) * 1024 * 1024) if len(sys.argv) > 5 else b""
 if os.environ.get("LANE_KID"):
     subprocess.Popen([sys.executable, "-c", "import sys, time; time.sleep(float(sys.argv[1]))", os.environ["LANE_SLEEP"], d])
 print(f"{name} one", flush=True)
@@ -294,7 +294,7 @@ EOF
       fs.mkdirSync(d);
       const wrap = path.join(d, "wrap.sh");
       fs.writeFileSync(wrap, '"$@"\n');
-      const suites = [`sh ${wrap} python3 ${FAKE} ${d} s1 0 3 300`, `python3 ${FAKE} ${d} s0 0 0.6`, `python3 ${FAKE} ${d} s2 0 0.1`];
+      const suites = [`sh ${wrap} python3 ${FAKE} ${d} s1 0 4 300`, `python3 ${FAKE} ${d} s0 0 1.5`, `python3 ${FAKE} ${d} s2 0 0.1`];
       const proc = await run(suites, { ...ladderHoldsAll(), VAULT_SUITE_LANES: "2", WFC_GATE_SEAT: gateSeatMarker({ pid: process.pid, chargeMb: 1100 }) });
       assert.equal(proc.status, 0, proc.stderr);
       const notes = fs.readFileSync(path.join(d, "peaks"), "utf8").trim().split("\n").map((l) => l.split(" "));
