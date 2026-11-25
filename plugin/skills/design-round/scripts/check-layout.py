@@ -175,6 +175,10 @@ PHONE_MAX = BANDS[0][2]
 # (developer.apple.com/forums/thread/735055, #252). Unmeasured here or on
 # iPadOS 26.
 HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)
+# The first screen a motion script renders at each band: check-flow.py's
+# desktop window, a 1920x1080 screen's (#252), over the desktop band, so a
+# critic's scrub or crop frames the motion as its contact sheet does (#548).
+MOTION_HEIGHTS = (*HEIGHTS[:2], flow.DESKTOP_SCREEN[1] - flow.DESKTOP_BARS)
 # A common phone's width and the commonest desktop's (StatCounter Sept 2026),
 # the widths the other checks render a page at.
 PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]

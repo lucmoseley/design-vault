@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 600 450">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1100" viewBox="0 0 600 550">
   <!-- look-renders.test.py's bare-SVG cases (#354): drawn-contacts.html's 1 CSS px gap, below the default viewport's
-       633 px, and a circle of radius 10 px for bends, right of a 1024 px viewport and below it, so each is shot only
+       945 px, and a circle of radius 10 px for bends, right of a 1024 px viewport and below it, so each is shot only
        once the viewport fits the SVG both ways. -->
-  <path id="left" fill="#c00" d="M5 405 H25 V445 H5 Z"/>
-  <g transform="translate(50 0)"><path fill="#00c" d="M-24.5 405 H-5 V445 H-24.5 Z"/></g>
-  <circle id="dot" fill="#000" cx="550" cy="425" r="5"/>
+  <path id="left" fill="#c00" d="M5 505 H25 V545 H5 Z"/>
+  <g transform="translate(50 0)"><path fill="#00c" d="M-24.5 505 H-5 V545 H-24.5 Z"/></g>
+  <circle id="dot" fill="#000" cx="550" cy="525" r="5"/>
 </svg>

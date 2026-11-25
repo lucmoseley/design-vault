@@ -55,15 +55,53 @@ def without(package, *args):
     )
 
 
+def script(name):
+    path = os.path.join(os.path.dirname(SCRIPT), name)
+    spec = importlib.util.spec_from_file_location(name.replace("-", "_")[:-3], path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 class Height(unittest.TestCase):
-    def test_the_default_height_is_check_layouts_first_screen_at_that_width(self):
-        for width, tall in ((375, 664), (800, 921), (1920, 633)):
-            at = look.parse(["measure", PAGE, "--at", "1,1", "--width", str(width)])
-            self.assertEqual(at.height, tall, width)
+    def test_a_zoom_or_measure_frames_check_layouts_first_screen_at_that_width(self):
+        for cmd in (
+            ["measure", PAGE, "--at", "1,1"],
+            ["zoom", PAGE, "--clip", "0,0,1,1", "--out", "x.png"],
+        ):
+            for width, tall in ((375, 664), (800, 921), (1920, 633)):
+                at = look.parse([*cmd, "--width", str(width)])
+                self.assertEqual(at.height, tall, (cmd[0], width))
 
     def test_with_no_width_the_commonest_desktop_and_its_first_screen_are_framed(self):
         at = look.parse(["measure", PAGE, "--at", "1,1"])
         self.assertEqual((at.width, at.height), (1920, 633))
+
+    def test_a_scrub_frames_the_motion_scripts_window(self):  # #548
+        for width, tall in ((375, 664), (800, 921), (1536, 945), (1920, 945)):
+            at = look.parse(["scrub", PAGE, "--out", "x", "--width", str(width)])
+            self.assertEqual(at.height, tall, width)
+
+    def test_scrub_and_look_renders_default_to_the_window_check_frames_and_the_contact_sheet_render(
+        self,
+    ):  # #548
+        with tempfile.TemporaryDirectory() as out:
+            _, frames = script("check-frames.py").parse(["hash", PAGE, "--out", out])
+            sheet = script("contact-sheet.py").parse([PAGE, "--out", out])
+            renders = script("look-renders.py")
+            shots = {
+                mode: renders.parse([mode, PAGE, "--out", out, *extra]).viewport_size
+                for mode, extra in (("contacts", ["--contact", "a=1,1"]), ("bends", []))
+            }
+        scrub = look.parse(["scrub", PAGE, "--out", "x"])
+        motion = {"width": scrub.width, "height": scrub.height}
+        self.assertEqual(motion, {"width": 1920, "height": 945})
+        self.assertEqual(motion, sheet.desktop)
+        self.assertEqual(motion, frames.viewport_size)
+        self.assertEqual(shots, {"contacts": motion, "bends": motion})
+        # The phone, too: a 390 px scrub or crop frames the contact sheet's phone.
+        phone = look.parse(["scrub", PAGE, "--out", "x", "--width", "390"])
+        self.assertEqual({"width": 390, "height": phone.height}, sheet.phone)
 
     def test_a_given_height_wins(self):
         self.assertEqual(
