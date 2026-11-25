@@ -308,9 +308,7 @@ class LateStart(unittest.TestCase):
 
 class Scripted(unittest.TestCase):
     """#546: motion no Web Animations API animation holds is answered
-    cannot-measure, naming what draws it, in every mode. The positive pairs,
-    builds of listed animations only measured as before: Hash's steady draft
-    and Last's mark alone."""
+    cannot-measure, naming what draws it, in every mode."""
 
     TRAILER = "\nCheck its frames by eye.\n"
 
@@ -351,7 +349,7 @@ class Scripted(unittest.TestCase):
     ):
         self.refused(
             hash_page(os.path.join(FIXTURES, "seeked.html")),
-            "holds 1 paused animation(s) that a script seeks by hand (div#box)",
+            "holds 1 animation(s) it paused itself (div#box), which a seek would move as if playing",
         )
 
     def test_a_frame_loop_build_ending_on_its_asset_cannot_be_checked_beside_listed_animations_unlike_the_mark_alone(
