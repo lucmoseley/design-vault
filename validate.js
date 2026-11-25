@@ -139,6 +139,9 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
   for (const [key, project] of Object.entries(projects)) {
     if (!Array.isArray(project?.groups))
       fault("group-list", `projects.${key}.groups is missing or not a list — a project with no group carries []`);
+    // The project's rules file, as design-project §4 registers it and ledger-upkeep.js reads it (#554).
+    if (!isRepoMarkdown(project?.rules))
+      fault("project-rules", `projects.${key}.rules ${JSON.stringify(project?.rules)} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
     // The project's gate file, optional, in the form `rules` takes, where gate.js reads it (#154, #159).
     if (project?.gate !== undefined && !isRepoMarkdown(project.gate))
       fault("project-gate", `projects.${key}.gate ${JSON.stringify(project.gate)} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
