@@ -65,8 +65,8 @@ const filesUnder = (dir) => fs.readdirSync(path.join(ROOT, dir), { recursive: tr
 
 /**
  * Every path `entries` read, following each code file they name in turn. A directory stands for all under it, and the
- * code files under it are followed for what they name, but are not themselves named, so a script there that no suite
- * names still runs every suite. A directory named by a lone bare word is not followed (#382).
+ * code files under it are followed for what they name without being named themselves. A directory named by a lone bare
+ * word is not followed (#382).
  */
 function reads(entries) {
   const seen = new Set(entries);
