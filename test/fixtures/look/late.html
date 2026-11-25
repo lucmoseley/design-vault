@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #ffffff; }
+div { position: absolute; left: 0; width: 40px; height: 40px; background: #000000; }
+#a { top: 40px; }
+#b { top: 120px; }
+</style></head>
+<body>
+<div id="a"></div>
+<div id="b"></div>
+<script>
+const move = (id) => document.getElementById(id).animate(
+  [{ transform: "none" }, { transform: "translateX(1000px)" }], { duration: 2000, fill: "both" });
+move("a").ready.then(() => setTimeout(() => move("b"), 800));
+</script>
+</body></html>
