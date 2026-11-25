@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Renders brand-art and video candidates through Higgsfield's pay-per-request
- * API (design-vault#18, design-vault#62).
+ * API.
  *
  * Usage:
  *   node higgsfield.js [--estimate] --out <r<n>/v<n>-<name>> --model <endpoint id> --prompt <text>
@@ -16,11 +16,10 @@
  * `--estimate` prices the jobs and stops.
  *
  * Some models, among them FLUX.2, GPT Image 2.5 and Seedance 2.0 and 2.5,
- * estimate as a price rule in words with no usd figure (design-vault#49). Such
- * a job runs only with a `max_usd`: the most it can cost, worked out from the
- * rule by whoever writes the job. The ceiling binds on that figure and the
- * ledger records it, since the API reports no actual charge; the console shows
- * what was taken.
+ * estimate as a price rule in words with no usd figure. Such a job runs only
+ * with a `max_usd`: the most it can cost, worked out from the rule by whoever
+ * writes the job. The ceiling binds on that figure and the ledger records it,
+ * since the API reports no actual charge; the console shows what was taken.
  *
  * Environment, read from `~/.higgsfield.env` (`export NAME=value` lines, chmod 600)
  * wherever the process environment lacks it:
@@ -43,10 +42,10 @@
  *   5. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
  *
  * A submission refused 403 means the balance ran out: the batch stops there,
- * naming the jobs that ran, since the API has no balance to read beforehand
- * (design-vault#61). A submission that ends on a network fault, a 5xx, an
- * answer with no request_id, or a refusal answering a retry may have reached
- * Higgsfield: the batch stops there too, with that job recorded at its estimate.
+ * naming the jobs that ran, since the API has no balance to read beforehand.
+ * A submission that ends on a network fault, a 5xx, an answer with no
+ * request_id, or a refusal answering a retry may have reached Higgsfield: the
+ * batch stops there too, with that job recorded at its estimate.
  *
  * A failed, moderated or cancelled request, or a submission refused at its
  * first try, is not charged, so its outcome is recorded at $0. One that
