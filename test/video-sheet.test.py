@@ -1,5 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/video-sheet.py: python3 test/video-sheet.test.py"""
-
 import importlib.util
 import json
 import os
@@ -20,13 +18,12 @@ spec = importlib.util.spec_from_file_location("video_sheet", SCRIPT)
 sheet = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sheet)
 
-# The clip: 30 frames a second for 2 s, frame n's red 4n, a hard cut at frame 30 (1.00 s).
 FPS, FRAMES, CUT = 30, 60, 30
 RED_STEP = 4
-RED_SLACK = (
-    1  # guess, #408: PNG frames are lossless, so a tile's resample alone moves red
-)
-TIMEOUT_S = 120  # guess, #408: one run takes seconds here
+RED_SLACK = 1  # guess, #408
+TIMEOUT_S = 120  # guess, #408
+AROUND_FRAMES = round(0.2 * FPS)
+KEEP_RATE = 25
 
 
 def make_clip(path):
@@ -56,7 +53,7 @@ def run(*args):
 
 
 TEN_A_SECOND = set(range(0, FRAMES, FPS // 10))
-AROUND_CUT = set(range(CUT - 6, CUT + 7))
+AROUND_CUT = set(range(CUT - AROUND_FRAMES, CUT + AROUND_FRAMES + 1))
 KEPT = sorted(TEN_A_SECOND | AROUND_CUT | {FRAMES - 1})
 PER_SHEET = 10
 
@@ -164,9 +161,10 @@ class Refusals(unittest.TestCase):
             make_clip(clip)
             blocker = os.path.join(d, "file")
             open(blocker, "w").close()
-            proc = run(clip, "--out", os.path.join(blocker, "out"))
+            out = os.path.join(blocker, "out")
+            proc = run(clip, "--out", out)
         self.assertEqual(proc.returncode, 5, proc.stdout + proc.stderr)
-        self.assertIn("cannot write the sheets under", proc.stderr)
+        self.assertIn(f"cannot write the sheets under {out}", proc.stderr)
 
 
 class Scores(unittest.TestCase):
@@ -179,11 +177,11 @@ class Scores(unittest.TestCase):
 
 class Keep(unittest.TestCase):
     def test_it_keeps_the_first_frame_at_or_after_each_step(self):
-        times = [n / 25 for n in range(10)]
+        times = [n / KEEP_RATE for n in range(10)]
         self.assertEqual(sheet.keep(times, [], 10, 0.2), [0, 3, 5, 8, 9])
 
     def test_it_keeps_every_frame_within_around_of_a_cut(self):
-        times = [n / 25 for n in range(30)]
+        times = [n / KEEP_RATE for n in range(30)]
         self.assertEqual(
             sheet.keep(times, [20], 1, 0.08), [0, 18, 19, 20, 21, 22, 25, 29]
         )

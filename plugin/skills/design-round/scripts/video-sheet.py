@@ -49,8 +49,8 @@ GAP = PAD = 16  # px; guess, #408
 COLUMNS = 5  # guess, #408
 LABEL = 16  # px; guess, #408
 LABEL_GAP = 4  # px; guess, #408
-CAPTION = LABEL + 3 * LABEL_GAP
-EPS = 1e-6  # s; guess, #408: float rounding on a step's time
+CAPTION = LABEL_GAP + LABEL + 2 * LABEL_GAP  # one gap above the label, two below
+EPS = 1e-6  # s; guess, #408
 
 
 class ClipError(Exception):
@@ -82,8 +82,8 @@ def decode(path, each):
 
 
 def scores(diffs):
-    # libavfilter/vf_scdet.c: min(MAFD, |MAFD - previous MAFD|) within 0 to 100;
-    # the first frame scores 0 and the previous MAFD starts at 0.
+    # https://github.com/FFmpeg/FFmpeg/blob/master/libavfilter/vf_scdet.c: MAFD is the
+    # mean difference x 100 / 2^bitdepth; score min(MAFD, |MAFD - previous MAFD|), 0 to 100.
     out, previous = [], 0.0
     for mafd in diffs:
         if mafd is None:
