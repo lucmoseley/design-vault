@@ -244,13 +244,27 @@ class Jolts(unittest.TestCase):
         self.assertEqual([round(j["px"]) for j in r["jumps"]], [36])
 
     def test_a_delay_ending_mid_frame_is_drawn_in_its_starts_phase(self):
-        # A loaded machine starts one 8.4 ms off the sampled frames and its
-        # delay ends 25 ms later, so its frames fall at 8.4 + 16.7 k and the
-        # first after the delay carries 8.3 ms of the move, not 16.7 (#411).
-        times = flow.sample_times(800, [8.4, 33.4, 483.4], 60, [(8.4, 33.4)])
-        self.assertAlmostEqual(times[times.index(33.4) + 1], 8.4 + 2 * STEP)
-        r = flow.analyse(sample((33.4, 483.4, linear), until=800, times=times))
-        self.assertEqual(r["jumps"], [])
+        # #411
+        delay = 25
+        for start in (k / 2 for k in range(34)):
+            with self.subTest(start=start):
+                moves_at = start + delay
+                times = flow.sample_times(
+                    800, [start, moves_at, moves_at + 450], 60, [(start, moves_at)]
+                )
+                drawn = times[times.index(moves_at) + 1]
+                self.assertAlmostEqual(drawn, start + 2 * STEP)
+                r = flow.analyse(
+                    sample((moves_at, moves_at + 450, linear), until=800, times=times)
+                )
+                self.assertEqual(r["jumps"], [])
+
+    def test_a_delayed_move_off_the_sampled_frames_still_jumps(self):
+        start, moves_at = 8.4, 33.4
+        times = flow.sample_times(800, [start, moves_at], 60, [(start, moves_at)])
+        move = (moves_at, moves_at + 400, lambda p: 1 - (1 - p) ** 3)
+        r = flow.analyse(sample(move, until=800, times=times))
+        self.assertEqual([round(j["px"]) for j in r["jumps"]], [18])
 
     def test_a_delay_ending_within_1_ms_of_its_frame_has_a_whole_first_frame(self):
         times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
