@@ -13,6 +13,7 @@ const { inspect } = require("util");
 
 const API = "https://api.higgsfield.ai";
 const LEDGER = "higgsfield-spend.jsonl";
+const LOCK = "higgsfield.lock";
 const ENV_FILE = path.join(os.homedir(), ".higgsfield.env");
 const SETTINGS = ["HIGGSFIELD_API_KEY", "HIGGSFIELD_ROUND_CEILING_USD"];
 const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
@@ -111,6 +112,63 @@ function spentIn(roundDir) {
 function record(job, line) {
   fs.mkdirSync(job.roundDir, { recursive: true });
   fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
+}
+
+function roundKey(roundDir) {
+  let existing = roundDir;
+  while (!fs.existsSync(existing)) existing = path.dirname(existing);
+  const { dev, ino } = fs.statSync(existing);
+  return `${dev}:${ino}/${path.relative(existing, roundDir)}`;
+}
+
+const asList = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
+
+function isHolderAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
+}
+
+// #559
+function lock(roundDir) {
+  const file = path.join(roundDir, LOCK);
+  const mine = JSON.stringify({ pid: process.pid, token: crypto.randomUUID(), at: new Date().toISOString() });
+  try {
+    fs.writeFileSync(file, mine, { flag: "wx" });
+    return { file, mine };
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  let holder;
+  try {
+    holder = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    holder = undefined;
+  }
+  const round = path.basename(roundDir);
+  if (!Number.isInteger(holder?.pid)) {
+    throw new Error(`${round} holds a lock that cannot be read, ${file}, so nothing was submitted; delete it once no higgsfield.js run is working on the round`);
+  }
+  if (isHolderAlive(holder.pid)) {
+    throw new Error(`${round} is held by another higgsfield.js run (process ${holder.pid}, since ${holder.at}), so nothing was submitted; rerun once it ends, or delete ${file} if process ${holder.pid} is no higgsfield.js run`);
+  }
+  throw new Error(
+    `${round} holds the lock of a higgsfield.js run that ended without releasing it (process ${holder.pid}, since ${holder.at}), so nothing was submitted. A job it submitted may be charged and missing from the ledger: check the Higgsfield console, then delete ${file}`,
+  );
+}
+
+// #559
+function unlockAll(held, log) {
+  for (const one of held) {
+    try {
+      if (fs.readFileSync(one.file, "utf8") === one.mine) fs.rmSync(one.file);
+    } catch (error) {
+      if (error.code !== "ENOENT") log(`✗ could not release ${one.file}: ${error.message}; delete it by hand`);
+    }
+  }
 }
 
 // The key goes to api.higgsfield.ai alone: every URL this sends it to is built from API.
@@ -230,7 +288,7 @@ async function save(ctx, job, outputs) {
 
 /**
  * Prices the jobs, holds them to the round ceiling, then renders them.
- * Returns how many jobs did not end in a saved file.
+ * Returns how many jobs it logged as failed (✗).
  */
 async function render(jobs, options = {}) {
   const log = options.log ?? console.log;
@@ -246,6 +304,38 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
+  if (!options.estimateOnly) {
+    // #559
+    for (const job of checked) {
+      try {
+        fs.mkdirSync(job.roundDir, { recursive: true });
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    }
+    for (const job of checked) fs.mkdirSync(job.roundDir, { recursive: true });
+  }
+  const byKey = new Map();
+  for (const job of checked) {
+    const key = roundKey(job.roundDir);
+    if (!byKey.has(key)) byKey.set(key, job.roundDir);
+    job.roundDir = byKey.get(key);
+    job.round = path.basename(job.roundDir);
+    job.name = `${job.round}/${job.stem}`;
+  }
+  const roundDirs = [...byKey.values()];
+
+  // #559
+  const held = [];
+  try {
+    if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
+    return await runBatch(ctx, checked, roundDirs, ceiling, options, log);
+  } finally {
+    unlockAll(held, log);
+  }
+}
+
+async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
   const outs = new Set();
   for (const job of checked) {
     const out = path.join(job.roundDir, job.stem);
@@ -253,7 +343,6 @@ async function render(jobs, options = {}) {
     outs.add(out);
     if (alreadyRendered(job)) throw new Error(`${job.name} is already rendered; give the candidate a new v<n>`);
   }
-  const roundDirs = [...new Set(checked.map((job) => job.roundDir))];
 
   const priced = [];
   for (const job of checked) priced.push({ ...job, price: await estimate(ctx, job) });
@@ -323,22 +412,25 @@ async function render(jobs, options = {}) {
       continue;
     }
     // An image model answers `images: [...]`, a video model `video: { url }`.
-    const outputs = [...(Array.isArray(state.images) ? state.images : []), ...(state.video?.url ? [state.video] : [])];
+    const listed = [...asList(state.images), ...asList(state.video)];
+    const outputs = listed.filter((output) => typeof output?.url === "string" && output.url !== "");
+    const unreadable = listed.length - outputs.length;
     // Recorded before the download: the charge stands even if the download fails,
     // and the ledger then keeps the output's URL, live for at least seven days.
-    record(job, { ...entry, status: "completed", urls: outputs.map((output) => output.url) });
-    if (!outputs.length) {
-      log(`✗ ${name}: completed with no image or video`);
-      failed++;
-      continue;
+    record(job, { ...entry, status: "completed", urls: outputs.map((output) => output.url), ...(unreadable ? { unreadable } : {}) });
+    let succeeded = outputs.length > 0 && !unreadable;
+    if (unreadable) log(`✗ ${name}: charged, but ${unreadable} of its ${listed.length} outputs carried no URL`);
+    else if (!outputs.length) log(`✗ ${name}: completed with no image or video`);
+    if (outputs.length) {
+      try {
+        const files = await save(ctx, job, outputs);
+        log(`saved ${files.join(", ")}  cost ${priceText(job.price)}`);
+      } catch (error) {
+        log(`✗ ${name}: charged, but not saved: ${error.message}. The ledger keeps its URL`);
+        succeeded = false;
+      }
     }
-    try {
-      const files = await save(ctx, job, outputs);
-      log(`saved ${files.join(", ")}  cost ${priceText(job.price)}`);
-    } catch (error) {
-      log(`✗ ${name}: charged, but not saved: ${error.message}. The ledger keeps its URL`);
-      failed++;
-    }
+    if (!succeeded) failed++;
   }
   for (const roundDir of roundDirs) {
     log(`${path.basename(roundDir)} has spent ${dollars(spentIn(roundDir))} of ${dollars(ceiling)}`);
