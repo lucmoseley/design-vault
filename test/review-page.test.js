@@ -214,7 +214,8 @@ test("a figure for the whole set lets its cards go without a picture of their ow
 });
 
 test("an address on another host with no scheme is not a file beside the page (#554)", () => {
-  for (const src of ["//evil.example/x.png", "\\\\evil.example/x.png", "/\\evil.example/x.png", "\\/evil.example/x.png"]) {
+  for (const src of ["//evil.example/x.png", "\\\\evil.example/x.png", "/\\evil.example/x.png", "\\/evil.example/x.png",
+    " //evil.example/x.png", "\t//evil.example/x.png", "/\t/evil.example/x.png", "/\n/evil.example/x.png", " javascript:alert(1)", "java\tscript:alert(1)"]) {
     assert.match(R.checkItems({ figure: src, items: [{ id: "a", name: "A" }] }).problems.join("\n"), /"figure" must be a file beside/, src);
     assert.match(R.checkItems({ items: [{ id: "a", name: "A", image: src }] }).problems.join("\n"), /\(a\): "image" must be a file beside/, src);
   }

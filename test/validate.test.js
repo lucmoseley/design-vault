@@ -159,7 +159,7 @@ test("a project's gate file written as <path> in <owner>/<repo> passes", () => {
   assert.equal(result.status, 0, result.stderr);
 });
 
-const badRepoMarkdown = [
+const BAD_REPO_MARKDOWN = [
   null,
   42,
   "",
@@ -173,8 +173,7 @@ const badRepoMarkdown = [
   "C:/fit-gate.md in lucmoseley/mantahostels",
   "docs/brand/fit-gate.md in ../..",
 ];
-// rules is required (design-project §4), so leaving it out is refused too; gate is optional.
-for (const [field, values] of [["gate", badRepoMarkdown], ["rules", [undefined, ...badRepoMarkdown]]])
+for (const [field, values] of [["gate", BAD_REPO_MARKDOWN], ["rules", [undefined, ...BAD_REPO_MARKDOWN]]])
   for (const value of values)
     test(`a project ${field} of ${JSON.stringify(value)} is refused as one project-${field} fault naming projects.manta.${field}`, () => {
       const result = runMutated((gallery) => {
