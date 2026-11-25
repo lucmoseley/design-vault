@@ -27,9 +27,10 @@
 			"description": "The design round's Higgsfield client, which spends real money on the founder's pay-per-request account and holds its API key.",
 			"globs": [
 				"plugin/skills/design-round/scripts/higgsfield.js",
-				"plugin/skills/design-round/scripts/higgsfield-client.js"
+				"plugin/skills/design-round/scripts/higgsfield-client.js",
+				"plugin/skills/design-round/scripts/higgsfield-api.js"
 			],
-			"focus": "the round ceiling and max_usd bind before any job is submitted; a charged job is never lost; the API key is never printed, logged or written to the ledger",
+			"focus": "the round ceiling and max_usd bind before any job is submitted; a charged job is never lost; the API key is never printed, logged or written to the ledger, and is sent only to api.higgsfield.ai",
 			"examples": [
 				"#62: a finished video was charged, then lost, because the script never read video.url"
 			],
