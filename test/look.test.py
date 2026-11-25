@@ -24,8 +24,14 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look.py"
 )
+CHECK_FRAMES = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-frames.py"
+)
 CONTACT_SHEET = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "contact-sheet.py"
+)
+LOOK_RENDERS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "look-renders.py"
 )
 PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
 STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
@@ -92,13 +98,13 @@ class Height(unittest.TestCase):
         self,
     ):  # #548
         with tempfile.TemporaryDirectory() as out:
-            _, frames = look.siblings.load(look.HERE, "check-frames.py").parse(
+            _, frames = look.siblings.load(look.HERE, CHECK_FRAMES).parse(
                 ["hash", PAGE, "--out", out]
             )
             sheet = look.siblings.load(look.HERE, CONTACT_SHEET).parse(
                 [PAGE, "--out", out]
             )
-            renders = look.siblings.load(look.HERE, "look-renders.py")
+            renders = look.siblings.load(look.HERE, LOOK_RENDERS)
             shots = {
                 mode: renders.parse([mode, PAGE, "--out", out, *extra]).viewport_size
                 for mode, extra in (("contacts", ["--contact", "a=1,1"]), ("bends", []))
