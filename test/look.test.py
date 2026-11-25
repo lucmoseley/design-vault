@@ -8,6 +8,7 @@ pixels and it settles on a wrong number.
 
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -24,6 +25,9 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look.py"
 )
 PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
+STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
+LATE = os.path.join(HERE, "fixtures", "look", "late.html")
+STILL = os.path.join(HERE, "fixtures", "look", "still.html")
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 spec = importlib.util.spec_from_file_location("look", SCRIPT)
 look = importlib.util.module_from_spec(spec)
@@ -182,6 +186,59 @@ class Page(unittest.TestCase):
             # Half of a linear fade, give or take the rounding of an 8-bit grey.
             self.assertAlmostEqual(int(grey[1]), 128, delta=3)
             self.assertEqual(grey[2], 0)
+
+
+def first_dark_x(png, row) -> int | None:
+    dark = np.flatnonzero(np.asarray(Image.open(png).convert("L"))[row] < 128)
+    return int(dark[0]) if dark.size else None
+
+
+# The rows through #a and #b: each box's top plus half its 40 px height.
+ROW_A, ROW_B = 60, 140
+# 100 ms of staggered.html's half-px-a-ms move, a guess at a timer's lateness, #547.
+STAGGER_PX = 50
+
+
+def timer_ms(fixture):
+    with open(fixture, encoding="utf8") as fh:
+        return int(re.search(r"setTimeout\(.*, (\d+)\)", fh.read()).group(1))
+
+
+class Staggered(unittest.TestCase):  # #547
+    def test_the_fixtures_timers_sit_either_side_of_quiet_ms_and_inside_twice_it(self):
+        quiet = look.frames.QUIET_MS
+        self.assertLess(timer_ms(STAGGERED), quiet)
+        self.assertLess(quiet, timer_ms(LATE))
+        self.assertLess(timer_ms(LATE), 2 * quiet)
+
+    def test_a_move_a_timer_starts_sits_at_its_own_time_since_load(self):
+        with tempfile.TemporaryDirectory() as d:
+            proc = run(
+                "scrub", STAGGERED, "--out", d, "--step", "200", "--until", "1000"
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+            def edge(t, row):
+                return first_dark_x(os.path.join(d, f"t{t:05d}.png"), row)
+
+            self.assertEqual((edge(200, ROW_A), edge(1000, ROW_A)), (100, 500))
+            self.assertEqual(edge(200, ROW_B), 0)
+            self.assertAlmostEqual(edge(1000, ROW_B), 350, delta=STAGGER_PX)
+
+    def test_a_move_started_after_the_timeline_was_read_is_refused_unwritten(self):
+        with tempfile.TemporaryDirectory() as d:
+            Image.new("RGB", (1, 1)).save(os.path.join(d, "t00000.png"))
+            proc = run("scrub", LATE, "--out", d, "--step", "500", "--until", "1000")
+            self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+            self.assertIn("starts animations after its frames were read", proc.stdout)
+            self.assertIn("Scrub it by eye", proc.stdout)
+            self.assertEqual(os.listdir(d), [])
+
+    def test_a_page_with_no_motion_is_named_still(self):
+        with tempfile.TemporaryDirectory() as d:
+            proc = run("scrub", STILL, "--out", d, "--step", "500", "--until", "500")
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertIn("is read as still", proc.stdout)
 
 
 class Pixels(unittest.TestCase):
