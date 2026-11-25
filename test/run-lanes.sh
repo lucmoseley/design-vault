@@ -4,14 +4,22 @@
 # failing test files on stderr, one `FAIL <path>` line each, the shape workflow-core's lander reads (#436): those the
 # suite wrote, one a line, to the file VAULT_FAILED_FILES names, else the one `.test.` file its command names. Any
 # other red is printed `RED  <suite>`.
-# A second or third suite starts only while the machine runs fewer than 3 suites, counted from `ps` (this run's
-# own included), and MemAvailable clears that count's rung: core docs/environment.md §6's ceiling and ladder, the
-# figures guard-suite-concurrency.sh holds. One suite may always run.
+# Under a gate seat (#434) — WFC_GATE_SEAT names workflow-core's queue marker for it, the marker parses with a pid
+# and a chargeMb, and that pid is this script's ancestor — the seat has already reserved the machine for the whole
+# run: the first suite starts at once, and a second or third only while this run's lanes' PSS, with every process
+# under them, plus the ladder's rise from one suite to that many (900 MB to a second, 1,550 MB to a third) stays
+# within chargeMb. No `ps` count or MemAvailable is read.
+# Otherwise every suite, the first included, starts only while the machine runs fewer than 3 suites, counted from
+# `ps` (this run's own included), and MemAvailable clears that count's rung: core docs/environment.md §6's ceiling
+# and ladder, the figures guard-suite-concurrency.sh holds. A first suite short of its rung polls each second, and the
+# run is refused after VAULT_LANE_WAIT_S seconds (600 by default); one whose ps or memory reading will not read runs.
+# Either way a second or third suite also needs that rise free under this run's memory cgroup limit: its memory.max
+# less its working set (memory.current less inactive_file), the bound a session's scope sets.
 # The suites start longest first, by the seconds each last took green, kept one file a suite in the directory
 # VAULT_SUITE_TIMES names; one with none kept starts ahead of them all, and ties keep the order given. So the last
 # suite to end is a short one wherever a second lane opens (#457).
 # VAULT_SUITE_LANES caps this run's own lanes (1 runs one at a time). VAULT_MEMINFO and VAULT_PS stand in for
-# /proc/meminfo and ps in test/run-lanes.test.js.
+# /proc/meminfo and ps in test/run-lanes.test.js, and VAULT_CGROUP for this run's cgroup directory.
 # VAULT_SUITE_BUDGET, in seconds, refuses the run before any suite starts where the kept seconds, laid longest first
 # on the lanes the machine would open now, end past it (#473). A suite with none kept counts as 0 s; lanes that open
 # later than the start can still make a refused run fit.
@@ -22,8 +30,10 @@ max=${VAULT_SUITE_LANES:-$ceiling}
 [[ $max =~ ^[1-9][0-9]*$ ]] || { echo "test/run-lanes.sh: VAULT_SUITE_LANES wants 1 or more — got '$max'" >&2 && exit 2; }
 meminfo=${VAULT_MEMINFO:-/proc/meminfo}
 ps_bin=${VAULT_PS:-ps}
-# MemAvailable, in MB, wanted resting before the machine's 1st, 2nd and 3rd concurrent suite. The 1st is never read.
+# MemAvailable, in MB, wanted resting before the machine's 1st, 2nd and 3rd concurrent suite.
 rungs=(0 2500 3400 4050)
+wait_s=${VAULT_LANE_WAIT_S:-600}
+[[ $wait_s =~ ^[0-9]+$ ]] || { echo "test/run-lanes.sh: VAULT_LANE_WAIT_S wants whole seconds — got '$wait_s'" >&2 && exit 2; }
 # A runner's own line, never a wrapper's: a shell or `timeout` before it is its parent, which has its own line.
 suite_line='^([^ ]*/)?(python3?( [^ ]+)* [^ ]*\.test\.py|node( [^ ]+)* --test|pytest|py\.test|python3? -m (pytest|unittest)|(node( [^ ]+)* )?[^ ]*[.]bin/vitest)( |$)'
 
@@ -48,11 +58,80 @@ fits() { # fits <count>: whether the machine may run that many suites at once, b
   (($1 <= ceiling)) && mb="$(available_mb)" && ((mb >= rungs[$1]))
 }
 
-opens() { # whether one more suite may start now; where ps or the memory reading fails, no second one does
-  local mine=${#lane[@]} n
-  ((mine == 0)) && return 0
-  ((mine < max)) && n="$(others)" || return 1
-  fits $((n + mine + 1))
+rise() { # rise <lanes>: what the ladder adds, from one suite to that many
+  echo $((rungs[$1] - rungs[1]))
+}
+
+ancestor() { # ancestor <pid>: whether that process is this script or one above it
+  local p=$$ stat
+  while ((p > 1)); do
+    ((p == $1)) && return 0
+    read -r stat 2>/dev/null <"/proc/$p/stat" || return 1
+    # The fields after the command name, whose own parentheses or spaces would shift them.
+    stat=${stat##*) }
+    read -r _ p _ <<<"$stat"
+  done
+  return 1
+}
+
+seat_mb='' # the gate seat's charge, set only under a seat this script runs inside
+if [[ -n ${WFC_GATE_SEAT:-} ]] &&
+  seat="$(node -e 'const r = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+    if (!(Number.isInteger(r.pid) && r.pid > 1 && Number.isFinite(r.chargeMb) && r.chargeMb > 0)) process.exit(1);
+    console.log(r.pid, Math.floor(r.chargeMb));' "$WFC_GATE_SEAT" 2>/dev/null)" &&
+  read -r seat_pid seat_charge <<<"$seat" && ancestor "$seat_pid"; then
+  seat_mb=$seat_charge
+fi
+
+own_pss_mb() { # the PSS, in MB, of this run's lanes and every process under them
+  local f stat pid p kb=0 key val
+  local -A parent=() tree=()
+  for f in /proc/[0-9]*/stat; do
+    read -r stat 2>/dev/null <"$f" || continue
+    pid=${f#/proc/} pid=${pid%/stat} stat=${stat##*) }
+    read -r _ p _ <<<"$stat"
+    parent[$pid]=$p
+  done
+  for pid in "${!lane[@]}"; do tree[$pid]=1; done
+  local grew=1
+  while ((grew)); do
+    grew=0
+    for pid in "${!parent[@]}"; do
+      [[ -z ${tree[$pid]:-} && -n ${tree[${parent[$pid]}]:-} ]] && tree[$pid]=1 && grew=1
+    done
+  done
+  for pid in "${!tree[@]}"; do
+    while read -r key val _; do [[ $key == Pss: ]] && kb=$((kb + val)); done 2>/dev/null <"/proc/$pid/smaps_rollup"
+  done
+  echo $((kb / 1024))
+}
+
+scope_room_mb() { # what this run's memory cgroup has left under its limit, in MB; fails where it sets none
+  local dir=${VAULT_CGROUP:-} line max current key val inactive=''
+  if [[ -z $dir ]]; then
+    line="$(grep -m1 '^0::' /proc/self/cgroup 2>/dev/null)" || return 1
+    dir=/sys/fs/cgroup${line#0::}
+  fi
+  read -r max 2>/dev/null <"$dir/memory.max" && read -r current 2>/dev/null <"$dir/memory.current" || return 1
+  while read -r key val; do [[ $key == inactive_file ]] && inactive=$val; done 2>/dev/null <"$dir/memory.stat"
+  [[ $max =~ ^[0-9]+$ && $current =~ ^[0-9]+$ && $inactive =~ ^[0-9]+$ ]] || return 1
+  echo $(((max - current + inactive) / 1048576))
+}
+
+opens() { # whether one more suite may start now
+  local mine=${#lane[@]} n mb room own
+  ((mine < max && mine < ceiling)) || return 1
+  if ((mine)); then
+    room="$(scope_room_mb)" && ((room < $(rise $((mine + 1))))) && return 1
+  fi
+  if [[ -n $seat_mb ]]; then
+    ((mine == 0)) && return 0
+    own="$(own_pss_mb)" && ((own + $(rise $((mine + 1))) <= seat_mb))
+    return
+  fi
+  # Where ps or the memory reading fails, a first suite runs and no second one does.
+  if ! n="$(others)" || ! mb="$(available_mb)"; then ((mine == 0)) && return 0 || return 1; fi
+  ((n + mine + 1 <= ceiling && mb >= rungs[n + mine + 1]))
 }
 
 declare -A lane=() began=() log=()
@@ -136,6 +215,10 @@ if [[ -n $timings ]] && ((${#queue[@]} > 1)); then
 fi
 lanes_now() { # how many lanes opens() would grant at once, read before any suite of this run starts
   local n count=1
+  if [[ -n $seat_mb ]]; then
+    while ((count < max && count < ceiling && $(rise $((count + 1))) <= seat_mb)); do count=$((count + 1)); done
+    echo "$count" && return
+  fi
   n="$(others)" || { echo 1 && return; }
   while ((count < max)) && fits $((n + count + 1)); do count=$((count + 1)); done
   echo "$count"
@@ -171,8 +254,10 @@ suites run on the machine and more memory is free (#473)." >&2
   fi
 fi
 started=0
+held='' # when a first suite began waiting for its rung, in SECONDS
 while ((${#queue[@]} || ${#lane[@]})); do
   if ((${#queue[@]})) && opens; then
+    held=''
     started=$((started + 1))
     # shellcheck disable=SC2086 # a suite is a command line, split into its words
     (VAULT_FAILED_FILES=$logs/$started.failed VAULT_FILE_SECONDS=$logs/$started.seconds exec ${queue[0]}) >"$logs/$started" 2>&1 </dev/null &
@@ -180,6 +265,18 @@ while ((${#queue[@]} || ${#lane[@]})); do
     lane[$!]=${queue[0]}
     began[$!]=$EPOCHREALTIME
     queue=("${queue[@]:1}")
+    continue
+  fi
+  if ((!${#lane[@]})); then
+    if [[ -z $held ]]; then
+      held=$SECONDS
+      echo "test/run-lanes.sh: waiting up to $wait_s s for the machine to run fewer suites or free more memory (#434)."
+    elif ((SECONDS - held >= wait_s)); then
+      echo "test/run-lanes.sh: refused: after $wait_s s the machine still runs too many suites, or has too little \
+memory available, for one more (core docs/environment.md §6). Run it again once it frees (#434)." >&2
+      exit 1
+    fi
+    sleep 1
     continue
   fi
   wait -n -p ended "${!lane[@]}"

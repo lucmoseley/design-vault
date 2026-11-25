@@ -17,22 +17,24 @@ after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 // A suite named as test/all.sh names a Python one, so the ps count reads it as a suite.
 // The pause, 1 s unless LANE_SLEEP says otherwise, is a guess: long enough that suites a run starts together still
-// overlap on a loaded machine. With LANE_KID set it first starts a child that sleeps as long, as a suite starts a
-// checker and a browser.
+// overlap on a loaded machine; a 4th argument sets one suite's own. With LANE_KID set it first starts a child that sleeps
+// as long, as a suite starts a checker and a browser. A 5th argument holds that many MB, written, before the first note.
 const FAKE = path.join(dir, "lane.test.py");
 fs.writeFileSync(FAKE, `import os, subprocess, sys, time
 d, name, code = sys.argv[1], sys.argv[2], int(sys.argv[3])
+pause = float(sys.argv[4]) if len(sys.argv) > 4 else float(os.environ.get("LANE_SLEEP", "1"))
+held = b"\\x01" * (int(sys.argv[5]) * 1024 * 1024) if len(sys.argv) > 5 else b""
 run = os.path.join(d, "running")
 os.makedirs(run, exist_ok=True)
 open(os.path.join(run, name), "w").close()
 def note():
     with open(os.path.join(d, "peaks"), "a") as fh:
-        fh.write(f"{len(os.listdir(run))}\\n")
+        fh.write(f"{len(os.listdir(run))} {name}\\n")
 note()
 if os.environ.get("LANE_KID"):
     subprocess.Popen([sys.executable, "-c", "import sys, time; time.sleep(float(sys.argv[1]))", os.environ["LANE_SLEEP"], d])
 print(f"{name} one", flush=True)
-time.sleep(float(os.environ.get("LANE_SLEEP", "1")))
+time.sleep(pause)
 print(f"{name} two", flush=True)
 note()
 os.remove(os.path.join(run, name))
@@ -57,11 +59,15 @@ const AMPLE = 8000;
 // The file run-lanes.sh keeps a suite's seconds in under `times`, named by the POSIX cksum of its command line.
 const keptFile = (times, suite) => path.join(times, spawnSync("cksum", { input: suite, encoding: "utf8" }).stdout.split(" ")[0]);
 
+// No gate seat, though this test may run under one, and a cgroup directory setting no limit.
+const UNLIMITED = fs.mkdtempSync(path.join(dir, "cgroup-"));
+const UNSEATED = { WFC_GATE_SEAT: "", VAULT_CGROUP: UNLIMITED, VAULT_LANE_WAIT_S: "" };
+
 let runs = 0;
 // #370
 function run(args, env, { cwd } = {}) {
   return new Promise((resolve) => {
-    const full = { ...process.env, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", CI: "1", ...env };
+    const full = { ...process.env, ...UNSEATED, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", CI: "1", ...env };
     for (const key of Object.keys(full)) if (full[key] === undefined) delete full[key];
     const child = spawn("bash", [LANES, ...args], { cwd, env: full });
     const out = { stdout: "", stderr: "" };
@@ -88,8 +94,8 @@ async function lanes(n, { env = {}, red = [], psFor, own } = {}) {
   const suites = Array.from({ length: n }, (_, i) => `python3 ${fake(i)} ${d} s${i} ${red.includes(i) ? 1 : 0}`);
   const proc = await run(suites, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, ...env });
   assert.equal(proc.status, red.length ? 1 : 0, proc.stderr);
-  const peaks = fs.readFileSync(path.join(d, "peaks"), "utf8").trim().split("\n").map(Number);
-  return { proc, peak: Math.max(...peaks), suites };
+  const counts = fs.readFileSync(path.join(d, "peaks"), "utf8").trim().split("\n").map((l) => Number(l.split(" ")[0]));
+  return { proc, peak: Math.max(...counts), suites };
 }
 
 // Each case runs its own fake suites in a directory of its own, so the cases run at once.
@@ -152,11 +158,10 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     assert.match(proc.stderr, /VAULT_SUITE_LANES wants 1 or more — got '0'/);
   });
 
-  // Past the ceiling, one suite still runs.
+  const THREE = ["  11 python3 -m pytest", "  12 node --test", "  13 node /r/node_modules/.bin/vitest run"];
   for (const [others, lines, n, peak] of [
     ["one", ["  11 /usr/bin/python3 test/check-flow.test.py"], 3, 2],
     ["two", ["  11 python3 test/check-flow.test.py", "  12 /home/u/.nvm/bin/node --test"], 3, 1],
-    ["three", ["  11 python3 -m pytest", "  12 node --test", "  13 node /r/node_modules/.bin/vitest run"], 2, 1],
   ]) {
     test(`with ${others} suite(s) running elsewhere on the machine, ${peak} of this run's go at once`, async () => {
       assert.equal((await lanes(n, { env: { VAULT_PS: ps(others, lines) } })).peak, peak);
@@ -187,11 +192,135 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     assert.equal((await lanes(3, { psFor, env: { LANE_SLEEP: "1.5" } })).peak, 3);
   });
 
-  for (const [mb, peak] of [[3399, 1], [3400, 2], [4049, 2], [4050, 3]]) {
-    test(`at ${mb} MB available, ${peak} suite(s) run at once: a second waits for 3,400 MB and a third for 4,050 MB`, async () => {
+  for (const [mb, peak] of [[2500, 1], [3399, 1], [3400, 2], [4049, 2], [4050, 3]]) {
+    test(`at ${mb} MB available, ${peak} suite(s) run at once: a first waits for 2,500 MB, a second for 3,400 MB and a third for 4,050 MB`, async () => {
       assert.equal((await lanes(3, { env: { VAULT_MEMINFO: meminfo(mb) } })).peak, peak);
     });
   }
+
+  // Waiting out the bound is real time: VAULT_LANE_WAIT_S=0 refuses on the second poll, a second in.
+  for (const [why, env] of [
+    ["the machine already runs 3 suites", { VAULT_PS: ps("three", THREE) }],
+    ["MemAvailable is short of the first rung", { VAULT_MEMINFO: meminfo(2499) }],
+  ]) {
+    test(`where ${why}, the first suite waits for its rung too, and the run is refused at VAULT_LANE_WAIT_S`, async () => {
+      const d = path.join(dir, `held-${runs++}`);
+      fs.mkdirSync(d);
+      const proc = await run([`python3 ${FAKE} ${d} s0 0`], { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, ...env, VAULT_LANE_WAIT_S: "0" });
+      assert.equal(proc.status, 1, proc.stderr);
+      assert.equal(fs.existsSync(path.join(d, "peaks")), false, "a suite ran");
+      assert.match(proc.stdout, /waiting up to 0 s for the machine to run fewer suites or free more memory/);
+      assert.match(proc.stderr, /^test\/run-lanes\.sh: refused: after 0 s the machine still runs too many suites/);
+    });
+  }
+
+  test("a first suite held for its rung starts once it frees", async () => {
+    const d = path.join(dir, "freed");
+    fs.mkdirSync(d);
+    // A ps that reports 3 suites on its first two reads and none after.
+    const reads = path.join(d, "reads");
+    const freeing = ps("freeing", []);
+    fs.writeFileSync(freeing, `#!/bin/sh
+echo >>'${reads}'
+[ "$(wc -l <'${reads}')" -gt 2 ] && exit 0
+cat <<'EOF'
+${THREE.join("\n")}
+EOF
+`);
+    const proc = await run([`python3 ${FAKE} ${d} s0 0 0.1`], { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: freeing });
+    assert.equal(proc.status, 0, proc.stderr);
+    assert.ok(fs.existsSync(path.join(d, "peaks")), "the suite never ran");
+  });
+
+  test("an unparsable VAULT_LANE_WAIT_S runs nothing and exits 2", async () => {
+    const proc = await run(["true"], { VAULT_LANE_WAIT_S: "soon" });
+    assert.equal(proc.status, 2);
+    assert.match(proc.stderr, /VAULT_LANE_WAIT_S wants whole seconds — got 'soon'/);
+  });
+
+  // A cgroup directory whose limit leaves `roomMb` free: memory.max less memory.current plus inactive_file.
+  const cgroup = (name, roomMb) => {
+    const c = path.join(dir, `cgroup-${name}`);
+    fs.mkdirSync(c, { recursive: true });
+    const mib = 1024 * 1024;
+    fs.writeFileSync(path.join(c, "memory.max"), `${3584 * mib}\n`);
+    fs.writeFileSync(path.join(c, "memory.current"), `${(3584 - roomMb + 100) * mib}\n`);
+    fs.writeFileSync(path.join(c, "memory.stat"), `anon 1\ninactive_file ${100 * mib}\nactive_file 5\n`);
+    return c;
+  };
+  for (const [room, peak] of [[899, 1], [900, 2], [1549, 2], [1550, 3]]) {
+    test(`with ${room} MB left under this run's cgroup limit, ${peak} suite(s) run at once: a second needs 900 MB there and a third 1,550 MB`, async () => {
+      assert.equal((await lanes(3, { env: { VAULT_CGROUP: cgroup(`room-${room}`, room) } })).peak, peak);
+    });
+  }
+  // The suites' own memory is real, so their cgroup's room is read after each start: a fixed room stands for it.
+  test("a cgroup limit of max reads as no limit", async () => {
+    const c = cgroup("max", 0);
+    fs.writeFileSync(path.join(c, "memory.max"), "max\n");
+    assert.equal((await lanes(3, { env: { VAULT_CGROUP: c } })).peak, 3);
+  });
+
+  describe("under a gate seat (#434)", () => {
+    let seats = 0;
+    // workflow-core's queue marker for a gate seat, as queue-run.js --gate writes it.
+    const marker = (fields) => {
+      const file = path.join(dir, `seat-${seats++}.json`);
+      fs.writeFileSync(file, typeof fields === "string" ? fields
+        : JSON.stringify({ at: Date.now(), role: "gate", repo: "design-vault", session: null, command: "bash test/all.sh", ...fields }));
+      return file;
+    };
+    // A machine the ladder would hold every suite on.
+    const FULL = () => ({ VAULT_PS: ps("seat-full", THREE), VAULT_MEMINFO: meminfo(0), VAULT_LANE_WAIT_S: "0" });
+
+    test("a seat this run sits under sizes its lanes by its charge alone: no ps count or MemAvailable is read", async () => {
+      const env = { ...FULL(), WFC_GATE_SEAT: marker({ pid: process.pid, chargeMb: 3350 }) };
+      assert.equal((await lanes(3, { env })).peak, 3);
+    });
+
+    // A second lane needs the ladder's 900 MB rise free beside the lanes' own PSS, a third 1,550 MB.
+    for (const [chargeMb, peak] of [[899, 1], [1549, 2], [3350, 3]]) {
+      test(`a seat charged ${chargeMb} MB runs ${peak} suite(s) at once`, async () => {
+        const env = { ...FULL(), WFC_GATE_SEAT: marker({ pid: process.pid, chargeMb }) };
+        assert.equal((await lanes(3, { env })).peak, peak);
+      });
+    }
+
+    test("a lane's PSS, with every process under it, counts against the charge", async () => {
+      // s0 and s1 open at once, the second on the 900 MB rise of a 1,100 MB charge. Once s0 ends, s2 would need
+      // that rise again beside s1, whose child holds 300 MB, so it waits for s1.
+      const d = path.join(dir, "pss");
+      fs.mkdirSync(d);
+      const wrap = path.join(d, "wrap.sh");
+      fs.writeFileSync(wrap, '"$@"\n');
+      const suites = [`python3 ${FAKE} ${d} s0 0 0.6`, `sh ${wrap} python3 ${FAKE} ${d} s1 0 3 300`, `python3 ${FAKE} ${d} s2 0 0.1`];
+      const proc = await run(suites, { ...FULL(), VAULT_SUITE_LANES: "2", WFC_GATE_SEAT: marker({ pid: process.pid, chargeMb: 1100 }) });
+      assert.equal(proc.status, 0, proc.stderr);
+      const notes = fs.readFileSync(path.join(d, "peaks"), "utf8").trim().split("\n").map((l) => l.split(" "));
+      assert.ok(notes.some(([c, n]) => n === "s0" && c === "2"), "s0 and s1 never ran together");
+      assert.deepEqual(notes.filter(([, n]) => n === "s2").map(([c]) => c), ["1", "1"], "s2 ran beside s1's 300 MB");
+    });
+
+    for (const [why, file] of [
+      ["names a pid that is not this run's ancestor", () => marker({ pid: 2 ** 22 + 1, chargeMb: 3350 })],
+      ["does not parse", () => marker("{ not json")],
+      ["carries no chargeMb", () => marker({ pid: process.pid })],
+      ["names a file that is not there", () => path.join(dir, "no-seat.json")],
+    ]) {
+      test(`a seat marker that ${why} leaves the ladder in force`, async () => {
+        const d = path.join(dir, `unseated-${seats++}`);
+        fs.mkdirSync(d);
+        const proc = await run([`python3 ${FAKE} ${d} s0 0`], { ...FULL(), WFC_GATE_SEAT: file() });
+        assert.equal(proc.status, 1, proc.stderr);
+        assert.equal(fs.existsSync(path.join(d, "peaks")), false, "a suite ran past the ladder");
+      });
+    }
+
+    test("the budget counts the lanes the charge opens, not the machine's", async () => {
+      const proc = await underBudget(8, { ...FULL(), WFC_GATE_SEAT: marker({ pid: process.pid, chargeMb: 3350 }) });
+      assert.equal(proc.status, 0, proc.stderr);
+      assert.equal(proc.ran, true);
+    });
+  });
 
   test("where ps cannot be read, suites run one at a time", async () => {
     assert.equal((await lanes(2, { env: { VAULT_PS: "false" } })).peak, 1);
