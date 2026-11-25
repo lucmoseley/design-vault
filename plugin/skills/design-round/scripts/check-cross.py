@@ -41,7 +41,8 @@ where it reads one. Blank lines and lines starting with # are skipped.
                       or a search field)
   home-hub pages <= N on a site of N pages or fewer whose home page links
                       every other page, a page that links back to the home
-                      page passes the ways line however many ways it has
+                      page passes its own record's ways line however many
+                      ways it has; a record with no ways line is refused
   back                in a flow, Back from a step shows the step before at
                       its own URL with every value typed into it
   repeat              in a flow, a field whose autocomplete token an
@@ -123,6 +124,12 @@ def parse(text):
             raise TableError(
                 f"{line.text!r}: {line.check} is already given a different value by "
                 f"{first.text!r}, and the table gives each check one value"
+            )
+    ways = {line.id for line in lines if line.check == "ways"}
+    for line in lines:
+        if line.check == "home-hub" and line.id not in ways:
+            raise TableError(
+                f"{line.text!r}: home-hub relaxes its own record's ways line, and {line.id} has none"
             )
     return lines
 
@@ -289,14 +296,14 @@ def findings(table, pages, walks, *, phones, home):
     `walks` holds a Walk for each flow; `phones` is phone_urls()'s result, or
     None where the table has no phone line."""
     answers = rule_table.Answers(table, "page")
-    hub = next((line for line in table if line.check == "home-hub"), None)
+    hubs = {line.id: line for line in table if line.check == "home-hub"}
     for line in {(line.id, line.check): line for line in table}.values():
         if line.check == "phone" and phones is not None:
             _phone(answers, line, phones)
         elif line.check == "order":
             _order(answers, line, pages)
         elif line.check == "ways":
-            _ways(answers, line, hub, pages=pages, walks=walks, home=home)
+            _ways(answers, line, hubs.get(line.id), pages=pages, walks=walks, home=home)
         elif line.check == "back":
             for w in walks:
                 _back(answers, line, w)

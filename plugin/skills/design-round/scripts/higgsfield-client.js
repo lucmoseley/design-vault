@@ -33,6 +33,17 @@ class ApiError extends Error {
   }
 }
 
+class BatchStoppedError extends Error {
+  constructor(message, { stoppedAt, ran, notSubmitted, mayBeCharged, cause }) {
+    super(message, { cause });
+    this.name = "BatchStoppedError";
+    this.stoppedAt = stoppedAt;
+    this.ran = ran;
+    this.notSubmitted = notSubmitted;
+    this.mayBeCharged = mayBeCharged;
+  }
+}
+
 /** The image or video type by its first bytes; null for anything else. */
 function sniff(bytes) {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
@@ -131,6 +142,22 @@ function isHolderAlive(pid) {
   } catch (error) {
     return error.code === "EPERM";
   }
+}
+
+function tryMakeFolder(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return false;
+  }
+}
+
+// #574
+function makeRoundFolders(jobs) {
+  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir));
+  for (const job of waitingOnAnotherJobsFolder) fs.mkdirSync(job.roundDir, { recursive: true });
 }
 
 // #559
@@ -302,17 +329,7 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
-  if (!options.estimateOnly) {
-    // #559
-    for (const job of checked) {
-      try {
-        fs.mkdirSync(job.roundDir, { recursive: true });
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
-    }
-    for (const job of checked) fs.mkdirSync(job.roundDir, { recursive: true });
-  }
+  if (!options.estimateOnly) makeRoundFolders(checked);
   const byKey = new Map();
   for (const job of checked) {
     const key = roundKey(job.roundDir);
@@ -387,11 +404,11 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       if (error instanceof ApiError && !error.afterFault) {
         record(job, { ...entry, usd: 0, status: "refused", http_status: error.status, files: [] });
         const rest = priced.slice(index).map((other) => other.name);
-        throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
+        throw new BatchStoppedError(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { stoppedAt: name, ran, notSubmitted: rest, mayBeCharged: false, cause: error });
       }
       record(job, { ...entry, status: "unanswered", files: [] });
       const rest = priced.slice(index + 1).map((other) => other.name);
-      throw new Error(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { cause: error });
+      throw new BatchStoppedError(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { stoppedAt: name, ran, notSubmitted: rest, mayBeCharged: true, cause: error });
     }
     entry.request_id = accepted.request_id;
     log(`${name}: accepted as request ${accepted.request_id}`);
