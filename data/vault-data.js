@@ -2770,7 +2770,7 @@ window.VAULT_DATA = {
       ],
       "origin": "unattributed",
       "source": "Tracked in `docs/brand-assets/`, where it stays (lucmoseley/mantahostels#3170 decoupled the tracked path from the authorship claim). The founder confirmed on 6 Sep 2026 that he neither made nor commissioned it. No C2PA manifest and no recorded provenance (lucmoseley/mantahostels#3086 scanned all four PNGs); who made it is unknown and the founder does not need to know.",
-      "licence": "Rights unknown: ownership is not assumed where in doubt. It must not ship on a live surface without authorship being established.",
+      "licence": "Rights unknown. It must not ship on a live surface until authorship is established.",
       "added": "2026-09-06",
       "file": "rating-or-bkg-art.png",
       "image_recipe": "A manta ray banking across white watercolour paper, seen from above at an angle so its eye and a strip of cream underside show along the leading edge, a long whip tail rising to the top-right corner; inside the silhouette, large wine-red seaweed leaves running along the body's midline from head toward tail, fine rose-red branching fronds, small orange five-petal blossoms and umbel flower clusters across the wings, a plum wash flecked with white salt-like speckles along the wing edges; thin gaps of bare paper separating every element; no drawn outline, no background, no text.",

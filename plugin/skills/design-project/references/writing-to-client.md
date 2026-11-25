@@ -38,7 +38,7 @@ Use the words in <client>'s words for design faults above. Where the founder has
 
 ### 6. Length fits the question, not their message — Weak
 
-An open question takes as many points as are worth making, each with its reason, however short their message: the study behind matching their length measured no outcome (Kooti et al. 2015).
+An open question takes as many points as are worth making, each with its reason, however short their message (#108).
 
 ### 7. A string check does not show a draft sounds like the founder — Moderate
 
