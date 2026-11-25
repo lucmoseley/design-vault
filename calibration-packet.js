@@ -77,6 +77,10 @@ function planRounds(manifest, base, roundRows, corrections) {
   if (!Array.isArray(manifest.rounds) || manifest.rounds.length === 0) fault("manifest", "rounds is not a list of one or more rounds");
   for (const [index, round] of (Array.isArray(manifest.rounds) ? manifest.rounds : []).entries()) {
     const at = `round ${index + 1}`;
+    if (round === null || typeof round !== "object") {
+      fault("manifest", `${at}: is not a round object`);
+      continue;
+    }
     const tag = typeof round.tag === "string" ? round.tag.match(TAG) : null;
     if (!tag || Number(tag[2]) !== round.round) {
       fault("manifest", `${at}: tag ${JSON.stringify(round.tag)} is not rounds/<slug>-r<n> for round ${JSON.stringify(round.round)}`);
@@ -162,6 +166,7 @@ function main(argv) {
     options = parseArgs(argv);
     const manifestFile = path.resolve(options.manifest);
     manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+    if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest)) throw new Error(`${options.manifest} is not a manifest object`);
     base = path.dirname(manifestFile);
     const log = (option, vaultPath, gate) => readLog(path.resolve(options[option] ?? path.join(__dirname, vaultPath)), options[option] !== null, gate);
     roundRows = log("round-log", ROUND_LOG, { name: "the round log", check: roundLog.checkRoundLog });

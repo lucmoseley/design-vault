@@ -85,14 +85,14 @@ KEY_TEXT = 40
 # Records which elements the page gives a click listener, before its scripts run.
 LISTEN_JS = r"""
 (() => {
-  const TYPES = new Set(['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend']);
+  const TYPES = new Set(ACT_EVENTS_JSON);
   const add = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function (type, ...rest) {
     if (TYPES.has(type) && this instanceof Element) this.__partsMapClick = true;
     return add.call(this, type, ...rest);
   };
 })();
-"""
+""".replace("ACT_EVENTS_JSON", json.dumps(access.ACT_EVENTS))
 
 MAP_JS = (
     flow.LABEL_JS
@@ -102,7 +102,7 @@ MAP_JS = (
   const ACTION = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [onclick], ' +
     '[role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=menuitem], ' +
     '[role=option], [role=combobox], [role=slider], [role=textbox], iframe';
-  const CLICKS = ['onClick', 'onMouseDown', 'onMouseUp', 'onPointerDown', 'onPointerUp', 'onTouchStart', 'onTouchEnd'];
+  const CLICKS = REACT_PROPS_JSON;
   const css = (el) => getComputedStyle(el);
   const shown = (el) => {
     for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
@@ -271,7 +271,7 @@ MAP_JS = (
   scrollTo({ top: 0, left: 0, behavior: 'instant' });
   return { unread, parts: parts.map(({ el, ...p }) => p) };
 }
-"""
+""".replace("REACT_PROPS_JSON", json.dumps(access.REACT_PROPS))
 )
 
 # Outlines each part on the page with its id beside it, for the key screenshot.

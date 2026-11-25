@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""de00-look-test.py — the ΔE00 look test's review page data (#178).
+"""de00-look-test.py — a review page of grey pairs at set ΔE00 gaps.
 
-Research set the palette's near-miss line at about ΔE00 10 for colours that
-differ in hue or strength, but its sources contradict each other for two greys
-(docs/research/de00-thresholds.md), so the founder sets the grey line by eye
-(#178 Q3). This script builds that look: for each ΔE00 in TARGETS it moves two
-greys in lightness (the mmm-infra logo grey lighter, a pale panel grey darker),
-and draws every pair large and small.
+For each ΔE00 in TARGETS it moves two greys in lightness (the mmm-infra logo
+grey lighter, a pale panel grey darker), and draws every pair large and small.
 
 Every ΔE00 it reports is measured from the rounded hex, never the target.
 CIELAB and CIEDE2000 come from design-project's colour_space.py, which

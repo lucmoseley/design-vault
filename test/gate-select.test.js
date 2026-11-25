@@ -146,6 +146,14 @@ test("the build stage reads a parts map's roles as the candidate's parts, and jo
   assert.deepEqual(ids(ok(list(builder("build", "--parts", carried)))), both);
 });
 
+test("the build stage refuses a parts map holding a part that is not an object, naming it, rather than crashing", () => {
+  const hollow = buildCopy(PARTS_MAP, (data) => data.parts.push(null));
+  const r = list(builder("build", "--parts", hollow));
+  assert.equal(r.status, 1, r.out + r.err);
+  assert.match(r.out, /part \d+ has no id, no actable true or false, or no text/);
+  assert.doesNotMatch(r.err, /TypeError/);
+});
+
 test("the finish stage gives each script to run and the records it answers, never their text, and names the records whose script is owed", () => {
   const out = ok(list(builder("finish")));
   assert.match(out, /: 2 script\(s\)\.\n\n1\. check-access\.py\n {3}Answers: vault\.focus-script, vault\.contrast-script\n2\. check-layout\.py\n {3}Answers: vault\.reflow-script\n\nScript owed, so the gate critics look instead: vault\.measure-owed\.\n$/);

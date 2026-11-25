@@ -30,7 +30,8 @@ the arguments are wrong, or check-curves.js cannot read the file / 3 Node,
 Playwright, its browser, numpy or Pillow is missing / 4 the page did not render
 in time / 5 the browser refused the page / 6 none fails, but a contact cannot be
 measured: a fill that lets the ground through, a contact off its crop, a shape
-check-curves.js cannot read, or a page that cannot be rendered frame by frame.
+check-curves.js cannot read, a cover whose paint it cannot prove opaque, or a
+page that cannot be rendered frame by frame.
 Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 """
 
@@ -315,7 +316,10 @@ def main(argv):
     os.makedirs(args.out, exist_ok=True)
     lines, faults, unmeasured = [], 0, len(listed["unread"])
     for c in contacts:
-        if c["cls"] in UNMEASURED:
+        if c["cls"] in UNMEASURED and c.get("unproved"):
+            lines.append(f"NOT MEASURED {c['name']} ({c['cls']}): {c['verdict']}.")
+            unmeasured += 1
+        elif c["cls"] in UNMEASURED:
             lines.append(f"pass {c['name']} ({c['cls']}): {UNMEASURED[c['cls']]}")
     if measured:
         look = look_args(args, measured)

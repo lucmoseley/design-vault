@@ -167,7 +167,8 @@ DESKTOP_BARS = 135
 # The desktop viewport every design-round script renders at unless told: that
 # screen less its bars (#252). A project whose own visitors differ records its
 # screen as `projects.<key>.desktop` in the library (#196).
-DESKTOP = f"{DESKTOP_SCREEN[0]}x{DESKTOP_SCREEN[1] - DESKTOP_BARS}"
+DESKTOP_WINDOW = (DESKTOP_SCREEN[0], DESKTOP_SCREEN[1] - DESKTOP_BARS)
+DESKTOP = f"{DESKTOP_WINDOW[0]}x{DESKTOP_WINDOW[1]}"
 # A channel slower than this share of its own top speed counts as still, so an
 # easing's long tail does not hide the pause after it. A box channel counts as
 # still only below the lower of this and STILL_ARCMIN_S (#196).
