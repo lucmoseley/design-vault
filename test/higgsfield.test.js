@@ -390,6 +390,22 @@ test("one round reached by two spellings is held to its ceiling once, for the wh
   await assert.rejects(render([job(dir, "v1-dusk"), job(path.join(alias, "r1"), "v1-dusk")], api.options()), /r1\/v1-dusk appears twice in the batch/);
 });
 
+test("a round behind a symlink to a folder only a later job of the batch makes is made and rendered (#574)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "real"), path.join(base, "alias"));
+  const behindTheSymlink = path.join(base, "alias", "r2");
+  assert.equal(await render([job(behindTheSymlink), job(path.join(base, "real", "r1"))], fakeApi().options()), 0);
+  assert.equal(ledger(behindTheSymlink).length, 1);
+});
+
+test("a round behind a symlink to a folder no job of the batch makes refuses the batch, submitting nothing (#574)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "nowhere"), path.join(base, "alias"));
+  const api = fakeApi();
+  await assert.rejects(render([job(path.join(base, "real", "r1")), job(path.join(base, "alias", "r2"))], api.options()), { code: "ENOENT" });
+  assert.equal(api.calls.length, 0);
+});
+
 test("a round not yet made, reached by two spellings through a symlink to a folder not yet made, is one round (#559)", async () => {
   const base = path.dirname(roundDir());
   const alias = path.join(base, "alias");
