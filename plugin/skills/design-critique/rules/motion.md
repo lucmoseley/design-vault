@@ -248,11 +248,11 @@ Animation: brand motion's pace, length and end frame, and pausing motion that st
 - status: staged
 
 ### vault.motion-purpose
-- applies-when: web-surface and has-motion; every motion that starts by itself, with no visitor action: an idle float, a loop, a ring that pops out, drifting particles; not a status or progress indicator
+- applies-when: web-surface and has-motion; every motion that starts by itself: an idle float, a loop, a ring that pops out, drifting particles; not a status or progress indicator
 - question: Does every motion that starts by itself draw attention to one thing the brief names, with none on anything else?
 - answered-by: look
 - writes: self-starting motion
-- yields-to: vault.pause, vault.carousel-timing, vault.carry-status, level 2
+- yields-to: level 2
 - source: Anthropic `frontend-design` SKILL.md:32, "Use non-user-triggered motion sparingly and deliberately, only to draw attention"; impeccable 4.5.0 `craft-floor.md:13`, "one authored moment, not scattered effects"; impeccable slop catalogue (impeccable.style/slop), "wobbling icons, and drifting badges" (all as read Nov 2026); strength: impeccable "AI look" ban and vendor skill guidance
 - era: dated 2027-04-14
 - owner: vault
