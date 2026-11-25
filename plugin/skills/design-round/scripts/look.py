@@ -20,10 +20,10 @@ USAGE
   python3 look.py pixels <png> --at X,Y --against X,Y
       Two pixels of a screenshot, their colours and their WCAG contrast ratio.
 
---width is 1920 unless given, and --height is the first screen check-layout.py
-shoots at that width, so a zoom, scrub or measure frames the page as the
-critic's screenshots do. The settled page is the page once its fonts load and
-SETTLE_MS have passed.
+--width is 1920 unless given. --height is the first screen at that width: for
+zoom and measure the one check-layout.py shoots (633 at 1920); for scrub the
+motion scripts' window (945 at 1920). The settled page is the page once its
+fonts load and SETTLE_MS have passed.
 
 EXITS 0 done / 2 the arguments are wrong / 3 Playwright, its browser, numpy or
 Pillow is missing / 4 the page did not load in time / 5 the browser refused the
@@ -61,6 +61,11 @@ WIDTH = layout.DESKTOP_WIDTH
 # How long a page is left to finish its entrance before a still is taken. A
 # guess, unmeasured.
 SETTLE_MS = 4000
+FIRST_SCREEN = {
+    "zoom": ("check-layout.py's first screen", layout.HEIGHTS),
+    "measure": ("check-layout.py's first screen", layout.HEIGHTS),
+    "scrub": ("the motion scripts' window", layout.MOTION_HEIGHTS),
+}
 
 # Every animation to time t; one that refuses the seek stays where it is, so the
 # rest still move.
@@ -118,7 +123,7 @@ def parse(argv):
         s.add_argument(
             "--height",
             type=int,
-            help="default: check-layout.py's first screen at --width",
+            help=f"default: {FIRST_SCREEN[name][0]} at --width",
         )
         pages[name] = s
     pages["zoom"].add_argument("--clip", required=True)
@@ -146,7 +151,7 @@ def parse(argv):
         if getattr(args, flag, least) < least:
             p.error(f"--{flag} wants {least} or more")
     if args.height is None:
-        args.height = layout.height_at(args.width, layout.HEIGHTS)
+        args.height = layout.height_at(args.width, FIRST_SCREEN[args.cmd][1])
     args.url = flow.page_url(p, args.page)
     if args.cmd == "zoom":
         args.clip = numbers(p, "--clip", args.clip, 4)
