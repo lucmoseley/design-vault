@@ -263,6 +263,15 @@
 		"consumes": null,
 		"reader": "agent"
 	},
+	"docs/practice/design-critique-and-presentation.md": {
+		"section": "Research notes",
+		"class": "free-edit",
+		"classQualifier": null,
+		"role": "The practice note for design critique and presenting work: breaking a verdict that names no part into the parts a client can point at (#406)",
+		"route": "Direct; rewrite it when its Researched date passes six months",
+		"consumes": null,
+		"reader": "agent"
+	},
 	"docs/practice/llm-evaluation.md": {
 		"section": "Research notes",
 		"class": "free-edit",
