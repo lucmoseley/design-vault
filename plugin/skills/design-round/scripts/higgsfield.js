@@ -60,8 +60,9 @@
  * job got, with its request id and output URLs where it has them, and the jobs
  * that ran and those not submitted. The one exception is an accepted job's
  * submitted line: the job is polled on, its outcome line stands in for it, and
- * the batch stops only where that outcome line cannot be written either,
- * naming the job's output URLs. A ledger line that is not JSON, as a run
+ * the batch stops only where that outcome line cannot be written either. A
+ * completed job's outputs are saved before the batch stops. A write cut off
+ * part-way is cut back. A ledger line that is not JSON, as a run
  * killed mid-write leaves, refuses every run on its round, naming its file and
  * line number.
  */

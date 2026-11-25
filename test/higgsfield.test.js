@@ -284,15 +284,16 @@ test("a submission refused at its first try is recorded at $0, so its estimate l
   assert.equal(await render([job(dir, "v2-tide")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
 });
 
-function ledgerTurnsReadOnlyAtFirstCall(api, dir, matching, extra) {
+function ledgerTurnsReadOnlyAtFirstCall(api, dir, matching, extra, writableAgainAt = () => false) {
   const options = api.options(extra);
   const fetch = options.fetch;
   let turned = false;
   options.fetch = async (url, init = {}) => {
-    if (!turned && matching(new URL(url).pathname, init)) {
+    const { pathname } = new URL(url);
+    if (!turned && matching(pathname, init)) {
       fs.chmodSync(path.join(dir, LEDGER), 0o444);
       turned = true;
-    }
+    } else if (turned && writableAgainAt(pathname, init)) fs.chmodSync(path.join(dir, LEDGER), 0o644);
     return fetch(url, init);
   };
   return options;
@@ -321,12 +322,13 @@ test("a submitted line that cannot be written leaves the job polled on, saved an
   const dir = roundDir();
   const api = fakeApi();
   const lines = [];
-  const options = ledgerTurnsReadOnlyAtFirstCall(api, dir, (pathname, init) => init.method === "POST" && !pathname.startsWith("/estimate/"), { log: (line) => lines.push(line) });
-  const fetch = options.fetch;
-  options.fetch = async (url, init = {}) => {
-    if (new URL(url).pathname.startsWith("/requests/")) fs.chmodSync(path.join(dir, LEDGER), 0o644);
-    return fetch(url, init);
-  };
+  const options = ledgerTurnsReadOnlyAtFirstCall(
+    api,
+    dir,
+    (pathname, init) => init.method === "POST" && !pathname.startsWith("/estimate/"),
+    { log: (line) => lines.push(line) },
+    (pathname) => pathname.startsWith("/requests/"),
+  );
   assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], options), 0);
   assert.ok(lines.some((line) => /^r1\/v1-dusk: its submitted line could not be written/.test(line)), lines.join("\n"));
   assert.ok(fs.existsSync(path.join(dir, "v1-dusk.png")) && fs.existsSync(path.join(dir, "v2-tide.png")));
@@ -343,7 +345,7 @@ test("a submitted line that cannot be written leaves the job polled on, saved an
   assert.equal(ledger(dir)[1].request_id, "req-1");
 });
 
-test("a ledger write that fails once a request completes names its request id and every output URL, and stops the batch naming what ran (#575)", async () => {
+test("a ledger write that fails once a request completes still saves its outputs, names its request id, every output URL and the files saved, and stops the batch naming what ran (#575)", async () => {
   const dir = roundDir();
   const second = "https://cdn.example.com/out-2.png";
   const api = fakeApi({ images: [{ url: CDN }, { url: second }, {}] });
@@ -351,14 +353,15 @@ test("a ledger write that fails once a request completes names its request id an
   const options = ledgerTurnsReadOnlyAtFirstCall(api, dir, (pathname) => pathname.startsWith("/requests/") && ++polls === 2);
   await assert.rejects(render([job(dir, "v1-dusk"), job(dir, "v2-tide")], options), (error) => {
     assert.match(error.message, /^r1\/v1-dusk: its completed line could not be written to .*higgsfield-spend\.jsonl \(EACCES/);
-    assert.ok(error.message.includes(`request req-1 completed and is charged, its outputs at ${CDN} ${second}, live for at least seven days, and 1 output with no URL`), error.message);
+    assert.ok(error.message.includes(`request req-1 completed and is charged, its outputs at ${CDN} ${second}, live for at least seven days, saved as r1/v1-dusk.png, r1/v1-dusk-2.png, and 1 output with no URL`), error.message);
     assert.match(error.message, /No job ran\. Not submitted: r1\/v2-tide$/);
     assert.deepEqual(stopFields(error), { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v2-tide"], mayBeCharged: true });
+    assert.doesNotMatch(error.message, /left torn/, "a write refused outright leaves nothing torn");
     assert.equal(error.cause.code, "EACCES");
     return true;
   });
   assert.equal(api.submissions().length, 1, "the batch stops at the job whose line was lost");
-  assert.equal(api.calls.filter((call) => call.url.startsWith("https://cdn.example.com/")).length, 0, "nothing is downloaded past a lost line");
+  assert.ok(fs.existsSync(path.join(dir, "v1-dusk.png")) && fs.existsSync(path.join(dir, "v1-dusk-2.png")), "the paid outputs are saved");
   assert.equal(fs.existsSync(path.join(dir, "higgsfield.lock")), false, "the round's lock is released");
   assert.deepEqual(
     ledger(dir).map((entry) => [entry.status, entry.usd]),
@@ -392,13 +395,43 @@ test("a ledger write that fails at any step stops the batch naming the job it st
   }
 });
 
+test("a completed line that cannot be written, with one of two outputs failing to download, names the one saved (#575)", async () => {
+  const dir = roundDir();
+  let downloads = 0;
+  const api = fakeApi({ images: [{ url: CDN }, { url: "https://cdn.example.com/out-2.png" }], cdn: () => (++downloads === 1 ? reply(200, PNG) : reply(503, "")) });
+  let polls = 0;
+  const options = ledgerTurnsReadOnlyAtFirstCall(api, dir, (pathname) => pathname.startsWith("/requests/") && ++polls === 2);
+  await assert.rejects(render([job(dir)], options), /live for at least seven days, only r1\/v1-dusk\.png saved\. No job ran/);
+});
+
+test("a ledger write cut off part-way is cut back, so the next line lands whole and the run reads its ledger (#575)", async (t) => {
+  const dir = roundDir();
+  const append = fs.appendFileSync;
+  let writes = 0;
+  t.mock.method(fs, "appendFileSync", (file, text) => {
+    if (++writes !== 2) return append(file, text);
+    append(file, text.slice(0, 40));
+    throw Object.assign(new Error("ENOSPC: no space left on device, write"), { code: "ENOSPC" });
+  });
+  assert.equal(await render([job(dir)], fakeApi().options()), 0);
+  assert.deepEqual(
+    ledger(dir).map((entry) => entry.status),
+    ["submitting", "completed"],
+  );
+});
+
 test("a torn ledger line, as a run killed mid-write leaves, is refused naming the file and line, before anything is submitted (#575)", async () => {
   for (const torn of ['{"usd":0.094,"candidate":"r1/v1-du', "null", "[0.094]"]) {
     const dir = roundDir();
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: 0.094 })}\n\n${torn}`);
     const api = fakeApi();
-    await assert.rejects(render([job(dir, "v2-tide")], api.options()), new RegExp(`${path.join(dir, LEDGER).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} line 3 is not a ledger entry`), torn);
+    await assert.rejects(render([job(dir, "v2-tide")], api.options()), (error) => {
+      assert.equal(error.name, "LedgerLineError", torn);
+      assert.deepEqual({ file: error.file, line: error.line, text: error.text }, { file: path.join(dir, LEDGER), line: 3, text: torn });
+      assert.match(error.message, /is not a ledger entry, as a run killed mid-write leaves/);
+      return true;
+    });
     assert.equal(api.submissions().length, 0, torn);
   }
 });
