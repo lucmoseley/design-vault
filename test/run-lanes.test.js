@@ -376,7 +376,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
         const proc = await run([many], quiet(core));
         assert.equal(proc.status, code, proc.stderr);
         assert.equal(proc.stdout.match(/run-cost/g).length, 1);
-        assert.match(proc.stdout, /test\/run-lanes\.sh: workflow-core's run-cost report would not run \(at load\), so no test file's cost is judged; the suites' verdict stands \(#370\)\.\n$/);
+        assert.match(proc.stdout, /test\/run-lanes\.sh: workflow-core's run-cost report would not run \(at load\); the suites' verdict stands \(#370\)\.\n$/);
         assert.deepEqual(proc.stderr.split("\n").filter(Boolean), code ? [`FAIL ${many.replace(/^bash /, "")}`] : []);
       });
     }

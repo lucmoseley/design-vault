@@ -15,12 +15,6 @@
 # VAULT_SUITE_BUDGET, in seconds, refuses the run before any suite starts where the kept seconds, laid longest first
 # on the lanes the machine would open now, end past it (#473). A suite with none kept counts as 0 s; lanes that open
 # later than the start can still make a refused run fit.
-# Once every suite has ended, red or green, each test file's own wall seconds go to workflow-core's run-cost report
-# (#370), which names one new or changed against the base that took past its budget, after the suites' output and
-# before any FAIL line. A suite that wrote `<path>\t<seconds>` lines to the file VAULT_FILE_SECONDS names, as
-# test/failed-files.js does for node --test's many files, is timed by those alone; else the one `.test.` file its
-# command names takes the suite's wall seconds, interpreter start included. The report never moves the exit status,
-# and is not run where CI is set.
 
 set -u
 ceiling=3
@@ -76,7 +70,7 @@ stop() { # stop <exit status>
 trap 'stop 130' INT
 trap 'stop 143' TERM
 
-named_files() { # named_files <suite>: the test files its command line names, one a line
+named_files() {
   local word words
   read -ra words <<<"$1"
   for word in "${words[@]}"; do [[ $word == *.test.* && -f $word ]] && printf '%s\n' "$word"; done
@@ -191,11 +185,11 @@ while ((${#queue[@]} || ${#lane[@]})); do
   wait -n -p ended "${!lane[@]}"
   finish "$ended" $?
 done
-# Its program entry would judge a worktree's main checkout, not this tree (#370).
+# #370
 if [[ -z ${CI:-} && -s $logs/seconds ]]; then
   root="$(git rev-parse --show-toplevel 2>/dev/null)" || root=$PWD
   node "$(dirname "${BASH_SOURCE[0]}")/run-cost.js" "$root" "$logs/seconds" 2>/dev/null ||
-    echo "test/run-lanes.sh: workflow-core's run-cost report would not run, so no test file's cost is judged; the suites' verdict stands (#370)."
+    echo "test/run-lanes.sh: workflow-core's run-cost report would not run; the suites' verdict stands (#370)."
 fi
 if ((${#reds[@]})); then
   printf '%s\n' "${reds[@]}" >&2
