@@ -55,6 +55,15 @@
  * estimate that is not a positive usd figure is refused before anything is
  * submitted. A completed request is recorded whatever it returns; an output
  * carrying no URL counts the job failed.
+ *
+ * A ledger line that cannot be written stops the batch, naming how far that
+ * job got, with its request id and output URLs where it has them, and the jobs
+ * that ran and those not submitted. The one exception is an accepted job's
+ * submitted line: the job is polled on, its outcome line stands in for it, and
+ * the batch stops only where that outcome line cannot be written either,
+ * naming the job's output URLs. A ledger line that is not JSON, as a run
+ * killed mid-write leaves, refuses every run on its round, naming its file and
+ * line number.
  */
 "use strict";
 const { render, parseArgs, settings } = require("./higgsfield-client.js");

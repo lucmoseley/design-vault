@@ -97,13 +97,24 @@ function spentIn(roundDir) {
   if (!fs.existsSync(file)) return 0;
   const bySubmission = new Map();
   let unkeyed = 0;
-  for (const line of fs.readFileSync(file, "utf8").split("\n").filter(Boolean)) {
-    const entry = JSON.parse(line);
+  for (const [index, line] of fs.readFileSync(file, "utf8").split("\n").entries()) {
+    if (!line) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      entry = undefined;
+    }
+    const where = `${file} line ${index + 1}`;
+    // #575
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${where} is not a ledger entry, as a run killed mid-write leaves: ${line}. Check the Higgsfield console for that job's charge, then mend the line to carry it`);
+    }
     const usd = Number(entry.usd);
     // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
-    if (!Number.isFinite(usd)) throw new Error(`${file} holds a line with no usd figure: ${line}`);
+    if (!Number.isFinite(usd)) throw new Error(`${where} holds no usd figure: ${line}`);
     // A negative line would free room under the ceiling.
-    if (usd < 0) throw new Error(`${file} holds a line with a negative usd figure: ${line}`);
+    if (usd < 0) throw new Error(`${where} holds a negative usd figure: ${line}`);
     if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
     else unkeyed += usd;
   }
@@ -113,6 +124,12 @@ function spentIn(roundDir) {
 function record(job, line) {
   fs.mkdirSync(job.roundDir, { recursive: true });
   fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
+}
+
+function batchText(priced, index, { thisJobSubmitted }) {
+  const ran = priced.slice(0, index).map((other) => other.name);
+  const rest = priced.slice(thisJobSubmitted ? index + 1 : index).map((other) => other.name);
+  return `${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`;
 }
 
 function roundKey(roundDir) {
@@ -374,28 +391,38 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
   for (const [index, job] of priced.entries()) {
     const { name } = job;
     const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
+    const ledgerFault = (status, error) => `${name}: its ${status} line could not be written to ${path.join(job.roundDir, LEDGER)} (${error.message})`;
+    // #575
+    const recordOrStop = (line, howFar, { thisJobSubmitted = true } = {}) => {
+      try {
+        record(job, line);
+      } catch (error) {
+        throw new Error(`${ledgerFault(line.status, error)}; ${howFar}. ${batchText(priced, index, { thisJobSubmitted })}`, { cause: error });
+      }
+    };
     // #571
-    record(job, { ...entry, status: "submitting", files: [] });
+    recordOrStop({ ...entry, status: "submitting", files: [] }, "it was not submitted", { thisJobSubmitted: false });
     let accepted;
     try {
       accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
-      const ran = priced.slice(0, index).map((other) => other.name);
-      const ranText = ran.length ? `Ran: ${ran.join(", ")}` : "No job ran";
       // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
-        record(job, { ...entry, usd: 0, status: "refused", http_status: error.status, files: [] });
-        const rest = priced.slice(index).map((other) => other.name);
-        throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
+        recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { thisJobSubmitted: false });
+        throw new Error(`${error.message}. ${batchText(priced, index, { thisJobSubmitted: false })}`, { cause: error });
       }
-      record(job, { ...entry, status: "unanswered", files: [] });
-      const rest = priced.slice(index + 1).map((other) => other.name);
-      throw new Error(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { cause: error });
+      recordOrStop({ ...entry, status: "unanswered", files: [] }, `it may have reached Higgsfield: ${error.message}`);
+      throw new Error(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${batchText(priced, index, { thisJobSubmitted: true })}`, { cause: error });
     }
     entry.request_id = accepted.request_id;
     log(`${name}: accepted as request ${accepted.request_id}`);
-    record(job, { ...entry, status: "submitted", files: [] });
+    // #575
+    try {
+      record(job, { ...entry, status: "submitted", files: [] });
+    } catch (error) {
+      log(`${ledgerFault("submitted", error)}; request ${accepted.request_id} is polled on, and its outcome line stands in for it`);
+    }
     let state;
     try {
       state = await poll(ctx, accepted);
@@ -403,14 +430,14 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       state = { status: "unpolled", error: error.message };
     }
     if (state.status === "timed-out" || state.status === "unpolled") {
-      record(job, { ...entry, status: state.status, files: [] });
       const why = state.status === "unpolled" ? `its status could not be read (${state.error})` : `still running after ${ctx.timeoutMs / 1000} s`;
+      recordOrStop({ ...entry, status: state.status, files: [] }, `request ${accepted.request_id}: ${why}`);
       log(`✗ ${name}: ${why}; recorded at its estimate, since it may yet be charged. Request ${accepted.request_id}`);
       failed++;
       continue;
     }
     if (state.status !== "completed") {
-      record(job, { ...entry, usd: 0, status: state.status, files: [] });
+      recordOrStop({ ...entry, usd: 0, status: state.status, files: [] }, `request ${accepted.request_id} ended ${state.status}, not charged`);
       log(`✗ ${name}: ${state.status}${state.error ? ` (${state.error})` : ""}; not charged`);
       failed++;
       continue;
@@ -421,7 +448,12 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     const unreadable = listed.length - outputs.length;
     // Recorded before the download: the charge stands even if the download fails,
     // and the ledger then keeps the output's URL, live for at least seven days.
-    record(job, { ...entry, status: "completed", urls: outputs.map((output) => output.url), ...(unreadable ? { unreadable } : {}) });
+    const urls = outputs.map((output) => output.url);
+    const unreadableText = unreadable ? `, and ${unreadable} output${unreadable > 1 ? "s" : ""} with no URL` : "";
+    recordOrStop(
+      { ...entry, status: "completed", urls, ...(unreadable ? { unreadable } : {}) },
+      `request ${accepted.request_id} completed and is charged, ${urls.length ? `its outputs at ${urls.join(" ")}, live for at least seven days` : "with no output URL"}${unreadableText}`,
+    );
     let succeeded = outputs.length > 0 && !unreadable;
     if (unreadable) log(`✗ ${name}: charged, but ${unreadable} of its ${listed.length} outputs carried no URL`);
     else if (!outputs.length) log(`✗ ${name}: completed with no image or video`);
