@@ -139,7 +139,7 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
   for (const [key, project] of Object.entries(projects)) {
     if (!Array.isArray(project?.groups))
       fault("group-list", `projects.${key}.groups is missing or not a list — a project with no group carries []`);
-    // Its rules file and its optional gate file, where ledger-upkeep.js and gate.js read them (#154, #159, #554).
+    // The rules and gate files, where ledger-upkeep.js and gate.js read them (#154, #159, #554).
     for (const [field, required] of [["rules", true], ["gate", false]])
       if ((required || project?.[field] !== undefined) && !isRepoMarkdown(project?.[field]))
         fault(`project-${field}`, `projects.${key}.${field} ${JSON.stringify(project?.[field])} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
