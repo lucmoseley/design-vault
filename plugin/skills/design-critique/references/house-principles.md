@@ -178,7 +178,7 @@ Record: `vault.motion-purpose`.
 
 - **Why.** Motion a visitor did not start pulls the eye whether or not anything is there to see, so it is spent on the one thing the brief wants noticed. Anthropic's `frontend-design` keeps it "only to draw attention", impeccable asks for "one authored moment", and its slop catalogue lists wobbling icons and drifting badges among the generated defaults.
 - **Trade-off.** A brand whose character is restless motion loses it here unless the brief names that motion as the thing to notice.
-- **Clash.** `vault.pause` still gives any such motion over 5 s a control.
+- **Clash.** `vault.pause` still gives any such motion over 5 s a control. A carousel that advances by itself is `vault.carousel-timing`'s, and a pulse on a status carrier `vault.carry-status`'s.
 
 ### Distinct from the category leaders
 

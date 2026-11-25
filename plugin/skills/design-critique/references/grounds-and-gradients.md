@@ -80,7 +80,7 @@ Record: `vault.card-image-tint`.
 
 Records: `vault.gradient-function`, `vault.gradient-kind`, `vault.gradient-place`.
 
-- **Why.** A gradient does a job when it is a scrim under text on a photo (NN/g's fade), a light cue on a surface (Krehel's "depth lighting"), the brand's colour where the page may go committed (`vault.tone-colour-share`), an ambient pattern on a promotion (Atlassian), or a chart or ring (conic). Each kind suits one of these jobs. impeccable's detector flags the radial halo and spotlight glow behind a hero, and its quieter pass removes any gradient "that don't serve purpose".
+- **Why.** A gradient does a job when it is a scrim under text on a photo (NN/g's fade), a light cue on a surface (Krehel's "depth lighting"), the brand's colour where the page may go committed (`vault.tone-colour-share`), an ambient pattern on a promotion (Atlassian), or a chart or ring (conic). Each kind suits one of these jobs. impeccable's detector flags the radial halo and spotlight glow behind a hero, and its quieter pass removes any gradient "that don't serve purpose". A blurred or glowing orb drawn as an object is the same glow given a shape, which Hallmark's lint gate 29 flags, so it needs a job too.
 - **Clash.** A gradient behind a working region is `vault.decoration-place`'s to refuse. Where one is earned back, `vault.ai-look` decides.
 
 ### Gradient text
