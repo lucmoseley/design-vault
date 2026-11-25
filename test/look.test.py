@@ -55,14 +55,6 @@ def without(package, *args):
     )
 
 
-def script(name):
-    path = os.path.join(os.path.dirname(SCRIPT), name)
-    spec = importlib.util.spec_from_file_location(name.replace("-", "_")[:-3], path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 class Height(unittest.TestCase):
     def test_a_zoom_or_measure_frames_check_layouts_first_screen_at_that_width(self):
         for cmd in (
@@ -77,7 +69,9 @@ class Height(unittest.TestCase):
         at = look.parse(["measure", PAGE, "--at", "1,1"])
         self.assertEqual((at.width, at.height), (1920, 633))
 
-    def test_a_scrub_frames_the_motion_scripts_window(self):  # #548
+    def test_a_scrub_frames_the_motion_scripts_window_where_a_zoom_or_measure_frames_check_layouts(
+        self,
+    ):  # #548
         for width, tall in ((375, 664), (800, 921), (1536, 945), (1920, 945)):
             at = look.parse(["scrub", PAGE, "--out", "x", "--width", str(width)])
             self.assertEqual(at.height, tall, width)
@@ -86,9 +80,11 @@ class Height(unittest.TestCase):
         self,
     ):  # #548
         with tempfile.TemporaryDirectory() as out:
-            _, frames = script("check-frames.py").parse(["hash", PAGE, "--out", out])
-            sheet = script("contact-sheet.py").parse([PAGE, "--out", out])
-            renders = script("look-renders.py")
+            _, frames = look.sibling("check-frames.py").parse(
+                ["hash", PAGE, "--out", out]
+            )
+            sheet = look.sibling("contact-sheet.py").parse([PAGE, "--out", out])
+            renders = look.sibling("look-renders.py")
             shots = {
                 mode: renders.parse([mode, PAGE, "--out", out, *extra]).viewport_size
                 for mode, extra in (("contacts", ["--contact", "a=1,1"]), ("bends", []))
@@ -99,7 +95,10 @@ class Height(unittest.TestCase):
         self.assertEqual(motion, sheet.desktop)
         self.assertEqual(motion, frames.viewport_size)
         self.assertEqual(shots, {"contacts": motion, "bends": motion})
-        # The phone, too: a 390 px scrub or crop frames the contact sheet's phone.
+
+    def test_a_phone_scrub_frames_the_contact_sheets_phone(self):  # #548
+        with tempfile.TemporaryDirectory() as out:
+            sheet = look.sibling("contact-sheet.py").parse([PAGE, "--out", out])
         phone = look.parse(["scrub", PAGE, "--out", "x", "--width", "390"])
         self.assertEqual({"width": 390, "height": phone.height}, sheet.phone)
 

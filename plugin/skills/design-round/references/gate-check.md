@@ -52,6 +52,8 @@ Exit 1 means an answers file breaks the form, each fault printed. Fix your own. 
 
 > Settle this one question for this candidate by looking closer: zoom, scrub or measure with look.py, never by weighing the three answers. Answer Yes, No or Unsure with one line of evidence naming what you zoomed, scrubbed or measured, and where. Answer Unsure only where looking closer still cannot settle it. Write `{ "answers": { <candidate>: { <question id>: { "answer", "evidence" } } } }` to `<path>`.
 
+Where the question judges motion, the prompt ends `Pass --width <W> --height <H> to every look.py call.`, naming the motion window design-round §4 gives (1920x945 unless the project records its own), so a zoom or measure of a frame matches the contact sheet's.
+
 Under `vault.affordance` it answers each split part, and `unlisted` where a critic named a part off the key, as `gate.js`'s header gives. Each writes `gate/settle-<n>.json`. Then run the tally again with one `--settle gate/settle-<n>.json` for each, into `gate/tally.txt`: Yes passes, No is a fault, and only Unsure goes to the founder. Count the round's splits and how many the settle critics answered Yes or No, for the round log (design-round §3 step 5).
 
 ## 5. Fix and re-check

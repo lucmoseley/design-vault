@@ -10,6 +10,7 @@ page or on a bare SVG file (#354), and check-curves.js --contacts hands this
 script a contact it refuses or crops somewhere else.
 """
 
+import importlib.util
 import json
 import os
 import shlex
@@ -28,6 +29,9 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look-renders.py"
 )
+_spec = importlib.util.spec_from_file_location("look_renders", SCRIPT)
+look_renders = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(look_renders)
 FIXTURES = os.path.join(HERE, "fixtures", "look-renders")
 CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
@@ -162,7 +166,6 @@ class ContactsFromCheckCurves(unittest.TestCase):
         self.round_trip(os.path.join(FIXTURES, "drawn-contacts.html"), 945)
 
     def test_a_contact_on_a_bare_svg_file_is_cropped_there_too(self):  # #354
-        # The default 945 px viewport grown to the SVG's 1100.
         self.round_trip(os.path.join(FIXTURES, "drawn-contacts.svg"), 1100)
 
     def round_trip(self, page, height):
@@ -201,8 +204,8 @@ class ContactsFromCheckCurves(unittest.TestCase):
 
 
 class Bends(unittest.TestCase):
-    # The viewport asked for: --width 1024 and the motion scripts' desktop height (#548).
-    WIDTH, HEIGHT = 1024, 945
+    WIDTH = 1024
+    HEIGHT = look_renders.layout.height_at(WIDTH, look_renders.layout.MOTION_HEIGHTS)
 
     def test_a_bend_outside_the_viewport_on_a_bare_svg_file_is_shot_once_the_viewport_fits_it(
         self,

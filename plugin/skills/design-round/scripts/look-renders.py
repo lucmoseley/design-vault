@@ -37,8 +37,8 @@ shoot its tightest bend by eye with look.py zoom --scale 8, at the --width and
 
 Both write DIR/renders.json naming every render, after deleting the renders an
 earlier run's renders.json in DIR names, and refuse a page check-frames.py hash
-refuses. --width and --height frame the page as the motion scripts do, at
-check-layout.py's MOTION_HEIGHTS (1920x945 unless given); a bare SVG
+refuses. --width and --height frame the page as the motion scripts do
+(1920x945 unless given); a bare SVG
 file larger than that is framed at its drawn size, which the report and
 renders.json give. A sheet fits the standard image tier, so no critic's model scales
 it down and its repeated pixels stay whole.
@@ -463,9 +463,7 @@ def report_contacts(args, result):
     return "\n".join(lines), 0
 
 
-def zoom_size(args):
-    """look.py's flags for the window these renders frame, which its zoom defaults short of (#548)."""
-    size = args.viewport_size
+def zoom_flags(size):
     return f"--width {size['width']} --height {size['height']}"
 
 
@@ -484,7 +482,7 @@ def report_bends(args, result):
         lines.append(
             "no SVG shape on the page draws a curve: vault.curves-look does not apply, "
             "unless CSS or a canvas draws one (shoot that by eye with look.py zoom --scale 8 "
-            f"{zoom_size(args)})"
+            f"{zoom_flags(size)})"
         )
     for b in bends:
         what = (
@@ -541,7 +539,7 @@ def main(argv):
         args.url,
         (
             f"cannot render {args.url}, because this page:",
-            f"Shoot it by hand with look.py zoom {zoom_size(args)}: each contact at --scale 1, 2 and 3, "
+            f"Shoot it by hand with look.py zoom {zoom_flags(args.viewport_size)}: each contact at --scale 1, 2 and 3, "
             "each shot magnified 4x with Pillow's Image.NEAREST; each bend at --scale 8.",
         ),
     )
