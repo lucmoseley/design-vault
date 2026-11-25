@@ -4,6 +4,8 @@ Claude writes each prompt from the brief. It renders a Higgsfield API model's pr
 
 ## Art direction — the model-agnostic template
 
+Records: `vault.render-palette-look`, `vault.headline-plain-look`.
+
 Every image prompt starts here.
 
 ```text
@@ -106,6 +108,8 @@ prompt: [SUBJECT] [PLACED IN] [SETTING], [ONE OR TWO COMPOSITION DETAILS]
 Once the project has a finished artwork, build a custom style from it and reuse it by id.
 
 ### Video — image to video
+
+Record: `vault.clip-loop`.
 
 Use the same still as the start frame and the end frame, so the prompt describes **motion only**, never the scene. Length, resolution and sound are the project's ruling. Kling caps a same-frame clip at 5 s.
 

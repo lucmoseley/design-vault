@@ -7,10 +7,11 @@ import pathlib
 from collections import Counter
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import runner
 import score
 
 ap = argparse.ArgumentParser()
-score.runner.add_runs(ap)
+runner.add_runs(ap)
 score.use_runs(ap.parse_args().runs)
 WORK = score.WORK
 hit = {}
