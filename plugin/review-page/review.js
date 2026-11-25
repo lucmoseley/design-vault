@@ -24,8 +24,11 @@
     const marks = data.marks || [];
     if (!Array.isArray(marks)) problems.push('"marks" is not a list');
     else marks.forEach((m, i) => { if (!m || !ID.test(m.id || '') || !m.label) problems.push(`mark ${i + 1} needs an "id" and a "label"`); });
-    // A browser reads `//host/x` as an address on another host, and a backslash as a slash, so neither is a file beside the page.
-    const fileOrHttps = src => /^https:\/\//i.test(src) || !(/^[a-z][a-z0-9+.-]*:/i.test(src) || /^[\\/]{2}/.test(src));
+    // A browser trims the ends, drops tabs and newlines, and reads `\` as `/`: https://url.spec.whatwg.org/#concept-basic-url-parser
+    const fileOrHttps = raw => {
+      const src = String(raw).replace(/^[\u0000-\u0020]+|[\u0000-\u0020]+$/g, '').replace(/[\t\n\r]/g, '');
+      return /^https:\/\//i.test(src) || !(/^[a-z][a-z0-9+.-]*:/i.test(src) || /^[\\/]{2}/.test(src));
+    };
     if (data.figure && !fileOrHttps(data.figure)) problems.push('"figure" must be a file beside the page or an https:// address');
     const seen = new Set();
     (Array.isArray(data.items) ? data.items : []).forEach((item, i) => {

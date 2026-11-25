@@ -73,7 +73,6 @@ import collections
 import contextlib
 import datetime
 import difflib
-import importlib.util
 import json
 import os
 import re
@@ -81,18 +80,14 @@ import sys
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-form = _load("drive_form", os.path.join(HERE, "drive-form.py"))
-rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
+flow = siblings.load(HERE, "check-flow.py")
+form = siblings.load(HERE, "drive-form.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-cross.table")
 # Each check and the shape of the value its line gives: None for no value.

@@ -60,18 +60,17 @@ stderr.
 
 import argparse
 import datetime
-import importlib.util
 import json
 import os
 import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_access", os.path.join(HERE, "check-access.py")
-)
-access = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(access)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+access = siblings.load(HERE, "check-access.py")
 layout, flow = access.layout, access.flow
 
 FILES = (

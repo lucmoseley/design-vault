@@ -4,11 +4,9 @@ shows, where focus goes, whether typed values survive. A library the check
 scripts load; it judges nothing itself.
 
 Its only I/O is the Playwright page it is handed, which the caller opens
-and closes, as check-flow.py's chromium() does. A check loads it by path:
+and closes, as check-flow.py's chromium() does. A check loads it through siblings.py:
 
-    spec = importlib.util.spec_from_file_location("drive_form", os.path.join(HERE, "drive-form.py"))
-    form = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(form)
+    form = siblings.load(HERE, "drive-form.py")
 
     form.fill(page, "#book", bad=["#email"])
     settled = form.submit(page, "#book")   # read settled.state: errors, focus, values
