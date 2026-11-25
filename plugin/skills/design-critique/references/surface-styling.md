@@ -2,7 +2,7 @@
 
 Why a web surface's borders, shadows, corners, dividers, fills, focus rings, scrims and glass follow from what each part does (#117, #154). Decide a part's function first; its styling follows from that, and a styling finding against the function is reported, never dropped. The research behind every line is `docs/research/surface-styling.md` in the design vault, Parts B and E, and `docs/research/house-audit-visual.md` measures the figures against shipped design systems.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets, and, on behaviour, a record resting on domain evidence, which it departs from only on evidence of its own ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 ## Principles
 
