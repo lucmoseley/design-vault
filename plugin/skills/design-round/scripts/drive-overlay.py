@@ -27,7 +27,8 @@ is never clicked: each visible button, [role=button] or menu item that would not
 page is clicked, top-level ones first and then those each trigger's overlay draws, until every such dialog has
 its opener. A trial is kept per URL and those options. It reads the page as it loads, with none of the caller's
 cookies, storage (storage_state included), proxy, init scripts, routes or page.emulate_media, so it misses an
-opener that only the caller's own steps or those draw, and it cannot load a page set by set_content. A
+opener that only the caller's own steps or those draw, and it cannot load a page set by set_content; it
+downloads nothing, so it takes no accept_downloads. A
 [role=dialog] that no markup names is not tried for, as nothing generic tells a trial it opened. Text fields
 are never triggers: a combobox opens by typing, which the form driver (#302) does.
 
@@ -288,7 +289,7 @@ class Overlay:
 
 
 _trials: dict[tuple[str, str], dict[str, str]] = {}
-TRIAL_LEAVES_OUT = ("acceptDownloads",)
+TRIAL_LEAVES_OUT = ("accept_downloads",)
 
 
 def _items(handle):
@@ -328,7 +329,7 @@ def _trial_options(page):
     options = {
         names[k.lower()]: v
         for k, v in protocol.items()
-        if k.lower() in names and k not in TRIAL_LEAVES_OUT
+        if k.lower() in names and names[k.lower()] not in TRIAL_LEAVES_OUT
     }
     if page.viewport_size:
         options["viewport"] = page.viewport_size

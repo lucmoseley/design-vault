@@ -65,11 +65,12 @@ TRIGGERS = {
     "sort-button": ("disclosure", False, "sort-button"),
 }
 BROWSER = flow.chromium()
+# The phone band's first screen, measured at 390x664 (#197).
 PHONE = {"width": 390, "height": 664}
 LEFT_OUT = {
+    *overlay.TRIAL_LEAVES_OUT,
     "proxy",
     "storage_state",
-    "accept_downloads",
     "default_browser_type",
     "record_har_path",
     "record_har_omit_content",
@@ -293,7 +294,7 @@ class TrialUnderCallerOptions(unittest.TestCase):
     def test_every_option_the_caller_set_reaches_the_trial_context(self):
         options = dict(
             viewport=PHONE,
-            screen=PHONE,
+            screen={**PHONE, "height": 844},
             ignore_https_errors=True,
             java_script_enabled=False,
             bypass_csp=True,
@@ -329,11 +330,13 @@ class TrialUnderCallerOptions(unittest.TestCase):
             {"origin": "https://localhost", "certPath": cert, "keyPath": private}
         ]
 
+        left = {n.replace("_", "") for n in overlay.TRIAL_LEAVES_OUT}
+
         def held(context):
             return {
                 k: v
                 for k, v in context._impl_obj._options.items()
-                if k not in overlay.TRIAL_LEAVES_OUT
+                if k.lower() not in left
             }
 
         no_viewport = {"no_viewport": True, "color_scheme": "null"}
