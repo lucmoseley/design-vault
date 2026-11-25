@@ -24,6 +24,8 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look.py"
 )
 PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
+STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
+LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 spec = importlib.util.spec_from_file_location("look", SCRIPT)
 look = importlib.util.module_from_spec(spec)
@@ -123,6 +125,44 @@ class Page(unittest.TestCase):
             # Half of a linear fade, give or take the rounding of an 8-bit grey.
             self.assertAlmostEqual(int(grey[1]), 128, delta=3)
             self.assertEqual(grey[2], 0)
+
+
+def left_edge(png, row):
+    """The x of the first black pixel on `row` of a frame."""
+    dark = np.flatnonzero(np.asarray(Image.open(png).convert("L"))[row] < 128)
+    return int(dark[0]) if dark.size else None
+
+
+# How far, in px, a box a timer starts may sit from where the page puts it:
+# 50 px is 100 ms of staggered.html's move, a guess at a timer's lateness on a
+# loaded machine (check-frames.py's STAGE_JITTER_MS notes a start drifting up
+# to 150 ms with three suites running).
+STAGGER_PX = 50
+
+
+class Staggered(unittest.TestCase):  # #547
+    def test_a_move_a_timer_starts_sits_at_its_own_time_since_load(self):
+        with tempfile.TemporaryDirectory() as d:
+            proc = run(
+                "scrub", STAGGERED, "--out", d, "--step", "200", "--until", "1000"
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+            def edge(t, row):
+                return left_edge(os.path.join(d, f"t{t:05d}.png"), row)
+
+            # #a, from load, is exact: half a px a ms.
+            self.assertEqual((edge(200, 60), edge(1000, 60)), (100, 500))
+            # #b has not started at 200 ms, and is 300 ms behind #a at 1000.
+            self.assertEqual(edge(200, 140), 0)
+            self.assertAlmostEqual(edge(1000, 140), 350, delta=STAGGER_PX)
+
+    def test_a_move_started_after_the_timeline_was_read_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            proc = run("scrub", LATE, "--out", d, "--step", "500", "--until", "1000")
+            self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+            self.assertIn("starts animations after its frames were read", proc.stdout)
+            self.assertIn("Scrub it by eye", proc.stdout)
 
 
 class Pixels(unittest.TestCase):

@@ -166,9 +166,8 @@ def tile(browser, at, size, viewport, *, shots, end):
 
 
 def run(at):
-    # As check-frames.py's hash: a compositor animation can keep a scaled
-    # layer's raster from the frame before a seek.
-    with flow.chromium(["--disable-threaded-animation"]) as browser:
+    # Seeked as check-frames.py's hash is, on the main thread.
+    with flow.chromium(frames.HASH_ARGS) as browser:
         record = {"page": at.url, "step_ms": at.step, "sheets": {}}
         for size, viewport in (("desktop", at.desktop), ("phone", at.phone)):
             shots, end = shoot(browser, at, viewport)

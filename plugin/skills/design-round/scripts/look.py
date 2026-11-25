@@ -9,11 +9,14 @@ USAGE
       The settled page, the clip (CSS px, page coordinates) shot at --scale
       times its pixels: 4, or 8 for the tightest bend of a curve.
   python3 look.py scrub <url or file> --out DIR [--step 50] [--until 2500]
-        [--width W] [--height H]
-      The first screen from load, every --step ms of animation time to
-      --until, one PNG a frame, each named by its time: every Web Animations
-      API animation is paused and seeked, so the frames are the motion at any
-      speed they are played.
+        [--wait SEL] [--width W] [--height H]
+      The first screen from load, every --step ms of the page's timeline to
+      --until, one PNG a frame, each named by its time. The timeline is read
+      and seeked as check-frames.py hash reads and seeks it (#240, #259), so
+      an animation a timer starts after the first sits at its own time since
+      load, and the frames are the motion at any speed they are played. A
+      page check-frames.py cannot seek, one that starts an animation when
+      another finishes or after its frames were read, is refused.
   python3 look.py measure <url or file> --at X,Y [--width W] [--height H]
       The part under the point (CSS px, page coordinates) on the settled page:
       its element, box, font size and weight, and colour.
@@ -27,7 +30,8 @@ SETTLE_MS have passed.
 
 EXITS 0 done / 2 the arguments are wrong / 3 Playwright, its browser, numpy or
 Pillow is missing / 4 the page did not load in time / 5 the browser refused the
-page / 7 a call hung that would never return.
+page / 6 scrub cannot seek the page (why, on stdout) / 7 a call hung that would
+never return.
 """
 
 import argparse
@@ -50,7 +54,10 @@ def sibling(name):
 
 
 layout = sibling("check-layout.py")
-flow = layout.flow
+frames = sibling("check-frames.py")
+# check-frames' own check-flow, so run_browser catches the UnmeasurableError
+# its seek raises.
+flow = frames.flow
 try:
     maths = sibling("access-pixels.py")
 except ImportError as err:
@@ -61,22 +68,6 @@ WIDTH = layout.DESKTOP_WIDTH
 # How long a page is left to finish its entrance before a still is taken. A
 # guess, unmeasured.
 SETTLE_MS = 4000
-
-# Every animation to time t; one that refuses the seek stays where it is, so the
-# rest still move.
-SEEK_JS = "(t) => document.getAnimations().forEach((a) => { try { a.currentTime = t; } catch (e) {} })"
-# Every animation paused, then moved 1 ms and drawn: a pause that lands where
-# the first seek goes makes that seek no change, and the compositor keeps its
-# own frame of a fade unless a frame is drawn before the seek.
-PAUSE_JS = """
-async () => {
-  document.getAnimations().forEach((a) => {
-    a.pause();
-    try { a.currentTime = (a.currentTime || 0) + 1; } catch (e) {}
-  });
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-}
-"""
 
 # The part under a point, and the font and colour it is drawn in.
 MEASURE_JS = r"""
@@ -129,6 +120,7 @@ def parse(argv):
     pages["scrub"].add_argument("--out", required=True)
     pages["scrub"].add_argument("--step", type=int, default=50)
     pages["scrub"].add_argument("--until", type=int, default=2500)
+    pages["scrub"].add_argument("--wait")
     pages["measure"].add_argument("--at", required=True)
     px = sub.add_parser("pixels")
     px.add_argument("png")
@@ -177,13 +169,23 @@ def zoom(browser, args):
 def scrub(browser, args):
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    page = settled_page(browser, args)
-    page.evaluate(PAUSE_JS)
-    n = 0
-    for t in range(0, args.until + 1, args.step):
-        page.evaluate(SEEK_JS, t)
-        page.screenshot(path=str(out / f"t{t:05d}.png"))
-        n += 1
+    at = frames.args_with(
+        args,
+        viewport_size={"width": args.width, "height": args.height},
+        timeout=flow.LOAD_TIMEOUT_MS,
+    )
+    context, page, _ = frames.open_page(
+        browser, at, 1, device=layout.device(args.width)
+    )
+    try:
+        n = 0
+        for t in range(0, args.until + 1, args.step):
+            frames.seek(page, t)
+            page.screenshot(path=str(out / f"t{t:05d}.png"))
+            n += 1
+        frames.refuse_chain(page)
+    finally:
+        context.close()
     return f"wrote {n} frame(s) to {out}, every {args.step} ms to {args.until} ms, at {args.width}x{args.height}"
 
 
@@ -223,10 +225,19 @@ def main(argv):
     work = {"zoom": zoom, "scrub": scrub, "measure": measure}[args.cmd]
 
     def run():
-        with flow.chromium() as browser:
+        # A scrub is seeked as check-frames.py hash is, on the main thread.
+        with flow.chromium(frames.HASH_ARGS if args.cmd == "scrub" else []) as browser:
             return work(browser, args)
 
-    said, code = flow.run_browser(run, flow.LOAD_TIMEOUT_MS, url=args.url)
+    said, code = flow.run_browser(
+        run,
+        flow.LOAD_TIMEOUT_MS,
+        args.url,
+        (
+            f"cannot scrub {args.url}, because this page:",
+            "Scrub it by eye: play it and watch, and say in the evidence that its frames went unseeked.",
+        ),
+    )
     if code:
         return code
     print(said)

@@ -523,7 +523,7 @@ def main(argv):
     clear(args.out)
 
     def run():
-        with flow.chromium(["--disable-threaded-animation"]) as browser:
+        with flow.chromium(frames.HASH_ARGS) as browser:
             return render(browser, args)
 
     result, code = flow.run_browser(
