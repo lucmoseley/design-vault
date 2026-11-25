@@ -410,8 +410,7 @@ class TheWaysCheck(unittest.TestCase):
         }
         self.assertIn("a", {m["page"] for m in answer(WAYS, pages)["misses"]})
 
-    def test_the_home_hub_relaxes_its_own_records_ways_line_and_no_other(self):
-        # #572
+    def test_the_home_hub_relaxes_its_own_records_ways_line_and_no_other(self):  # #572
         table = cross.parse(
             "vault.x | ways | >= 2\n"
             "vault.x | home-hub | pages <= 4\n"
