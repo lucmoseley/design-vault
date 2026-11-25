@@ -727,7 +727,6 @@ test("--contacts names each shape in a group whose transform it cannot read as u
   assert.match(r.lines[0], /:3 <path id="b">: could not read the shape, so its contacts are not measured: unreadable transform 'wobble\(2\)'/);
 });
 
-// #541: a cover passes a gap only where its paint is proved opaque.
 /** Asserts the A–B gap is covered but not measured, exit 6, its line naming why the cover's paint is unproved. */
 function assertUnproved(body, why, prefix = "") {
   const r = contactsIn(`${prefix}${A(49)}\n${B(51)}\n${body}`);
@@ -739,7 +738,7 @@ function assertUnproved(body, why, prefix = "") {
   assert.match(r.lines.at(-1), /, 0 failing, \d+ not measured$/);
 }
 
-test("a cover whose fill colour carries alpha lets the ground through: the gap fails as separate, naming the alpha", () => {
+test("#541: a cover whose fill colour carries alpha lets the ground through: the gap fails as separate, naming the alpha", () => {
   for (const fill of ["#0c08", "#00cc0080", "rgba(0, 204, 0, 0.5)", "rgb(0 204 0 / 50%)", "hsla(120, 100%, 40%, .5)", "oklch(0.7 0.2 140 / 0.5)", "transparent"]) {
     assertUncovered(`<path id="strip" fill="${fill}" d="M48 10 H52 V50 H48 Z"/>`);
   }
@@ -753,7 +752,7 @@ test("a cover whose fill colour carries alpha lets the ground through: the gap f
   }
 });
 
-test("a gradient cover passes only where every stop it paints with is opaque, its own or the ones its href lends it", () => {
+test("#541: a gradient cover passes only where every stop it paints with is opaque, its own or the ones its href lends it", () => {
   const strip = (id) => `<path id="strip" fill="url(#${id})" d="M48 10 H52 V50 H48 Z"/>`;
   const defs = `<defs><linearGradient id="solid"><stop offset="0" stop-color="#0c0"/><stop offset="1" stop-color="rgb(0 0 200)"/></linearGradient>
 <linearGradient id="fade"><stop offset="0" stop-color="#0c0"/><stop offset="1" stop-color="#0c0" stop-opacity="0.5"/></linearGradient>
@@ -762,17 +761,18 @@ test("a gradient cover passes only where every stop it paints with is opaque, it
   for (const id of ["fade", "lent", "empty"]) assertUncovered(`${defs}${strip(id)}`);
   assertUnproved(`<defs><pattern id="dots"><rect width="1" height="1"/></pattern></defs>${strip("dots")}`, "a pattern, which it does not read");
   assertUnproved(strip("nowhere"), "which names no paint server in the file");
+  assertUnproved(`<defs><pattern id="p"><rect width="1" height="1"/></pattern><linearGradient id="viaPattern" href="#p"/></defs>${strip("viaPattern")}`, "a pattern, which it does not read");
 });
 
-test("a cover that sets a blend mode, on it or an ancestor, lets the ground through; mix-blend-mode normal does not", () => {
+test("#541: a cover that sets a blend mode, on it or an ancestor, lets the ground through; mix-blend-mode normal does not", () => {
   for (const cover of [STRIP(' mix-blend-mode="multiply"'), `<g style="mix-blend-mode: screen">${STRIP()}</g>`]) assertUncovered(cover);
   const r = contactsIn(`${A(49)}\n${B(51)}\n${STRIP(' style="mix-blend-mode: multiply"')}`);
   assert.match(r.lines.find((l) => l.includes("a.2-b.4=")), /lets the ground through \(mix-blend-mode multiply on line 4\)/);
   assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n${STRIP(' style="mix-blend-mode: normal"')}`)), "covered");
 });
 
-test("a cover in a document whose stylesheet may thin paint is not measured; one setting only opaque paint still passes", () => {
-  for (const css of [".t{opacity:.5}", "path { fill-opacity: 0.5 !important }", "/* c */ g{mix-blend-mode:multiply}", ".s{fill:rgba(0,0,0,.5)}", "#strip{display:none}", "@import url(x.css);"]) {
+test("#541: a cover in a document whose stylesheet may thin paint is not measured; one setting only opaque paint still passes", () => {
+  for (const css of [".t{opacity:.5}", "path { fill-opacity: 0.5 !important }", "/* c */ g{mix-blend-mode:multiply}", ".s{fill:rgba(0,0,0,.5)}", "#strip{display:none}", "@import url(x.css);", "stop{stop-opacity:.3}", "@keyframes f{to{opacity:0}}"]) {
     assertUnproved(STRIP(' class="t"'), "stylesheet", `<style>${css}</style>\n`);
   }
   assertUnproved(STRIP(' class="t"'), "a stylesheet rule setting opacity: .5", "<style><![CDATA[.t{opacity:.5}]]></style>\n");
@@ -790,14 +790,14 @@ test("a cover in a document whose stylesheet may thin paint is not measured; one
   assert.match(linked.stdout, /: covered: .+a linked stylesheet, which it does not read/);
 });
 
-test("a cover through a filter, or with an opacity or colour it cannot read, is not measured", () => {
+test("#541: a cover through a filter, or with an opacity or colour it cannot read, is not measured", () => {
   assertUnproved(STRIP(' filter="url(#blur)"'), "filter url(#blur) on line 4");
   assertUnproved(STRIP(' style="fill-opacity: var(--a)"'), "fill-opacity var(--a)");
   assertUnproved(`<g opacity="calc(1)">${STRIP()}</g>`, "opacity calc(1) on line 4");
   assertUnproved(STRIP(' fill="var(--brand)"'), "fill var(--brand), a colour it cannot read");
 });
 
-test("of several shapes over a gap, an opaque one covers it wherever it lies; one whose paint is unread outranks a translucent one", () => {
+test("#541: of several shapes over a gap, an opaque one covers it wherever it lies; one whose paint is unread outranks a translucent one", () => {
   const thin = STRIP(' fill-opacity="0.5"');
   // The translucent strip's own underlaps with A and B are not measured, so the gap's line is read, not the exit.
   for (const body of [`${thin}\n${STRIP()}`, `${STRIP()}\n${thin}`]) {
@@ -805,9 +805,18 @@ test("of several shapes over a gap, an opaque one covers it wherever it lies; on
     assert.match(r.lines.find((l) => l.includes("a.2-b.4=")), /: covered: the edges run 2 px apart, but \S+ <path id="strip">, painted over both, fills the gap\./, body);
   }
   assertUnproved(`${thin}\n${STRIP(' filter="url(#f)"')}`, "filter url(#f) on line 5");
+  assertUnproved(`<g opacity="0.5">${STRIP(' filter="url(#f)"')}</g>\n${STRIP(' filter="url(#f)"')}`, "filter url(#f) on line 5");
 });
 
-test("--contacts --json marks a pass resting on paint it could not prove opaque", () => {
+test("#541: a cover whose paint an <animate> or <set> changes, on it, an ancestor or by href, is not measured", () => {
+  const anim = '<animate attributeName="fill-opacity" values="1;0.2" dur="1s"/>';
+  assertUnproved(`<path id="strip" fill="#0c0" d="M48 10 H52 V50 H48 Z">${anim}</path>`, "a <animate> of fill-opacity on line 4, which it does not play");
+  assertUnproved(`<g><set attributeName="visibility" to="hidden"/>${STRIP()}</g>`, "a <set> of visibility");
+  assertUnproved(`${STRIP()}<animate href="#strip" attributeName="opacity" values="1;0"/>`, "a <animate> of opacity");
+  assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n<path id="strip" fill="#0c0" d="M48 10 H52 V50 H48 Z"><animate attributeName="d" dur="1s"/></path>`)), "covered");
+});
+
+test("#541: --contacts --json marks a pass resting on paint it could not prove opaque", () => {
   const file = path.join(scratch, "unproved.svg");
   fs.writeFileSync(file, `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><style>.t{opacity:.5}</style>${A(49)}${B(51)}${STRIP()}</svg>`);
   const r = runInProcess(SCRIPT, ["--contacts", "--json", file]);
@@ -817,8 +826,7 @@ test("--contacts --json marks a pass resting on paint it could not prove opaque"
   assert.deepEqual([gap.cls, gap.unproved], ["covered", true]);
 });
 
-// #489: an underlap's upper fill lies over the lower where they overlap, so its paint decides whether the band shows.
-test("an underlap whose upper fill is translucent or sets a blend mode is not measured; opaque, it passes", () => {
+test("#489: an underlap whose upper fill is translucent or sets a blend mode is not measured; opaque, it passes", () => {
   for (const attrs of [' fill-opacity="0.5"', ' fill="#00c8"', ' mix-blend-mode="multiply"']) {
     const r = contactsIn(`${A(51)}\n<path id="b" fill="#00c"${attrs} d="M50 10 H90 V50 H50 Z"/>`.replace('fill="#00c" fill=', "fill="));
     assert.ok(classes(r).includes("underlap"), attrs);

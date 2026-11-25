@@ -51,19 +51,21 @@
  * one exact edge, the conflation seam) fail. A separate gap that one shape
  * painted after both fills, at both edges and halfway between them, is covered
  * and passes, naming that shape: no ground shows there (design-vault#356), where
- * its paint is proved opaque (design-vault#541). A shape painted before either
+ * its paint is proved opaque. A shape painted before either
  * does not cover it, since the gap shows that shape and not the art; nor does
  * one in another outermost <svg>, one hidden by visibility, or one whose paint
  * lets the ground through: an opacity, a clip-path, a mask or a blend mode on it
  * or an ancestor, its fill-opacity, its fill colour's alpha (#rgba, rgba(),
  * transparent and the like) or a gradient stop's. Where a cover's paint may let
  * the ground through but it cannot tell (a filter, a pattern, a value it cannot
- * read, or a stylesheet rule setting paint, which it matches to no shape), the
+ * read, an <animate> or <set> of its paint, or a stylesheet rule setting paint,
+ * which it matches to no shape), the
  * covered line is not measured. An underlap whose upper fill is not proved
  * opaque is not measured either, as the lower shows through it where they
- * overlap (design-vault#489). Each line ends with the contact as look-renders.py
+ * overlap. Each line ends with the contact as look-renders.py
  * contacts' --contact, a shell word to pass on unchanged. --contacts does not
- * read: stroke widths (a stroke is its centre line), a stylesheet's geometry,
+ * read: stroke widths (a stroke is its centre line), a stylesheet's or an
+ * animation's geometry,
  * what a <use> draws, an <svg> sized by CSS, whose user units are read as CSS
  * px with a note, and contacts between two outermost <svg>s, whose places on
  * the page it does not know.
@@ -640,13 +642,12 @@ const DRAWN = new Set(["path", "polygon", "polyline", "circle", "ellipse", "rect
 
 const isNone = (v) => v === undefined || v.trim() === "none";
 
-/** An opacity, fill-opacity, stop-opacity or colour alpha as a number, 1 or more opaque; null where it cannot be read. */
-function alphaOf(v) {
+function parseAlpha(v) {
   const m = v.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(%?)$/i);
   return m ? Number(m[1]) / (m[2] ? 100 : 1) : null;
 }
 
-/** A colour's alpha (CSS Color 4, §4–§11): 1 for a named colour, null where it cannot be read (a var(), a calc()). */
+// https://www.w3.org/TR/css-color-4/#color-syntax
 function colourAlpha(v) {
   const s = v.trim().toLowerCase();
   if (s === "transparent") return 0;
@@ -661,18 +662,17 @@ function colourAlpha(v) {
   if (fn) {
     const [channels, alpha, ...more] = fn[1].split("/");
     if (more.length) return null;
-    if (alpha !== undefined) return alpha.trim() === "none" ? 0 : alphaOf(alpha);
+    if (alpha !== undefined) return alpha.trim() === "none" ? 0 : parseAlpha(alpha);
     const parts = channels.split(",");
-    return parts.length === 4 ? alphaOf(parts[3]) : 1;
+    return parts.length === 4 ? parseAlpha(parts[3]) : 1;
   }
   return /^[a-z]+$/.test(s) ? 1 : null;
 }
 
-// The properties that decide whether a shape's fill hides what lies under it, each with the values that leave it
-// opaque and drawn; a stylesheet rule setting one is matched to no shape here (SVG 2, §13; Compositing 1, §3.2).
+// https://www.w3.org/TR/SVG2/render.html, https://www.w3.org/TR/compositing-1/#mix-blend-mode
 const PAINT_PROPS = {
-  opacity: (v) => alphaOf(v) >= 1,
-  "fill-opacity": (v) => alphaOf(v) >= 1,
+  opacity: (v) => parseAlpha(v) >= 1,
+  "fill-opacity": (v) => parseAlpha(v) >= 1,
   fill: (v) => colourAlpha(v) >= 1 && !/^(?:none|currentcolor)$/i.test(v.trim()),
   color: (v) => colourAlpha(v) >= 1,
   visibility: (v) => v.trim() === "visible",
@@ -681,13 +681,10 @@ const PAINT_PROPS = {
   filter: (v) => v.trim() === "none",
   "clip-path": (v) => v.trim() === "none",
   mask: (v) => v.trim() === "none",
+  "stop-color": (v) => colourAlpha(v) >= 1,
+  "stop-opacity": (v) => parseAlpha(v) >= 1,
 };
 
-/**
- * What a document's stylesheets do to a shape's paint: "thins" where a rule may let the ground through a shape, so
- * no shape's paint is proved; touches where rules set paint only to opaque, drawn values, which can still override
- * a translucent attribute; otherwise null. A linked sheet or an @import is not read, so thins.
- */
 function sheetEffect(sheets, linked) {
   if (linked) return { thins: "a linked stylesheet, which it does not read" };
   let touches = false;
@@ -726,6 +723,7 @@ function drawnShapes(text) {
   const sheets = [];
   let linked = false;
   const servers = new Map();
+  const animatedIds = new Map();
   const stack = [{ name: null, seen: {}, selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, paint: "black", fillOpacity: "1", color: "black", evenodd: false, undrawn: false, thin: undefined, unread: undefined, visible: true, transformError: undefined }];
   const markup = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[!?][^>]*>|<\/([\w:.-]+)\s*>|<([\w:.-]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
   let m;
@@ -752,6 +750,8 @@ function drawnShapes(text) {
     if (name === "link" && /\bstylesheet\b/i.test(attrs.rel ?? "")) linked = true;
     const el = {
       name,
+      id,
+      up: parent,
       seen: {},
       selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : step,
       // The outermost <svg> it sits in: each is laid out by the page, where this does not read.
@@ -767,11 +767,11 @@ function drawnShapes(text) {
       // What on it or an ancestor lets the ground through its content (thin), or may, unread: each the first found.
       thin:
         parent.thin ??
-        (attrs.opacity !== undefined && alphaOf(attrs.opacity) !== null && alphaOf(attrs.opacity) < 1 ? own("opacity") : undefined) ??
+        (attrs.opacity !== undefined && parseAlpha(attrs.opacity) !== null && parseAlpha(attrs.opacity) < 1 ? own("opacity") : undefined) ??
         (isNone(attrs["clip-path"]) ? undefined : own("clip-path")) ??
         (isNone(attrs.mask) ? undefined : own("mask")) ??
         (attrs["mix-blend-mode"] === undefined || attrs["mix-blend-mode"].trim() === "normal" ? undefined : own("mix-blend-mode")),
-      unread: parent.unread ?? (attrs.opacity !== undefined && alphaOf(attrs.opacity) === null ? own("opacity") : undefined) ?? (isNone(attrs.filter) ? undefined : own("filter")),
+      unread: parent.unread ?? (attrs.opacity !== undefined && parseAlpha(attrs.opacity) === null ? own("opacity") : undefined) ?? (isNone(attrs.filter) ? undefined : own("filter")),
       // visibility is inherited, and a descendant may set it back to visible (SVG 2, §3.2.3).
       visible: attrs.visibility === undefined || attrs.visibility === "inherit" ? parent.visible : attrs.visibility === "visible",
       transformError: parent.transformError,
@@ -797,12 +797,13 @@ function drawnShapes(text) {
         if (shape?.d) {
           shape.err ??= Math.min(...tokenise(shape.d).flatMap((c) => c.errs.filter((e) => e > 0)));
           const fill = el.fill && name !== "line";
-          const fillAlpha = alphaOf(el.fillOpacity);
+          const fillAlpha = parseAlpha(el.fillOpacity);
           const paint = {
             thin: el.thin ?? (el.visible ? undefined : `visibility on line ${line} or an ancestor`) ?? (fillAlpha !== null && fillAlpha < 1 ? `fill-opacity ${el.fillOpacity}` : undefined),
             unread: el.unread ?? (fillAlpha === null ? `fill-opacity ${el.fillOpacity}` : undefined),
             fill: el.paint,
             color: el.color,
+            node: el,
           };
           list.push({ ...base, ...shape, matrix: el.matrix, fill, paint, evenodd: el.evenodd, selector: el.selector, root: el.root, transformError: el.transformError });
         }
@@ -810,14 +811,18 @@ function drawnShapes(text) {
         list.push({ ...base, error: err.message });
       }
     }
-    // A paint server a fill's url() may name, gradients with each stop's alpha (SVG 2, §14.2–§14.3).
     if (name === "lineargradient" || name === "radialgradient") el.server = { kind: "gradient", href: href?.startsWith("#") ? href.slice(1) : null, stops: [] };
     else if (name === "pattern") el.server = { kind: "pattern" };
     if (el.server && id) servers.set(id, el.server);
     if (name === "stop" && parent.server?.kind === "gradient") {
       const stopColour = inherit("stop-color", "black");
-      const alpha = [colourAlpha(/^currentcolor$/i.test(stopColour) ? el.color : stopColour), alphaOf(inherit("stop-opacity", "1"))];
+      const alpha = [colourAlpha(/^currentcolor$/i.test(stopColour) ? el.color : stopColour), parseAlpha(inherit("stop-opacity", "1"))];
       parent.server.stops.push(alpha.includes(null) ? null : alpha[0] * alpha[1]);
+    }
+    if ((name === "animate" || name === "set") && (attrs.attributeName ?? "").toLowerCase() in PAINT_PROPS) {
+      const what = `a <${tag}> of ${attrs.attributeName} on line ${line}, which it does not play`;
+      if (href?.startsWith("#")) animatedIds.set(href.slice(1), what);
+      else parent.animated ??= what;
     }
     if (!/\/\s*$/.test(rest) && !VOID.has(name)) stack.push(el);
     if (RAW.has(name)) {
@@ -827,25 +832,26 @@ function drawnShapes(text) {
     }
   }
   const sheet = sheetEffect(sheets, linked);
-  for (const s of out) if (s.paint) s.paint = readPaint(s.paint, servers, sheet);
+  for (const s of out) {
+    if (!s.paint) continue;
+    let animated;
+    for (let n = s.paint.node; n && !animated; n = n.up) animated = n.animated ?? (n.id === undefined ? undefined : animatedIds.get(n.id));
+    s.paint = resolvePaint(s.paint, servers, sheet);
+    if (animated) s.paint = { unread: animated };
+  }
   return { shapes: out, referable, refs, notes };
 }
 
-/** A gradient's stops, through the href it takes them from where it has none of its own (SVG 2, §14.2.3). */
 function stopsOf(server, servers) {
   const seen = new Set();
-  while (server && !server.stops.length && server.href && !seen.has(server)) {
+  while (server?.kind === "gradient" && !server.stops.length && server.href && !seen.has(server)) {
     seen.add(server);
     server = servers.get(server.href);
   }
   return server?.kind === "gradient" ? server.stops : null;
 }
 
-/**
- * A shape's paint read through its fill, its paint servers and the document's stylesheets: { thin, unread }, thin
- * naming what proves its fill lets the ground through, unread what may, where it cannot tell; neither, opaque.
- */
-function readPaint({ thin, unread, fill, color }, servers, sheet) {
+function resolvePaint({ thin, unread, fill, color }, servers, sheet) {
   if (!thin && !unread) {
     const ref = fill.match(/^url\(\s*["']?#([^)"'\s]+)["']?\s*\)\s*(.*)$/i);
     if (ref) {
@@ -1022,7 +1028,7 @@ function findContacts(shapes) {
     const above = drawn.slice(j + 1).filter((s) => s.root === upper.root);
     const coverOf = (gap) => {
       const over = above.filter((s) => gap.every((pt) => isFilledAt(s, pt)));
-      return over.find((s) => !s.paint.thin && !s.paint.unread) ?? over.find((s) => s.paint.unread) ?? over[0];
+      return over.find((s) => !s.paint.thin && !s.paint.unread) ?? over.find((s) => !s.paint.thin && s.paint.unread) ?? over[0];
     };
     for (const lower of drawn.slice(0, j)) {
       if (lower.root !== upper.root) continue;

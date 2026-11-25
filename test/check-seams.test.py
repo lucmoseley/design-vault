@@ -213,8 +213,8 @@ class Edges(unittest.TestCase):
         self.assertIn("could not read the shape", proc.stdout)
         self.assertIn("judge them under vault.contacts-code", proc.stdout)
 
-    def test_a_cover_check_curves_cannot_prove_opaque_is_unmeasured(self):
-        # #541: the strip fills the gap, but a stylesheet rule may thin it; its other contacts are coincident.
+    def test_541_a_cover_check_curves_cannot_prove_opaque_is_unmeasured(self):
+        # The strip's other contacts are coincident, so no browser runs.
         page = self.page(
             "<style>.t{opacity:.5}</style>"
             '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
