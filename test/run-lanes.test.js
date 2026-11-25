@@ -58,9 +58,13 @@ const AMPLE = 8000;
 const keptFile = (times, suite) => path.join(times, spawnSync("cksum", { input: suite, encoding: "utf8" }).stdout.split(" ")[0]);
 
 let runs = 0;
-function run(args, env) {
+// CI keeps the run-cost report off (#370) but in the cases that test it, which clear it. A key set to undefined is
+// left out of the run's environment.
+function run(args, env, { cwd } = {}) {
   return new Promise((resolve) => {
-    const child = spawn("bash", [LANES, ...args], { env: { ...process.env, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", ...env } });
+    const full = { ...process.env, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", CI: "1", ...env };
+    for (const key of Object.keys(full)) if (full[key] === undefined) delete full[key];
+    const child = spawn("bash", [LANES, ...args], { cwd, env: full });
     const out = { stdout: "", stderr: "" };
     child.stdout.on("data", (b) => (out.stdout += b));
     child.stderr.on("data", (b) => (out.stderr += b));
@@ -309,4 +313,93 @@ describe("run-lanes.sh", { concurrency: true }, () => {
       assert.deepEqual(alive(), [], "a suite or its child outlived the run");
     });
   }
+
+  describe("the run-cost report (#370)", () => {
+    // A stand-in for the core, named by WORKFLOW_CORE_DIR, whose report records what it was called with and prints
+    // one line; with `throws`, its module fails at load.
+    const standIn = (name, { throws } = {}) => {
+      const core = path.join(dir, `core-${name}`);
+      fs.mkdirSync(path.join(core, "scripts", "lib"), { recursive: true });
+      const called = path.join(core, "called.json");
+      fs.writeFileSync(path.join(core, "scripts", "lib", "run-cost-report.js"), throws ? 'throw new Error("at load");\n'
+        : `exports.reportForRun = (root, timings) => {
+  require("node:fs").writeFileSync(${JSON.stringify(called)}, JSON.stringify({ root, timings }));
+  return ["STAND-IN REPORT"];
+};\n`);
+      return { core, called };
+    };
+    // A suite that times files itself, as test/failed-files.js does for node --test: it writes `lines` where
+    // VAULT_FILE_SECONDS says, then exits `code`.
+    const writer = (d, name, lines, code = 0) => {
+      const file = path.join(d, `${name}.test.sh`);
+      fs.writeFileSync(file, `printf '${lines.map((l) => `${l}\\n`).join("")}' >>"$VAULT_FILE_SECONDS"\nexit ${code}\n`);
+      return `bash ${file}`;
+    };
+    const scratch = (name) => {
+      const d = path.join(dir, `cost-${name}`);
+      fs.mkdirSync(d);
+      return d;
+    };
+    const ROOT = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: __dirname, encoding: "utf8" }).stdout.trim();
+    const quiet = (core) => ({ VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, CI: "", WORKFLOW_CORE_DIR: core });
+
+    for (const red of [false, true]) {
+      test(`a ${red ? "red" : "green"} run hands the report each file's own seconds, after the suites' output, and exits as its suites ${red ? "failed" : "passed"}`, async () => {
+        const d = scratch(red ? "red" : "green");
+        const { core, called } = standIn(red ? "red" : "green");
+        const one = path.join(d, "one.test.py");
+        fs.writeFileSync(one, `import sys\nsys.exit(${red ? 1 : 0})\n`);
+        const many = writer(d, "many", ["test/a.test.js\t1.250", "test/b.test.js\t0.040"]);
+        const proc = await run([`python3 ${one}`, many, "true"],
+          quiet(core));
+        assert.equal(proc.status, red ? 1 : 0, proc.stderr);
+        assert.equal(proc.stderr.includes(`FAIL ${one}`), red);
+        const { root, timings } = JSON.parse(fs.readFileSync(called, "utf8"));
+        assert.equal(root, ROOT);
+        // The suite that timed its own files is never also timed whole; one naming no test file times none.
+        assert.deepEqual(Object.keys(timings).sort(), [one, "test/a.test.js", "test/b.test.js"].sort());
+        assert.equal(timings["test/a.test.js"], 1.25);
+        assert.equal(timings["test/b.test.js"], 0.04);
+        assert.ok(Number.isFinite(timings[one]) && timings[one] >= 0, `${timings[one]} s for one.test.py`);
+        assert.match(proc.stdout, /\n== true \(\d+ s\)\n(.*\n)*STAND-IN REPORT\n$/);
+      });
+    }
+
+    test("with CI set the report is not called", async () => {
+      const d = scratch("ci");
+      const { core, called } = standIn("ci");
+      const proc = await run([writer(d, "many", ["test/a.test.js\t12"])], { ...quiet(core), CI: "true" });
+      assert.equal(proc.status, 0, proc.stderr);
+      assert.equal(fs.existsSync(called), false);
+      assert.doesNotMatch(proc.stdout, /STAND-IN|run-cost/);
+    });
+
+    for (const code of [0, 1]) {
+      test(`a report that will not run prints one line and leaves the exit at ${code}`, async () => {
+        const d = scratch(`broken-${code}`);
+        const { core } = standIn(`broken-${code}`, { throws: true });
+        const proc = await run([writer(d, "many", ["test/a.test.js\t12"], code)], quiet(core));
+        assert.equal(proc.status, code, proc.stderr);
+        assert.equal(proc.stdout.match(/run-cost/g).length, 1);
+        assert.match(proc.stdout, /test\/run-lanes\.sh: workflow-core's run-cost report would not run, so no test file's cost is judged; the suites' verdict stands \(#370\)\.\n$/);
+      });
+    }
+
+    test("the core's own report names a new test file timed past its budget, after the suites' output", async () => {
+      // A repo of its own, so the file is new against its base; WFC_SHARD_TIMINGS names no file, so no CI record is
+      // fetched. The seconds come from the suite, never a real slow file.
+      const d = scratch("core");
+      const git = (...args) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: d, encoding: "utf8" });
+      git("init", "-q");
+      fs.writeFileSync(path.join(d, "old.test.py"), "");
+      git("add", "old.test.py");
+      git("commit", "-qm", "base");
+      fs.writeFileSync(path.join(d, "new.test.py"), "");
+      const proc = await run([writer(d, "many", ["new.test.py\t12.5", "old.test.py\t11"])],
+        { ...quiet(undefined), WFC_SHARD_TIMINGS: path.join(d, "absent.csv") }, { cwd: d });
+      assert.equal(proc.status, 0, proc.stderr);
+      assert.match(proc.stdout, /^== bash .*many\.test\.sh \(\d+ s\)\nRUN COST: new\.test\.py took 12\.5 s, over the 10 s budget — new since HEAD: /);
+      assert.doesNotMatch(proc.stdout, /old\.test\.py/);
+    });
+  });
 });

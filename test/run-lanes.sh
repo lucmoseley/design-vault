@@ -15,6 +15,12 @@
 # VAULT_SUITE_BUDGET, in seconds, refuses the run before any suite starts where the kept seconds, laid longest first
 # on the lanes the machine would open now, end past it (#473). A suite with none kept counts as 0 s; lanes that open
 # later than the start can still make a refused run fit.
+# Once every suite has ended, red or green, each test file's own wall seconds go to workflow-core's run-cost report
+# (#370), which names one new or changed against the base that took past its budget, after the suites' output and
+# before any FAIL line. A suite that wrote `<path>\t<seconds>` lines to the file VAULT_FILE_SECONDS names, as
+# test/failed-files.js does for node --test's many files, is timed by those alone; else the one `.test.` file its
+# command names takes the suite's wall seconds, interpreter start included. The report never moves the exit status,
+# and is not run where CI is set.
 
 set -u
 ceiling=3
@@ -70,13 +76,18 @@ stop() { # stop <exit status>
 trap 'stop 130' INT
 trap 'stop 143' TERM
 
+named_files() { # named_files <suite>: the test files its command line names, one a line
+  local word
+  # shellcheck disable=SC2086 # a suite is a command line, split into its words as it was run
+  for word in $1; do [[ $word == *.test.* && -f $word ]] && printf '%s\n' "$word"; done
+}
+
 failing() { # failing <suite> <its VAULT_FAILED_FILES>
-  local suite=$1 named=$2 word files=()
+  local suite=$1 named=$2 files=()
   if [[ -s $named ]]; then
     mapfile -t files <"$named"
   else
-    # shellcheck disable=SC2086 # a suite is a command line, split into its words as it was run
-    for word in $suite; do [[ $word == *.test.* && -f $word ]] && files+=("$word"); done
+    mapfile -t files < <(named_files "$suite")
   fi
   # A red run of several files that recorded none failed as a whole, and pins its fault on no one file.
   if ((${#files[@]} == 1)) || [[ -s $named ]]; then printf 'FAIL %s\n' "${files[@]}"; else printf 'RED  %s\n' "$suite"; fi
@@ -97,9 +108,16 @@ kept_secs() { # kept_secs <suite> <default>: its last green seconds, else the de
 }
 
 finish() { # finish <pid> <status>
-  local suite=${lane[$1]} took
-  took=$(((${EPOCHREALTIME/./} - ${began[$1]/./} + 500000) / 1000000))
+  local suite=${lane[$1]} micros took files=()
+  micros=$((${EPOCHREALTIME/./} - ${began[$1]/./}))
+  took=$(((micros + 500000) / 1000000))
   echo "== $suite ($took s)"
+  if [[ -s ${log[$1]}.seconds ]]; then
+    cat "${log[$1]}.seconds" >>"$logs/seconds"
+  else
+    mapfile -t files < <(named_files "$suite")
+    ((${#files[@]} == 1)) && printf '%s\t%d.%06d\n' "${files[0]}" $((micros / 1000000)) $((micros % 1000000)) >>"$logs/seconds"
+  fi
   cat "${log[$1]}"
   if (($2)); then
     mapfile -t -O "${#reds[@]}" reds < <(failing "$suite" "${log[$1]}.failed")
@@ -163,7 +181,7 @@ while ((${#queue[@]} || ${#lane[@]})); do
   if ((${#queue[@]})) && opens; then
     started=$((started + 1))
     # shellcheck disable=SC2086 # a suite is a command line, split into its words
-    (VAULT_FAILED_FILES=$logs/$started.failed exec ${queue[0]}) >"$logs/$started" 2>&1 </dev/null &
+    (VAULT_FAILED_FILES=$logs/$started.failed VAULT_FILE_SECONDS=$logs/$started.seconds exec ${queue[0]}) >"$logs/$started" 2>&1 </dev/null &
     log[$!]=$logs/$started
     lane[$!]=${queue[0]}
     began[$!]=$EPOCHREALTIME
@@ -173,6 +191,25 @@ while ((${#queue[@]} || ${#lane[@]})); do
   wait -n -p ended "${!lane[@]}"
   finish "$ended" $?
 done
+# Through the core's own module, which keeps the budget and the wording, called on this tree: its program entry reads
+# its root as the main checkout of a worktree, so from a worktree it would judge the wrong tree's files.
+if [[ -z ${CI:-} && -s $logs/seconds ]]; then
+  # shellcheck disable=SC2016 # the ${…} are JavaScript's template literals
+  if ! root="$(git rev-parse --show-toplevel 2>/dev/null)" || ! node -e '
+const fs = require("node:fs");
+const [vault, root, seconds] = process.argv.slice(1);
+const core = require(`${vault}/scripts/lib/resolve-core.js`).resolveCore({ root: vault });
+const report = require(`${core}/scripts/lib/run-cost-report.js`);
+const timings = {};
+for (const line of fs.readFileSync(seconds, "utf8").split("\n").filter(Boolean)) {
+  const [file, secs] = line.split("\t");
+  timings[file] = Number(secs);
+}
+for (const line of report.reportForRun(root, timings)) console.log(line);' \
+    "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" "$root" "$logs/seconds"; then
+    echo "test/run-lanes.sh: workflow-core's run-cost report would not run, so no test file's cost is judged; the suites' verdict stands (#370)."
+  fi
+fi
 if ((${#reds[@]})); then
   printf '%s\n' "${reds[@]}" >&2
   exit 1
