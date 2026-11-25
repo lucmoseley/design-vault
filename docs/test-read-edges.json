@@ -129,10 +129,11 @@
 		"plugin/.claude-plugin/plugin.json": [
 			"test/plugin-manifest.test.js"
 		],
+		"plugin/review-page/index.html": [
+			"test/review-page.test.js"
+		],
 		"plugin/review-page/review.js": [
-			"test/ledger-check.test.js",
-			"test/no-git-env.test.js",
-			"test/select-suites.test.js"
+			"test/review-page.test.js"
 		],
 		"plugin/skills/design-critique/SKILL.md": [
 			"test/gate-wording.test.js"
