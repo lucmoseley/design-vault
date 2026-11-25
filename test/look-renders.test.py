@@ -360,7 +360,7 @@ class StagedBuilds(unittest.TestCase):
                     "by rewriting their style or attributes from a script, frame by frame (path#arch)",
                     proc.stdout,
                 )
-                self.assertIn("\nShoot it by hand with look.py zoom:", proc.stdout)
+                self.assertIn("\nShoot it by hand with look.py zoom", proc.stdout)
                 self.assertFalse(os.path.exists(os.path.join(out, "renders.json")))
 
 
