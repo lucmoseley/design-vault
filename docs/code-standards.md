@@ -43,11 +43,12 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/drive-pointer.py` | library: hovers, presses, clicks, drags and wheel-scrolls a page with the mouse and returns once it settles, for the family scripts (#301) |
 | `plugin/skills/design-round/scripts/fall-motion.js` | library: the fall and settle maths fall.js prints, split out so its tests call what the program calls (#187) |
 | `plugin/skills/design-round/scripts/higgsfield-client.js` | library, risk path: higgsfield.js's command line, settings and render client, split out so its tests call what the program calls (#187) |
+| `plugin/skills/design-round/scripts/higgsfield-api.js` | library, risk path: the one request that carries the Higgsfield key, refused off api.higgsfield.ai, and its retry, for higgsfield-client.js (#588) |
 | `plugin/skills/design-round/scripts/gate-form.js` | library: the gate question form gate.js reads and checks, and the asset vocabulary corrections-log.js and critic-examples.js share with it (#187) |
 | `plugin/review-page/page.js` | library, composition root: the review page's entry point, which reads `items.json` by `fetch`, opens the artifact store through `window.claude`, and hands every rule on checking and saving answers to review.js (#120, #381) |
 | `kits/planted-faults/tools/*.py` | program: the planted-fault kit's research scripts, run by hand for a test of a critic's load; `runner.py` and `score.py` are also imported by the scripts beside them (#238) |
 
-**Risk paths.** `plugin/skills/design-round/scripts/higgsfield.js` and `plugin/skills/design-round/scripts/higgsfield-client.js`, the client it runs, spend money: they call Higgsfield's pay-per-request API under `HIGGSFIELD_ROUND_CEILING_USD` and hold `HIGGSFIELD_API_KEY`.
+**Risk paths.** `plugin/skills/design-round/scripts/higgsfield.js` and `plugin/skills/design-round/scripts/higgsfield-client.js`, the client it runs, with `plugin/skills/design-round/scripts/higgsfield-api.js`, the client's keyed request, spend money: they call Higgsfield's pay-per-request API under `HIGGSFIELD_ROUND_CEILING_USD` and hold `HIGGSFIELD_API_KEY`.
 
 ## Local rules
 

@@ -291,6 +291,9 @@
 			"test/gate-tally.test.js",
 			"test/gate.test.js"
 		],
+		"plugin/skills/design-round/scripts/higgsfield-api.js": [
+			"test/higgsfield.test.js"
+		],
 		"plugin/skills/design-round/scripts/higgsfield-client.js": [
 			"test/higgsfield.test.js"
 		],
