@@ -462,7 +462,6 @@ def read_artboard(path, box):
 
 
 def read_page(browser, args):
-    """The full page drawn at args.scale, and the --at element's box in its device pixels."""
     from PIL import Image
     import io
 

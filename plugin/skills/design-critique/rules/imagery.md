@@ -49,11 +49,11 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 
 ### vault.contacts-script
 - applies-when: any; every place two separately drawn paths nearly touch
-- question: Where segments of two separately drawn shapes run alongside within 2 px of each other at the drawn size, does each pair either match to the paths' written precision with both fills on one side, or have one fill run on past the other's edge, leaving no exact edge with a fill on each side, or, where a gap parts them, have an opaque shape painted after both fill it?
+- question: Where segments of two separately drawn shapes run alongside within 2 px of each other at the drawn size, does each pair either match to the paths' written precision with both fills on one side, or have one fill run on past the other's edge, the upper fill opaque, leaving no exact edge with a fill on each side, or, where a gap parts them, have an opaque shape painted after both fill it?
 - answered-by: script
 - writes: contact
 - yields-to: level 2
-- source: the rule is the founder's, lucmoseley/mmm-infra#9; the #262 ruling that a script lists the contacts (spec #324, user story 19); a fill on each side of one exact edge is the conflation seam (Khronos NV_path_rendering_shared_edge, Issue 1); an opaque shape painted later hides a gap, as each element paints over those before it (SVG 2, §3.3–3.4) (#356); the 2 px is a guess no source sets (#324's Values); strength: founder ruling for the rule, house ruling for the script, a rendering fact for the seam and the cover, an unsourced guess for the 2 px
+- source: the rule is the founder's, lucmoseley/mmm-infra#9; the #262 ruling that a script lists the contacts (spec #324, user story 19); a fill on each side of one exact edge is the conflation seam (Khronos NV_path_rendering_shared_edge, Issue 1); an opaque shape painted later hides a gap or an underlap's lower edge, as each element paints over those before it (SVG 2, §3.3–3.4) (#356, #489); the 2 px is a guess no source sets (#324's Values); strength: founder ruling for the rule, house ruling for the script, a rendering fact for the seam and the cover, an unsourced guess for the 2 px
 - era: timeless
 - owner: vault
 - stage: value
