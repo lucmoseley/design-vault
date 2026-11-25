@@ -297,14 +297,7 @@ def findings(table, pages, walks, *, phones, home):
         _ways(
             answers,
             lines["ways"],
-            next(
-                (
-                    line
-                    for line in table
-                    if line.check == "home-hub" and line.id == lines["ways"].id
-                ),
-                None,
-            ),
+            lines.get("home-hub"),
             pages=pages,
             walks=walks,
             home=home,

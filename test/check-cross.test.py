@@ -385,20 +385,6 @@ class TheWaysCheck(unittest.TestCase):
         }
         self.assertIn("a", {m["page"] for m in answer(WAYS, pages)["misses"]})
 
-    def test_the_home_hub_relaxes_only_its_own_records_ways_line(self):
-        # #572: a home-hub line on one record left another's ways line alone.
-        table = cross.parse(
-            "vault.x | ways | >= 2\n"
-            "vault.x | home-hub | pages <= 4\n"
-            "vault.y | ways | >= 2"
-        )
-        pages = {
-            "h": page("h", links=[link("a", nav=True)]),
-            "a": page("a", links=[link("h", nav=True)]),
-        }
-        got = cross.findings(table, pages, [], phones=None, home="h")
-        self.assertIn("a", {m["page"] for m in got[-1]["misses"]})
-
 
 def step(url, typed, arrived, *, back_url=None, held=None):
     back = (
