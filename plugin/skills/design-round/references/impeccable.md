@@ -90,7 +90,7 @@ The precedence levels are the house's [source precedence](../../design-critique/
 
 ### The "AI look" bans: dated defaults, review by 14 Apr 2027
 
-The record is `vault.ai-look`. These are impeccable's reaction to 2024–2026 model output (design-vault#119 F3), so they sit at precedence level 6. The rest of the Refuse list keeps impeccable's weight, its light-or-dark row as conditioned above.
+The record is `vault.ai-look`. These are impeccable's reaction to 2024–2026 model output (design-vault#119 F3), so they sit at precedence level 6. Purple, as a gradient or the default accent, rests on more than impeccable: Hallmark's lint bans the gradient and Krebs's scan of Show HN pages counts it (#400), though impeccable's catalogue dates it to 2022, so it is reviewed with the rest. The rest of the Refuse list keeps impeccable's weight, its light-or-dark row as conditioned above.
 
 A candidate that uses one is reported at P2 at most. It never fails a gate and never decides a pick. At the review date, check each against Anthropic's `frontend-design` list of current AI-made traits, which the House DNA follows, and strike what no longer marks it.
 
