@@ -7,7 +7,8 @@ check-access.py calls, at each width:
     keys.mark(page, js, carousels)            # before the walk: what each declared carousel shows at rest
     keys.ring(frame, js, i)                   # at each forward stop, focused and then blurred
     keys.walked(page, js, readings, unseen)   # after the walk: the answers it settles
-    keys.driven(context, url, js, carousels, mouse=...)  # a fresh load: the answers that press keys or the mouse
+    keys.driven(context, url, js, carousels, mouse=...)  # a fresh load: the answers that press keys or the mouse,
+                                                         # and each carousel's slide span, which vault.pause reads
 
 `js` wraps a page-side body with check-access.py's helpers (label, shown, TARGET, visiblePart and the rest);
 `carousels` are the CSS selectors the parts declaration gives the carousel part. Each answer is a
@@ -768,14 +769,16 @@ def still(handle):
 
 def _carousels(page, js, carousels):
     """vault.carousel-focus's driven faults and cannot-measure reasons: a rotating carousel holds still while
-    focus or the pointer is in it, and its previous and next buttons keep focus when pressed."""
-    faults, unmeasured = [], []
+    focus or the pointer is in it, and its previous and next buttons keep focus when pressed; and each
+    carousel's _span."""
+    faults, unmeasured, spans = [], [], []
     for n, c in enumerate(carousels):
         handle = page.evaluate_handle(
             "(n) => window.__drive.carousels[n]", n
         ).as_element()
         # The pointer has not moved on a fresh load, so it is over nothing yet.
         span = _span(page, handle)
+        spans.append(span)
         if isinstance(span, str):
             unmeasured.append(f"{c['subject']} {span}")
         elif span is not None:
@@ -813,7 +816,7 @@ def _carousels(page, js, carousels):
                         "detail": f"moves focus from {name} to {moved} when it is pressed",
                     }
                 )
-    return faults, unmeasured
+    return faults, unmeasured, spans
 
 
 def _span(page, handle):
@@ -883,8 +886,9 @@ def _presses(page, js):
 
 
 def driven(context, url, js, carousels, *, mouse):
-    """The answers that press keys or the mouse, from a fresh load of the page; the mouse presses only where
-    `mouse`, as a press at one width settles the :focus rule every width shares."""
+    """The answers that press keys or the mouse, from a fresh load of the page, and each declared carousel's
+    time from one slide to the next, as _span gives it; the mouse presses only where `mouse`, as a press at one
+    width settles the :focus rule every width shares."""
     out = {qid: answering.unjudged() for qid in DRIVEN}
     page = context.new_page()
     page.add_init_script(pointer.WATCH_JS)
@@ -892,7 +896,7 @@ def driven(context, url, js, carousels, *, mouse):
     page.evaluate("() => document.fonts.ready")
     got = page.evaluate(js(DRIVE_JS), list(carousels))
     out["vault.roving-focus"].faults.extend(_arrows(page, js, got["groups"]))
-    faults, unmeasured = _carousels(page, js, got["carousels"])
+    faults, unmeasured, spans = _carousels(page, js, got["carousels"])
     out["vault.carousel-focus"].faults.extend(faults)
     out["vault.carousel-focus"].unmeasured.extend(unmeasured)
     if mouse:
@@ -902,4 +906,4 @@ def driven(context, url, js, carousels, *, mouse):
     # Menus last: a menu item may act when its menu is shut by Tab.
     out["vault.menu-focus"].faults.extend(_menus(page, js))
     page.close()
-    return out
+    return out, spans

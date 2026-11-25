@@ -154,12 +154,21 @@ check-layout.py does, and measures each question at both:
 - vault.pause: on a fresh load, each animation running from the start whose
   active span is over 5 s, and each video playing that loops or runs over
   5 s without its own controls, fails unless a button, switch or checkbox
-  named for pausing, stopping or hiding it stops it when clicked. Such an
-  animation that ends before the check could try a control, or while it
-  tries them, an element
-  a script moves frame by frame, and a canvas, image or SVG whose pixels
-  change across WATCH_MS without an animation the browser lists, cannot be
-  measured; nor can a carousel that changes slides less often than that;
+  named for pausing, stopping or hiding it stops it when clicked. So does a
+  declared carousel in which, past 5 s from load and within ROTATE_MS of
+  that, a script rewrites a style, class, source or geometry attribute
+  check-flow.py's collector watches, or an animation or transition starts,
+  unless such a control, clicked, holds it still for its slide's
+  span as vault.carousel-focus timed it, or ROTATE_MS where that timed none,
+  and STILL_SLACK_MS more. Such a change outside a declared carousel, named by
+  the changed element's parent, cannot be measured unless a control holds it
+  still. An entrance that ends within 5 s is no such change, and one is
+  watched for only where a carousel is declared or the page, at the
+  read, still runs an interval, holds a pending timeout or asks for frames.
+  A long animation that ends before the check could try a control, or while
+  it tries them, an element a script moves frame by frame, and a canvas,
+  image or SVG whose pixels change across WATCH_MS without an animation the
+  browser lists, cannot be measured;
 - vault.skip-link: where a Tab stop outside the main element comes before it,
   the first stop, past any in a dialog or a fixed or sticky cookie or consent
   banner, must link to the main element or something in it, and show whole in
@@ -313,6 +322,9 @@ WATCH_MS = 1000
 PAUSE_TRIES = 6
 # Frames a pause control has to hold still in before it counts as moving (#536): a guess.
 PAUSE_FRAMES = 10
+# A frame loop of the page's still runs where it asked a frame within this
+# many of the collector's: a guess.
+PAGE_LOOP_FRAMES = 2
 # Event types that make an element act on a pointer, and React's props for them.
 ACT_EVENTS = (
     "click",
@@ -1073,6 +1085,84 @@ CLICKABLE_JS = r"""
 STOPPED_JS = "() => window.__motions.flatMap((m, i) => (m.stopped() ? [i] : []))"
 ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
 
+# Run before any page script, so the motion check knows which intervals still run.
+INTERVALS_JS = r"""
+(() => {
+  const live = new Set(), set = window.setInterval, clear = window.clearInterval;
+  window.setInterval = function (...a) { const id = set.apply(this, a); live.add(id); return id; };
+  window.clearInterval = function (id) { live.delete(id); return clear.call(this, id); };
+  window.__intervals = live;
+})();
+"""
+
+# Whether anything could change the page past LONG_MS: a declared carousel, an
+# interval still running, a timeout still pending, or a frame loop the page
+# asked a frame of in the last PAGE_LOOP_FRAMES.
+TIMED_JS = r"""
+(carousels) => {
+  const f = window.__flow;
+  return carousels > 0 || window.__intervals.size > 0 || f.pending.size > 0 || f.lastPageFrame >= f.frame - PAGE_LOOP_FRAMES;
+}
+"""
+
+# The elements that changed since `since`: an attribute the collector watches
+# a script rewrote, or an animation or transition that started, outside a control named
+# for pausing and leaving out an element a script moves frame by frame, which
+# the motion check reports apart.
+CHANGED_JS = r"""
+const changedSince = (since) => {
+  const f = window.__flow;
+  f.scan();
+  const out = new Set();
+  const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el), REWRITE_FRAMES, REWRITE_SPAN_MS);
+  const keep = (el) => el && el.isConnected && !scripted(el) && !window.__pauses.some((p) => p.contains(el));
+  for (const [el, log] of f.rewrites) if (keep(el) && log.some((r) => r.at >= since)) out.add(el);
+  for (const [a, rec] of f.seen) {
+    const el = a.effect && a.effect.target;
+    if (keep(el) && rec.start !== null && rec.start >= since) out.add(el);
+  }
+  return out;
+};
+"""
+
+# What changed past LONG_MS, kept in window.__rotations: each declared carousel
+# shown that holds a change, and, outside them, each changed element's parent,
+# the outermost where one holds another.
+ROTATION_JS = (
+    flow.LABEL_JS
+    + flow.LOOP_JS
+    + CHANGED_JS
+    + r"""
+([selectors, since]) => {
+  const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
+  const carousels = selectors.flatMap((s) => [...document.querySelectorAll(s)]);
+  const found = window.__rotations = [];
+  const rest = [];
+  for (const el of changedSince(since)) {
+    const c = carousels.find((c) => c.contains(el));
+    if (!c) rest.push(el.parentElement || el);
+    else if (on(c) && !found.some((r) => r.root === c)) found.push({ root: c, declared: true });
+  }
+  for (const root of rest)
+    if (on(root) && !rest.some((o) => o !== root && o.contains(root)) && !found.some((r) => r.root === root))
+      found.push({ root, declared: false });
+  return found.map((r) => ({ subject: label(r.root), declared: r.declared, index: carousels.indexOf(r.root) }));
+}
+"""
+)
+
+# Which of window.__rotations changed since `since`, by their index.
+ROTATED_JS = (
+    flow.LOOP_JS
+    + CHANGED_JS
+    + r"""
+(since) => {
+  const changed = [...changedSince(since)];
+  return window.__rotations.flatMap((r, i) => (changed.some((el) => r.root.contains(el)) ? [i] : []));
+}
+"""
+)
+
 BLUR_JS = "() => document.activeElement && document.activeElement.blur()"
 
 
@@ -1093,7 +1183,7 @@ def page_js(body):
     consts = (
         f"const MIN_TARGET = {MIN_TARGET}, PX_SLACK = {maths.PX_SLACK}, BOLD_CUE = {BOLD_CUE}, WRAP = {WRAP}, "
         f"LINK_RATIO = {LINK_RATIO}, WRAPPERS = {WRAPPERS}, FOCUS_REACH = {FOCUS_REACH}, LONG_MS = {LONG_MS}, "
-        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, PAUSE_FRAMES = {PAUSE_FRAMES}, "
+        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, PAUSE_FRAMES = {PAUSE_FRAMES}, PAGE_LOOP_FRAMES = {PAGE_LOOP_FRAMES}, "
         f"OPAQUE = {OPAQUE}, DATE_PARTS = {DATE_PARTS}, ACT_EVENTS = {json.dumps(ACT_EVENTS)}, REACT_PROPS = {json.dumps(REACT_PROPS)};\n"
     )
     return consts + CUE_JS + body
@@ -1392,17 +1482,35 @@ def tab_walk(page, carousels):
     }
 
 
-def pause_answer(context, url):
+def hold_ms(rotation, spans):
+    """How long, in ms, a change ROTATION_JS found must hold still to count as
+    stopped: its declared carousel's span from `spans`, where
+    vault.carousel-focus timed one, else keys.ROTATE_MS; and
+    keys.STILL_SLACK_MS more."""
+    span = (
+        spans[rotation["index"]]
+        if rotation["declared"] and rotation["index"] < len(spans)
+        else None
+    )
+    timed = isinstance(span, (int, float))
+    return (span if timed else keys.ROTATE_MS) + keys.STILL_SLACK_MS
+
+
+def pause_answer(context, url, carousels=(), spans=()):
     """vault.pause's (faults, cannot-measure reasons), from a fresh load of the
-    page: each motion running more than LONG_MS from load fails
-    unless one of the controls named for pausing it, clicked, stops it.
-    One that ends before the read or while its controls are tried, and
-    motion a script draws, frame by frame or on a canvas, image or SVG,
-    cannot be measured."""
+    page: each motion running more than LONG_MS from load, and each part that
+    changes what it shows past LONG_MS, fails unless one of the controls named
+    for pausing it, clicked, stops it. A change outside the declared
+    `carousels` cannot be measured instead. One that ends before the read or
+    while its controls are tried, and motion a script draws, frame by frame or
+    on a canvas, image or SVG, cannot be measured. `spans` are
+    vault.carousel-focus's times from one slide to the next, by carousel, each
+    None or a reason where it timed none."""
     from playwright.sync_api import Error as PlaywrightError
 
     page = context.new_page()
     page.add_init_script(flow.COLLECTOR_JS)
+    page.add_init_script(INTERVALS_JS)
     page.goto(url, wait_until="load")
     page.evaluate("() => document.fonts.ready")
     before = page.screenshot(full_page=True)
@@ -1423,9 +1531,20 @@ def pause_answer(context, url):
             unmeasured.append(
                 f"{painted['subject']} changes as it is drawn, which this check cannot time"
             )
-    stopped, unclickable = set(), 0
+    # A change past LONG_MS, watched for keys.ROTATE_MS, before any control is
+    # clicked; an entrance that ends sooner is not one.
+    rotating = []
+    if page.evaluate(page_js(TIMED_JS), len(carousels)):
+        page.wait_for_timeout(
+            max(0, LONG_MS - page.evaluate("() => performance.now()"))
+        )
+        since = page.evaluate("() => performance.now()")
+        page.wait_for_timeout(keys.ROTATE_MS)
+        rotating = page.evaluate(page_js(ROTATION_JS), [list(carousels), since])
+    holds = [hold_ms(r, spans) for r in rotating]
+    stopped, held, unclickable = set(), set(), 0
     for i in range(got["pauses"]):
-        if len(stopped) == len(got["long"]):
+        if len(stopped) == len(got["long"]) and len(held) == len(rotating):
             break
         # Covered, moving or detached: a visitor could not click it either,
         # so it pauses nothing.
@@ -1443,6 +1562,11 @@ def pause_answer(context, url):
             "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
         )
         stopped.update(page.evaluate(STOPPED_JS))
+        if len(held) < len(rotating):
+            since = page.evaluate("() => performance.now()")
+            page.wait_for_timeout(max(h for k, h in enumerate(holds) if k not in held))
+            moved = page.evaluate(page_js(ROTATED_JS), since)
+            held.update(set(range(len(rotating))) - set(moved))
     ended = set(page.evaluate(ENDED_JS)) - stopped
     page.close()
     tried = (
@@ -1458,17 +1582,28 @@ def pause_answer(context, url):
                 f"{m['subject']} {m['what']} from the page's load and ended while the controls named for pausing it were tried"
             )
         elif i not in stopped:
-            held = faults.setdefault(
+            held_on = faults.setdefault(
                 m["subject"], {"subject": m["subject"], "what": []}
             )
-            held["what"].append(m["what"])
-    return [
+            held_on["what"].append(m["what"])
+    found = [
         {
             "subject": s,
             "detail": f"{' and '.join(f['what'])} from the page's load, and {tried}",
         }
         for s, f in faults.items()
-    ], unmeasured
+    ]
+    later = f"changes what it shows more than {LONG_MS / 1000:g} s after the page's load, and {tried}"
+    for k, r in enumerate(rotating):
+        if k in held:
+            continue
+        if r["declared"]:
+            found.append({"subject": r["subject"], "detail": later})
+        else:
+            unmeasured.append(
+                f"{r['subject']} {later}; no carousel was declared, so whether the change shows cannot be told"
+            )
+    return found, unmeasured
 
 
 def judge(got, shots, measured, table):
@@ -1701,15 +1836,13 @@ def run(at):
             )
             light = contrasts.signature(page, contrast_js)
             merge(measured, tab_walk(page, at.carousels))
+            driven, spans = keys.driven(
+                context, at.url, keys_js, at.carousels, mouse=name == "desktop"
+            )
             measured["vault.pause"] = answering.Judged(
-                *pause_answer(context, at.url), [], []
+                *pause_answer(context, at.url, at.carousels, spans), [], []
             )
-            merge(
-                measured,
-                keys.driven(
-                    context, at.url, keys_js, at.carousels, mouse=name == "desktop"
-                ),
-            )
+            merge(measured, driven)
             context.close()
             answered, judge_readings = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>carousel</title>
+<!-- vault.pause (#545): three slides a setInterval swaps every 3 s forever, each by a short CSS transition, and
+     no control on the page. Declared as the carousel (.slides), it fails; undeclared, it cannot be
+     measured. -->
+<style>
+  body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
+  main { padding: 16px }
+  .slides { position: relative; width: 300px; height: 120px; border: 1px solid #767676 }
+  .slide { position: absolute; inset: 0; padding: 16px; opacity: 0; transition: opacity 300ms }
+  .slide.on { opacity: 1 }
+</style>
+<main>
+  <div class="slides">
+    <div class="slide on"><p>Rooftop bar.</p></div>
+    <div class="slide"><p>Pool.</p></div>
+    <div class="slide"><p>Garden.</p></div>
+  </div>
+</main>
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let at = 0;
+  setInterval(() => {
+    slides[at].classList.remove('on');
+    at = (at + 1) % slides.length;
+    slides[at].classList.add('on');
+  }, 3000);
+</script>
+</html>

@@ -1,4 +1,4 @@
-"""Pins check-access.py's access questions (#163, #164, #189, #315, #316): python3 test/check-access.test.py
+"""Pins check-access.py's access questions (#163, #164, #189, #315, #316, #545): python3 test/check-access.test.py
 
 Each question is run end to end on a fixture that fails it, and on a clean
 page that passes every question check-access.py asks; the keyboard-tier01 fixtures plant one fault for each
@@ -607,7 +607,7 @@ class Browsed(unittest.TestCase):
         cls.browser.close()
         cls.playwright.stop()
 
-    def pause_answer(self, fixture, watch_ms=None, init=None):
+    def pause_answer(self, fixture, watch_ms=None, init=None, carousels=()):
         access = library("check-access.py")
         if watch_ms is not None:
             access.WATCH_MS = watch_ms
@@ -616,7 +616,7 @@ class Browsed(unittest.TestCase):
             if init:
                 context.add_init_script(init)
             return access.pause_answer(
-                context, pathlib.Path(FIXTURES, fixture).resolve().as_uri()
+                context, pathlib.Path(FIXTURES, fixture).resolve().as_uri(), carousels
             )
         finally:
             context.close()
@@ -648,6 +648,70 @@ class LateMotionRead(Browsed):
                 'div.slide "slide" runs 60.0 s from the page\'s load and ended while the controls named for pausing it were tried'
             ],
         )
+
+
+class Hold(unittest.TestCase):
+    """How long vault.pause waits for a change a control may have stopped (#545): a declared carousel's
+    slide span as vault.carousel-focus timed it, else access-keys.py's ROTATE_MS, and STILL_SLACK_MS more."""
+
+    def test_a_declared_carousel_holds_for_its_timed_span_and_anything_else_for_rotate_ms(
+        self,
+    ):
+        access = library("check-access.py")
+        slack, rotate = access.keys.STILL_SLACK_MS, access.keys.ROTATE_MS
+        spans = [3000.0, "never holds still", None]
+        for rotation, want in (
+            ({"declared": True, "index": 0}, 3000 + slack),
+            ({"declared": True, "index": 1}, rotate + slack),
+            ({"declared": True, "index": 2}, rotate + slack),
+            ({"declared": True, "index": 3}, rotate + slack),
+            ({"declared": False, "index": -1}, rotate + slack),
+        ):
+            with self.subTest(rotation):
+                self.assertEqual(access.hold_ms(rotation, spans), want)
+
+
+class TimedChange(Browsed):
+    """vault.pause on a page that changes what it shows on a timer past 5 s, as a carousel's slides do, told
+    apart from an entrance that ends sooner (#545)."""
+
+    LATER = "main > div.slides changes what it shows more than 5 s after the page's load, and no control on the page is named for pausing, stopping or hiding it"
+
+    def test_a_declared_carousel_with_no_pause_control_fails(self):
+        self.assertEqual(
+            self.pause_answer("carousel.html", carousels=[".slides"]),
+            (
+                [
+                    {
+                        "subject": "main > div.slides",
+                        "detail": self.LATER.removeprefix("main > div.slides "),
+                    }
+                ],
+                [],
+            ),
+        )
+
+    def test_an_undeclared_carousel_with_no_pause_control_cannot_be_measured(self):
+        self.assertEqual(
+            self.pause_answer("carousel.html"),
+            (
+                [],
+                [
+                    f"{self.LATER}; no carousel was declared, so whether the change shows cannot be told"
+                ],
+            ),
+        )
+
+    def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self):
+        for carousels in ([".slides"], []):
+            with self.subTest(carousels=carousels):
+                self.assertEqual(
+                    self.pause_answer("carousel-paused.html", carousels=carousels),
+                    ([], []),
+                )
+
+    def test_an_entrance_that_ends_within_5_s_beside_a_running_interval_passes(self):
+        self.assertEqual(self.pause_answer("entrance.html"), ([], []))
 
 
 class PauseClick(Browsed):
