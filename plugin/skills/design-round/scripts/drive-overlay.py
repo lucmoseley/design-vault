@@ -26,8 +26,8 @@ scheme, locale…) at the caller's viewport, reloaded from the caller's URL befo
 is never clicked: each visible button, [role=button] or menu item that would not submit a form or leave the
 page is clicked, top-level ones first and then those each trigger's overlay draws, until every such dialog has
 its opener. A trial is kept per URL and those options. It reads the page as it loads, with none of the caller's
-cookies, storage, init scripts, routes or page.emulate_media, so it misses an opener that only the caller's own
-steps or those draw, and it cannot load a page set by set_content. A
+cookies, storage (storage_state included), proxy, init scripts, routes or page.emulate_media, so it misses an
+opener that only the caller's own steps or those draw, and it cannot load a page set by set_content. A
 [role=dialog] that no markup names is not tried for, as nothing generic tells a trial it opened. Text fields
 are never triggers: a combobox opens by typing, which the form driver (#302) does.
 
@@ -287,10 +287,8 @@ class Overlay:
     declared: bool
 
 
-# Trial results, {(url, trial options as JSON): {opener path: dialog path}}.
-_trials = {}
-# Context options a trial leaves out, as it downloads nothing.
-UNCARRIED = ("acceptDownloads",)
+_trials: dict[tuple[str, str], dict[str, str]] = {}
+TRIAL_LEAVES_OUT = ("acceptDownloads",)
 
 
 def _items(handle):
@@ -305,33 +303,32 @@ def _settle(page, target=None):
 
 
 def _trial_options(page):
-    """The caller's context options as browser.new_context() keywords, at the page's own viewport. Playwright
-    has no public getter, so they are read from the protocol options it keeps on the context and named back by
-    new_context()'s signature; one with no keyword there (selector engines, recording) is left out."""
+    # `playwright==1.61.0` has no public getter for a context's options, and keeps no storage_state or proxy
+    # among the private ones it holds.
     from playwright.sync_api import Browser
 
     names = {
         n.replace("_", ""): n for n in inspect.signature(Browser.new_context).parameters
     }
-    kept = dict(page.context._impl_obj._options)
-    if kept.pop("noDefaultViewport", False):
-        kept["noViewport"] = True
-    if "extraHTTPHeaders" in kept:
-        kept["extraHTTPHeaders"] = {
-            h["name"]: h["value"] for h in kept["extraHTTPHeaders"]
+    protocol = dict(page.context._impl_obj._options)
+    if protocol.pop("noDefaultViewport", False):
+        protocol["noViewport"] = True
+    if "extraHTTPHeaders" in protocol:
+        protocol["extraHTTPHeaders"] = {
+            h["name"]: h["value"] for h in protocol["extraHTTPHeaders"]
         }
-    if "clientCertificates" in kept:
-        kept["clientCertificates"] = [
+    if "clientCertificates" in protocol:
+        protocol["clientCertificates"] = [
             {
                 k: base64.b64decode(v) if k in ("cert", "key", "pfx") else v
                 for k, v in c.items()
             }
-            for c in kept["clientCertificates"]
+            for c in protocol["clientCertificates"]
         ]
     options = {
         names[k.lower()]: v
-        for k, v in kept.items()
-        if k.lower() in names and k not in UNCARRIED
+        for k, v in protocol.items()
+        if k.lower() in names and k not in TRIAL_LEAVES_OUT
     }
     if page.viewport_size:
         options["viewport"] = page.viewport_size

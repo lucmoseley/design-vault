@@ -1,13 +1,13 @@
 """Tests plugin/skills/design-round/scripts/drive-overlay.py (#303): python3 test/drive-overlay.test.py
 
 Lose the settle and the fading panel reads shut while it opens; lose the trial and a dialog only a script
-opens is never found. It drives a real Chromium on three fixture pages, since what it pins is what the browser
-opens, focuses and draws under real clicks and keys. One browser serves the module and each test opens a
+opens is never found. One browser serves the module and each test opens a
 fresh page in it, so no test sees another's open overlay; the driver's trial cache does outlive a test, so a
 test that watches the trial clears it first.
 """
 
 import importlib.util
+import inspect
 import os
 import pathlib
 import shutil
@@ -15,6 +15,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+from playwright.sync_api import Browser
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
@@ -63,6 +65,20 @@ TRIGGERS = {
     "sort-button": ("disclosure", False, "sort-button"),
 }
 BROWSER = flow.chromium()
+PHONE = {"width": 390, "height": 664}
+LEFT_OUT = {
+    "proxy",
+    "storage_state",
+    "accept_downloads",
+    "default_browser_type",
+    "record_har_path",
+    "record_har_omit_content",
+    "record_har_url_filter",
+    "record_har_mode",
+    "record_har_content",
+    "record_video_dir",
+    "record_video_size",
+}
 
 
 def setUpModule():
@@ -247,15 +263,13 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.page.evaluate(opacity), "0")
 
 
-class Trial(unittest.TestCase):
-    """The trial page under the caller's context options (#552)."""
-
-    def opened(self, width=None, **options):
+class TrialUnderCallerOptions(unittest.TestCase):
+    def opened(self, resize=False, **options):
         context = browser.new_context(**options)
         self.addCleanup(context.close)
         page = context.new_page()
-        if width:
-            page.set_viewport_size({"width": width, "height": 664})
+        if resize:
+            page.set_viewport_size(PHONE)
         page.goto(TOUCH)
         return {key(ov): ov.target.get_attribute("id") for ov in overlay.find(page)}
 
@@ -263,24 +277,23 @@ class Trial(unittest.TestCase):
         self,
     ):
         overlay._trials.clear()
-        phone = {"width": 390, "height": 664}
         both = {"info-button": "info", "map-button": "map"}
-        self.assertEqual(self.opened(viewport=phone), both)
+        self.assertEqual(self.opened(viewport=PHONE), both)
         self.assertEqual(
-            self.opened(viewport=phone, has_touch=True), {"book-button": "book", **both}
+            self.opened(viewport=PHONE, has_touch=True), {"book-button": "book", **both}
         )
 
     def test_the_trial_takes_the_pages_viewport_where_the_caller_resized_it(self):
         overlay._trials.clear()
         self.assertEqual(self.opened(), {"info-button": "info"})
         self.assertEqual(
-            self.opened(width=390), {"info-button": "info", "map-button": "map"}
+            self.opened(resize=True), {"info-button": "info", "map-button": "map"}
         )
 
     def test_every_option_the_caller_set_reaches_the_trial_context(self):
         options = dict(
-            viewport={"width": 390, "height": 664},
-            screen={"width": 390, "height": 844},
+            viewport=PHONE,
+            screen=PHONE,
             ignore_https_errors=True,
             java_script_enabled=False,
             bypass_csp=True,
@@ -316,21 +329,26 @@ class Trial(unittest.TestCase):
             {"origin": "https://localhost", "certPath": cert, "keyPath": private}
         ]
 
-        def kept(context):
+        def held(context):
             return {
                 k: v
                 for k, v in context._impl_obj._options.items()
-                if k not in overlay.UNCARRIED
+                if k not in overlay.TRIAL_LEAVES_OUT
             }
 
-        for given in (options, {"no_viewport": True, "color_scheme": "null"}):
+        no_viewport = {"no_viewport": True, "color_scheme": "null"}
+        self.assertEqual(
+            set(options) | set(no_viewport) | LEFT_OUT,
+            set(inspect.signature(Browser.new_context).parameters) - {"self"},
+        )
+        for given in (options, no_viewport):
             with self.subTest(given=sorted(given)):
                 context = browser.new_context(**given)
                 self.addCleanup(context.close)
                 carried = overlay._trial_options(context.new_page())
                 trial = browser.new_context(**carried)
                 self.addCleanup(trial.close)
-                self.assertEqual(kept(trial), kept(context))
+                self.assertEqual(held(trial), held(context))  # #552
 
 
 if __name__ == "__main__":
