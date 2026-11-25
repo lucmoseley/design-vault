@@ -70,13 +70,18 @@ stop() { # stop <exit status>
 trap 'stop 130' INT
 trap 'stop 143' TERM
 
+named_files() {
+  local word words
+  read -ra words <<<"$1"
+  for word in "${words[@]}"; do [[ $word == *.test.* && -f $word ]] && printf '%s\n' "$word"; done
+}
+
 failing() { # failing <suite> <its VAULT_FAILED_FILES>
-  local suite=$1 named=$2 word files=()
+  local suite=$1 named=$2 files=()
   if [[ -s $named ]]; then
     mapfile -t files <"$named"
   else
-    # shellcheck disable=SC2086 # a suite is a command line, split into its words as it was run
-    for word in $suite; do [[ $word == *.test.* && -f $word ]] && files+=("$word"); done
+    mapfile -t files < <(named_files "$suite")
   fi
   # A red run of several files that recorded none failed as a whole, and pins its fault on no one file.
   if ((${#files[@]} == 1)) || [[ -s $named ]]; then printf 'FAIL %s\n' "${files[@]}"; else printf 'RED  %s\n' "$suite"; fi
@@ -97,9 +102,16 @@ kept_secs() { # kept_secs <suite> <default>: its last green seconds, else the de
 }
 
 finish() { # finish <pid> <status>
-  local suite=${lane[$1]} took
-  took=$(((${EPOCHREALTIME/./} - ${began[$1]/./} + 500000) / 1000000))
+  local suite=${lane[$1]} micros took files=()
+  micros=$((${EPOCHREALTIME/./} - ${began[$1]/./}))
+  took=$(((micros + 500000) / 1000000))
   echo "== $suite ($took s)"
+  if [[ -s ${log[$1]}.seconds ]]; then
+    cat "${log[$1]}.seconds" >>"$logs/seconds"
+  else
+    mapfile -t files < <(named_files "$suite")
+    ((${#files[@]} == 1)) && printf '%s\t%d.%06d\n' "${files[0]}" $((micros / 1000000)) $((micros % 1000000)) >>"$logs/seconds"
+  fi
   cat "${log[$1]}"
   if (($2)); then
     mapfile -t -O "${#reds[@]}" reds < <(failing "$suite" "${log[$1]}.failed")
@@ -163,7 +175,7 @@ while ((${#queue[@]} || ${#lane[@]})); do
   if ((${#queue[@]})) && opens; then
     started=$((started + 1))
     # shellcheck disable=SC2086 # a suite is a command line, split into its words
-    (VAULT_FAILED_FILES=$logs/$started.failed exec ${queue[0]}) >"$logs/$started" 2>&1 </dev/null &
+    (VAULT_FAILED_FILES=$logs/$started.failed VAULT_FILE_SECONDS=$logs/$started.seconds exec ${queue[0]}) >"$logs/$started" 2>&1 </dev/null &
     log[$!]=$logs/$started
     lane[$!]=${queue[0]}
     began[$!]=$EPOCHREALTIME
@@ -173,6 +185,12 @@ while ((${#queue[@]} || ${#lane[@]})); do
   wait -n -p ended "${!lane[@]}"
   finish "$ended" $?
 done
+# #370
+if [[ -z ${CI:-} && -s $logs/seconds ]]; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null)" || root=$PWD
+  node "$(dirname "${BASH_SOURCE[0]}")/run-cost.js" "$root" "$logs/seconds" 2>/dev/null ||
+    echo "test/run-lanes.sh: workflow-core's run-cost report would not run; the suites' verdict stands (#370)."
+fi
 if ((${#reds[@]})); then
   printf '%s\n' "${reds[@]}" >&2
   exit 1

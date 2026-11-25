@@ -15,11 +15,11 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), "failed-files-"));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 // A node --test run under this one would report to it, not through its own reporter; and an outer run's
-// VAULT_FAILED_FILES is that run's, never these cases'.
+// VAULT_FAILED_FILES and VAULT_FILE_SECONDS are that run's, never these cases'.
 const env = (extra) => {
   const e = { ...process.env, ...extra };
   delete e.NODE_TEST_CONTEXT;
-  if (!("VAULT_FAILED_FILES" in extra)) delete e.VAULT_FAILED_FILES;
+  for (const own of ["VAULT_FAILED_FILES", "VAULT_FILE_SECONDS"]) if (!(own in extra)) delete e[own];
   return e;
 };
 
@@ -57,6 +57,23 @@ test("a node --test run under the reporter writes each file with a failing test 
     ["test/nested.test.js", "test/red.test.js", "test/unloadable.test.js"]);
   assert.match(r.stdout, /✖ red/);
   assert.match(r.stdout, /✔ green/);
+});
+
+// guess, #370: a load the real clock shows counted, a floor a slow machine only raises
+const LOAD_MS = 400;
+test("the reporter writes each file's own wall seconds once, its module load counted, from the run's root (#370)", () => {
+  const root = scratch("seconds");
+  fs.writeFileSync(path.join(root, "test", "slow-load.test.js"),
+    `const start = Date.now(); while (Date.now() - start < ${LOAD_MS});\n${T}test("quick", () => {});\n`);
+  const seconds = path.join(dir, "seconds.tsv");
+  const files = ["test/slow-load.test.js", "test/green.test.js", "test/red.test.js", "test/unloadable.test.js"];
+  const r = spawnSync("bash", ["-c", `${NODE} "$@"`, "node", ...files],
+    { cwd: root, encoding: "utf8", env: env({ VAULT_FILE_SECONDS: seconds }) });
+  assert.equal(r.status, 1, r.stderr);
+  const rows = fs.readFileSync(seconds, "utf8").trim().split("\n").map((l) => l.split("\t"));
+  assert.deepEqual(rows.map(([f]) => f).sort(), [...files].sort());
+  const took = Object.fromEntries(rows.map(([f, s]) => [f, Number(s)]));
+  assert.ok(took["test/slow-load.test.js"] >= LOAD_MS / 1000, `${took["test/slow-load.test.js"]} s`);
 });
 
 test("without VAULT_FAILED_FILES the reporter still prints Node's report and the run's red", () => {
