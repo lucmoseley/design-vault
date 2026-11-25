@@ -53,7 +53,7 @@ range of widths it holds over:
   past the file's edge, or an art shown at no swept width) is listed as not
   measured.
 
-The first five answer vault.reflow, the cta check vault.layout and the
+The first four answer vault.reflow, the cta check vault.layout and the
 focal check vault.focal-crop: the report gives each question pass or fail,
 with its faults under it, vault.layout not checked with no --cta,
 vault.focal-crop not checked with no --focal or "cannot measure" where an art
@@ -130,7 +130,6 @@ would never return. Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 import argparse
 import collections
 import datetime
-import importlib.util
 import json
 import os
 import pathlib
@@ -138,23 +137,15 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_flow", os.path.join(HERE, "check-flow.py")
-)
-flow = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(flow)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+flow = siblings.load(HERE, "check-flow.py")
 
 
-def _load(name, file):
-    """A sibling script loaded by path."""
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _load("layout_records", "layout-records.py")
-rule_table = _load("rule_table", "rule-table.py")
+records = siblings.load(HERE, "layout-records.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 
 # 320 is WCAG 1.4.10's reflow width, a 1280 px desktop at 400% zoom. 2560 is
@@ -175,6 +166,7 @@ PHONE_MAX = BANDS[0][2]
 # (developer.apple.com/forums/thread/735055, #252). Unmeasured here or on
 # iPadOS 26.
 HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)
+MOTION_HEIGHTS = (*HEIGHTS[:2], flow.DESKTOP_WINDOW[1])
 # A common phone's width and the commonest desktop's (StatCounter Sept 2026),
 # the widths the other checks render a page at.
 PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]
@@ -994,7 +986,7 @@ class Records:
         self.inset = records.with_label(records.INSET_JS, flow.LABEL_JS)
         self.sheet = records.with_label(records.SHEET_JS, flow.LABEL_JS)
         self.measure = (
-            _load("check_measure", "check-measure.py")
+            siblings.load(HERE, "check-measure.py")
             if "line-length" in self.checks
             else None
         )
@@ -1152,7 +1144,7 @@ def records_after(browser, at, rec, page_as):
             rec.add(w, faults)
         off.close()
     if "popover-sheet" in checks:
-        overlay = _load("drive_overlay", "drive-overlay.py")
+        overlay = siblings.load(HERE, "drive-overlay.py")
         under = checks["popover-sheet"].value["under"]
         for w in narrow(under, "popover-sheet"):
             page = page_as(device(w))
@@ -1553,7 +1545,7 @@ def parse(argv):
         at.brief[key] = value
     at.parts = {}
     if at.parts_file:
-        probe = _load("probe", "probe.py")
+        probe = siblings.load(HERE, "probe.py")
         try:
             with open(at.parts_file, encoding="utf8") as fh:
                 at.parts = probe.declared_parts(fh.read())[0]

@@ -8,7 +8,7 @@ run draw() in-process on a stand-in page, since only a stalled renderer makes a 
 one fail (test/load/check-overlay-shot.py).
 """
 
-import importlib.util
+import base64
 import io
 import math
 import os
@@ -36,9 +36,11 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 REQUIREMENTS = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", "plugin", "requirements.txt")
 )
-spec = importlib.util.spec_from_file_location("check_overlay", SCRIPT)
-overlay = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(overlay)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+overlay = siblings.load(SCRIPTS, "check-overlay.py")
 ARCH = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">'
     '<g transform="translate({dx} 0)"><path d="M20 70 C20 20 100 20 100 70 Z" fill="#222"/>'
@@ -147,6 +149,27 @@ class Overlay(unittest.TestCase):
             proc.stdout,
             r"px \(FAIL, the limit is 0\.5 px against a raster source\)",
         )
+
+    def test_an_svg_that_only_wraps_a_raster_is_held_to_the_raster_limit(self):  # #154
+        with open(self.smooth_png("source.png", 0), "rb") as fh:
+            png = base64.b64encode(fh.read()).decode()
+        href = f'xlink:href="data:image/png;base64,{png}"'
+        for name, drawn in (
+            ("image", f'<image width="120" height="80" {href}/>'),
+            (
+                "feImage",
+                f'<filter id="f"><feImage {href}/></filter><rect width="120" height="80" filter="url(#f)"/>',
+            ),
+        ):
+            source = self.file(
+                f"{name}.svg",
+                '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 80" width="120" height="80">'
+                f"{drawn}</svg>",
+            )
+            proc = run(self.smooth_png("near.png", 0.3), source)
+            self.assertIn(
+                "the limit is 0.5 px against a raster source", proc.stdout, name
+            )
 
     def test_the_0_3_px_shift_a_raster_source_allows_fails_against_an_svg_source(self):
         proc = run(

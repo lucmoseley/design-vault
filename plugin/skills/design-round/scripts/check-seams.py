@@ -30,12 +30,12 @@ the arguments are wrong, or check-curves.js cannot read the file / 3 Node,
 Playwright, its browser, numpy or Pillow is missing / 4 the page did not render
 in time / 5 the browser refused the page / 6 none fails, but a contact cannot be
 measured: a fill that lets the ground through, a contact off its crop, a shape
-check-curves.js cannot read, or a page that cannot be rendered frame by frame.
+check-curves.js cannot read, a cover whose paint it cannot prove opaque, or a
+page that cannot be rendered frame by frame.
 Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 """
 
 import argparse
-import importlib.util
 import io
 import json
 import math
@@ -45,25 +45,20 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-renders = _load("look_renders", os.path.join(HERE, "look-renders.py"))
+renders = siblings.load(HERE, "look-renders.py")
 flow = renders.flow
 try:
     import numpy as np
     from PIL import Image
 except ImportError as err:
     sys.exit(flow.missing(err))
-colour_space = _load(
-    "colour_space",
-    os.path.join(HERE, "..", "..", "design-project", "scripts", "colour_space.py"),
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
 
 # A seam shows once its width x luminance contrast reaches 0.5 arcsec: Hecht & Mintz 1939's thin-line floor, its
@@ -315,7 +310,10 @@ def main(argv):
     os.makedirs(args.out, exist_ok=True)
     lines, faults, unmeasured = [], 0, len(listed["unread"])
     for c in contacts:
-        if c["cls"] in UNMEASURED:
+        if c["cls"] in UNMEASURED and c.get("unproved"):
+            lines.append(f"NOT MEASURED {c['name']} ({c['cls']}): {c['verdict']}.")
+            unmeasured += 1
+        elif c["cls"] in UNMEASURED:
             lines.append(f"pass {c['name']} ({c['cls']}): {UNMEASURED[c['cls']]}")
     if measured:
         look = look_args(args, measured)

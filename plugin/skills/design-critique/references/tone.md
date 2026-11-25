@@ -2,7 +2,7 @@
 
 Why the feel a design aims at, its tone, is set as a position on five scales, and how each choice moves it (#288). The records are `vault.tone-direction`, `vault.tone-words`, `vault.tone-colour-share`, `vault.tone-saturation`, `vault.tone-space`, `vault.tone-symmetry`, `vault.tone-face` and `vault.tone-mix`, in [rules/](../rules/). The research behind every line is `docs/research/design-feel.md` (#204) and `docs/research/tone-sources.md` (#288) in the design vault.
 
-Where a project sits on the scales is its own brief's call; nothing here says which tone is right. A project's rules file wins over every record here ([source precedence](house-principles.md#source-precedence)), and the [brand-layer line](house-principles.md#the-brand-layer-line) says where expression may go before any of these says how much.
+Where a project sits on the scales is its own brief's call; nothing here says which tone is right. Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides, and the [brand-layer line](house-principles.md#the-brand-layer-line) says where expression may go before any of these says how much.
 
 ## The five scales
 

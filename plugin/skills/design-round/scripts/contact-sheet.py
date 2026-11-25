@@ -33,23 +33,18 @@ never return. Exits 0 and 6 print on stdout; the rest print on stderr.
 import argparse
 import base64
 import html
-import importlib.util
 import json
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_frames", os.path.join(HERE, "check-frames.py")
-)
-frames = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(frames)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+frames = siblings.load(HERE, "check-frames.py")
 flow = frames.flow
-_spec = importlib.util.spec_from_file_location(
-    "check_layout", os.path.join(HERE, "check-layout.py")
-)
-layout = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(layout)
+layout = siblings.load(HERE, "check-layout.py")
 UnmeasurableError = flow.UnmeasurableError
 
 # A tile's width in CSS px, by size, and the sheet's width it wraps at. A first
@@ -123,12 +118,7 @@ def shoot(browser, at, viewport):
                     "makes no Web Animations API animation that runs for any time, so it has no timeline to seek"
                 ]
             )
-        shots = []
-        for t in times(prep["end"], at.step):
-            frames.seek(page, t)
-            shots.append((t, page.screenshot()))
-        frames.refuse_chain(page)
-        return shots, prep["end"]
+        return frames.seek_shots(page, times(prep["end"], at.step)), prep["end"]
     finally:
         context.close()
 
@@ -166,9 +156,7 @@ def tile(browser, at, size, viewport, *, shots, end):
 
 
 def run(at):
-    # As check-frames.py's hash: a compositor animation can keep a scaled
-    # layer's raster from the frame before a seek.
-    with flow.chromium(["--disable-threaded-animation"]) as browser:
+    with flow.chromium(frames.HASH_ARGS) as browser:
         record = {"page": at.url, "step_ms": at.step, "sheets": {}}
         for size, viewport in (("desktop", at.desktop), ("phone", at.phone)):
             shots, end = shoot(browser, at, viewport)

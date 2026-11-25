@@ -23,7 +23,6 @@ import concurrent.futures
 import datetime
 import functools
 import html.parser
-import importlib.util
 import json
 import os
 import pathlib
@@ -40,9 +39,11 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-layout.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "layout")
-spec = importlib.util.spec_from_file_location("check_layout", SCRIPT)
-layout = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(layout)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+layout = siblings.load(SCRIPTS, "check-layout.py")
 
 SCRATCH = tempfile.TemporaryDirectory()
 TEXT = ["--widths", "620-700", "--step", "40"]
@@ -232,6 +233,11 @@ def spans(name, kind):
         for r in DONE[name][3]["ranges"]
         if r["kind"] == kind
     ]
+
+
+class OneCopy(unittest.TestCase):
+    def test_the_probe_parse_loads_shares_this_copy(self):  # #562
+        self.assertIs(siblings.load(SCRIPTS, "probe.py").layout, layout)
 
 
 class Ranges(unittest.TestCase):

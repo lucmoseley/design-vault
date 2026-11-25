@@ -10,7 +10,6 @@ time between the events it sends; slowing the page's own CPU (DevTools'
 CPU throttling) would delay its handlers, not when the throw reaches it.
 """
 
-import importlib.util
 import os
 import sys
 import time
@@ -39,6 +38,9 @@ FLOW = os.path.join(
     "scripts",
     "check-flow.py",
 )
+SCRIPTS = os.path.dirname(FLOW)  # #562
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
 
 def late(call, ms):
@@ -60,8 +62,6 @@ if __name__ == "__main__":
     Mouse.down = late(Mouse.down, lambda **_: LATE_PRESS_MS)
     Mouse.move = late(Mouse.move, lambda *_, **__: LATE_MOVE_MS)
     CDPSession.send = late(CDPSession.send, cdp_ms)
-    spec = importlib.util.spec_from_file_location("check_flow", FLOW)
-    flow = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(flow)
+    flow = siblings.load(SCRIPTS, "check-flow.py")
     flow.records.RELEASE_INIT += BUSY_RELEASE_INIT
     sys.exit(flow.main(sys.argv[1:]))

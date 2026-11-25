@@ -1,7 +1,7 @@
 """spend-log.py — reads a round's spend log, the `higgsfield-spend.jsonl`
-higgsfield.js appends one line to per request, and finds a candidate's line in
-it, for the checks that read what was asked of the model: check-render.py and
-check-clip.py (design-vault#336).
+higgsfield.js appends a line to at each step of a request, and finds a
+candidate's line in it, for the checks that read what was asked of the model:
+check-render.py and check-clip.py (design-vault#336).
 
 A file's line is the last whose `candidate` is the file's folder and stem,
 `r2/v3-grok` for `r2/v3-grok.png`, and for a request's later outputs,

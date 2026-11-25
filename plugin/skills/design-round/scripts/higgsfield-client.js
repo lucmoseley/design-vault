@@ -13,6 +13,7 @@ const { inspect } = require("util");
 
 const API = "https://api.higgsfield.ai";
 const LEDGER = "higgsfield-spend.jsonl";
+const LOCK = "higgsfield.lock";
 const ENV_FILE = path.join(os.homedir(), ".higgsfield.env");
 const SETTINGS = ["HIGGSFIELD_API_KEY", "HIGGSFIELD_ROUND_CEILING_USD"];
 const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
@@ -29,6 +30,17 @@ class ApiError extends Error {
   constructor(message, status) {
     super(message);
     this.status = status;
+  }
+}
+
+class BatchStoppedError extends Error {
+  constructor(message, { stoppedAt, ran, notSubmitted, mayBeCharged, cause }) {
+    super(message, { cause });
+    this.name = "BatchStoppedError";
+    this.stoppedAt = stoppedAt;
+    this.ran = ran;
+    this.notSubmitted = notSubmitted;
+    this.mayBeCharged = mayBeCharged;
   }
 }
 
@@ -94,21 +106,157 @@ function alreadyRendered(job) {
 function spentIn(roundDir) {
   const file = path.join(roundDir, LEDGER);
   if (!fs.existsSync(file)) return 0;
-  return fs
-    .readFileSync(file, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .reduce((sum, line) => {
-      const usd = Number(JSON.parse(line).usd);
-      // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
-      if (!Number.isFinite(usd)) throw new Error(`${file} holds a line with no usd figure: ${line}`);
-      return sum + usd;
-    }, 0);
+  const bySubmission = new Map();
+  let unkeyed = 0;
+  for (const [index, line] of fs.readFileSync(file, "utf8").split("\n").entries()) {
+    if (!line) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      entry = undefined;
+    }
+    const where = `${file} line ${index + 1}`;
+    // #575
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${where} is not a ledger entry, as a run killed mid-write leaves: ${line}. Check the Higgsfield console for that job's charge, then mend the line to carry it`);
+    }
+    const usd = Number(entry.usd);
+    // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
+    if (!Number.isFinite(usd)) throw new Error(`${where} holds no usd figure: ${line}`);
+    // A negative line would free room under the ceiling.
+    if (usd < 0) throw new Error(`${where} holds a negative usd figure: ${line}`);
+    if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
+    else unkeyed += usd;
+  }
+  return [...bySubmission.values()].reduce((sum, usd) => sum + usd, unkeyed);
 }
 
 function record(job, line) {
   fs.mkdirSync(job.roundDir, { recursive: true });
   fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
+}
+
+function batchStopped(message, priced, index, { thisJobSubmitted, mayBeCharged = thisJobSubmitted, cause }) {
+  const ran = priced.slice(0, index).map((other) => other.name);
+  const notSubmitted = priced.slice(thisJobSubmitted ? index + 1 : index).map((other) => other.name);
+  const text = `${message}. ${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${notSubmitted.length ? notSubmitted.join(", ") : "none"}`;
+  return new BatchStoppedError(text, { stoppedAt: priced[index].name, ran, notSubmitted, mayBeCharged, cause });
+}
+
+// Bigint: drvfs on /mnt/c hands out inode numbers past 2^53, where two folders' numbers round to one.
+function readFolderId(dir) {
+  const { dev, ino } = fs.statSync(dir, { bigint: true });
+  return `${dev}:${ino}`;
+}
+
+const asList = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
+
+function isHolderAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
+}
+
+// The birth time too: ext4 hands a freed inode number straight to the next folder made, so another run's folder in
+// place of one this run made would otherwise read as the same.
+function readMadeId(dir) {
+  const { dev, ino, birthtimeNs } = fs.statSync(dir, { bigint: true });
+  return `${dev}:${ino}:${birthtimeNs}`;
+}
+
+// One level at a time, as mkdir -p does, recording each folder this call made the moment it is made, so an estimate
+// takes back only its own, a partial failure included.
+function makeFolder(dir, made) {
+  const missing = [];
+  for (let at = dir; ; at = path.dirname(at)) {
+    try {
+      fs.lstatSync(at);
+      break;
+    } catch (error) {
+      if (error.code !== "ENOENT" || path.dirname(at) === at) throw error;
+      missing.unshift(at);
+    }
+  }
+  for (const at of missing) {
+    try {
+      fs.mkdirSync(at);
+    } catch (error) {
+      if (error.code === "EEXIST" && fs.statSync(at).isDirectory()) continue;
+      throw error;
+    }
+    made.push({ at: fs.realpathSync.native(at), id: readMadeId(at) });
+  }
+}
+
+function tryMakeFolder(dir, made) {
+  try {
+    makeFolder(dir, made);
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return false;
+  }
+}
+
+// #574
+function makeRoundFolders(jobs, made) {
+  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir, made));
+  for (const job of waitingOnAnotherJobsFolder) makeFolder(job.roundDir, made);
+}
+
+// #577: deepest first by real path, so a folder made under another spelling still empties its parent; a folder
+// that is no longer the one made is another run's.
+function takeBack(made, log) {
+  for (const { at, id } of [...made].sort((a, b) => b.at.length - a.at.length)) {
+    try {
+      if (readMadeId(at) === id) fs.rmdirSync(at);
+    } catch (error) {
+      if (error.code !== "ENOENT" && error.code !== "ENOTEMPTY") log(`✗ could not take back ${at}: ${error.message}; delete it by hand if it is empty`);
+    }
+  }
+}
+
+// #559
+function lock(roundDir) {
+  const file = path.join(roundDir, LOCK);
+  const mine = JSON.stringify({ pid: process.pid, token: crypto.randomUUID(), at: new Date().toISOString() });
+  try {
+    fs.writeFileSync(file, mine, { flag: "wx" });
+    return { file, mine };
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  let holder;
+  try {
+    holder = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    holder = undefined;
+  }
+  const round = path.basename(roundDir);
+  if (!Number.isInteger(holder?.pid)) {
+    throw new Error(`${round} holds a lock that cannot be read, ${file}, so nothing was submitted; delete it once no higgsfield.js run is working on the round`);
+  }
+  if (isHolderAlive(holder.pid)) {
+    throw new Error(`${round} is held by another higgsfield.js run (process ${holder.pid}, since ${holder.at}), so nothing was submitted; rerun once it ends, or delete ${file} if process ${holder.pid} is no higgsfield.js run`);
+  }
+  throw new Error(
+    `${round} holds the lock of a higgsfield.js run that ended without releasing it (process ${holder.pid}, since ${holder.at}), so nothing was submitted. A job it submitted may be charged and missing from the ledger: check the Higgsfield console, then delete ${file}`,
+  );
+}
+
+// #559
+function unlockAll(held, log) {
+  for (const one of held) {
+    try {
+      if (fs.readFileSync(one.file, "utf8") === one.mine) fs.rmSync(one.file);
+    } catch (error) {
+      if (error.code !== "ENOENT") log(`✗ could not release ${one.file}: ${error.message}; delete it by hand`);
+    }
+  }
 }
 
 // The key goes to api.higgsfield.ai alone: every URL this sends it to is built from API.
@@ -138,13 +286,19 @@ async function call(ctx, method, url, body, headers = {}) {
 // asks for exponential backoff, with jitter, and a most-attempts cap, but gives no numbers: three tries, 2 s then 4 s
 // apart, are guesses. No jitter: one job is retried at a time (docs/research/house-audit-constants.md O1).
 // Residual: no total retry deadline, which the page also asks for; the three tries bound the waits, not the calls.
+// An error after a transient try is marked `afterFault`, since that earlier try may have reached the API.
 async function withRetry(ctx, attempt) {
+  let faulted = false;
   for (let tries = 1; ; tries++) {
     try {
       return await attempt();
     } catch (error) {
       const transient = !(error instanceof ApiError) || error.status >= 500;
-      if (!transient || tries >= 3) throw error;
+      if (!transient || tries >= 3) {
+        if (faulted && error instanceof Error) error.afterFault = true;
+        throw error;
+      }
+      faulted = true;
       await ctx.sleep(1000 * 2 ** tries);
     }
   }
@@ -161,6 +315,7 @@ function readUsd(value) {
 async function estimate(ctx, job) {
   const answer = await withRetry(ctx, () => call(ctx, "POST", `${API}/estimate/${job.model}`, job.input));
   const usd = readUsd(answer?.usd);
+  if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
   if (answer?.type !== "description") throw new Error(`the estimate for ${job.model} is neither a usd figure nor a price rule: ${JSON.stringify(answer)}`);
   return { usd: job.maxUsd, rule: answer };
@@ -172,12 +327,9 @@ function priceText(price, suffix = "") {
   return `at most ${dollars(price.usd)}${suffix}, by its max_usd (the rule: ${JSON.stringify(price.rule)})`;
 }
 
-async function submit(ctx, job) {
-  // One key per intended output: a resubmission after a lost answer returns the
-  // original request rather than a second, charged one.
-  const key = crypto.randomUUID();
-  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": key }));
-  if (typeof accepted?.request_id !== "string") throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
+async function submit(ctx, job, idempotencyKey) {
+  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": idempotencyKey }));
+  if (typeof accepted?.request_id !== "string" || !accepted.request_id) throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
   return accepted;
 }
 
@@ -221,7 +373,7 @@ async function save(ctx, job, outputs) {
 
 /**
  * Prices the jobs, holds them to the round ceiling, then renders them.
- * Returns how many jobs did not end in a saved file.
+ * Returns how many jobs it logged as failed (✗).
  */
 async function render(jobs, options = {}) {
   const log = options.log ?? console.log;
@@ -237,6 +389,43 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
+  const made = [];
+  // #559
+  const held = [];
+  try {
+    try {
+      makeRoundFolders(checked, made);
+    } catch (error) {
+      // An error with no code is a fault in this script, not the filesystem refusing a folder.
+      if (!options.estimateOnly || error.code === undefined) throw error;
+      log(`a round folder cannot be made (${error.message}), so a run would be refused`);
+      return 0;
+    }
+    let roundDirs;
+    try {
+      const byKey = new Map();
+      for (const job of checked) {
+        const key = readFolderId(job.roundDir);
+        if (!byKey.has(key)) byKey.set(key, job.roundDir);
+        job.roundDir = byKey.get(key);
+        job.round = path.basename(job.roundDir);
+        job.name = `${job.round}/${job.stem}`;
+      }
+      roundDirs = [...byKey.values()];
+      if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      // #577: an --estimate running beside this one takes back the empty folders it made.
+      throw new Error(`a round folder went away before the batch could lock it (${error.message}), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun`, { cause: error });
+    }
+    return await runBatch(ctx, checked, roundDirs, ceiling, options, log);
+  } finally {
+    unlockAll(held, log);
+    if (options.estimateOnly) takeBack(made, log);
+  }
+}
+
+async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
   const outs = new Set();
   for (const job of checked) {
     const out = path.join(job.roundDir, job.stem);
@@ -244,7 +433,6 @@ async function render(jobs, options = {}) {
     outs.add(out);
     if (alreadyRendered(job)) throw new Error(`${job.name} is already rendered; give the candidate a new v<n>`);
   }
-  const roundDirs = [...new Set(checked.map((job) => job.roundDir))];
 
   const priced = [];
   for (const job of checked) priced.push({ ...job, price: await estimate(ctx, job) });
@@ -277,45 +465,83 @@ async function render(jobs, options = {}) {
   let failed = 0;
   for (const [index, job] of priced.entries()) {
     const { name } = job;
+    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
+    const ledgerFault = (status, error) => `${name}: its ${status} line could not be written to ${path.join(job.roundDir, LEDGER)} (${error.message})`;
+    // #575
+    const recordOrStop = (line, howFar, { thisJobSubmitted = true, mayBeCharged = thisJobSubmitted } = {}) => {
+      try {
+        record(job, line);
+      } catch (error) {
+        throw batchStopped(`${ledgerFault(line.status, error)}; ${howFar}`, priced, index, { thisJobSubmitted, mayBeCharged, cause: error });
+      }
+    };
+    // #571
+    recordOrStop({ ...entry, status: "submitting", files: [] }, "it was not submitted", { thisJobSubmitted: false });
     let accepted;
     try {
-      accepted = await submit(ctx, job);
+      accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
-      if (error.status !== 403) throw error;
-      const ran = priced.slice(0, index).map((other) => other.name);
-      const rest = priced.slice(index).map((other) => other.name);
-      throw new Error(`${error.message}. ${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${rest.join(", ")}`, { cause: error });
+      // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
+      // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
+      if (error instanceof ApiError && !error.afterFault) {
+        recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { thisJobSubmitted: false });
+        throw batchStopped(error.message, priced, index, { thisJobSubmitted: false, cause: error });
+      }
+      recordOrStop({ ...entry, status: "unanswered", files: [] }, `it may have reached Higgsfield: ${error.message}`);
+      throw batchStopped(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate`, priced, index, { thisJobSubmitted: true, cause: error });
     }
-    const state = await poll(ctx, accepted);
-    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, request_id: state.request_id, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
-    if (state.status === "timed-out") {
-      record(job, { ...entry, status: "timed-out", files: [] });
-      log(`✗ ${name}: still running after ${ctx.timeoutMs / 1000} s; recorded at its estimate, since it may yet be charged. Request ${state.request_id}`);
+    entry.request_id = accepted.request_id;
+    log(`${name}: accepted as request ${accepted.request_id}`);
+    // #575
+    try {
+      record(job, { ...entry, status: "submitted", files: [] });
+    } catch (error) {
+      log(`${ledgerFault("submitted", error)}; request ${accepted.request_id} is polled on, and its outcome line stands in for it`);
+    }
+    let state;
+    try {
+      state = await poll(ctx, accepted);
+    } catch (error) {
+      state = { status: "unpolled", error: error.message };
+    }
+    if (state.status === "timed-out" || state.status === "unpolled") {
+      const why = state.status === "unpolled" ? `its status could not be read (${state.error})` : `still running after ${ctx.timeoutMs / 1000} s`;
+      recordOrStop({ ...entry, status: state.status, files: [] }, `request ${accepted.request_id}: ${why}`);
+      log(`✗ ${name}: ${why}; recorded at its estimate, since it may yet be charged. Request ${accepted.request_id}`);
       failed++;
       continue;
     }
     if (state.status !== "completed") {
+      recordOrStop({ ...entry, usd: 0, status: state.status, files: [] }, `request ${accepted.request_id} ended ${state.status}, not charged`, { mayBeCharged: false });
       log(`✗ ${name}: ${state.status}${state.error ? ` (${state.error})` : ""}; not charged`);
       failed++;
       continue;
     }
     // An image model answers `images: [...]`, a video model `video: { url }`.
-    const outputs = [...(Array.isArray(state.images) ? state.images : []), ...(state.video?.url ? [state.video] : [])];
+    const listed = [...asList(state.images), ...asList(state.video)];
+    const outputs = listed.filter((output) => typeof output?.url === "string" && output.url !== "");
+    const unreadable = listed.length - outputs.length;
     // Recorded before the download: the charge stands even if the download fails,
     // and the ledger then keeps the output's URL, live for at least seven days.
-    record(job, { ...entry, status: "completed", urls: outputs.map((output) => output.url) });
-    if (!outputs.length) {
-      log(`✗ ${name}: completed with no image or video`);
-      failed++;
-      continue;
+    const urls = outputs.map((output) => output.url);
+    const unreadableText = unreadable ? `, and ${unreadable} output${unreadable > 1 ? "s" : ""} with no URL` : "";
+    recordOrStop(
+      { ...entry, status: "completed", urls, ...(unreadable ? { unreadable } : {}) },
+      `request ${accepted.request_id} completed and is charged, ${urls.length ? `its outputs at ${urls.join(" ")}, live for at least seven days` : "with no output URL"}${unreadableText}`,
+    );
+    let succeeded = outputs.length > 0 && !unreadable;
+    if (unreadable) log(`✗ ${name}: charged, but ${unreadable} of its ${listed.length} outputs carried no URL`);
+    else if (!outputs.length) log(`✗ ${name}: completed with no image or video`);
+    if (outputs.length) {
+      try {
+        const files = await save(ctx, job, outputs);
+        log(`saved ${files.join(", ")}  cost ${priceText(job.price)}`);
+      } catch (error) {
+        log(`✗ ${name}: charged, but not saved: ${error.message}. The ledger keeps its URL`);
+        succeeded = false;
+      }
     }
-    try {
-      const files = await save(ctx, job, outputs);
-      log(`saved ${files.join(", ")}  cost ${priceText(job.price)}`);
-    } catch (error) {
-      log(`✗ ${name}: charged, but not saved: ${error.message}. The ledger keeps its URL`);
-      failed++;
-    }
+    if (!succeeded) failed++;
   }
   for (const roundDir of roundDirs) {
     log(`${path.basename(roundDir)} has spent ${dollars(spentIn(roundDir))} of ${dollars(ceiling)}`);

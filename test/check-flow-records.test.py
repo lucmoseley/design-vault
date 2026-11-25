@@ -85,6 +85,18 @@ class Table(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(records.TableError):
                 records.parse_table(bad)
 
+    def test_a_check_given_two_values_is_refused_unlike_one_value_twice(self):  # #553
+        with self.assertRaisesRegex(records.TableError, r"line 2: frequent .* line 1"):
+            records.parse_table(
+                "vault.a | frequent | under 150\nvault.b | frequent | under 400"
+            )
+
+    def test_a_check_named_twice_at_one_value_is_kept(self):  # #553
+        got = records.parse_table(
+            "vault.a | frequent | under 150\nvault.b | frequent | under 150"
+        )
+        self.assertEqual([line.id for line in got], ["vault.a", "vault.b"])
+
     def test_a_bad_parts_or_table_flag_is_a_usage_error(self):
         bad = os.path.join(FIXTURES, "nosuch.table")
         for argv in (
@@ -771,7 +783,7 @@ class Pause(unittest.TestCase):
                     url = "file://" + os.path.abspath(
                         os.path.join(FIXTURES, f"tier01-{name}.html")
                     )
-                    got[name] = access.pause_answer(ctx, url)
+                    got[name] = access.pause_answer(ctx, url, [], [])
                     ctx.close()
             finally:
                 browser.close()
@@ -780,7 +792,19 @@ class Pause(unittest.TestCase):
             [f["subject"] for f in faults],
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
         )
-        self.assertEqual(got["clean"], ([], []))
+        # Its live dot blinks forever and its carousel turns on a timer, neither
+        # declared, so past 5 s neither can be measured (#545).
+        tried = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
+        self.assertEqual(
+            got["clean"],
+            (
+                [],
+                [
+                    f"section:nth-of-type(2) > div.carousel {tried}",
+                    f"section:nth-of-type(1) {tried}",
+                ],
+            ),
+        )
 
 
 if __name__ == "__main__":

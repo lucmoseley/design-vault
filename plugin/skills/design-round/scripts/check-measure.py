@@ -37,7 +37,6 @@ print on stderr.
 """
 
 import argparse
-import importlib.util
 import math
 import os
 import pathlib
@@ -47,11 +46,11 @@ import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_layout", os.path.join(HERE, "check-layout.py")
-)
-layout = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(layout)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
 
 # scripts/browse.py's desktop Chrome UA: a live client page is often served a

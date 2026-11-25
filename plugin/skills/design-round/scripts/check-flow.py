@@ -108,7 +108,6 @@ import argparse
 import base64
 import bisect
 import contextlib
-import importlib.util
 import io
 import itertools
 import json
@@ -167,7 +166,8 @@ DESKTOP_BARS = 135
 # The desktop viewport every design-round script renders at unless told: that
 # screen less its bars (#252). A project whose own visitors differ records its
 # screen as `projects.<key>.desktop` in the library (#196).
-DESKTOP = f"{DESKTOP_SCREEN[0]}x{DESKTOP_SCREEN[1] - DESKTOP_BARS}"
+DESKTOP_WINDOW = (DESKTOP_SCREEN[0], DESKTOP_SCREEN[1] - DESKTOP_BARS)
+DESKTOP = f"{DESKTOP_WINDOW[0]}x{DESKTOP_WINDOW[1]}"
 # A channel slower than this share of its own top speed counts as still, so an
 # easing's long tail does not hide the pause after it. A box channel counts as
 # still only below the lower of this and STILL_ARCMIN_S (#196).
@@ -472,20 +472,12 @@ STATUS_JS = (
 """
 )
 
-# Everything that moves the page some way this sampler cannot seek.
-BLOCKERS_JS = (
-    r"""
-({ before, frames, span, shown }) => {
-  """
-    + LABEL_JS
-    + LOOP_JS
-    + r"""
-  const f = window.__flow;
-  f.scan();
-  f.stopped = true;
+DRAWN_JS = r"""
+const listing = (els, shown) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
+const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
+const drawn = (f, { frames, span, shown, morphs }) => {
   const reasons = [];
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const name = (els) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
   // [selector, why, whether only a visible one counts]
   const kinds = [
     ['canvas', 'draws on a canvas', true],
@@ -495,21 +487,40 @@ BLOCKERS_JS = (
   ];
   for (const [sel, why, onlyVisible] of kinds) {
     const els = [...document.querySelectorAll(sel)].filter((e) => !onlyVisible || visible(e));
-    if (els.length) reasons.push(why + ' (' + name(els) + ')');
+    if (els.length) reasons.push(why + ' (' + listing(els, shown) + ')');
   }
   const shadowed = [...document.querySelectorAll('*')].filter((e) => e.shadowRoot);
-  if (shadowed.length) reasons.push('has shadow DOM (' + name(shadowed) + ')');
+  if (shadowed.length) reasons.push('has shadow DOM (' + listing(shadowed, shown) + ')');
+  const rewritten = looping(f.rewrites, frames, span);
+  if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + listing(rewritten, shown) + ')');
+  const morphed = morphs ? looping(f.morphs, frames, span) : [];
+  if (morphed.length) reasons.push('morphs ' + morphed.length + ' path(s) by rewriting their d from a script, frame by frame (' + listing(morphed, shown) + ')');
+  return reasons;
+};
+"""
+
+# Everything that moves the page some way this sampler cannot seek.
+BLOCKERS_JS = (
+    r"""
+({ before, frames, span, shown }) => {
+  """
+    + LABEL_JS
+    + LOOP_JS
+    + DRAWN_JS
+    + r"""
+  const f = window.__flow;
+  f.scan();
+  f.stopped = true;
+  const reasons = drawn(f, { frames, span, shown, morphs: false });
   const scrolled = [...f.seen.keys()].filter((a) => a.timeline !== document.timeline);
   if (scrolled.length) reasons.push('drives ' + scrolled.length + ' animation(s) by scroll position, not time');
   const reversed = [...f.seen.keys()].filter((a) => a.playbackRate <= 0);
   if (reversed.length) reasons.push('plays ' + reversed.length + ' animation(s) in reverse or at zero speed');
   const seeked = [...f.seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused');
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
-  const rewritten = [...f.rewrites].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
-  if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + name(rewritten) + ')');
-  f.morphing = [...f.morphs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
+  f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
-  if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + name(scrollMorphed) + ')');
+  if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
   if (f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
   return reasons;
 }
@@ -1853,18 +1864,15 @@ def report(at, sample, result, *, svg_path, json_path, morph_path):
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
 TABLE = os.path.join(HERE, "check-flow.table")
 
 
-def _sibling(name, file):
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _sibling("motion_records", "motion-records.py")
-pointer = _sibling("drive_pointer", "drive-pointer.py")
+records = siblings.load(HERE, "motion-records.py")
+pointer = siblings.load(HERE, "drive-pointer.py")
 
 # --records' working figures, none a record's value. No run has measured
 # where any of the caps or waits below starts to miss a fault, so each is a
@@ -2361,7 +2369,7 @@ RUNS = {
 
 def run_records(at):
     """Each table line's check's Answer."""
-    layout = _sibling("check_layout", "check-layout.py")
+    layout = siblings.load(HERE, "check-layout.py")
     phone = (layout.PHONE_WIDTH, layout.HEIGHTS[0], layout.PHONE)
     values = {line.mode: line.value for line in at.lines}
     out = {}
@@ -2501,7 +2509,7 @@ def parse(argv):
             p.error(f"{at.table}: {exc}")
         at.parts = {}
         if at.parts_file:
-            probe = _sibling("probe", "probe.py")
+            probe = siblings.load(HERE, "probe.py")
             try:
                 with open(at.parts_file, encoding="utf8") as fh:
                     at.parts = probe.declared_parts(fh.read())[0]

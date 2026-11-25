@@ -306,6 +306,65 @@ class LateStart(unittest.TestCase):
         )
 
 
+class Scripted(unittest.TestCase):
+    """#546: motion no Web Animations API animation holds is answered
+    cannot-measure, naming what draws it, in every mode."""
+
+    TRAILER = "\nCheck its frames by eye.\n"
+
+    def refused(self, proc, why):
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(f"because this page:\n  - {why}\n", proc.stdout)
+        self.assertTrue(proc.stdout.endswith(self.TRAILER), proc.stdout)
+
+    def test_a_frame_loop_build_cannot_be_hashed_naming_it_unlike_a_steady_draft(self):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "raf.html")),
+            "moves 1 element(s) by rewriting their style or attributes from a script, "
+            "frame by frame (div#box)",
+        )
+
+    def test_a_canvas_build_cannot_be_hashed_naming_it_unlike_a_steady_draft(self):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "canvas.html")),
+            "draws on a canvas (canvas#stage)",
+        )
+
+    def test_a_smil_build_cannot_be_hashed_naming_it_unlike_a_steady_draft(self):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "smil.html")),
+            "animates SVG with SMIL (rect#slab > animate)",
+        )
+
+    def test_a_path_a_frame_loop_morphs_cannot_be_hashed_naming_it_unlike_a_steady_draft(
+        self,
+    ):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "morph.html")),
+            "morphs 1 path(s) by rewriting their d from a script, frame by frame (path#wave)",
+        )
+
+    def test_an_animation_a_script_seeks_by_hand_cannot_be_hashed_naming_it_unlike_a_steady_draft(
+        self,
+    ):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "seeked.html")),
+            "holds 1 animation(s) it paused itself (div#box), which a seek would move as if playing",
+        )
+
+    def test_a_frame_loop_build_ending_on_its_asset_cannot_be_checked_beside_listed_animations_unlike_the_mark_alone(
+        self,
+    ):
+        why = (
+            "moves 1 element(s) by rewriting their style or attributes from a script, "
+            "frame by frame (path#arch)"
+        )
+        proc, written = last("raf-asset.html")
+        self.refused(proc, why)
+        self.assertEqual(written, [])
+        self.refused(hash_page(os.path.join(FIXTURES, "raf-asset.html")), why)
+
+
 class StagedBuilds(unittest.TestCase):
     """#259: a build carried on by finish events, or started in stages."""
 

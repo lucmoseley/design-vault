@@ -2,7 +2,7 @@
 
 Why text hyphenates, wraps and holds word groups together where its records say (#286). The source checks behind the records are on design-vault#286 (https://github.com/lucmoseley/design-vault/issues/286#issuecomment-6842712602).
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
 
 ## Principles
 

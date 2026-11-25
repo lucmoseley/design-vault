@@ -7,6 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const { after, test } = require("node:test");
 const { runInProcessAsync } = require("./core-run-in-process.js");
 
@@ -42,10 +43,11 @@ const reply = (status, body) => ({
  * A stand-in for api.higgsfield.ai and its CDN. `statuses` is what successive
  * status polls answer; `submit` may answer a list of replies, one per attempt.
  */
-function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "completed"], submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
+function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "completed"], pollReply, submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
   const calls = [];
   let polls = 0;
   let submits = 0;
+  let accepted = 0;
   let clock = 0;
   const fetch = async (url, init = {}) => {
     calls.push({ url, method: init.method ?? "GET", headers: init.headers ?? {}, redirect: init.redirect, body: init.body && JSON.parse(init.body) });
@@ -53,13 +55,14 @@ function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "complete
     const { pathname } = new URL(url);
     if (pathname.startsWith("/estimate/")) return reply(200, estimate === undefined ? { credits: "1.500", usd } : estimate);
     if (pathname.startsWith("/requests/")) {
+      if (pollReply) return pollReply;
       const status = statuses[Math.min(polls++, statuses.length - 1)];
-      return reply(200, { status, request_id: "req-1", ...(status === "completed" ? (video ? { video } : { images }) : {}), ...(status === "failed" ? { error: "Generation failed" } : {}) });
+      return reply(200, { status, request_id: "req-status", ...(status === "completed" ? (video ? { video } : { images }) : {}), ...(status === "failed" ? { error: "Generation failed" } : {}) });
     }
     const answer = submit?.[submits++];
     if (answer instanceof Error) throw answer;
     if (answer) return answer;
-    return reply(200, { status: "queued", request_id: "req-1" });
+    return reply(200, { status: "queued", request_id: `req-${++accepted}` });
   };
   return {
     calls,
@@ -85,6 +88,8 @@ const ledger = (dir) =>
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+const outcomes = (dir) => ledger(dir).filter((entry) => entry.status !== "submitting" && entry.status !== "submitted");
+const stopFields = (error) => ({ stoppedAt: error.stoppedAt, ran: error.ran, notSubmitted: error.notSubmitted, mayBeCharged: error.mayBeCharged });
 
 test("a job is priced, submitted, polled, saved under its sniffed type and charged to the round's ledger", async () => {
   const dir = roundDir();
@@ -99,7 +104,12 @@ test("a job is priced, submitted, polled, saved under its sniffed type and charg
   assert.deepEqual(submit.body, { prompt: "a manta over an ink sea", aspect_ratio: "16:9" });
   assert.equal(submit.headers.Authorization, `Key ${KEY}`);
   assert.match(submit.headers["Idempotency-Key"], /^[0-9a-f-]{36}$/);
-  const [entry] = ledger(dir);
+  const [submitting, submitted, entry] = ledger(dir);
+  assert.deepEqual([submitting.status, submitting.usd, submitting.request_id], ["submitting", 0.094, null]);
+  assert.deepEqual([submitted.status, submitted.usd, submitted.request_id], ["submitted", 0.094, "req-1"]);
+  assert.match(entry.idempotency_key, /^[0-9a-f-]{36}$/);
+  assert.ok([submitting, submitted].every((line) => line.idempotency_key === entry.idempotency_key), "each line of a request carries its idempotency key");
+  assert.equal(entry.idempotency_key, submit.headers["Idempotency-Key"]);
   assert.equal(entry.usd, 0.094);
   assert.equal(entry.status, "completed");
   assert.equal(entry.request_id, "req-1");
@@ -134,7 +144,7 @@ test("a batch that fits under the ceiling with what the round has spent runs", a
   const api = fakeApi();
   assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), 0);
   assert.equal(api.submissions().length, 2);
-  assert.equal(ledger(dir).length, 3);
+  assert.equal(outcomes(dir).length, 3);
 });
 
 test("generation refuses to run with no ceiling set; --estimate runs without one and submits nothing", async () => {
@@ -143,7 +153,7 @@ test("generation refuses to run with no ceiling set; --estimate runs without one
   await assert.rejects(render([job(dir)], api.options({ ceiling: undefined })), /HIGGSFIELD_ROUND_CEILING_USD must be set/);
   assert.equal(await render([job(dir)], api.options({ ceiling: undefined, estimateOnly: true })), 0);
   assert.equal(api.submissions().length, 0);
-  assert.equal(fs.existsSync(path.join(dir, LEDGER)), false);
+  assert.equal(fs.existsSync(dir), false);
 });
 
 test("a key without its secret is refused before any call", async () => {
@@ -160,8 +170,15 @@ test("a failed request is not charged, and the batch carries on to the next job"
   assert.equal(fs.existsSync(path.join(dir, "v1-dusk.png")), false);
   assert.ok(fs.existsSync(path.join(dir, "v2-tide.png")));
   assert.deepEqual(
-    ledger(dir).map((entry) => entry.status),
-    ["completed"],
+    ledger(dir).map((entry) => [entry.candidate, entry.status, entry.usd]),
+    [
+      ["r1/v1-dusk", "submitting", 0.094],
+      ["r1/v1-dusk", "submitted", 0.094],
+      ["r1/v1-dusk", "failed", 0],
+      ["r1/v2-tide", "submitting", 0.094],
+      ["r1/v2-tide", "submitted", 0.094],
+      ["r1/v2-tide", "completed", 0.094],
+    ],
   );
 });
 
@@ -169,9 +186,247 @@ test("a request still running at the timeout is recorded at its estimate, since 
   const dir = roundDir();
   const api = fakeApi({ statuses: ["in_progress"] });
   assert.equal(await render([job(dir)], api.options({ timeoutMs: 30000 })), 1);
-  const [entry] = ledger(dir);
-  assert.equal(entry.status, "timed-out");
-  assert.equal(entry.usd, 0.094);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.094], ["submitted", 0.094], ["timed-out", 0.094]],
+  );
+});
+
+test("a submitted job whose status poll fails is recorded at its estimate, the batch carries on, and a rerun counts it against the ceiling", async () => {
+  const dir = roundDir();
+  const failing = fakeApi({ usd: "0.25", pollReply: reply(404, { detail: "Not found" }) });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], failing.options({ ceiling: "0.60" })), 2);
+  assert.equal(failing.submissions().length, 2);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
+    [
+      ["submitting", 0.25, null],
+      ["submitted", 0.25, "req-1"],
+      ["unpolled", 0.25, "req-1"],
+      ["submitting", 0.25, null],
+      ["submitted", 0.25, "req-2"],
+      ["unpolled", 0.25, "req-2"],
+    ],
+  );
+  const rerun = fakeApi({ usd: "0.25" });
+  await assert.rejects(render([job(dir, "v3-ebb")], rerun.options({ ceiling: "0.60" })), /past its \$0\.600 ceiling/);
+  assert.equal(rerun.submissions().length, 0);
+});
+
+test("a run abandoned mid-poll leaves its charge on the ledger, so a rerun's ceiling counts it (#571)", async () => {
+  const dir = roundDir();
+  const stopped = fakeApi({ usd: "0.20", pollReply: new Promise(() => {}) });
+  const lines = [];
+  render([job(dir, "v1-dusk")], stopped.options({ ceiling: "0.30", log: (line) => lines.push(line) }));
+  for (let turns = 0; !stopped.calls.some((call) => call.url.includes("/requests/")); turns++) {
+    assert.ok(turns < 100, "the run never reached its first poll");
+    await new Promise(setImmediate);
+  }
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
+    [["submitting", 0.2, null], ["submitted", 0.2, "req-1"]],
+  );
+  assert.ok(lines.includes("r1/v1-dusk: accepted as request req-1"), "the request id is printed before polling");
+  fs.rmSync(path.join(dir, "higgsfield.lock"));
+  const rerun = fakeApi({ usd: "0.20" });
+  await assert.rejects(render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), /past its \$0\.300 ceiling/);
+  assert.equal(rerun.submissions().length, 0);
+});
+
+test("a finished request's outcome supersedes its submitted line, so the ceiling counts it once (#571)", async () => {
+  const dir = roundDir();
+  assert.equal(await render([job(dir, "v1-dusk")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
+  const rerun = fakeApi({ usd: "0.10" });
+  assert.equal(await render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), 0);
+  assert.equal(rerun.submissions().length, 1);
+});
+
+test("a run stopped while a lost submission waits to be retried leaves its charge on the ledger (#571)", async () => {
+  const dir = roundDir();
+  const stopped = fakeApi({ usd: "0.20", submit: [new TypeError("fetch failed")] });
+  render([job(dir, "v1-dusk")], stopped.options({ ceiling: "0.30", sleep: () => new Promise(() => {}) }));
+  for (let turns = 0; stopped.submissions().length === 0; turns++) {
+    assert.ok(turns < 100, "the run never submitted");
+    await new Promise(setImmediate);
+  }
+  fs.rmSync(path.join(dir, "higgsfield.lock"));
+  const rerun = fakeApi({ usd: "0.20" });
+  await assert.rejects(render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), /past its \$0\.300 ceiling/);
+  assert.equal(rerun.submissions().length, 0);
+});
+
+test("two submissions the API answers with one request_id are still two charges (#571)", async () => {
+  const dir = roundDir();
+  const same = fakeApi({ usd: "0.20", submit: [reply(200, { status: "queued", request_id: "same" }), reply(200, { status: "queued", request_id: "same" })] });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], same.options({ ceiling: "0.50" })), 0);
+  const rerun = fakeApi({ usd: "0.20" });
+  await assert.rejects(render([job(dir, "v3-reef")], rerun.options({ ceiling: "0.50" })), /past its \$0\.500 ceiling/);
+});
+
+test("a submission answered with an empty request_id is recorded at its estimate, since it may have been charged", async () => {
+  const dir = roundDir();
+  await assert.rejects(render([job(dir)], fakeApi({ submit: [reply(200, { status: "queued", request_id: "" })] }).options()), /may have reached Higgsfield/);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.094], ["unanswered", 0.094]],
+  );
+});
+
+test("a submission refused at its first try is recorded at $0, so its estimate leaves the ceiling (#571)", async () => {
+  const dir = roundDir();
+  await assert.rejects(render([job(dir)], fakeApi({ usd: "0.20", submit: [reply(422, { detail: "aspect_ratio is invalid" })] }).options({ ceiling: "0.30" })), /422/);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.2], ["refused", 0]],
+  );
+  assert.equal(ledger(dir)[1].http_status, 422);
+  assert.equal(ledger(dir)[1].error, undefined, "the API's text stays off the ledger");
+  assert.equal(await render([job(dir, "v2-tide")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
+});
+
+function ledgerTurnsReadOnlyAtFirstCall(api, dir, matching, extra) {
+  const options = api.options(extra);
+  const fetch = options.fetch;
+  let turned = false;
+  options.fetch = async (url, init = {}) => {
+    if (!turned && matching(new URL(url).pathname, init)) {
+      fs.chmodSync(path.join(dir, LEDGER), 0o444);
+      turned = true;
+    }
+    return fetch(url, init);
+  };
+  return options;
+}
+
+test("a ledger write that fails once the API accepts a job leaves its request id on screen, and the job is polled on to its URLs (#571, #575)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const lines = [];
+  const options = ledgerTurnsReadOnlyAtFirstCall(api, dir, (pathname, init) => init.method === "POST" && !pathname.startsWith("/estimate/"), { log: (line) => lines.push(line) });
+  await assert.rejects(render([job(dir)], options), (error) => {
+    assert.equal(error.cause?.code, "EACCES");
+    assert.match(error.message, /its completed line could not be written.*request req-1 completed and is charged, its outputs at https:\/\/cdn\.example\.com\/out\.png/);
+    return true;
+  });
+  assert.ok(lines.includes("r1/v1-dusk: accepted as request req-1"));
+  assert.ok(lines.some((line) => /^r1\/v1-dusk: its submitted line could not be written.*request req-1 is polled on/.test(line)), lines.join("\n"));
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.094]],
+    "the submitting line still counts the charge at its estimate",
+  );
+});
+
+test("a submitted line that cannot be written leaves the job polled on, saved and charged by its outcome line, with the batch carrying on (#575)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const lines = [];
+  const options = ledgerTurnsReadOnlyAtFirstCall(api, dir, (pathname, init) => init.method === "POST" && !pathname.startsWith("/estimate/"), { log: (line) => lines.push(line) });
+  const fetch = options.fetch;
+  options.fetch = async (url, init = {}) => {
+    if (new URL(url).pathname.startsWith("/requests/")) fs.chmodSync(path.join(dir, LEDGER), 0o644);
+    return fetch(url, init);
+  };
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], options), 0);
+  assert.ok(lines.some((line) => /^r1\/v1-dusk: its submitted line could not be written/.test(line)), lines.join("\n"));
+  assert.ok(fs.existsSync(path.join(dir, "v1-dusk.png")) && fs.existsSync(path.join(dir, "v2-tide.png")));
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.candidate, entry.status]),
+    [
+      ["r1/v1-dusk", "submitting"],
+      ["r1/v1-dusk", "completed"],
+      ["r1/v2-tide", "submitting"],
+      ["r1/v2-tide", "submitted"],
+      ["r1/v2-tide", "completed"],
+    ],
+  );
+  assert.equal(ledger(dir)[1].request_id, "req-1");
+});
+
+test("a ledger write that fails once a request completes names its request id and every output URL, and stops the batch naming what ran (#575)", async () => {
+  const dir = roundDir();
+  const second = "https://cdn.example.com/out-2.png";
+  const api = fakeApi({ images: [{ url: CDN }, { url: second }, {}] });
+  let polls = 0;
+  const options = ledgerTurnsReadOnlyAtFirstCall(api, dir, (pathname) => pathname.startsWith("/requests/") && ++polls === 2);
+  await assert.rejects(render([job(dir, "v1-dusk"), job(dir, "v2-tide")], options), (error) => {
+    assert.match(error.message, /^r1\/v1-dusk: its completed line could not be written to .*higgsfield-spend\.jsonl \(EACCES/);
+    assert.ok(error.message.includes(`request req-1 completed and is charged, its outputs at ${CDN} ${second}, live for at least seven days, and 1 output with no URL`), error.message);
+    assert.match(error.message, /No job ran\. Not submitted: r1\/v2-tide$/);
+    assert.deepEqual(stopFields(error), { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v2-tide"], mayBeCharged: true });
+    assert.equal(error.cause.code, "EACCES");
+    return true;
+  });
+  assert.equal(api.submissions().length, 1, "the batch stops at the job whose line was lost");
+  assert.equal(api.calls.filter((call) => call.url.startsWith("https://cdn.example.com/")).length, 0, "nothing is downloaded past a lost line");
+  assert.equal(fs.existsSync(path.join(dir, "higgsfield.lock")), false, "the round's lock is released");
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [
+      ["submitting", 0.094],
+      ["submitted", 0.094],
+    ],
+    "the submitted line still counts the charge at its estimate",
+  );
+});
+
+test("a ledger write that fails at any step stops the batch naming the job it stopped at, those that ran, those not submitted, and whether it may be charged (#575)", async () => {
+  const submitPost = (pathname, init) => init.method === "POST" && !pathname.startsWith("/estimate/");
+  const firstPoll = (pathname) => pathname.startsWith("/requests/");
+  const fault = () => Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
+  const cases = [
+    { line: "submitting", turnsAt: (pathname) => pathname === "/out.png", api: {}, stop: { stoppedAt: "r1/v2-tide", ran: ["r1/v1-dusk"], notSubmitted: ["r1/v2-tide"], mayBeCharged: false } },
+    { line: "refused", turnsAt: submitPost, api: { submit: [reply(422, { detail: "bad prompt" })] }, stop: { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v1-dusk", "r1/v2-tide"], mayBeCharged: false } },
+    { line: "unanswered", turnsAt: submitPost, api: { submit: [fault(), fault(), fault()] }, stop: { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v2-tide"], mayBeCharged: true } },
+    { line: "timed-out", turnsAt: firstPoll, api: { statuses: ["in_progress"] }, extra: { timeoutMs: 5000 }, stop: { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v2-tide"], mayBeCharged: true } },
+    { line: "failed", turnsAt: firstPoll, api: { statuses: ["failed"] }, stop: { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v2-tide"], mayBeCharged: false } },
+  ];
+  for (const { line, turnsAt, api, extra, stop } of cases) {
+    const dir = roundDir();
+    const options = ledgerTurnsReadOnlyAtFirstCall(fakeApi(api), dir, turnsAt, extra);
+    await assert.rejects(render([job(dir, "v1-dusk"), job(dir, "v2-tide")], options), (error) => {
+      assert.match(error.message, new RegExp(`its ${line} line could not be written`), line);
+      assert.deepEqual(stopFields(error), stop, line);
+      return true;
+    });
+  }
+});
+
+test("a torn ledger line, as a run killed mid-write leaves, is refused naming the file and line, before anything is submitted (#575)", async () => {
+  for (const torn of ['{"usd":0.094,"candidate":"r1/v1-du', "null", "[0.094]"]) {
+    const dir = roundDir();
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: 0.094 })}\n\n${torn}`);
+    const api = fakeApi();
+    await assert.rejects(render([job(dir, "v2-tide")], api.options()), new RegExp(`${path.join(dir, LEDGER).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} line 3 is not a ledger entry`), torn);
+    assert.equal(api.submissions().length, 0, torn);
+  }
+});
+
+test("a failed request's $0 outcome takes its submitted charge off the ceiling (#571)", async () => {
+  const dir = roundDir();
+  assert.equal(await render([job(dir, "v1-dusk")], fakeApi({ usd: "0.20", statuses: ["failed"] }).options({ ceiling: "0.30" })), 1);
+  assert.equal(ledger(dir).at(-1).error, undefined, "the API's text stays off the ledger");
+  const rerun = fakeApi({ usd: "0.20" });
+  assert.equal(await render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), 0);
+  assert.equal(rerun.submissions().length, 1);
+});
+
+test("an estimate that is not a positive usd figure is refused before anything is submitted", async () => {
+  for (const usd of ["-5", "0"]) {
+    const api = fakeApi({ usd });
+    await assert.rejects(render([job(roundDir())], api.options()), /not a positive usd figure/, usd);
+    assert.equal(api.submissions().length, 0, usd);
+  }
+});
+
+test("a ledger line with a negative usd figure is refused, since it would free room under the ceiling", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: -5 })}\n`);
+  const api = fakeApi();
+  await assert.rejects(render([job(dir)], api.options()), /line 1 holds a negative usd figure/);
+  assert.equal(api.submissions().length, 0);
 });
 
 test("a submission answered 5xx is retried under the same idempotency key", async () => {
@@ -216,7 +471,7 @@ test("a ledger line with no usd figure stops the batch rather than letting the c
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ note: "hand edit" })}\n`);
   const api = fakeApi({ usd: "50" });
-  await assert.rejects(render([job(dir)], api.options()), /holds a line with no usd figure/);
+  await assert.rejects(render([job(dir)], api.options()), /line 1 holds no usd figure/);
   assert.equal(api.submissions().length, 0);
 });
 
@@ -236,7 +491,7 @@ test("a download that fails after the charge is logged as failed, keeps its ledg
   assert.equal(fs.existsSync(path.join(dir, "v1-dusk.png")), false);
   assert.ok(fs.existsSync(path.join(dir, "v2-tide.png")));
   assert.deepEqual(
-    ledger(dir).map((entry) => entry.urls),
+    outcomes(dir).map((entry) => entry.urls),
     [[CDN], [CDN]],
   );
 });
@@ -245,7 +500,287 @@ test("a request that completes with no image is counted as failed", async () => 
   const dir = roundDir();
   const api = fakeApi({ statuses: ["completed"], images: [] });
   assert.equal(await render([job(dir)], api.options()), 1);
-  assert.equal(ledger(dir).length, 1);
+  assert.deepEqual(
+    ledger(dir).map((entry) => entry.status),
+    ["submitting", "submitted", "completed"],
+  );
+});
+
+test("a completed reply whose outputs are not objects with a URL is charged and counted failed, and the batch carries on (#559)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: [null] });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), 2);
+  assert.deepEqual(
+    outcomes(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.urls, entry.unreadable]),
+    [
+      ["r1/v1-dusk", "completed", 0.094, [], 1],
+      ["r1/v2-tide", "completed", 0.094, [], 1],
+    ],
+  );
+});
+
+test("a completed reply with one output unreadable saves the rest and is counted failed (#559)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: ["not-an-object", { url: CDN }] });
+  assert.equal(await render([job(dir)], api.options()), 1);
+  assert.deepEqual(fs.readFileSync(path.join(dir, "v1-dusk.png")), PNG);
+  assert.deepEqual(outcomes(dir)[0].urls, [CDN]);
+});
+
+test("a completed reply whose images is one object rather than a list keeps its URL; one that is a string is unreadable (#559)", async () => {
+  const single = roundDir();
+  assert.equal(await render([job(single)], fakeApi({ statuses: ["completed"], images: { url: CDN } }).options()), 0);
+  assert.deepEqual(outcomes(single)[0].urls, [CDN]);
+  const text = roundDir();
+  assert.equal(await render([job(text)], fakeApi({ statuses: ["completed"], images: CDN }).options()), 1);
+  assert.deepEqual([outcomes(text)[0].urls, outcomes(text)[0].unreadable], [[], 1]);
+});
+
+test("a job with an unreadable output whose download then fails is counted failed once (#559)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ statuses: ["completed"], images: [null, { url: CDN }], cdn: () => reply(500, "") });
+  assert.equal(await render([job(dir)], api.options()), 1);
+});
+
+function holdFirstPoll() {
+  let release;
+  let reached;
+  const polling = new Promise((resolve) => {
+    reached = resolve;
+  });
+  const sleep = () => {
+    if (release) return Promise.resolve();
+    reached();
+    return new Promise((resolve) => {
+      release = resolve;
+    });
+  };
+  return { sleep, polling, release: () => release() };
+}
+
+test("a second batch on a round whose batch is still running is refused, submitting nothing, and runs once it ends (#559)", async () => {
+  const dir = roundDir();
+  const held = holdFirstPoll();
+  const running = render([job(dir, "v1-dusk")], fakeApi().options({ sleep: held.sleep }));
+  await held.polling;
+
+  for (const stem of ["v1-dusk", "v2-tide"]) {
+    const second = fakeApi();
+    await assert.rejects(render([job(dir, stem)], second.options()), /r1 is held by another higgsfield\.js run \(process \d+, since .+\), so nothing was submitted; rerun once it ends, or delete .*higgsfield\.lock if process \d+ is no higgsfield\.js run$/);
+    assert.equal(second.calls.length, 0);
+  }
+
+  held.release();
+  assert.equal(await running, 0);
+  assert.equal(fs.existsSync(path.join(dir, "higgsfield.lock")), false);
+  const later = fakeApi();
+  assert.equal(await render([job(dir, "v2-tide")], later.options()), 0);
+  assert.equal(later.submissions().length, 1);
+});
+
+test("a batch refused at the ceiling leaves the round unlocked (#559)", async () => {
+  const dir = roundDir();
+  await assert.rejects(render([job(dir)], fakeApi().options({ ceiling: "0.05" })), /past its \$0\.050 ceiling/);
+  assert.equal(fs.existsSync(path.join(dir, "higgsfield.lock")), false);
+  assert.equal(await render([job(dir)], fakeApi().options()), 0);
+});
+
+test("a lock left by a run that ended, or one that cannot be read, is refused and left in place (#559)", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir);
+  const lockFile = path.join(dir, "higgsfield.lock");
+  const { pid } = spawnSync(process.execPath, ["-e", ""]);
+  const dead = JSON.stringify({ pid, at: "2026-01-01T00:00:00.000Z" });
+  for (const [content, why] of [
+    [dead, /r1 holds the lock of a higgsfield\.js run that ended without releasing it \(process \d+, since 2026-01-01T00:00:00\.000Z\), so nothing was submitted\. A job it submitted may be charged and missing from the ledger: check the Higgsfield console, then delete .*higgsfield\.lock/],
+    ["", /r1 holds a lock that cannot be read, .*higgsfield\.lock, so nothing was submitted; delete it once no higgsfield\.js run is working on the round/],
+  ]) {
+    fs.writeFileSync(lockFile, content);
+    const api = fakeApi();
+    await assert.rejects(render([job(dir)], api.options()), why);
+    assert.equal(api.calls.length, 0);
+    assert.equal(fs.readFileSync(lockFile, "utf8"), content);
+  }
+});
+
+test("one round reached by two spellings is held to its ceiling once, for the whole batch (#559)", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir);
+  const alias = path.join(path.dirname(dir), "alias");
+  fs.symlinkSync(path.dirname(dir), alias);
+  const api = fakeApi();
+  const twoSpellings = [job(dir, "v1-dusk"), job(path.join(alias, "r1"), "v2-tide")];
+  await assert.rejects(render(twoSpellings, api.options({ ceiling: "0.15" })), /past its \$0\.150 ceiling, so nothing was submitted/);
+  assert.equal(api.submissions().length, 0);
+  await assert.rejects(render([job(dir, "v1-dusk"), job(path.join(alias, "r1"), "v1-dusk")], api.options()), /r1\/v1-dusk appears twice in the batch/);
+});
+
+test("a round behind a symlink to a folder only a later job of the batch makes is made and rendered (#574)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "real"), path.join(base, "alias"));
+  const behindTheSymlink = path.join(base, "alias", "r2");
+  assert.equal(await render([job(behindTheSymlink), job(path.join(base, "real", "r1"))], fakeApi().options()), 0);
+  assert.equal(outcomes(behindTheSymlink).length, 1);
+});
+
+test("a round behind a symlink to a folder no job of the batch makes refuses the batch, submitting nothing (#574)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "nowhere"), path.join(base, "alias"));
+  const api = fakeApi();
+  await assert.rejects(render([job(path.join(base, "real", "r1")), job(path.join(base, "alias", "r2"))], api.options()), { code: "ENOENT" });
+  assert.equal(api.calls.length, 0);
+});
+
+test("a round not yet made, reached by two spellings through a symlink to a folder not yet made, is one round (#559)", async () => {
+  const base = path.dirname(roundDir());
+  const alias = path.join(base, "alias");
+  fs.symlinkSync(path.join(base, "real"), alias);
+  const api = fakeApi();
+  const twoSpellings = [job(path.join(alias, "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v2-tide")];
+  await assert.rejects(render(twoSpellings, api.options({ ceiling: "0.15" })), /past its \$0\.150 ceiling, so nothing was submitted/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("--estimate prices two spellings of a round not yet made, through a symlink to a folder not yet made, as one round, making no folder (#576)", async () => {
+  const base = path.dirname(roundDir());
+  const alias = path.join(base, "alias");
+  fs.symlinkSync(path.join(base, "real"), alias);
+  const api = fakeApi();
+  const lines = [];
+  const twoSpellings = [job(path.join(alias, "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v2-tide")];
+  assert.equal(await render(twoSpellings, api.options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("past its $0.150 ceiling, so a run would be refused")));
+  assert.equal(fs.existsSync(path.join(base, "real")), false);
+  await assert.rejects(render([job(path.join(alias, "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v1-dusk")], api.options({ estimateOnly: true })), /r1\/v1-dusk appears twice in the batch/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("--estimate prices two different rounds behind a symlink to a folder not yet made as two rounds (#576)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "real"), path.join(base, "alias"));
+  const lines = [];
+  const twoRounds = [job(path.join(base, "alias", "r1")), job(path.join(base, "real", "r2"))];
+  assert.equal(await render(twoRounds, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.equal(lines.filter((line) => line.includes("this batch $0.094")).length, 2);
+  assert.ok(!lines.some((line) => line.includes("would be refused")));
+});
+
+test("--estimate follows a symlink a target reaches by .. out of a folder not yet made, as a run does (#576)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync("x/../l", path.join(base, "alias"));
+  fs.symlinkSync("y", path.join(base, "l"));
+  const lines = [];
+  const twoSpellings = [job(path.join(base, "x", "r1"), "v1-dusk"), job(path.join(base, "alias", "r1"), "v2-tide"), job(path.join(base, "y", "r1"), "v3-reef")];
+  assert.equal(await render(twoSpellings, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("this batch $0.188")));
+  assert.ok(lines.some((line) => line.includes("so a run would be refused")));
+});
+
+test("--estimate of a round behind a symlink to a folder no job of the batch makes says a run would be refused, calling nothing and leaving no folder (#577)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "nowhere"), path.join(base, "alias"));
+  const api = fakeApi();
+  const lines = [];
+  assert.equal(await render([job(path.join(base, "real", "deeper", "r1")), job(path.join(base, "alias", "r2"))], api.options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => /^a round folder cannot be made \(ENOENT.*\), so a run would be refused$/.test(line)), lines.join("\n"));
+  assert.equal(api.calls.length, 0);
+  assert.deepEqual(fs.readdirSync(base), ["alias"]);
+});
+
+test("--estimate takes back every folder it made, under any spelling, and none it found (#577)", async () => {
+  const base = path.dirname(roundDir());
+  fs.mkdirSync(path.join(base, "kept"));
+  fs.symlinkSync(path.join(base, "made", "deep"), path.join(base, "alias"));
+  const lines = [];
+  const jobs = [job(path.join(base, "alias", "r1")), job(path.join(base, "made", "deep", "er", "r2")), job(path.join(base, "kept", "r3"))];
+  assert.equal(await render(jobs, fakeApi().options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.equal(lines.filter((line) => line.includes("this batch $0.094")).length, 3);
+  assert.deepEqual(fs.readdirSync(base).sort(), ["alias", "kept"]);
+  assert.deepEqual(fs.readdirSync(path.join(base, "kept")), []);
+});
+
+test("--estimate leaves a folder another run put in place of one it made, and one it found through a symlink (#577)", async () => {
+  const base = path.dirname(roundDir());
+  const api = fakeApi();
+  const inner = api.options().fetch;
+  const swapped = path.join(base, "swapped", "r1");
+  let swaps = 0;
+  const fetch = async (url, init) => {
+    if (swaps++ === 0) {
+      fs.rmdirSync(swapped);
+      fs.mkdirSync(swapped);
+    }
+    return inner(url, init);
+  };
+  fs.mkdirSync(path.join(base, "old", "r2"), { recursive: true });
+  fs.symlinkSync("made/../old", path.join(base, "through"));
+  const jobs = [job(swapped), job(path.join(base, "made", "r3")), job(path.join(base, "through", "r2"))];
+  assert.equal(await render(jobs, api.options({ fetch, estimateOnly: true })), 0);
+  assert.deepEqual(fs.readdirSync(base).sort(), ["old", "swapped", "through"]);
+  assert.deepEqual(fs.readdirSync(path.join(base, "swapped")), ["r1"]);
+  assert.deepEqual(fs.readdirSync(path.join(base, "old")), ["r2"]);
+});
+
+test("--estimate whose round folder fails partway takes back the folders it made before the failure (#577)", async () => {
+  const base = path.dirname(roundDir());
+  const lines = [];
+  const jobs = [job(path.join(base, "ok", "r1")), job(path.join(base, "bad", "x".repeat(300), "r2"))];
+  assert.equal(await render(jobs, fakeApi().options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => /^a round folder cannot be made \(ENAMETOOLONG.*\), so a run would be refused$/.test(line)), lines.join("\n"));
+  assert.deepEqual(fs.readdirSync(base), []);
+});
+
+test("a run whose round folder goes before its lock is taken is refused plainly, submitting nothing (#577)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const write = fs.writeFileSync;
+  fs.writeFileSync = (file, ...rest) => {
+    if (String(file).endsWith("higgsfield.lock")) fs.rmdirSync(path.dirname(file));
+    return write(file, ...rest);
+  };
+  try {
+    await assert.rejects(render([job(dir)], api.options()), /^Error: a round folder went away before the batch could lock it \(ENOENT.*\), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun$/);
+  } finally {
+    fs.writeFileSync = write;
+  }
+  assert.equal(api.calls.length, 0);
+});
+
+// Runs where the scratch folder folds case, as macOS's APFS and /mnt/c on WSL do; TMPDIR=/mnt/c/... runs it on WSL.
+const foldsCase = (() => {
+  const probe = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-case-"));
+  scratch.push(probe);
+  fs.mkdirSync(path.join(probe, "a"));
+  return fs.existsSync(path.join(probe, "A"));
+})();
+test("--estimate prices two case spellings of a round not yet made as one round, where the filesystem folds case (#577)", { skip: !foldsCase && "the scratch folder is case-sensitive" }, async () => {
+  const base = path.dirname(roundDir());
+  const lines = [];
+  const twoSpellings = [job(path.join(base, "Real", "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v2-tide")];
+  assert.equal(await render(twoSpellings, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("past its $0.150 ceiling, so a run would be refused")));
+  assert.deepEqual(fs.readdirSync(base), []);
+});
+
+test("a video answered as a list keeps its URL (#559)", async () => {
+  const dir = roundDir();
+  assert.equal(await render([job(dir)], fakeApi({ statuses: ["completed"], video: [{ url: CDN }] }).options()), 0);
+  assert.deepEqual(outcomes(dir)[0].urls, [CDN]);
+});
+
+test("a lock that cannot be released is logged, and the batch's other locks and outcome stand (#559)", async () => {
+  const first = roundDir();
+  const second = roundDir();
+  const held = holdFirstPoll();
+  const lines = [];
+  const running = render([job(first, "v1-dusk"), job(second, "v1-dusk")], fakeApi().options({ sleep: held.sleep, log: (line) => lines.push(line) }));
+  await held.polling;
+  fs.rmSync(path.join(first, "higgsfield.lock"));
+  fs.mkdirSync(path.join(first, "higgsfield.lock"));
+  held.release();
+  assert.equal(await running, 0);
+  assert.equal(fs.existsSync(path.join(second, "higgsfield.lock")), false);
+  assert.ok(lines.some((line) => /^✗ could not release .*higgsfield\.lock: .*; delete it by hand$/.test(line)));
 });
 
 test("a network fault on submission is retried under the same idempotency key", async () => {
@@ -254,6 +789,56 @@ test("a network fault on submission is retried under the same idempotency key", 
   const calls = api.calls.filter((call) => call.method === "POST" && !new URL(call.url).pathname.startsWith("/estimate/"));
   assert.equal(calls.length, 2);
   assert.equal(calls[0].headers["Idempotency-Key"], calls[1].headers["Idempotency-Key"]);
+});
+
+test("a submission whose every try ends on a network fault is recorded at its estimate and stops the batch, naming it as maybe charged (#573)", async () => {
+  const dir = roundDir();
+  const fault = new TypeError("fetch failed");
+  const api = fakeApi({ usd: "0.25", statuses: ["completed"], submit: [undefined, fault, fault, fault] });
+  await assert.rejects(
+    render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options({ ceiling: "0.80" })),
+    (error) => {
+      assert.match(error.message, /fetch failed\. r1\/v2-tide may have reached Higgsfield[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v3-reef/);
+      assert.equal(error.name, "BatchStoppedError");
+      assert.deepEqual(
+        stopFields(error),
+        { stoppedAt: "r1/v2-tide", ran: ["r1/v1-dusk"], notSubmitted: ["r1/v3-reef"], mayBeCharged: true },
+      );
+      return true;
+    },
+  );
+  assert.deepEqual(
+    outcomes(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.request_id]),
+    [["r1/v1-dusk", "completed", 0.25, "req-1"], ["r1/v2-tide", "unanswered", 0.25, null]],
+  );
+  const rerun = fakeApi({ usd: "0.25" });
+  await assert.rejects(render([job(dir, "v4-ebb"), job(dir, "v5-swell")], rerun.options({ ceiling: "0.80" })), /past its \$0\.800 ceiling/);
+});
+
+test("a submission that may have reached the API is recorded at its estimate and named as maybe charged: 5xx to the last try, no request_id, or a refusal answering a retry (#573)", async () => {
+  const cases = {
+    "5xx to the last try": [reply(502, {}), reply(502, {}), reply(502, {})],
+    "no request_id": [reply(200, { status: "queued" })],
+    "a 422 after a lost answer": [new TypeError("fetch failed"), reply(422, { detail: "aspect_ratio is invalid" })],
+    "a 403 after a lost answer": [new TypeError("fetch failed"), reply(403, { detail: "Not enough credits" })],
+  };
+  for (const [what, submit] of Object.entries(cases)) {
+    const dir = roundDir();
+    await assert.rejects(
+      render([job(dir)], fakeApi({ submit }).options()),
+      (error) => {
+        assert.match(error.message, /may have reached Higgsfield/, what);
+        assert.equal(error.name, "BatchStoppedError", what);
+        assert.deepEqual(stopFields(error), { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: [], mayBeCharged: true }, what);
+        return true;
+      },
+    );
+    assert.deepEqual(
+      ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
+      [["submitting", 0.094, null], ["unanswered", 0.094, null]],
+      what,
+    );
+  }
 });
 
 test("every call to the API refuses to follow a redirect", async () => {
@@ -304,7 +889,7 @@ test("a job priced by a rule runs under its max_usd and is charged to the ledger
   assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.25 })], api.options({ log: (line) => lines.push(line) })), 0);
   const [submit] = api.submissions();
   assert.equal(submit.body.max_usd, undefined, "max_usd is ours, not the API's");
-  const [entry] = ledger(dir);
+  const [entry] = outcomes(dir);
   assert.equal(entry.usd, 0.25);
   assert.deepEqual(entry.rule, RULE);
   assert.ok(lines.some((line) => line.includes("at most $0.250") && line.includes("first output megapixel")));
@@ -314,7 +899,7 @@ test("a job whose estimate carries a usd figure is charged at that figure, whate
   const dir = roundDir();
   const api = fakeApi();
   assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.01 })], api.options()), 0);
-  assert.equal(ledger(dir)[0].usd, 0.094);
+  assert.equal(outcomes(dir)[0].usd, 0.094);
 });
 
 test("a max_usd that is not a positive number is refused before any call", async () => {
@@ -355,7 +940,7 @@ test("a job priced by a rule that times out is recorded at its max_usd, with the
   const dir = roundDir();
   const api = fakeApi({ estimate: RULE, statuses: ["in_progress"] });
   assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.25 })], api.options({ timeoutMs: 30000 })), 1);
-  const [entry] = ledger(dir);
+  const [entry] = outcomes(dir);
   assert.equal(entry.status, "timed-out");
   assert.equal(entry.usd, 0.25);
   assert.deepEqual(entry.rule, RULE);
@@ -404,7 +989,7 @@ test("a completed video is saved under its sniffed type, with its URL in the led
     const lines = [];
     assert.equal(await render([job(dir, "v1-drift")], api.options({ log: (line) => lines.push(line) })), 0);
     assert.deepEqual(fs.readFileSync(path.join(dir, `v1-drift.${type}`)), bytes);
-    assert.deepEqual(ledger(dir)[0].urls, [CLIP]);
+    assert.deepEqual(outcomes(dir)[0].urls, [CLIP]);
     assert.ok(lines.some((line) => line.startsWith(`saved r1/v1-drift.${type}`)));
   }
 });
@@ -415,7 +1000,7 @@ test("a video whose download fails keeps its URL in the ledger, counted as faile
   const lines = [];
   assert.equal(await render([job(dir, "v1-drift")], api.options({ log: (line) => lines.push(line) })), 1);
   assert.deepEqual(fs.readdirSync(dir), [LEDGER]);
-  assert.deepEqual(ledger(dir)[0].urls, [CLIP]);
+  assert.deepEqual(outcomes(dir)[0].urls, [CLIP]);
   assert.ok(lines.some((line) => line.includes("charged, but not saved") && line.includes("The ledger keeps its URL")));
 });
 
@@ -443,39 +1028,47 @@ test("the estimate's discount is recorded on the ledger line beside the usd, whi
   const discount = { percentage: 15, credits: "1.008", usd: "0.063" };
   const api = fakeApi({ video: { url: CLIP }, cdn: () => reply(200, MP4), estimate: { credits: "5.712", usd: "0.357", discount } });
   assert.equal(await render([job(dir, "v1-drift")], api.options()), 0);
-  const [entry] = ledger(dir);
+  const [entry] = outcomes(dir);
   assert.equal(entry.usd, 0.357);
   assert.deepEqual(entry.discount, discount);
 });
 
-test("a 403 part-way through a batch names the jobs that ran and says the rest were not submitted", async () => {
-  const dir = roundDir();
-  const api = fakeApi({ statuses: ["completed"], submit: [undefined, reply(403, { detail: "Not enough credits" })] });
-  await assert.rejects(
-    render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options()),
-    /answered 403: Not enough credits \(the balance is too low[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v2-tide, r1\/v3-reef/,
-  );
-  assert.equal(api.submissions().length, 2);
-  assert.deepEqual(
-    ledger(dir).map((entry) => entry.candidate),
-    ["r1/v1-dusk"],
-  );
+test("a refusal at the first try part-way through a batch, a 403 or any other, keeps the API's message and names the jobs that ran and those not submitted, in its text and as fields (#570, #573)", async () => {
+  const cases = {
+    "a 403": [reply(403, { detail: "Not enough credits" }), /answered 403: Not enough credits \(the balance is too low[^]*/],
+    "a 422": [reply(422, { detail: "aspect_ratio is invalid" }), /answered 422: aspect_ratio is invalid/],
+  };
+  for (const [what, [refusal, apiMessage]] of Object.entries(cases)) {
+    const dir = roundDir();
+    const api = fakeApi({ statuses: ["completed"], submit: [undefined, refusal] });
+    await assert.rejects(
+      render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options()),
+      (error) => {
+        assert.match(error.message, new RegExp(`${apiMessage.source}\\. Ran: r1\\/v1-dusk\\. Not submitted: r1\\/v2-tide, r1\\/v3-reef$`), what);
+        assert.equal(error.name, "BatchStoppedError", what);
+        assert.deepEqual(
+          stopFields(error),
+          { stoppedAt: "r1/v2-tide", ran: ["r1/v1-dusk"], notSubmitted: ["r1/v2-tide", "r1/v3-reef"], mayBeCharged: false },
+          what,
+        );
+        return true;
+      },
+    );
+    assert.equal(api.submissions().length, 2, what);
+    assert.deepEqual(
+      outcomes(dir).map((entry) => [entry.candidate, entry.status, entry.usd]),
+      [["r1/v1-dusk", "completed", 0.094], ["r1/v2-tide", "refused", 0]],
+      what,
+    );
+  }
 });
 
 test("a completed video answer with no url is counted as failed, with nothing downloaded", async () => {
   const dir = roundDir();
   const api = fakeApi({ statuses: ["completed"], video: {} });
   assert.equal(await render([job(dir, "v1-drift")], api.options()), 1);
-  assert.deepEqual(ledger(dir)[0].urls, []);
+  assert.deepEqual(outcomes(dir)[0].urls, []);
   assert.equal(api.calls.filter((call) => call.url.startsWith("https://cdn.example.com/")).length, 0);
-});
-
-test("a submission refused for any reason but the balance stops the batch with the API's own message", async () => {
-  const api = fakeApi({ statuses: ["completed"], submit: [undefined, reply(422, { detail: "aspect_ratio is invalid" })] });
-  await assert.rejects(render([job(roundDir(), "v1-dusk"), job(roundDir(), "v2-tide")], api.options()), (error) => {
-    assert.match(error.message, /answered 422: aspect_ratio is invalid$/);
-    return true;
-  });
 });
 
 test("a 403 on the batch's first job says no job ran", async () => {

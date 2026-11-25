@@ -14,7 +14,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `data/vault-data.js` | library, presentational tier: a static data table derived from `data/gallery.json` and `data/styles.json` by `node bundle.js`, so a fault in it is fixed in `bundle.js` (#32) |
 | `plugin/review-page/review.js` | library: the shared review page's logic: checking the data file and the feedback boxes (#120) |
 | `git-read.js` | library: git run for the programs that judge a commit from the index or HEAD, under one read cap (#141) |
-| `log-gate.js` | library: what the round log's and the corrections log's gates share, reading a log from git and their command line (#166) |
+| `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line, and the row reader the calibration packet and critic examples use (#166, #168) |
 | `plugin/skills/design-round/scripts/access-pixels.py` | library: the pixel maths check-access.py measures its screenshots with (#198) |
 | `plugin/skills/design-round/scripts/access-answers.py` | library: check-access.py's questions, and how each width's findings merge into one answer per question (#214) |
 | `plugin/skills/design-round/scripts/access-keys.py` | library: check-access.py's keyboard and focus questions read from its Tab walk and from keys and mouse presses on a page of their own (#315) |
@@ -22,6 +22,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/access-boxes.py` | library: the boxes of generated `::before` and `::after` text, read from Chromium's DevTools for check-access.py's contrast question (#189) |
 | `plugin/skills/design-round/scripts/access-contrast.py` | library: check-access.py's contrast questions past text and field edges, with their table's parser (#316) |
 | `plugin/skills/design-round/scripts/text-checks.py` | library: check-text.py's checks, its table and word lists, and how each load's findings merge into one answer per record, split out so its tests call what the program calls (#314) |
+| `plugin/skills/design-round/scripts/siblings.py` | library: loads a design-round script's siblings once per process, cached by real path, so every caller shares one copy of each error class (#558) |
 | `plugin/skills/design-round/scripts/rule-table.py` | library: the rule tables' line reader, `ID \| CHECK [\| VALUE]` grammar and per-record answers, for the family scripts (#413) |
 | `plugin/skills/design-round/scripts/probe.py` | library: reads a page's DOM and computed style against a rule table at check-layout.py's widths, one finding per record id, for the family scripts; also a program that runs one table (#300) |
 | `plugin/skills/design-round/scripts/layout-records.py` | library: the record checks check-layout.py --records runs at each width and on its own loads, and how the sweep's widths give each record one answer, its values read from `check-layout.table` (#311) |
@@ -48,4 +49,4 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 
 ## Local rules
 
-**§LG1 · Python file names (workflow-core#1252).** A Python file run or loaded by path takes a kebab-case name, as its JS siblings do: a program, its test `test/<program>.test.py`, and a hand-run harness under `test/load/`. None is imported by module name (tests load their subject through `importlib.util`), so workflow-core#1252's reason for snake_case, that a hyphenated module cannot be imported, does not reach them. A module imported by name takes snake_case.
+**§LG1 · Python file names (workflow-core#1252).** A Python file run or loaded by path takes a kebab-case name, as its JS siblings do: a program, its test `test/<program>.test.py`, and a hand-run harness under `test/load/`. None is imported by module name (tests load their subject through `siblings.load`), so workflow-core#1252's reason for snake_case, that a hyphenated module cannot be imported, does not reach them. A module imported by name takes snake_case.

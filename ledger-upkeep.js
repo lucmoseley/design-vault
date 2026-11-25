@@ -115,7 +115,7 @@ function readStore(dir) {
   return records;
 }
 
-/** Each library project's rules file path, by its key: the library's `rules` reads "<path> in <repo>" (design-project §1). */
+/** Each library project's rules file path, by its key: the library's `rules` reads "<path> in <owner>/<repo>" (design-project §4). */
 function readProjects(file) {
   const projects = JSON.parse(fs.readFileSync(file, "utf8")).projects;
   return new Map(Object.entries(isObject(projects) ? projects : {}).map(([key, p]) => [key, String(p?.rules ?? "").split(" in ")[0]]));

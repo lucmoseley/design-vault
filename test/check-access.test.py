@@ -1,4 +1,4 @@
-"""Pins check-access.py's access questions (#163, #164, #189, #315, #316): python3 test/check-access.test.py
+"""Pins check-access.py's access questions (#163, #164, #189, #315, #316, #545): python3 test/check-access.test.py
 
 Each question is run end to end on a fixture that fails it, and on a clean
 page that passes every question check-access.py asks; the keyboard-tier01 fixtures plant one fault for each
@@ -580,10 +580,10 @@ class CarouselWatch(unittest.TestCase):
                         page.query_selector("#spin-on"),
                         page.query_selector("#spin-held"),
                     )
-                    self.assertIsNotNone(keys._change(page, on, 2000))
+                    self.assertIsNotNone(keys.change(page, on, 2000))
                     held.query_selector("button.pause").focus()
                     page.wait_for_timeout(100)
-                    self.assertIsNone(keys._change(page, held, 1500))
+                    self.assertIsNone(keys.change(page, held, 1500))
                     # Every shot unlike the last, as when one shot outlasts the gap between turns.
                     count = iter(range(10**6))
                     keys._shot = lambda handle: np.full((4, 4, 3), next(count) % 2 * 99)
@@ -607,7 +607,7 @@ class Browsed(unittest.TestCase):
         cls.browser.close()
         cls.playwright.stop()
 
-    def pause_answer(self, fixture, watch_ms=None, init=None):
+    def pause_answer(self, fixture, watch_ms=None, init=None, carousels=()):
         access = library("check-access.py")
         if watch_ms is not None:
             access.WATCH_MS = watch_ms
@@ -615,11 +615,17 @@ class Browsed(unittest.TestCase):
         try:
             if init:
                 context.add_init_script(init)
-            return access.pause_answer(
-                context, pathlib.Path(FIXTURES, fixture).resolve().as_uri()
-            )
+            return access.pause_answer(context, fixture_url(fixture), carousels, [])
         finally:
             context.close()
+
+
+def fixture_url(fixture):
+    """A fixture's file URL, keeping a query string after its name."""
+    name, _, query = fixture.partition("?")
+    return pathlib.Path(FIXTURES, name).resolve().as_uri() + (
+        f"?{query}" if query else ""
+    )
 
 
 class LateMotionRead(Browsed):
@@ -648,6 +654,95 @@ class LateMotionRead(Browsed):
                 'div.slide "slide" runs 60.0 s from the page\'s load and ended while the controls named for pausing it were tried'
             ],
         )
+
+
+class Hold(unittest.TestCase):
+    """How long vault.pause waits for a change a control may have stopped (#545): a slide span
+    vault.carousel-focus timed, else access-keys.py's ROTATE_MS, and STILL_SLACK_MS more."""
+
+    def test_a_timed_span_sets_the_hold_and_anything_else_takes_rotate_ms(self):
+        access = library("check-access.py")
+        slack, rotate = access.keys.STILL_SLACK_MS, access.keys.ROTATE_MS
+        for span, want in (
+            (3000.0, 3000 + slack),
+            ("never holds still", rotate + slack),
+            (None, rotate + slack),
+        ):
+            with self.subTest(span=span):
+                self.assertEqual(access.hold_ms(span), want)
+
+
+class TimedChange(Browsed):
+    """vault.pause on a page that changes what it shows on a timer past 5 s, as a carousel's slides do, told
+    apart from an entrance that ends sooner (#545)."""
+
+    CHANGING = "changes what it shows more than 5 s after the page's load, and no control on the page is named for pausing, stopping or hiding it"
+    UNDECLARED = f"main > div.slides {CHANGING}; no carousel was declared, so whether the change shows cannot be told"
+
+    def test_a_declared_carousel_with_no_pause_control_fails_naming_it_and_that_no_control_pauses_it(
+        self,
+    ):
+        for route in ("class", "text", "hidden", "scroll"):
+            with self.subTest(route=route):
+                self.assertEqual(
+                    self.pause_answer(
+                        f"carousel.html?route={route}", carousels=[".slides"]
+                    ),
+                    ([{"subject": "main > div.slides", "detail": self.CHANGING}], []),
+                )
+
+    def test_an_undeclared_carousel_with_no_pause_control_cannot_be_measured(self):
+        for route in ("class", "text"):
+            with self.subTest(route=route):
+                self.assertEqual(
+                    self.pause_answer(f"carousel.html?route={route}"),
+                    ([], [self.UNDECLARED]),
+                )
+
+    def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured(self):
+        self.assertEqual(
+            self.pause_answer("carousel.html?every=12000", carousels=[".slides"]),
+            (
+                [],
+                [
+                    "main > div.slides held still from 5 s to 11 s after the page's load while the page still ran a "
+                    "timer, so a slower rotation cannot be ruled out"
+                ],
+            ),
+        )
+
+    def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self):
+        for carousels in ([".slides"], []):
+            with self.subTest(carousels=carousels):
+                self.assertEqual(
+                    self.pause_answer("carousel.html?pause", carousels=carousels),
+                    ([], []),
+                )
+
+    def test_an_entrance_that_ends_within_5_s_beside_a_running_interval_passes(self):
+        self.assertEqual(self.pause_answer("entrance.html"), ([], []))
+
+    def test_vault_pause_holds_a_declared_carousel_for_the_span_vault_carousel_focus_timed(
+        self,
+    ):
+        access = library("check-access.py")
+        holds, hold_ms = [], access.hold_ms
+
+        def recorded(span):
+            holds.append(span)
+            return hold_ms(span)
+
+        access.hold_ms = recorded
+        context = self.browser.new_context()
+        try:
+            _, judged = access.motion_answers(
+                context, fixture_url("carousel.html?pause"), [".slides"], mouse=False
+            )
+        finally:
+            context.close()
+        self.assertEqual((judged.faults, judged.unmeasured), ([], []))
+        self.assertTrue(holds)
+        self.assertTrue(all(isinstance(span, float) for span in holds), holds)
 
 
 class PauseClick(Browsed):

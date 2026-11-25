@@ -2,7 +2,7 @@
 
 Why text is tinted and links are marked as their records say, and how two House DNA lines weigh against the tint and case rules (#123, #154, #272, #270, #275, #287). The records are `vault.text-tint`, `vault.link-style`, `vault.colour-script`, `vault.dna-near-black`, `vault.dna-caps-label`, `vault.heading-space`, `vault.body-ink`, `vault.text-steps`, `vault.text-on-dark`, `vault.dark-ground`, `vault.controls-on-photo`, `vault.visited-links`, `vault.prose-emphasis`, `vault.sibling-emphasis`, `vault.emphasis-cues`, `vault.text-case`, `vault.caps-extent` and `vault.name-case`, in [rules/](../rules/). The research behind every line is `docs/research/text-presentation.md` in the design vault, #275's source checks are `docs/research/carry-source-checks.md`, and design-vault#287's source checks are (https://github.com/lucmoseley/design-vault/issues/287#issuecomment-6842731457); `docs/research/house-audit-visual.md` measures the tint figures against shipped design systems.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets, and, on behaviour, a record resting on domain evidence, which it departs from only on evidence of its own ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 ## Principles
 
@@ -12,7 +12,7 @@ Record: `vault.text-tint`.
 
 - **Why.** HSL's lightness and Sass's `darken()` shift with hue, so only OKLCH or HCT holds lightness while the tint moves. Chroma falls toward white because pale tints read as coloured long before dark ones do. A spot accent is a figure, and greys tinted toward it compete with it. Where a page has several strong hues or many photographs and the rules file picks neither the dominant hue nor pure grey, the critic faults neither and puts the choice to the founder (#183 Q4).
 - **Trade-off.** A tint buys cohesion and warmth, not readability: at the same OKLCH lightness it moves contrast very little. Pure grey is an equal choice, for a neutral or functional feel.
-- **Clash.** The text-contrast floor (WCAG 2.2 SC 1.4.3) beats any tint. impeccable `quieter`'s "use tinted grays instead of pure gray" gives way: pure grey stays an equal choice.
+- **Clash.** The text-contrast floor (WCAG 2.2 SC 1.4.3) beats any tint. impeccable `quieter`'s "Use warm or cool tinted grays instead of pure gray" gives way: pure grey stays an equal choice.
 
 ### The link rule
 

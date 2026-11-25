@@ -146,6 +146,14 @@ test("the build stage reads a parts map's roles as the candidate's parts, and jo
   assert.deepEqual(ids(ok(list(builder("build", "--parts", carried)))), both);
 });
 
+test("the build stage refuses a parts map holding a part that is not an object, naming it, rather than crashing (#154)", () => {
+  const hollow = buildCopy(PARTS_MAP, (data) => data.parts.push(null));
+  const r = list(builder("build", "--parts", hollow));
+  assert.equal(r.status, 1, r.out + r.err);
+  assert.match(r.out, /part \d+ has no id, no actable true or false, or no text/);
+  assert.doesNotMatch(r.err, /TypeError/);
+});
+
 test("the finish stage gives each script to run and the records it answers, never their text, and names the records whose script is owed", () => {
   const out = ok(list(builder("finish")));
   assert.match(out, /: 2 script\(s\)\.\n\n1\. check-access\.py\n {3}Answers: vault\.focus-script, vault\.contrast-script\n2\. check-layout\.py\n {3}Answers: vault\.reflow-script\n\nScript owed, so the gate critics look instead: vault\.measure-owed\.\n$/);
@@ -422,4 +430,42 @@ test("design-round §1c's three stage commands run as written on the vault's sto
     const r = run("list", ...args.split(" "));
     assert.equal(r.status, 0, `${c}: ${r.err}`);
   }
+});
+
+const lookWriting = (id, stage, writes, { strength = "house judgement", yields = "none" } = {}) =>
+  record(id, { by: "look", stage })
+    .replace(`- writes: ${id}`, `- writes: ${writes}`)
+    .replace("strength: house judgement", `strength: ${strength}`)
+    .replace("- yields-to: none", `- yields-to: ${yields}`);
+const clashLine = (out, a, b) => out.split("\n").find((l) => l.startsWith("- ") && l.includes(` ${a} and `) && l.includes(` ${b} both`));
+
+test("a clash between two stages is settled by the dependency order, the earlier standing over any level unless whether it yields is unread; within a stage, or with no stage, the level decides (#549)", () => {
+  const vault = writeText("vault.md", `# vault\n\n${[
+    lookWriting("vault.edge-style", "function", "part-edge"),
+    lookWriting("vault.law-gap", "value", "gap", { strength: "law: a made-up statute" }),
+    lookWriting("vault.early-edge", "function", "edge-width", { yields: "level 4" }),
+    lookWriting("vault.late-edge", "treatment", "edge-width"),
+    lookWriting("vault.early-fill", "function", "fill"),
+    lookWriting("vault.late-fill", "treatment", "fill", { yields: "level 4" }),
+    lookWriting("vault.tone", "treatment", "tone"),
+    lookWriting("vault.pace", "role", "pace"),
+  ].join("\n\n")}\n`);
+  const project = writeText("acme.md", `# acme\n\n${[
+    lookWriting("acme.edge-style", "treatment", "part-edge"),
+    lookWriting("acme.gap", "role", "gap"),
+    lookWriting("acme.tone", "treatment", "tone"),
+    lookWriting("acme.pace", undefined, "pace"),
+    lookWriting("acme.early-gap", "role", "inset"),
+    lookWriting("acme.late-gap", "value", "inset"),
+  ].join("\n\n")}\n`);
+  assert.equal(run("check", vault, project).status, 0);
+  const out = ok(list(["--asset", "web-surface"], [vault, project]));
+  const byOrder = "Settled by precedence (the dependency order decides first, and a later step never changes an earlier one)";
+  assert.match(clashLine(out, "vault.edge-style", "acme.edge-style"), new RegExp(`^- ${byOrder.replace(/[()]/g, "\\$&")}: .*; vault\\.edge-style stands\\.$`));
+  assert.match(clashLine(out, "vault.law-gap", "acme.gap"), /\(the dependency order .*; acme\.gap stands\.$/);
+  assert.match(clashLine(out, "vault.tone", "acme.tone"), /^- Settled by precedence \(within one step, the project beats .*; acme\.tone stands\.$/);
+  assert.match(clashLine(out, "vault.pace", "acme.pace"), /^- Settled by precedence \(within one step, the project beats .*; acme\.pace stands\.$/);
+  assert.match(clashLine(out, "acme.early-gap", "acme.late-gap"), /\(the dependency order .*; acme\.early-gap stands\.$/);
+  assert.match(clashLine(out, "vault.early-fill", "vault.late-fill"), /\(the dependency order .*; vault\.early-fill stands\.$/);
+  assert.match(clashLine(out, "vault.early-edge", "vault.late-edge"), /^- For the founder \(it turns on a vault level the rule records do not record\)/);
 });
