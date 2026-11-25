@@ -42,6 +42,7 @@ CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
+REQUIREMENTS = os.path.join(HERE, "..", "plugin", "requirements.txt")
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
@@ -1538,8 +1539,11 @@ class RunBrowser(unittest.TestCase):
         self.assertEqual(self.exits(lambda: 7, "file:///p.html"), ((7, None), "", ""))
 
     def test_the_hint_names_the_plugins_pinned_requirements(self):
+        self.assertEqual(
+            os.path.realpath(flow.REQUIREMENTS), os.path.realpath(REQUIREMENTS)
+        )
         self.assertIn(f"-r {flow.REQUIREMENTS}\n", flow.INSTALL_HINT)
-        with open(flow.REQUIREMENTS, encoding="utf-8") as f:
+        with open(REQUIREMENTS, encoding="utf-8") as f:
             pins = [
                 line.split("==")
                 for line in f

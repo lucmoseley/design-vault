@@ -45,11 +45,6 @@
 		{
 			"tag": "v1.3.16",
 			"type": "act",
-			"text": "Without `docs/test-read-edges.json`, read base §X10 against your own test selector: each tracked file a test reads is one a change to it selects that test for, or the test's header carries a `full-sweep-only: <why>` line (workflow-core#1886). List the candidates: `git grep -nE -e '(readFileSync|readdirSync|existsSync|statSync)\\(' -e '(open|read_text|read_bytes)\\(' -- '*.test.*' '*test_*.py' '*_test.py'` and read each: a read of a fixture the test writes itself is no breach."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
 			"text": "Where your repo runs gates of its own — a `.husky/pre-commit.local`, or a CI job beyond the plugin's — record them in your code-standards local file's §W (base §0, workflow-core#1826). Paste this into a session in your repo: \"Read the floor table in base §0 of the core's `docs/code-standards-base.md`. Then read `.husky/pre-commit.local`, if it exists, and each workflow under `.github/workflows/`. In `docs/code-standards.md`, write or update a `## §W — what tooling already enforces` section holding one row per gate the floor does not name: what it refuses, which staged paths arm it, and whether it refuses or only warns. Add the rule sets your own `biome.json`, ESLint config, `tsconfig.json` or `ruff.toml` carry, and which declared command runs each, and what your CI runs, floor gates included. Delete each statement of what a floor gate does at commit, keeping what your CI does with the same tool. Commit by pathspec.\""
 		},
 		{

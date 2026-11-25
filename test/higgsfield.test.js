@@ -470,6 +470,21 @@ test("a submission answered 5xx is retried under the same idempotency key", asyn
   assert.equal(keys[0], keys[1]);
 });
 
+test("a 5xx submission is tried three times, 2 s then 4 s apart (#583)", async () => {
+  const api = fakeApi({ submit: [reply(502, {}), reply(502, {}), reply(502, {}), reply(502, {})] });
+  const waits = [];
+  await assert.rejects(render([job(roundDir())], api.options({ sleep: async (ms) => waits.push(ms) })), /answered 502/);
+  assert.equal(api.submissions().length, 3);
+  assert.deepEqual(waits, [2000, 4000]);
+});
+
+test("polling waits 2 s, then half as long again each time, to 10 s at most", async () => {
+  const api = fakeApi({ statuses: [...Array(6).fill("in_progress"), "completed"] });
+  const waits = [];
+  assert.equal(await render([job(roundDir())], api.options({ sleep: async (ms) => waits.push(ms) })), 0);
+  assert.deepEqual(waits, [2000, 3000, 4500, 6750, 10000, 10000, 10000]);
+});
+
 test("a 403 names the low balance and is not retried", async () => {
   const api = fakeApi({ submit: [reply(403, { detail: "Not enough credits" })] });
   await assert.rejects(render([job(roundDir())], api.options()), /answered 403: Not enough credits \(the balance is too low/);
@@ -883,6 +898,18 @@ test("a call's retries stop at its total deadline, starting no try whose wait wo
     return true;
   });
   assert.equal(api.submissions().length, 2);
+});
+
+test("a 5xx the deadline leaves unretried is recorded at its estimate as maybe charged (#587)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ submit: [reply(502, {})] });
+  await assert.rejects(render([job(dir)], api.options({ retryDeadlineMs: 2000 })), (error) => {
+    assert.match(error.message, /answered 502[^]*may have reached Higgsfield/);
+    assert.equal(stopFields(error).mayBeCharged, true);
+    return true;
+  });
+  assert.equal(api.submissions().length, 1);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["unanswered", 0.094]]);
 });
 
 function hangingSubmits(hangs) {
