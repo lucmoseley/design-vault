@@ -24,11 +24,16 @@ load = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(load)
 
 
+# A guess for check-load.py alone: a run takes about QUIET_MS plus the load.
+RUN_TIMEOUT_S = 180
+# A script that holds the throttled load 40% past QUIET_MS; the 40% is a guess (#154).
+SLOW_LOAD_BYTES = int(load.DOWN_BYTES * load.QUIET_MS / 1000 * 1.4)
+
+
 def run(page, *args):
-    # A guess for check-load.py alone: a run takes about QUIET_MS plus the load.
     return child.run(
         [sys.executable, SCRIPT, os.path.join(FIXTURES, page), *args],
-        timeout=180,
+        timeout=RUN_TIMEOUT_S,
     )
 
 
@@ -60,14 +65,12 @@ class Pages(unittest.TestCase):
         self.assertIn(" ms, h1#title", proc.stdout)
         self.assertIn("\nover by ", proc.stdout)
 
-    def test_a_headline_revealed_after_a_slow_load_fails(self):
-        # The load ends past QUIET_MS on the throttled network, so the quiet
-        # wait counts from the load, never from the early nav line.
+    def test_a_headline_revealed_after_a_slow_load_fails(self):  # #154
         scratch = tempfile.mkdtemp(prefix="check-load-")
         self.addCleanup(shutil.rmtree, scratch)
         shutil.copy(os.path.join(FIXTURES, "after-load.html"), scratch)
         with open(os.path.join(scratch, "big.js"), "w") as f:
-            f.write("//" + "x" * 1_300_000 + "\n")
+            f.write("//" + "x" * SLOW_LOAD_BYTES + "\n")
         proc = child.run(
             [
                 sys.executable,
@@ -76,7 +79,7 @@ class Pages(unittest.TestCase):
                 "--runs",
                 "1",
             ],
-            timeout=180,
+            timeout=RUN_TIMEOUT_S,
         )
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn(" ms, h1#title", proc.stdout)

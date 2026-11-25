@@ -4,9 +4,9 @@
 <title>pill</title>
 <!-- A static pill styled as the page's button, beside the button itself, and one static part for each other reason
      the map lists one: cursor: pointer (not again on the bold word inside it, which only inherits it), an
-     underline, a :hover rule, a link's colour and a shadow. A disabled button cannot be acted on. Four lines of text are
-     actable by script alone: a click and a double-click listener the page adds, and React-style onClick and
-     onDoubleClick props. Every tap target holds
+     underline, a :hover rule, a link's colour and a shadow. A disabled button cannot be acted on. Five lines of text are
+     actable by script alone: a click and a double-click listener the page adds, React-style onClick and
+     onDoubleClick props, and an inline onmousedown. Every tap target holds
      one action, so vault.one-target passes. -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #222 }
@@ -32,6 +32,7 @@
 <p id="react">See the garden</p>
 <p id="twice">Open the gallery</p>
 <p id="react-twice">See the bar</p>
+<p id="inline-press" onmousedown="void 0">Hold to hear</p>
 <script>
   document.getElementById('listened').addEventListener('click', () => {});
   document.getElementById('react')['__reactProps$fixture'] = { onClick() {} };

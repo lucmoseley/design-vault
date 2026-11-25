@@ -106,7 +106,7 @@ Measure: **sourced** (the masking index; F83 for contrast). Pass line: **untrace
 
 - **#339 closes not planned**, both halves, by #324 §Order and decision points.
 - **No critic question carries either rule yet.** Brand art has no look question on keeping to the ruled palette or on a plain headline area: colour.md's palette questions judge the palette, not a render against it, and imagery.md's `vault.text-over-image` covers only text already placed on a web surface. That page-level case is scripted, as `check-access.py` measures each letter's background as F83 asks. So "stays with the critics" needs two look questions written (#344), for which the findings above give the critic what to look at: the bulk of the art against the ruled colours, not its shadows and glints; both directions (every ruled colour present); and plainness at letter scale inside the area the headline will take, not the brief's whole box.
-- **A number the founder's eye could set.** Two of the gaps are house values a look test could settle, as `scripts/de00-look-test.py` was built to for the grey near-miss line before #178 withdrew it unmarked: the share of area beyond ΔE00 10 at which a render reads off its palette, and the local L\* spread at which a sky needs a scrim. Either would need a sample with more renders a palette was given than this one has; whether to run one is put to the founder on #338.
+- **A number the founder's eye could set.** Two of the gaps are house values a look test could settle: the share of area beyond ΔE00 10 at which a render reads off its palette, and the local L\* spread at which a sky needs a scrim. Either would need a sample with more renders a palette was given than this one has; whether to run one is put to the founder on #338.
 
 ## Bound
 

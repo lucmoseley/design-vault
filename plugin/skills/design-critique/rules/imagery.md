@@ -4,7 +4,7 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 
 ### vault.curves-script
 - applies-when: any; every curve the asset draws, and a traced or redrawn mark against its source
-- question: Is every curve drawn as a true curve, with no run of straight segments standing in for one and no node where two curves meet whose tangents differ by more than the path's written precision allows, nor a node where a curve meets a straight line whose tangents differ by more than that but under 5.7°, save a corner or kink the source has or the brief names, and does a traced or redrawn mark lie within 0.1 px of an SVG source's edge, or 0.5 px of a raster source's, at the source's size?
+- question: Is every curve drawn as a true curve, with no run of straight segments standing in for one and no node where two curves meet whose tangents differ by more than the path's written precision allows, nor a node where a curve meets a straight line whose tangents differ by more than that but under 5.7°, save a corner or kink the source has or the brief names, and does a traced or redrawn mark lie within 0.1 px of the edge of an SVG source that draws no raster image, or 0.5 px of a raster source's, at the source's size?
 - answered-by: script
 - writes: curve
 - yields-to: level 2
