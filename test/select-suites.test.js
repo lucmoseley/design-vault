@@ -76,6 +76,19 @@ test("a commit staging only docs/, data/ or images/ files runs the fast checks a
   assert.ok(p.suites.filter((s) => s.why).every((s) => /none of the 3 staged file\(s\) is one it reads/.test(s.why)));
 });
 
+test("a script a named directory holds is followed, so colour_space.py, which probe.py there loads, runs the suites naming design-round's scripts (#382)", () => {
+  const staged = ["plugin/skills/design-project/scripts/colour_space.py"];
+  assert.ok(!plan(SUITES, staged).all);
+  const got = ran(staged);
+  for (const suite of ["python3 test/check-dom.test.py", "python3 test/check-load-files.test.py"]) assert.ok(got.includes(suite), suite);
+});
+
+test("a directory named by a lone bare word is not followed: check-flow.test.py's \"load\" is a mock target, not test/load/ (#382)", () => {
+  assert.ok(SUITES.includes("python3 test/check-flow.test.py"));
+  assert.ok(!plan(SUITES, [`${SCRIPTS}/cutout.py`]).all);
+  assert.ok(!ran([`${SCRIPTS}/cutout.py`]).includes("python3 test/check-flow.test.py"));
+});
+
 test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py loads back; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
@@ -180,6 +193,17 @@ git(["-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "base"]);
 git(["config", "core.hooksPath", hooks]);
 const touch = (rel) => fs.appendFileSync(path.join(repo, rel), "\n# touched\n");
 const planRuns = () => fs.readFileSync(planOut, "utf8").split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+
+test("a script a followed directory holds, named by no suite, still runs every suite (#382)", () => {
+  const unnamed = `${SCRIPTS}/unnamed-by-any-suite.py`;
+  fs.writeFileSync(path.join(repo, unnamed), "");
+  try {
+    const scratchPlan = require(path.join(repo, "test", "select-suites.js")).plan;
+    assert.match(scratchPlan(SUITES, [unnamed]).all ?? "", /no suite is known to read it/);
+  } finally {
+    fs.rmSync(path.join(repo, unnamed));
+  }
+});
 
 test("a commit through its own index file, as commit-paths.js makes, is judged on that index, not the shared one", () => {
   // The shared index stages check-flow.py; the private one stages contact-sheet.py alone.

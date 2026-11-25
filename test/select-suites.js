@@ -41,35 +41,50 @@ function pathsNamedIn(file) {
   if (file.endsWith(".py")) {
     for (const [, name] of text.matchAll(PY_IMPORT)) {
       const rel = path.posix.join(path.posix.dirname(file), `${name}.py`);
-      if (rel !== file && isFile(rel)) out.push(rel);
+      if (rel !== file && isFile(rel)) out.push({ rel, lone: false });
     }
   }
   for (const [run] of text.matchAll(RUN_OF_PARTS)) {
     const parts = [...run.matchAll(/["']([^"']+)["']/g)].map((m) => m[1]);
-    const bases = parts.length > 1 || parts[0].includes("/") ? [path.posix.dirname(file), "."] : [path.posix.dirname(file)];
+    const lone = parts.length === 1 && !parts[0].includes("/");
+    const bases = lone ? [path.posix.dirname(file)] : [path.posix.dirname(file), "."];
     for (const base of bases) {
       const rel = path.posix.join(base, ...parts).replace(/\/+$/, "");
       // `..` to the repo top, or `.`, names the tree the file sits in, not something it reads.
       if (rel === "." || rel.startsWith("..") || file.startsWith(`${rel}/`) || !isPath(rel)) continue;
-      out.push(rel);
+      out.push({ rel, lone });
       break;
     }
   }
   return out;
 }
 
-/** Every path `entries` read, following each code file they name in turn. A directory stands for all under it. */
+const isCode = (rel) => /\.(py|js|sh)$/.test(rel);
+const filesUnder = (dir) => fs.readdirSync(path.join(ROOT, dir), { recursive: true })
+  .map((rel) => path.posix.join(dir, rel.split(path.sep).join("/")));
+
+/**
+ * Every path `entries` read, following each code file they name in turn. A directory stands for all under it, and the
+ * code files under it are followed for what they name without being named themselves. A directory named by a lone bare
+ * word is not followed (#382).
+ */
 function reads(entries) {
   const seen = new Set(entries);
+  const followed = new Set();
   const queue = [...entries];
   while (queue.length) {
     const file = queue.shift();
-    if (!/\.(py|js|sh)$/.test(file) || file === SELF || !isFile(file)) continue;
-    for (const rel of pathsNamedIn(file)) {
-      if (!seen.has(rel)) {
-        seen.add(rel);
-        queue.push(rel);
-      }
+    if (file === SELF || followed.has(file) || !isPath(file)) continue;
+    followed.add(file);
+    if (!isFile(file)) {
+      queue.push(...filesUnder(file).filter(isCode));
+      continue;
+    }
+    if (!isCode(file)) continue;
+    for (const { rel, lone } of pathsNamedIn(file)) {
+      if (seen.has(rel)) continue;
+      seen.add(rel);
+      if (!lone || isFile(rel)) queue.push(rel);
     }
   }
   return seen;
