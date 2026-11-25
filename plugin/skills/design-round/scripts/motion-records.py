@@ -116,8 +116,6 @@ def parse_table(text):
             value = parse_value(fields[1], fields[2])
         except ValueError as exc:
             raise TableError(f"line {n}: {exc}") from None
-        # A check runs once, at one value, and every line naming it is
-        # judged by that run (#553).
         seen = first.setdefault(fields[1], (n, value))
         if seen[1] != value:
             raise TableError(

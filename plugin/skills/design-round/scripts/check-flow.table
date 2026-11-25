@@ -1,6 +1,5 @@
 # check-flow.py --records' lines (#318): record id | check | value. Each value
-# comes from its record in design-critique/rules/; change them together. A
-# check runs once, so two lines naming it give it one value (#553).
+# comes from its record in design-critique/rules/; change them together.
 # 100 px: a working figure, one wheel turn and the touch drag's length, which
 # a native wheel scroll may miss by 1 px, room for Chromium rounding the
 # offset to whole device px; a guess.
