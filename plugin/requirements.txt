@@ -6,3 +6,5 @@ playwright==1.61.0
 numpy==2.4.6
 Pillow==12.3.0
 scipy==1.16.3
+# PyAV: ffmpeg's libraries in its wheel, for video-sheet.py, so no ffmpeg install is owed (#408).
+av==19.0.2

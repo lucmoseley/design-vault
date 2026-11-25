@@ -119,7 +119,7 @@ Open every cited entry's screenshot, and two to five of a cited collection's, in
 - **Invent** — a subject or metaphor, a composition and palette decisions, all drawn from what the product promises.
 - **Avoid repeating** — the source's signature combination of subject, placement, silhouette and layout. This field is per reference. It is never a home for a brand rule.
 - **Build scope** — the same sections and interactions for every direction.
-- **Technique** — the core technique it is built with, such as a photo reveal or a camera move through a scene. Where the project has kept no build that uses it, cite a short study of precedent sites or a reference film, made before the build.
+- **Technique** — the core technique it is built with, such as a photo reveal or a camera move through a scene. Where the project has kept no build that uses it, cite a short study of precedent sites or a reference film, made before the build; a film's study follows [Studying a reference film](#studying-a-reference-film).
 - **Model** — for a brand-art direction, the image model, the number of the row that picked it in [the model-selection rule](references/roster.md#the-model-selection-rule-design-vault52), and the condition in the card's own words, or "default".
 - **Family** — for a motion direction: a build, a transform, a camera move, scroll-driven, or in-page. A motion asset's five directions span at least three families, and the round record's part 3 names each one's. The client's own idea fills one family at most (design-vault#79).
 - **Beats** — for a motion direction, a numbered table: each beat's time, what happens, and how it leads into the next. Before any render, add up the times and rework the card until the total sits inside the motion brief's length range.
@@ -127,6 +127,15 @@ Open every cited entry's screenshot, and two to five of a cited collection's, in
 Do not carry a source's subject, palette, focal placement and layout over as a package: a flower swapped for another flower keeps the signature. Do not drop every observed trait and return a generic page either.
 
 Then render **five candidates**, each a distinct direction, one render per direction, built by stage (§1c). Each candidate carries a short name and one line saying what it is for.
+
+### Studying a reference film
+
+A study of a clip, before the build that uses its technique (design-vault#408):
+
+1. **Sheet it.** `python3 ${CLAUDE_PLUGIN_ROOT}/skills/design-round/scripts/video-sheet.py <clip> --out <round folder>/study/<clip name>` keeps ten frames a second and every frame within 0.2 s of each cut, at full size, and tiles them onto numbered sheets labelled with their times, the first frame of each new shot marked `cut`. A site's recording in the library (`motion.capture`) is a clip too.
+2. **Open every sheet**, as [Inspect the actual references](#inspect-the-actual-references) asks of a screenshot, and a frame at full size wherever a tile is too small to read.
+3. **Write one line per effect** in `<round folder>/study/<clip name>/study.md`: its time span, what moves and how, its easing read from the gaps between frames (even gaps are linear, gaps that shrink toward the end an ease-out, a frame past the rest an overshoot), and why it works on the viewer. A cut gets its own line: what carries the eye across it.
+4. **Keep it about craft.** The study tells the builder how an effect is made and why it lands, never "make it like this clip": no subject, palette, framing or layout carried over, so the build keeps to design-vault#112 and gives the founder no cause for `repair: too close`. The card's Technique cites the study's path.
 
 ## 3. Review, choose, and render the next round
 

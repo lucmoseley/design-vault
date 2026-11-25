@@ -2494,6 +2494,10 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/video-sheet.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/view.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
