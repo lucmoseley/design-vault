@@ -22,31 +22,25 @@ takes them off again, leaving only its window.__contrast* lists.
 
 import collections
 import functools
-import importlib.util
 import io
 import os
+import sys
 import re
 
 import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def _sibling(name):
-    spec = importlib.util.spec_from_file_location(
-        name[:-3].replace("-", "_"), os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-answering = _sibling("access-answers.py")
-keys = _sibling("access-keys.py")
-maths = _sibling("access-pixels.py")
-face = _sibling("face-profile.py")
-rule_table = _sibling("rule-table.py")
+answering = siblings.load(HERE, "access-answers.py")
+keys = siblings.load(HERE, "access-keys.py")
+maths = siblings.load(HERE, "access-pixels.py")
+face = siblings.load(HERE, "face-profile.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-access-contrast.table")
 SEP = "|"

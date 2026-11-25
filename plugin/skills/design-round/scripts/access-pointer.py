@@ -25,17 +25,17 @@ this script or check-access.py's --pointer-table FILE: the line `vault.coarse-ta
 floor.
 """
 
-import importlib.util
 import json
 import os
+import sys
 import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "rule_table", os.path.join(HERE, "rule-table.py")
-)
-rule_table = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(rule_table)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+rule_table = siblings.load(HERE, "rule-table.py")
 
 # The --pointer coarse floor, from vault.coarse-target's record.
 TABLE = os.path.join(HERE, "check-access-pointer.table")

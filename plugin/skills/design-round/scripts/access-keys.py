@@ -19,25 +19,19 @@ loads the URL there. Carousels are timed by the wall clock, time.monotonic, as t
 slides: Playwright's page.clock would stand in for those timers, and time the stand-in.
 """
 
-import importlib.util
 import os
+import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def _sibling(name):
-    spec = importlib.util.spec_from_file_location(
-        name[:-3].replace("-", "_"), os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-answering = _sibling("access-answers.py")
-overlay = _sibling("drive-overlay.py")
-pointer = _sibling("drive-pointer.py")
+answering = siblings.load(HERE, "access-answers.py")
+overlay = siblings.load(HERE, "drive-overlay.py")
+pointer = siblings.load(HERE, "drive-pointer.py")
 
 WALKED = (
     "vault.skip-link",

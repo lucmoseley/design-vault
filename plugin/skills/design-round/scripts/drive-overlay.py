@@ -1,11 +1,9 @@
 """drive-overlay.py — opens and closes a page's menus, dialogs and popovers for the
 check scripts that read a page with one open (design-vault#303).
 
-A module, not a command. A check loads it by path, as the others load check-flow.py:
+A module, not a command. A check loads it through siblings.py, as the others load check-flow.py:
 
-    spec = importlib.util.spec_from_file_location("drive_overlay", os.path.join(HERE, "drive-overlay.py"))
-    overlay = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(overlay)
+    overlay = siblings.load(HERE, "drive-overlay.py")
 
 and drives a Playwright page it has loaded and settled:
 

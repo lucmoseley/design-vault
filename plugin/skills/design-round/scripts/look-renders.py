@@ -53,7 +53,6 @@ stderr.
 
 import argparse
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -62,19 +61,13 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def sibling(name):
-    spec = importlib.util.spec_from_file_location(
-        name.replace("-", "_")[:-3], os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-frames = sibling("check-frames.py")
-look = sibling("look.py")
+frames = siblings.load(HERE, "check-frames.py")
+look = siblings.load(HERE, "look.py")
 layout = look.layout
 flow = frames.flow
 try:

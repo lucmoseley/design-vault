@@ -260,7 +260,6 @@ but a question cannot be measured / 7 a call hung that would never return. Exits
 import argparse
 import collections
 import datetime
-import importlib.util
 import io
 import itertools
 import json
@@ -269,32 +268,25 @@ import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def sibling(name):
-    """The module in the file `name` beside this script."""
-    spec = importlib.util.spec_from_file_location(
-        name[:-3].replace("-", "_"), os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-layout = sibling("check-layout.py")
+layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
 try:
     import numpy as np
     from PIL import Image
 except ImportError as err:
     sys.exit(flow.missing(err))
-maths = sibling("access-pixels.py")
-answering = sibling("access-answers.py")
-pseudo_boxes = sibling("access-boxes.py")
-keys = sibling("access-keys.py")
-contrasts = sibling("access-contrast.py")
-pointing = sibling("access-pointer.py")
-conditions = sibling("conditions.py")
+maths = siblings.load(HERE, "access-pixels.py")
+answering = siblings.load(HERE, "access-answers.py")
+pseudo_boxes = siblings.load(HERE, "access-boxes.py")
+keys = siblings.load(HERE, "access-keys.py")
+contrasts = siblings.load(HERE, "access-contrast.py")
+pointing = siblings.load(HERE, "access-pointer.py")
+conditions = siblings.load(HERE, "conditions.py")
 
 VIEWPORTS = tuple(
     (name, width, layout.height_at(width, layout.HEIGHTS))
@@ -1985,7 +1977,7 @@ def parse(argv):
         p.error(f"--contrast-table {at.contrast_table}: {exc}")
     at.parts, at.absent = {}, set()
     if at.parts_file:
-        probe = sibling("probe.py")
+        probe = siblings.load(HERE, "probe.py")
         try:
             with open(at.parts_file, encoding="utf8") as fh:
                 at.parts, at.absent = probe.declared_parts(fh.read())

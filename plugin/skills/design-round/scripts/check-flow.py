@@ -108,7 +108,6 @@ import argparse
 import base64
 import bisect
 import contextlib
-import importlib.util
 import io
 import itertools
 import json
@@ -1865,18 +1864,15 @@ def report(at, sample, result, *, svg_path, json_path, morph_path):
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
 TABLE = os.path.join(HERE, "check-flow.table")
 
 
-def _sibling(name, file):
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _sibling("motion_records", "motion-records.py")
-pointer = _sibling("drive_pointer", "drive-pointer.py")
+records = siblings.load(HERE, "motion-records.py")
+pointer = siblings.load(HERE, "drive-pointer.py")
 
 # --records' working figures, none a record's value. No run has measured
 # where any of the caps or waits below starts to miss a fault, so each is a
@@ -2373,7 +2369,7 @@ RUNS = {
 
 def run_records(at):
     """Each table line's check's Answer."""
-    layout = _sibling("check_layout", "check-layout.py")
+    layout = siblings.load(HERE, "check-layout.py")
     phone = (layout.PHONE_WIDTH, layout.HEIGHTS[0], layout.PHONE)
     values = {line.mode: line.value for line in at.lines}
     out = {}
@@ -2513,7 +2509,7 @@ def parse(argv):
             p.error(f"{at.table}: {exc}")
         at.parts = {}
         if at.parts_file:
-            probe = _sibling("probe", "probe.py")
+            probe = siblings.load(HERE, "probe.py")
             try:
                 with open(at.parts_file, encoding="utf8") as fh:
                     at.parts = probe.declared_parts(fh.read())[0]
