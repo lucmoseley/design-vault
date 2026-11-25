@@ -499,6 +499,17 @@ def seek(page, t):
         raise late_error(late)
 
 
+def seek_shots(page, times):
+    """Each time in `times` seeked and shot, as (ms, PNG), then refuse_chain,
+    so it spends the page."""
+    shots = []
+    for t in times:
+        seek(page, t)
+        shots.append((t, page.screenshot()))
+    refuse_chain(page)
+    return shots
+
+
 def check_last(browser, blank, at, assets):
     boxes = [viewbox(text, name) for name, text in assets]
     results = []

@@ -1,9 +1,4 @@
 <!doctype html>
-<!-- A staggered entrance (design-vault#547): #a moves 1000 px over 2000 ms
-     from load, and a timer 300 ms after #a starts moves #b the same way. On
-     the page, at 1000 ms #a is at 500 px and #b at 350. Timed from #a's start,
-     so a loaded machine cannot start both in one frame. The 300 ms must stay
-     under check-frames.py's QUIET_MS, or the scrub refuses the page. -->
 <html><head><style>
 body { margin: 0; background: #ffffff; }
 div { position: absolute; left: 0; width: 40px; height: 40px; background: #000000; }

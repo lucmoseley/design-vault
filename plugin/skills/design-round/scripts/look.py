@@ -10,13 +10,18 @@ USAGE
       times its pixels: 4, or 8 for the tightest bend of a curve.
   python3 look.py scrub <url or file> --out DIR [--step 50] [--until 2500]
         [--wait SEL] [--width W] [--height H]
-      The first screen from load, every --step ms of the page's timeline to
-      --until, one PNG a frame, each named by its time. The timeline is read
-      and seeked as check-frames.py hash reads and seeks it (#240, #259), so
-      an animation a timer starts after the first sits at its own time since
-      load, and the frames are the motion at any speed they are played. A
-      page check-frames.py cannot seek, one that starts an animation when
-      another finishes or after its frames were read, is refused.
+      The first screen, every --step ms of the page's timeline to --until, one
+      PNG a frame, each named by its time, in place of an earlier scrub's.
+      The timeline is read and seeked as check-frames.py hash reads and seeks
+      it: time zero is the first animation's start, an animation a timer
+      starts after it sits at its own time since then, and the frames are the
+      motion at any speed they are played. --wait waits for the element that
+      marks a start later than check-frames.py's QUIET_MS. A page that starts
+      an animation when another finishes, or after its timeline was read, is
+      refused and its frames are not written. Residual: a timer fires a few
+      ms late or early from load to load, so a move it starts sits a few px
+      apart from run to run; and a start later than the scrub watches is
+      missed, as in check-frames.py.
   python3 look.py measure <url or file> --at X,Y [--width W] [--height H]
       The part under the point (CSS px, page coordinates) on the settled page:
       its element, box, font size and weight, and colour.
@@ -55,8 +60,6 @@ def sibling(name):
 
 layout = sibling("check-layout.py")
 frames = sibling("check-frames.py")
-# check-frames' own check-flow, so run_browser catches the UnmeasurableError
-# its seek raises.
 flow = frames.flow
 try:
     maths = sibling("access-pixels.py")
@@ -169,24 +172,28 @@ def zoom(browser, args):
 def scrub(browser, args):
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("t[0-9][0-9][0-9][0-9][0-9].png"):
+        old.unlink()
     at = frames.args_with(
         args,
         viewport_size={"width": args.width, "height": args.height},
         timeout=flow.LOAD_TIMEOUT_MS,
     )
-    context, page, _ = frames.open_page(
+    context, page, prep = frames.open_page(
         browser, at, 1, device=layout.device(args.width)
     )
     try:
-        n = 0
-        for t in range(0, args.until + 1, args.step):
-            frames.seek(page, t)
-            page.screenshot(path=str(out / f"t{t:05d}.png"))
-            n += 1
-        frames.refuse_chain(page)
+        shots = frames.seek_shots(page, range(0, args.until + 1, args.step))
     finally:
         context.close()
-    return f"wrote {n} frame(s) to {out}, every {args.step} ms to {args.until} ms, at {args.width}x{args.height}"
+    for t, png in shots:
+        (out / f"t{t:05d}.png").write_bytes(png)
+    return "\n".join(
+        [
+            f"wrote {len(shots)} frame(s) to {out}, every {args.step} ms to {args.until} ms, at {args.width}x{args.height}",
+            *frames.still_note(prep["end"]),
+        ]
+    )
 
 
 def measure(browser, args):
@@ -222,11 +229,14 @@ def main(argv):
     args = parse(argv)
     if args.cmd == "pixels":
         return pixels(args)
-    work = {"zoom": zoom, "scrub": scrub, "measure": measure}[args.cmd]
+    work, flags = {
+        "zoom": (zoom, []),
+        "scrub": (scrub, frames.HASH_ARGS),
+        "measure": (measure, []),
+    }[args.cmd]
 
     def run():
-        # A scrub is seeked as check-frames.py hash is, on the main thread.
-        with flow.chromium(frames.HASH_ARGS if args.cmd == "scrub" else []) as browser:
+        with flow.chromium(flags) as browser:
             return work(browser, args)
 
     said, code = flow.run_browser(
