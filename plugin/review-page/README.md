@@ -18,7 +18,7 @@ One shared page for anything the founder reviews card by card: a design round's 
 }
 ```
 
-- Each item needs an `id`, a `name`, and an `image` (a file published beside the page) or a `link` (an `http://` or `https://` address for a live page or a motion candidate, which the card opens). `line` and `tag` are optional. `"pickable": false` takes the card out of the pick, as for a design round's `can't lead` candidate.
+- Each item needs an `id`, a `name`, and an `image` (a file published beside the page) or a `link` (an `http://` or `https://` address for a live page or a motion candidate, which the card opens). `line` and `tag` are optional; a `line` keeps its line breaks. `"pickable": false` takes the card out of the pick, as for a design round's `can't lead` candidate.
 - **An item's `id` keys its answers.** A rebuild that keeps an id keeps his note and mark on that card, so never renumber ids between rebuilds. Ids take letters, digits and `_ . ~ : @ + -`; `_page` is the set's own answer.
 - `marks`, `pick` and `pageNote` are optional. A `tone` of `yes` or `no` colours a marked card.
 
