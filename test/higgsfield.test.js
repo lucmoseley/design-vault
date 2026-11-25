@@ -87,6 +87,7 @@ const ledger = (dir) =>
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+const stopFields = (error) => ({ stoppedAt: error.stoppedAt, ran: error.ran, notSubmitted: error.notSubmitted, mayBeCharged: error.mayBeCharged });
 
 test("a job is priced, submitted, polled, saved under its sniffed type and charged to the round's ledger", async () => {
   const dir = roundDir();
@@ -429,13 +430,21 @@ test("a network fault on submission is retried under the same idempotency key", 
   assert.equal(calls[0].headers["Idempotency-Key"], calls[1].headers["Idempotency-Key"]);
 });
 
-test("a submission whose every try ends on a network fault is recorded at its estimate and stops the batch", async () => {
+test("a submission whose every try ends on a network fault is recorded at its estimate and stops the batch, naming it as maybe charged (#573)", async () => {
   const dir = roundDir();
   const fault = new TypeError("fetch failed");
   const api = fakeApi({ usd: "0.25", statuses: ["completed"], submit: [undefined, fault, fault, fault] });
   await assert.rejects(
     render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options({ ceiling: "0.80" })),
-    /fetch failed\. r1\/v2-tide may have reached Higgsfield[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v3-reef/,
+    (error) => {
+      assert.match(error.message, /fetch failed\. r1\/v2-tide may have reached Higgsfield[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v3-reef/);
+      assert.equal(error.name, "BatchStoppedError");
+      assert.deepEqual(
+        stopFields(error),
+        { stoppedAt: "r1/v2-tide", ran: ["r1/v1-dusk"], notSubmitted: ["r1/v3-reef"], mayBeCharged: true },
+      );
+      return true;
+    },
   );
   assert.deepEqual(
     ledger(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.request_id]),
@@ -445,7 +454,7 @@ test("a submission whose every try ends on a network fault is recorded at its es
   await assert.rejects(render([job(dir, "v4-ebb"), job(dir, "v5-swell")], rerun.options({ ceiling: "0.80" })), /past its \$0\.800 ceiling/);
 });
 
-test("a submission that may have reached the API is recorded at its estimate: 5xx to the last try, no request_id, or a refusal answering a retry", async () => {
+test("a submission that may have reached the API is recorded at its estimate and named as maybe charged: 5xx to the last try, no request_id, or a refusal answering a retry (#573)", async () => {
   const cases = {
     "5xx to the last try": [reply(502, {}), reply(502, {}), reply(502, {})],
     "no request_id": [reply(200, { status: "queued" })],
@@ -454,7 +463,15 @@ test("a submission that may have reached the API is recorded at its estimate: 5x
   };
   for (const [what, submit] of Object.entries(cases)) {
     const dir = roundDir();
-    await assert.rejects(render([job(dir)], fakeApi({ submit }).options()), /may have reached Higgsfield/, what);
+    await assert.rejects(
+      render([job(dir)], fakeApi({ submit }).options()),
+      (error) => {
+        assert.match(error.message, /may have reached Higgsfield/, what);
+        assert.equal(error.name, "BatchStoppedError", what);
+        assert.deepEqual(stopFields(error), { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: [], mayBeCharged: true }, what);
+        return true;
+      },
+    );
     assert.deepEqual(
       ledger(dir).map((entry) => [entry.status, entry.request_id]),
       [["unanswered", null]],
@@ -655,7 +672,7 @@ test("the estimate's discount is recorded on the ledger line beside the usd, whi
   assert.deepEqual(entry.discount, discount);
 });
 
-test("a refusal at the first try part-way through a batch, a 403 or any other, keeps the API's message and names the jobs that ran and those not submitted (#570)", async () => {
+test("a refusal at the first try part-way through a batch, a 403 or any other, keeps the API's message and names the jobs that ran and those not submitted, in its text and as fields (#570, #573)", async () => {
   const cases = {
     "a 403": [reply(403, { detail: "Not enough credits" }), /answered 403: Not enough credits \(the balance is too low[^]*/],
     "a 422": [reply(422, { detail: "aspect_ratio is invalid" }), /answered 422: aspect_ratio is invalid/],
@@ -665,8 +682,16 @@ test("a refusal at the first try part-way through a batch, a 403 or any other, k
     const api = fakeApi({ statuses: ["completed"], submit: [undefined, refusal] });
     await assert.rejects(
       render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options()),
-      new RegExp(`${apiMessage.source}\\. Ran: r1\\/v1-dusk\\. Not submitted: r1\\/v2-tide, r1\\/v3-reef$`),
-      what,
+      (error) => {
+        assert.match(error.message, new RegExp(`${apiMessage.source}\\. Ran: r1\\/v1-dusk\\. Not submitted: r1\\/v2-tide, r1\\/v3-reef$`), what);
+        assert.equal(error.name, "BatchStoppedError", what);
+        assert.deepEqual(
+          stopFields(error),
+          { stoppedAt: "r1/v2-tide", ran: ["r1/v1-dusk"], notSubmitted: ["r1/v2-tide", "r1/v3-reef"], mayBeCharged: false },
+          what,
+        );
+        return true;
+      },
     );
     assert.equal(api.submissions().length, 2, what);
     assert.deepEqual(
