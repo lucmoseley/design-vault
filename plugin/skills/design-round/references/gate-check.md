@@ -36,7 +36,7 @@ Dispatch every critic at once, each a fresh subagent. Each is given what design-
 
 **One whole-page critic** runs design-critique without its gates. It merges impeccable's two assessments into its critique (design-critique §1), runs impeccable's audit and the lenses, and names its leader, by design-critique §4's bar, and the runner-up it beat. Where its leader keeps a fault after §5, its runner-up leads if it has none, or else the round has no critic leader; the reveal says which. It is asked the same clash question, and its report quotes both rules of each clash it names.
 
-**One type critic** runs design-critique §2a, given `node gate.js list --asset <class> [--fact <fact>]… --reader type ${CLAUDE_PLUGIN_ROOT}/skills/design-critique/rules > gate/type.txt`, the reference sections it names, the brief's type and every candidate. It writes `type-critic.md` in the round folder, which the building session appends to the whole-page critic's report under the heading "The type critic". It is asked the same clash question, and its report quotes both rules of each clash it names. Its findings are fixed and re-checked as the whole-page critic's are.
+**One type critic** runs design-critique §2a, given `node gate.js list --asset <class> [--fact <fact>]… --reader type ${CLAUDE_PLUGIN_ROOT}/skills/design-critique/rules > gate/type.txt`, the reference sections it names, the brief's type and every candidate. It writes `type-critic.md` in the round folder, which the building session appends to the whole-page critic's report under the heading "The type critic". It is asked the same clash question. Its findings are fixed and re-checked as the whole-page critic's are.
 
 ## 4. The tally
 
