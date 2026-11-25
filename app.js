@@ -4,9 +4,14 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 let DATA, STYLES, showStyles=false, fit='any', queryTests=[], sort='newest', currentId=null, toastTimer;
 // Five picks, as many as a design round's round one has directions (design-round §2).
 const MAX_SELECTED=5, DEFAULT_PROJECT='manta';
-let project=DEFAULT_PROJECT, selected=new Set(), prefs={includeDna:false,overrides:''};
-try { prefs={...prefs,...JSON.parse(localStorage.getItem('taste-vault-preferences')||'{}')}; selected=new Set(JSON.parse(localStorage.getItem('taste-vault-selection')||'[]').slice(0,MAX_SELECTED)); } catch {}
-try { project=JSON.parse(localStorage.getItem('taste-vault-project'))||DEFAULT_PROJECT; } catch {}
+const stored = key => {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}};
+const storedSelection=stored('taste-vault-selection');
+let project=stored('taste-vault-project')||DEFAULT_PROJECT, selected=new Set((Array.isArray(storedSelection)?storedSelection:[]).slice(0,MAX_SELECTED)), prefs={includeDna:false,overrides:'',...stored('taste-vault-preferences')};
+function setShowStyles(on){showStyles=on;}
+function setFit(value){fit=value;}
+function setProject(key){project=key;}
+function setSelection(ids){selected=new Set(ids);saveLocal('taste-vault-selection',[...selected]);}
+const pruneSelection = keep => setSelection([...selected].filter(keep));
 const collectionFor = id => DATA.collections.find(c=>c.id===id);
 const entryFor = id => DATA.entries.find(e=>e.id===id);
 // What the page shows and copies is decided in view.js, from the view these lines hold.
@@ -38,6 +43,8 @@ const WAY_LOOKS={
 };
 const WAYS=VaultView.WAYS.map(w=>({...w,...WAY_LOOKS[w.key],items:()=>w.ids(view()).map(WAY_LOOKS[w.key].item)}));
 const pick=Object.fromEntries(WAYS.map(w=>[w.key,null]));
+function setPick(key,id){pick[key]=id;}
+const clearPicks = () => WAYS.forEach(w=>setPick(w.key,null));
 const picked = () => VaultView.picked(view()).map(w=>WAYS.find(way=>way.key===w.key));
 const pickName = w => w.items().find(i=>i.id===pick[w.key])?.name||pick[w.key];
 const imagePath = e => 'images/'+encodeURIComponent(e.file||e.still);
@@ -50,21 +57,20 @@ function tags(words){return (words||[]).map(v=>`<span>${esc(v)}</span>`).join(''
 // A keyword is a search word (#25): clicking one searches the whole library for it.
 function keywordTags(words){return (words||[]).map(v=>`<button type="button" data-keyword="${esc(v)}" title="Search the library for ${esc(v)}">${esc(v)}</button>`).join('');}
 // Focus goes to the box only where it opens no on-screen keyboard over the results.
-function searchLibrary(text){document.querySelectorAll('dialog[open]').forEach(d=>d.close());setQuery(text);fit='any';$('fitSelect').value='any';showAll();if(matchMedia('(pointer:fine)').matches)$('searchInput').focus();}
+function searchLibrary(text){document.querySelectorAll('dialog[open]').forEach(d=>d.close());setQuery(text);setFit('any');$('fitSelect').value='any';showAll();if(matchMedia('(pointer:fine)').matches)$('searchInput').focus();}
 function readHash(){
  const read=VaultView.readHash(view(),location.hash.slice(1));
- if(read.project!==project)setProject(read.project);
- Object.assign(pick,read.pick);showStyles=read.showStyles;
+ if(read.project!==project)switchProject(read.project);
+ Object.entries(read.pick).forEach(([key,id])=>setPick(key,id));setShowStyles(read.showStyles);
 }
 function showView(){history.replaceState(null,'','#'+VaultView.viewHash(view()));render();}
-function setPick(key,id){pick[key]=id;showStyles=false;showView();}
+function showPick(key,id){setPick(key,id);setShowStyles(false);showView();}
 // A sidebar click (a look or a group) clears the search, so a search never strands the new view on an empty page;
 // a chip keeps it, since its counts already reflect the search (#27 Q5).
-function pickWay(key,id){if(!WAYS.find(w=>w.key===key).chips)setQuery('');setPick(key,id);}
+function pickWay(key,id){if(!WAYS.find(w=>w.key===key).chips)setQuery('');showPick(key,id);}
 const choose = (key,id) => pickWay(key,pick[key]===id?null:id);
-const clearPicks = () => WAYS.forEach(w=>pick[w.key]=null);
-function showAll(){clearPicks();showStyles=false;showView();}
-function showStyleGuide(){clearPicks();showStyles=true;showView();}
+function showAll(){clearPicks();setShowStyles(false);showView();}
+function showStyleGuide(){clearPicks();setShowStyles(true);showView();}
 // A style card's look link is a sidebar click too, and its search was of styles, not references.
 const openLook = id => pickWay('look',id);
 // The box's words are compiled once per change, not once per reference (search.js).
@@ -97,7 +103,7 @@ function renderPicks(){
  const picks=picked();
  $('pickBar').hidden=!picks.length;
  $('pickBar').innerHTML=picks.map(w=>`<button class="pick-chip" data-unpick="${w.key}" aria-label="Remove ${esc(w.label())}: ${esc(pickName(w))}"><small>${esc(w.label())}</small> ${esc(pickName(w))} <span aria-hidden="true">✕</span></button>`).join('')+(picks.length>1?'<button class="pick-clear" data-clear-picks>Clear all</button>':'');
- document.querySelectorAll('[data-unpick]').forEach(button=>button.onclick=()=>setPick(button.dataset.unpick,null));
+ document.querySelectorAll('[data-unpick]').forEach(button=>button.onclick=()=>showPick(button.dataset.unpick,null));
  document.querySelectorAll('[data-clear-picks]').forEach(button=>button.onclick=()=>showAll());
 }
 function render(){
@@ -132,8 +138,8 @@ function renderTray(){
 }
 function toggleSelection(id){
  const focused=document.activeElement?.dataset?.select;
- if(selected.has(id))selected.delete(id);else if(selected.size<MAX_SELECTED)selected.add(id);else{notify(MAX_SELECTED+' selected. Remove one to add another.');return;}
- saveLocal('taste-vault-selection',[...selected]);render();
+ if(selected.has(id))pruneSelection(s=>s!==id);else if(selected.size<MAX_SELECTED)setSelection([...selected,id]);else{notify(MAX_SELECTED+' selected. Remove one to add another.');return;}
+ render();
  if(focused)document.querySelector(`[data-select="${CSS.escape(focused)}"]`)?.focus();
 }
 function openReference(id){
@@ -173,26 +179,26 @@ function renderProjectOptions(){
  $('fitSelect').innerHTML=['any',...(DATA.projects?.[project]?.verdicts||[]),'unjudged'].map(v=>`<option value="${esc(v)}">${esc(v==='any'?'Any':v[0].toUpperCase()+v.slice(1))}</option>`).join('');
  $('fitSelect').value=fit;
 }
-function setProject(key){
- project=key;fit='any';saveLocal('taste-vault-project',project);renderProjectOptions();
- selected=new Set([...selected].filter(id=>inProject(entryFor(id))));saveLocal('taste-vault-selection',[...selected]);
+function switchProject(key){
+ setProject(key);saveLocal('taste-vault-project',project);setFit('any');renderProjectOptions();
+ pruneSelection(id=>inProject(entryFor(id)));
  // A pick the new project does not offer (its groups, the page parts its references hold) is dropped.
- WAYS.forEach(w=>{if(!w.items().some(i=>i.id===pick[w.key]))pick[w.key]=null;});
+ WAYS.forEach(w=>{if(!w.items().some(i=>i.id===pick[w.key]))setPick(w.key,null);});
 }
-function chooseProject(key){setProject(key);showView();}
+function chooseProject(key){switchProject(key);showView();}
 async function boot(){
  try{
   // Opened from its folder, the page loads data/vault-data.js, since a browser refuses fetch() on file:// (#32).
   if(location.protocol==='file:'){await new Promise((loaded,failed)=>{const s=document.createElement('script');s.src='data/vault-data.js';s.onload=loaded;s.onerror=()=>failed(new Error('The copy of your library this page reads is missing — ask Claude to run node bundle.js.'));document.head.append(s);});({gallery:DATA,styles:STYLES}=window.VAULT_DATA);}
   else [DATA,STYLES]=await Promise.all(['data/gallery.json','data/styles.json'].map(async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('Unable to load your library.');return r.json();}));
-  if(!Object.hasOwn(DATA.projects||{},project))project=Object.keys(DATA.projects||{})[0]||DEFAULT_PROJECT;
+  if(!Object.hasOwn(DATA.projects||{},project))setProject(Object.keys(DATA.projects||{})[0]||DEFAULT_PROJECT);
   renderProjectOptions();
   $('browseHint').firstElementChild.textContent=`Select up to ${MAX_SELECTED} references to compare`;
-  selected=new Set([...selected].filter(id=>entryFor(id)&&inProject(entryFor(id))));readHash();showView();
+  pruneSelection(id=>entryFor(id)&&inProject(entryFor(id)));readHash();showView();
  }catch(error){$('grid').innerHTML=`<div class="empty-state"><h2>Your library couldn't load</h2><p>${esc(error.message)} Refresh the page to try again.</p></div>`;return;}
  $('searchInput').oninput=event=>{setQuery(event.target.value);render();};$('sortSelect').onchange=event=>{sort=event.target.value;render();};
  $('resetSearch').onclick=()=>searchLibrary('');
- $('clearSelection').onclick=()=>{selected.clear();saveLocal('taste-vault-selection',[]);render();};$('compareButton').onclick=openComparison;$('copyCombinedBrief').onclick=()=>copyText(VaultView.buildBrief(view(),[...selected].map(entryFor)));
+ $('clearSelection').onclick=()=>{setSelection([]);render();};$('compareButton').onclick=openComparison;$('copyCombinedBrief').onclick=()=>copyText(VaultView.buildBrief(view(),[...selected].map(entryFor)));
  $('detailSelect').onclick=()=>toggleSelection(currentId);$('copyReferenceBrief').onclick=()=>copyText(VaultView.buildBrief(view(),[entryFor(currentId)]));$('copyImagePrompt').onclick=()=>copyText(VaultView.imagePrompt(entryFor(currentId)),'Image prompt copied');
  $('previousReference').onclick=()=>navigateReference(-1);$('nextReference').onclick=()=>navigateReference(1);
  $('zoomButton').onclick=()=>{const zoomed=$('imageStage').classList.toggle('zoomed');$('zoomButton').textContent=zoomed?'Fit image':'Zoom in';$('zoomButton').setAttribute('aria-pressed',zoomed);};
@@ -203,7 +209,7 @@ async function boot(){
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeDialog(b.dataset.close));
  document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();});dialog.addEventListener('close',()=>{if(dialog.contains($('toast')))document.body.append($('toast'));});});
  window.addEventListener('hashchange',()=>{readHash();showView();});
- $('fitSelect').onchange=event=>{fit=event.target.value;render();};
+ $('fitSelect').onchange=event=>{setFit(event.target.value);render();};
  $('projectSelect').onchange=event=>chooseProject(event.target.value);
  document.addEventListener('keydown',event=>{const editing=/INPUT|TEXTAREA|SELECT/.test(event.target.tagName);if(event.key==='/'&&!editing&&!document.querySelector('dialog[open]')){event.preventDefault();$('searchInput').focus();}if($('inspector').open&&!editing&&!$('copyDialog').open){if(event.key==='ArrowLeft')navigateReference(-1);if(event.key==='ArrowRight')navigateReference(1);}});
 }

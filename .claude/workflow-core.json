@@ -40,21 +40,6 @@
 		{
 			"tag": "v1.3.16",
 			"type": "act",
-			"text": "Where module-level state has more than one writer and one is named for something else, move that write into a function named for it, or return the value instead (base §G9, workflow-core#1821). List the candidates — a module-scope `let`, `var`, Map or Set, and a `process.env` write — then read each one's writers: `git grep -nE '^(export )?(let|var) |^(export )?const \\w+(: [^=]+)? = new (Map|Set)\\b|process\\.env(\\.\\w+|\\[[^]]+\\]) *=[^=]|delete process\\.env' -- '*.js' '*.cjs' '*.mjs' '*.ts' ':!*.test.*'`. A module-scope object or array is missed. What §G9's \"Outside the rule\" names, test support among it, is no breach."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Give each component, layout and static data table a §N2 header that also states it performs no I/O, or, on a production adapter or a composition root, says which it is and names the suppliers it touches (base §N2, §T7, workflow-core#1824, workflow-core#1903). List the files whose first lines do not name them: `git ls-files -z 'app/**' | while IFS= read -r -d '' f; do case \"$f\" in *.test.*|*.test-support.*) ;; *.ts|*.tsx|*.js|*.jsx) head -5 \"$f\" | grep -qF \"$(basename \"$f\")\" || echo \"$f\" ;; esac; done`, and those whose text never says so: `git grep -L -i -e 'no I/O' -e 'production adapter' -e 'composition root' -- 'app/*.ts' 'app/*.tsx' ':!*.test.*' ':!*.test-support.*'`, adding any other path that holds them. A component that reads the clock or does I/O as it renders takes the value as a prop or from context instead."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Delete each changes-table row of your code-standards local file whose reason is that the code is presentational, or file a ticket that will (workflow-core#1824)."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
 			"text": "Clear the uncited swallows already in your tree (workflow-core#1830). Paste this into a session in your repo: \"Run `node <plugin root>/scripts/check-swallowed-errors.js --all`. For each `except` it lists, decide whether swallowing is the design. Where it is, write a comment at the site saying why and citing the ticket that chose it, filing one if none exists; where the drop reaches a person reading the output, also print it (base §N5). Where it is not, let the error raise or exit non-zero. Re-run until it prints OK, then commit.\""
 		},
 		{
