@@ -33,8 +33,7 @@ const isFile = (rel) => isPath(rel) && fs.statSync(path.join(ROOT, rel)).isFile(
 
 /**
  * The repo paths `file` names, each resolved from its own directory, or else from the repo top where it is more than
- * one bare word (a lone `"data"` is as often a dictionary key), kept where it exists. Each comes as `{ rel, lone }`,
- * `lone` where it was a single bare word.
+ * one bare word (a lone `"data"` is as often a dictionary key), kept where it exists.
  */
 function pathsNamedIn(file) {
   const out = [];
@@ -61,30 +60,31 @@ function pathsNamedIn(file) {
 }
 
 const isCode = (rel) => /\.(py|js|sh)$/.test(rel);
-
-/** The code files under directory `dir`, any depth down, as `pathsNamedIn` gives a path. */
-const codeUnder = (dir) => fs.readdirSync(path.join(ROOT, dir), { recursive: true })
-  .map((rel) => path.posix.join(dir, rel.split(path.sep).join("/")))
-  .filter((rel) => isCode(rel) && isFile(rel))
-  .map((rel) => ({ rel, lone: false }));
+const filesUnder = (dir) => fs.readdirSync(path.join(ROOT, dir), { recursive: true })
+  .map((rel) => path.posix.join(dir, rel.split(path.sep).join("/")));
 
 /**
- * Every path `entries` read, following each code file they name in turn. A directory stands for all under it, and each
- * code file under it is followed too, as a suite that loads any script there reads what that script loads; but not
- * one named by a lone bare word, as `mock.patch.object(siblings, "load", …)` names no `load/` (#382).
+ * Every path `entries` read, following each code file they name in turn. A directory stands for all under it, and the
+ * code files under it are followed for what they name without being named themselves. A directory named by a lone bare
+ * word is not followed (#382).
  */
 function reads(entries) {
   const seen = new Set(entries);
+  const followed = new Set();
   const queue = [...entries];
   while (queue.length) {
     const file = queue.shift();
-    if (file === SELF || !isPath(file)) continue;
-    const named = !isFile(file) ? codeUnder(file) : isCode(file) ? pathsNamedIn(file) : [];
-    for (const { rel, lone } of named) {
-      if (!seen.has(rel)) {
-        seen.add(rel);
-        if (!lone || isFile(rel)) queue.push(rel);
-      }
+    if (file === SELF || followed.has(file) || !isPath(file)) continue;
+    followed.add(file);
+    if (!isFile(file)) {
+      queue.push(...filesUnder(file).filter(isCode));
+      continue;
+    }
+    if (!isCode(file)) continue;
+    for (const { rel, lone } of pathsNamedIn(file)) {
+      if (seen.has(rel)) continue;
+      seen.add(rel);
+      if (!lone || isFile(rel)) queue.push(rel);
     }
   }
   return seen;
