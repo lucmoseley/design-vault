@@ -42,11 +42,15 @@
  *      idempotency_key, the last of which is the job's charge;
  *   5. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
  *
- * A submission refused at its first try is not charged: it is recorded at $0
- * and the batch stops there, naming the jobs that ran and those not submitted.
- * A 403, at any try, means the balance ran out. A submission that ends on a
- * network fault, a 5xx, an answer with no request_id, or a refusal answering a
- * retry may have reached Higgsfield: the batch stops there too, with that job
+ * An estimate or submission answered with a network fault, a 5xx, a 408 or a
+ * 429 is tried again within its retry deadline, after at least its
+ * Retry-After, a submission under the same idempotency key. A submission
+ * refused at its first try, or after only 429s and refusals, is not charged: it is
+ * recorded at $0 and the batch stops there, naming
+ * the jobs that ran and those not submitted. A 403, at any try, means the
+ * balance ran out. A submission that ends on a network fault, a 5xx, a 408, an
+ * answer with no request_id, or a refusal answering a retry of any of those
+ * may have reached Higgsfield: the batch stops there too, with that job
  * recorded at its estimate.
  *
  * A failed, moderated or cancelled request is not charged, so its outcome is
