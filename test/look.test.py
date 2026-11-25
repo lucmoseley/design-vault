@@ -59,6 +59,11 @@ def without(package, *args):
     )
 
 
+class Siblings(unittest.TestCase):  # #558
+    def test_check_layout_and_check_frames_share_one_check_flow(self):
+        self.assertIs(look.layout.flow, look.frames.flow)
+
+
 class Height(unittest.TestCase):
     def test_a_zoom_or_measure_frames_check_layouts_first_screen_at_that_width(self):
         for cmd in (

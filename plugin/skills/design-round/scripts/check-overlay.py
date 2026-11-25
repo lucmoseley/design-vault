@@ -41,7 +41,6 @@ print on stderr.
 
 import argparse
 import base64
-import importlib.util
 import io
 import math
 import os
@@ -50,11 +49,11 @@ import sys
 import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_flow", os.path.join(HERE, "check-flow.py")
-)
-flow = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(flow)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+
+flow = siblings.load(HERE, "check-flow.py")
 try:
     import numpy as np
     from PIL import Image

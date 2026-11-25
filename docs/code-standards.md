@@ -22,6 +22,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/access-boxes.py` | library: the boxes of generated `::before` and `::after` text, read from Chromium's DevTools for check-access.py's contrast question (#189) |
 | `plugin/skills/design-round/scripts/access-contrast.py` | library: check-access.py's contrast questions past text and field edges, with their table's parser (#316) |
 | `plugin/skills/design-round/scripts/text-checks.py` | library: check-text.py's checks, its table and word lists, and how each load's findings merge into one answer per record, split out so its tests call what the program calls (#314) |
+| `plugin/skills/design-round/scripts/siblings.py` | library: loads a design-round script's siblings once per process, cached by real path, so every caller shares one copy of each error class (#558) |
 | `plugin/skills/design-round/scripts/rule-table.py` | library: the rule tables' line reader, `ID \| CHECK [\| VALUE]` grammar and per-record answers, for the family scripts (#413) |
 | `plugin/skills/design-round/scripts/probe.py` | library: reads a page's DOM and computed style against a rule table at check-layout.py's widths, one finding per record id, for the family scripts; also a program that runs one table (#300) |
 | `plugin/skills/design-round/scripts/layout-records.py` | library: the record checks check-layout.py --records runs at each width and on its own loads, and how the sweep's widths give each record one answer, its values read from `check-layout.table` (#311) |

@@ -26,7 +26,6 @@ results and print on stdout; the rest print on stderr.
 """
 
 import argparse
-import importlib.util
 import json
 import pathlib
 import re
@@ -34,17 +33,14 @@ import struct
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+
 FIELDS = HERE.parent / "references" / "loop-fields.json"
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-spend_log = _load("spend_log", HERE / "spend-log.py")
+spend_log = siblings.load(HERE, "spend-log.py")
 UnreadableError = spend_log.UnreadableError
 
 PASS, FAIL, UNJUDGED = "PASS", "FAIL", "NOT JUDGED"

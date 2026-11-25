@@ -47,27 +47,22 @@ stdout; the rest print on stderr.
 
 import argparse
 import base64
-import importlib.util
 import math
 import os
 import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+
 REQUIREMENTS = HERE.parents[2] / "requirements.txt"
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", HERE / "check-flow.py")
-colour_space = _load(
-    "colour_space",
-    HERE.parent.parent / "design-project" / "scripts" / "colour_space.py",
+flow = siblings.load(HERE, "check-flow.py")
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
 
 # A placed pixel is unchanged within one 8-bit step a resample rounds to on each

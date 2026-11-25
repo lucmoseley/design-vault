@@ -50,27 +50,22 @@ Exits 0 and 1 print on stdout; the rest print on stderr.
 import argparse
 import contextlib
 import datetime
-import importlib.util
 import json
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402 - imported once the line above puts this folder on the path
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+flow = siblings.load(HERE, "check-flow.py")
+layout = siblings.load(HERE, "check-layout.py")
+probe = siblings.load(HERE, "probe.py")
+conditions = siblings.load(HERE, "conditions.py")
 
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-layout = _load("check_layout", os.path.join(HERE, "check-layout.py"))
-probe = _load("probe", os.path.join(HERE, "probe.py"))
-conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
-
-checks = _load("text_checks", os.path.join(HERE, "text-checks.py"))
+checks = siblings.load(HERE, "text-checks.py")
 
 TABLE = os.path.join(HERE, "check-text.table")
 WORDS = os.path.join(HERE, "check-text.words")

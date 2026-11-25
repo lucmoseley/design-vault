@@ -80,6 +80,11 @@ def white_columns(img):
     return [x for x in range(img.shape[1]) if (img[:, x] == WHITE).all()]
 
 
+class Siblings(unittest.TestCase):  # #558
+    def test_it_and_look_share_one_check_frames(self):
+        self.assertIs(look_renders.frames, look_renders.look.frames)
+
+
 class Contacts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

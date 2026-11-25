@@ -50,18 +50,17 @@ return. Exits 0 and 6 print on stdout; the rest on stderr.
 """
 
 import argparse
-import importlib.util
 import io
 import json
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_layout", os.path.join(HERE, "check-layout.py")
-)
-layout = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(layout)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+
+layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
 
 AXES = ("wght", "wdth", "opsz", "GRAD")
