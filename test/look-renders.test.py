@@ -349,6 +349,14 @@ class Arguments(unittest.TestCase):
         self.assertEqual(proc.returncode, 2, proc.stderr)
         self.assertIn("--contact wants NAME=X,Y", proc.stderr)
 
+    def test_a_contact_whose_point_is_no_number_is_a_usage_error(self):
+        proc = run(
+            "contacts", os.path.join(FIXTURES, "contacts.html"),
+            "--contact", "gap=1.2.3,4", "--out", "x",
+        )  # fmt: skip
+        self.assertEqual(proc.returncode, 2, proc.stderr)
+        self.assertIn("--contact wants NAME=X,Y", proc.stderr)
+
     def test_times_that_are_not_numbers_are_a_usage_error(self):
         proc = run(
             "contacts", os.path.join(FIXTURES, "contacts.html"),

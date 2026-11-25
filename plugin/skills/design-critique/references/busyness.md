@@ -2,7 +2,7 @@
 
 What makes a page look busy, and how busy each kind of visitor's page may be (#289). The records are `vault.busy-cues`, `vault.busy-density`, `vault.box-fills` and `vault.text-style-count`, in [rules/](../rules/). The research behind every line is the source checks on design-vault#289.
 
-A project's rules file wins over every record here ([source precedence](house-principles.md#source-precedence)). [Tone](tone.md#white-space) sets how much white space a tone takes.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. [Tone](tone.md#white-space) sets how much white space a tone takes.
 
 ## What makes a page busy
 

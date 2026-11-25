@@ -36,7 +36,7 @@ Dispatch every critic at once, each a fresh subagent. Each is given what design-
 
 **One whole-page critic** runs design-critique without its gates. It merges impeccable's two assessments into its critique (design-critique §1), runs impeccable's audit and the lenses, and names its leader, by design-critique §4's bar, and the runner-up it beat. Where its leader keeps a fault after §5, its runner-up leads if it has none, or else the round has no critic leader; the reveal says which. It is asked the same clash question, and its report quotes both rules of each clash it names.
 
-**One type critic** runs design-critique §2a, given `node gate.js list --asset <class> [--fact <fact>]… --reader type ${CLAUDE_PLUGIN_ROOT}/skills/design-critique/rules > gate/type.txt`, the reference sections it names, the brief's type and every candidate. It writes `type-critic.md` in the round folder, which the building session appends to the whole-page critic's report under the heading "The type critic". Its findings are fixed and re-checked as the whole-page critic's are.
+**One type critic** runs design-critique §2a, given `node gate.js list --asset <class> [--fact <fact>]… --reader type ${CLAUDE_PLUGIN_ROOT}/skills/design-critique/rules > gate/type.txt`, the reference sections it names, the brief's type and every candidate. It writes `type-critic.md` in the round folder, which the building session appends to the whole-page critic's report under the heading "The type critic". It is asked the same clash question, and its report quotes both rules of each clash it names. Its findings are fixed and re-checked as the whole-page critic's are.
 
 ## 4. The tally
 
@@ -98,7 +98,7 @@ A split re-check answer goes to a settle critic as in §4, given both renders, a
 - each fault left, and the stop signal or the cap that ended its fixing;
 - each founder question, with all three critics' answers and evidence and the settle critic's, from `gate/tally.txt`;
 - each minor case the tally reports, which the round does not fix;
-- each clash a critic named, the whole-page critic's included, quoting both rules; a clash that touches no question on the list goes under the gate list as a whole;
+- each clash a critic named, the whole-page and type critics' included, quoting both rules; a clash that touches no question on the list goes under the gate list as a whole;
 - each clash in `gate/list.txt`, settled by precedence or for the founder.
 
 The review strip's first line gives each gate's PASS or FAIL with its fault count, and how many questions are for the founder.

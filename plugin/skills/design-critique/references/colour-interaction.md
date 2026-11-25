@@ -2,7 +2,7 @@
 
 Why a colour is judged where it will sit, why two saturated hues of near-equal lightness are kept apart, and why parts near a photograph take their colour with it in view (#281). The research behind this file's records is `docs/research/brand-palette.md` Part 1 in the design vault, and the source checks `docs/research/control-feedback-defaults.md`.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language.
 
 ## Principles
 

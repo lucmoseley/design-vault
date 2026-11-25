@@ -120,7 +120,7 @@ function score(rounds) {
         const { answer, evidence } = data.principles[e.candidate][String(e.line)];
         entries[e.line] ??= figure();
         if (count(entries[e.line], answer, e.expected))
-          disagreements.push({ kind: "entry", round: name, critic, candidate: e.candidate, on: e.line, principle: e.principle, rule: RULE.test(e.ruling) ? e.ruling : "unlanded", founder: e.expected, answer, evidence });
+          disagreements.push({ kind: "entry", round: name, critic, candidate: e.candidate, on: e.line, principle: e.principle, rule: correctionsLog.LANDED.test(e.ruling) ? e.ruling : "unlanded", founder: e.expected, answer, evidence });
       }
     });
   }

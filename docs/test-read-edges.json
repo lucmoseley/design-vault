@@ -55,6 +55,10 @@
 			"test/critic-examples.test.js",
 			"test/rule-store-pointers.test.js"
 		],
+		"data/calibration-log.jsonl": [
+			"test/bundle.test.js",
+			"test/round-log.test.js"
+		],
 		"data/corrections-log.jsonl": [
 			"test/bundle.test.js"
 		],
@@ -1625,6 +1629,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/layout/wide.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/load/after-load.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
