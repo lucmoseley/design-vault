@@ -280,7 +280,7 @@ test("a submission refused at its first try is recorded at $0, so its estimate l
     [["submitting", 0.2], ["refused", 0]],
   );
   assert.equal(ledger(dir)[1].http_status, 422);
-  assert.equal(ledger(dir)[1].error, undefined, "the API's message, which may echo the request, stays off the ledger");
+  assert.equal(ledger(dir)[1].error, undefined, "the API's text stays off the ledger");
   assert.equal(await render([job(dir, "v2-tide")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
 });
 
