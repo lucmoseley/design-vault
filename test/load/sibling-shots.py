@@ -17,6 +17,8 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = os.path.join(HERE, "..", "..", "plugin", "skills", "design-round", "scripts")
 FIXTURES = os.path.join(HERE, "..", "fixtures")
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
 
 def load(name, path):
@@ -59,9 +61,7 @@ TARGETS = {
 
 def main(target, runs=shot.RUNS, busy=shot.BUSY):
     script, args, expected = TARGETS[target]
-    module = load(
-        script.removesuffix(".py").replace("-", "_"), os.path.join(SCRIPTS, script)
-    )
+    module = siblings.load(SCRIPTS, script)
 
     def call():
         with tempfile.TemporaryDirectory() as out:

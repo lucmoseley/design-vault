@@ -42,9 +42,10 @@ CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
-spec = importlib.util.spec_from_file_location("check_flow", SCRIPT)
-flow = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(flow)
+sys.path.insert(0, os.path.dirname(SCRIPT))
+import siblings  # noqa: E402
+
+flow = siblings.load(os.path.dirname(SCRIPT), "check-flow.py")
 
 STEP = 1000 / flow.FPS
 
@@ -95,6 +96,14 @@ def jolts_at(speeds, dropped=()):
 
 # Speeds px per frame of a move easing in and out to 3% of its top speed.
 EASED = [1, 3, 6, 10, 10, 6, 3, 1, 0.3]
+
+
+class OneCopy(unittest.TestCase):
+    def test_the_siblings_that_load_check_flow_back_share_this_copy(self):
+        # run_records' check-layout and parse's probe, as each loads them (#562).
+        for file in ("check-layout.py", "probe.py"):
+            with self.subTest(file):
+                self.assertIs(siblings.load(flow.HERE, file).flow, flow)
 
 
 class Pauses(unittest.TestCase):
