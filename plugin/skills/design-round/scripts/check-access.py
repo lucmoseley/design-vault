@@ -529,7 +529,7 @@ MEASURE_JS = (
   const linkFaults = [];
   document.querySelectorAll('a[href]').forEach((a) => {
     if (!shown(a) || !/\S/.test(a.textContent) || !inText(a) || cued(a)) return;
-    const ratio = contrast(rgba(css(a).color), rgba(css(a.parentElement).color));
+    const ratio = contrast(rgba(css(a).color), rgba(css(aroundOf(a)).color));
     if (ratio < LINK_RATIO) {
       linkFaults.push({ subject: label(a), detail: `is told from the text around it by colour alone, at ${ratio.toFixed(2)}:1; ${LINK_RATIO}:1 or an underline is needed` });
     }
@@ -670,8 +670,16 @@ const shadowed = (s) => s !== 'none' && s.split(/,(?![^(]*\))/).some((layer) => 
 });
 const bold = (cs) => parseInt(cs.fontWeight, 10) >= BOLD_CUE;
 const italic = (cs) => cs.fontStyle !== 'normal';
+// The element whose own text runs beside the link, past wrappers that hold
+// none, such as the <strong> around a bold link.
+const aroundOf = (a) => {
+  const block = blockOf(a);
+  for (let e = a.parentElement; e && e !== block; e = e.parentElement)
+    if ([...e.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && /\S/.test(n.data))) return e;
+  return block;
+};
 const cued = (a) => {
-  const parent = css(a.parentElement);
+  const parent = css(aroundOf(a));
   return [a, ...a.querySelectorAll('*')].some((e) => {
     const cs = css(e);
     return (/underline|overline/.test(cs.textDecorationLine) && painted(cs.textDecorationColor)) ||

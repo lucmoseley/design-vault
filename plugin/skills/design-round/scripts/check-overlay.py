@@ -69,7 +69,8 @@ first_line, PageTimeoutError, RefusedError = (
 )
 
 # The largest edge offset vault.curves-script allows, in px at the source's size,
-# and the source's kind as the report names it, by whether the source is an SVG.
+# and the source's kind as the report names it, by whether the source is an SVG
+# that draws no raster image.
 # Against a raster, half a pixel: a standard tracer's criterion (potrace, Selinger
 # 2003 §2.2), since the source's own edge is known to no better. Against an SVG,
 # this script's resolution, the reading error measured below, since the founder
@@ -108,8 +109,10 @@ def px(value):
 
 
 def read(path):
-    """A file as {path, data, mime, size, viewbox}: size is its own, viewbox
-    whether it can be drawn at another."""
+    """A file as {path, data, mime, size, viewbox, vector}: size is its own,
+    viewbox whether it can be drawn at another, vector whether it is an SVG
+    that draws no raster image, whose edges are then known no better than a
+    raster's."""
     with open(path, "rb") as fh:
         data = fh.read()
     if path.lower().endswith(".svg"):
@@ -136,6 +139,7 @@ def read(path):
             "mime": "image/svg+xml",
             "size": size,
             "viewbox": box is not None,
+            "vector": not any(e.tag.rpartition("}")[2] == "image" for e in root.iter()),
         }
     try:
         image = Image.open(io.BytesIO(data))
@@ -154,6 +158,7 @@ def read(path):
         "mime": mime,
         "size": image.size,
         "viewbox": True,
+        "vector": False,
     }
 
 
@@ -298,7 +303,7 @@ def parse(argv):
     except (OSError, ValueError) as exc:
         p.error(str(exc))
     at.box = at.files["source"]["size"]
-    at.limit, at.source_kind = LIMITS[at.files["source"]["mime"] == "image/svg+xml"]
+    at.limit, at.source_kind = LIMITS[at.files["source"]["vector"]]
     if at.size:
         size = flow.size_arg(p, "--size", at.size, number=float, example="120x80")
         w, h = size["width"], size["height"]

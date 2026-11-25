@@ -2,7 +2,7 @@
 
 Why a page's type, text, forms and images follow the standard or browser default their records name (#276). The source checks and browser measurements behind the records are `docs/research/platform-defaults.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
 
 ## Typography
 

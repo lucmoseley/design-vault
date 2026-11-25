@@ -14,7 +14,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `data/vault-data.js` | library, presentational tier: a static data table derived from `data/gallery.json` and `data/styles.json` by `node bundle.js`, so a fault in it is fixed in `bundle.js` (#32) |
 | `plugin/review-page/review.js` | library: the shared review page's logic: checking the data file and the feedback boxes (#120) |
 | `git-read.js` | library: git run for the programs that judge a commit from the index or HEAD, under one read cap (#141) |
-| `log-gate.js` | library: what the round log's and the corrections log's gates share, reading a log from git and their command line (#166) |
+| `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line, and the row reader the calibration packet and critic examples use (#166, #168) |
 | `plugin/skills/design-round/scripts/access-pixels.py` | library: the pixel maths check-access.py measures its screenshots with (#198) |
 | `plugin/skills/design-round/scripts/access-answers.py` | library: check-access.py's questions, and how each width's findings merge into one answer per question (#214) |
 | `plugin/skills/design-round/scripts/access-keys.py` | library: check-access.py's keyboard and focus questions read from its Tab walk and from keys and mouse presses on a page of their own (#315) |

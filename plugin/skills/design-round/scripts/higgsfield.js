@@ -38,11 +38,15 @@
  *
  * A submission refused 403 means the balance ran out: the batch stops there,
  * naming the jobs that ran, since the API has no balance to read beforehand
- * (design-vault#61).
+ * (design-vault#61). A submission that ends on a network fault, a 5xx, an
+ * answer with no request_id, or a refusal answering a retry may have reached
+ * Higgsfield: the batch stops there too, with that job recorded at its estimate.
  *
  * A failed, moderated or cancelled request is not charged, so nothing is
- * recorded. One that outlives the timeout is recorded at its estimate, since
- * it may still complete and be charged.
+ * recorded. One that outlives the timeout, or whose status cannot be read, is
+ * recorded at its estimate, since it may still complete and be charged. An
+ * estimate that is not a positive usd figure is refused before anything is
+ * submitted.
  */
 "use strict";
 const { render, parseArgs, settings } = require("./higgsfield-client.js");

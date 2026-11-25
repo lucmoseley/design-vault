@@ -78,6 +78,8 @@ test("a link the map marks as going nowhere is dead, a fault however it looks an
   assert.deepEqual(verdict(tally({ parts: { ...PARTS, clean: live } }).out, "clean", "vault.affordance"), ["look, part by part", "pass"]);
   const shapeless = buildBrokenCopy(PARTS.clean, (d) => (d.parts[0].dead = true));
   refused(tally({ parts: { ...PARTS, clean: shapeless } }), /parts-clean\.json: part 1 has a `dead` that is neither null nor a link's target/);
+  const hollow = buildBrokenCopy(PARTS.clean, (d) => (d.parts[0] = null));
+  refused(tally({ parts: { ...PARTS, clean: hollow } }), /parts-clean\.json: part 1 has no id, no actable true or false, or no text/);
 });
 
 test("a part the critics split on, or a part a critic names off the key, is a split for a settle critic, with every critic's evidence", () => {

@@ -9,7 +9,7 @@
 
 ## Precedence
 
-- **The house overrides below win over impeccable's text and its detector.** A project's rules file may override any of them, except one that rests on WCAG or the law, and, on behaviour, one that rests on domain evidence, which it overrides only on evidence of its own.
+- **The house overrides below win over impeccable's text and its detector.** Where a project's rules file and one of them disagree, [source precedence](../../design-critique/references/house-principles.md#source-precedence) decides.
 - **The round governs.** Where impeccable asks the user to pick, such as its direction board, the round's candidates and the founder's reply are that pick.
 - **The project's rules file wins** over PRODUCT.md and DESIGN.md, which impeccable reads on every run. Both are consumers of the rules file: bring them into line when it changes.
 - **Web layouts build code-first.** The project's `.impeccable/config.json` carries `"buildPath": "code"`.

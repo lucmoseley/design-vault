@@ -2,7 +2,7 @@
 
 Why each edge (border, outline, ring, hairline) takes the form its role calls for, and why each role keeps its contrast in every theme (#283). The research behind every line is `docs/research/edges-contrast.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 ## Principles
 

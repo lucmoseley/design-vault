@@ -53,7 +53,7 @@ range of widths it holds over:
   past the file's edge, or an art shown at no swept width) is listed as not
   measured.
 
-The first five answer vault.reflow, the cta check vault.layout and the
+The first four answer vault.reflow, the cta check vault.layout and the
 focal check vault.focal-crop: the report gives each question pass or fail,
 with its faults under it, vault.layout not checked with no --cta,
 vault.focal-crop not checked with no --focal or "cannot measure" where an art
@@ -175,6 +175,7 @@ PHONE_MAX = BANDS[0][2]
 # (developer.apple.com/forums/thread/735055, #252). Unmeasured here or on
 # iPadOS 26.
 HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)
+MOTION_HEIGHTS = (*HEIGHTS[:2], flow.DESKTOP_WINDOW[1])
 # A common phone's width and the commonest desktop's (StatCounter Sept 2026),
 # the widths the other checks render a page at.
 PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]
