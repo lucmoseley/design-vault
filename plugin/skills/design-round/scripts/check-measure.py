@@ -49,6 +49,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import fail_open  # noqa: E402
 
 layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
@@ -353,6 +354,8 @@ def fetch(page, href):
     """A stylesheet's text, by its address, or None."""
     if not href:
         return None
+    from playwright.sync_api import Error as PlaywrightError
+
     try:
         if href.startswith("file://"):
             return pathlib.Path(
@@ -360,7 +363,9 @@ def fetch(page, href):
             ).read_text(encoding="utf8")
         r = page.request.get(href)
         return r.text() if r.ok else None
-    except Exception:  # noqa: BLE001 — any failure leaves the sheet unread, and report() names it (#86)
+    except (OSError, UnicodeDecodeError, PlaywrightError) as exc:
+        # #86
+        fail_open(exc, f"{href} is left unread")
         return None
 
 

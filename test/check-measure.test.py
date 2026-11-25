@@ -7,9 +7,12 @@ narrow, or fails a page for its headings and last lines.
 """
 
 import argparse
+import contextlib
 import importlib.util
+import io
 import os
 import pathlib
+import re
 import sys
 import unittest
 
@@ -212,10 +215,13 @@ class Breakpoints(unittest.TestCase):
     def test_a_sheet_that_cannot_be_fetched_is_named_with_the_way_round_it(self):
         # Unverified end to end: no fixture makes a sheet both unreadable to the
         # page and unfetchable, so fetch() and report() are checked apart.
-        self.assertIsNone(
-            measure.fetch(
-                None, pathlib.Path(FIXTURES, "missing.css").resolve().as_uri()
-            )
+        missing = pathlib.Path(FIXTURES, "missing.css").resolve().as_uri()
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertIsNone(measure.fetch(None, missing))
+        self.assertRegex(
+            err.getvalue(),
+            rf"^fail-open: {re.escape(missing)} is left unread: FileNotFoundError: ",
         )
         at = argparse.Namespace(url="u", min=50, max=75, widths=None)
         out = measure.report(

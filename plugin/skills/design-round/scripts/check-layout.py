@@ -1568,14 +1568,13 @@ def parse(argv):
             p.error(f"{at.table} has no phone-width line, which --records needs")
     if at.step < 1:
         p.error("--step wants 1 or more")
+    wants = f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
     try:
         at.heights = tuple(int(n) for n in at.heights.split(","))
     except ValueError:
-        at.heights = ()
+        p.error(wants)
     if len(at.heights) != 3 or min(at.heights) < 1:
-        p.error(
-            f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
-        )
+        p.error(wants)
     m = re.fullmatch(r"(\d+)-(\d+)", at.widths)
     at.span = (int(m[1]), int(m[2])) if m else ()
     if not at.span or not LOW <= at.span[0] <= at.span[1] <= HIGH:

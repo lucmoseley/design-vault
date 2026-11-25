@@ -157,6 +157,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected, fail_open  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
@@ -646,8 +647,9 @@ def gone(page, url0):
 
     try:
         return page.url != url0 or not page.evaluate("() => !!window.__st")
-    except PlaywrightError:
+    except PlaywrightError as exc:
         # An evaluate the page's own navigation cut short is it leaving (#312).
+        expected(exc, "the page has left")
         return True
 
 
@@ -712,8 +714,9 @@ def trial(run, page, keep=None, before=None):
         page.evaluate("() => __st.mark()")
         try:
             pointer.click(page, button)
-        except pointer.PointerError:
+        except pointer.PointerError as exc:
             # A button no visitor can reach shows them nothing to judge (#312).
+            expected(exc, "nothing to judge")
             continue
         yield button, info(page, button), elements(page, "() => __st.revealed()")
 
@@ -729,6 +732,7 @@ def check_reveal(run, line, ans):
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             if not shown:
@@ -780,6 +784,7 @@ def check_persist(run, line, ans):
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             if not shown:
@@ -801,6 +806,7 @@ def check_persist(run, line, ans):
                         )
                 except pointer.PointerError as exc:
                     # Content hover shows that the pointer cannot reach is the fault (#312).
+                    expected(exc, "said as a miss")
                     ans.miss(
                         line, at, f"the pointer cannot reach what hover shows: {exc}"
                     )
@@ -848,6 +854,7 @@ def check_click_opens(run, line, ans):
                     shown = reveals(page, el)
                 except pointer.PointerError as exc:
                     # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                    expected(exc, "said as not judged")
                     unreached(page, line, ans, el, exc=exc)
                     continue
                 if not shown:
@@ -938,6 +945,7 @@ def check_reflow(run, line, ans):
                 pointer.leave(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             before = page.evaluate(BOX_JS, el)
@@ -945,6 +953,7 @@ def check_reflow(run, line, ans):
                 pointer.hover(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             worst = _moved(before, page.evaluate(BOX_JS, el), px)
@@ -1000,6 +1009,7 @@ def check_states(run, line, ans):
                 pointer.leave(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             rest = style(page, el)
@@ -1033,6 +1043,7 @@ def check_states(run, line, ans):
                     blur(page)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             same = [k for k, s in seen.items() if s == rest]
@@ -1071,6 +1082,7 @@ def check_inverse(run, line, ans):
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             tips = elements(
@@ -1160,6 +1172,7 @@ def check_toggle(run, line, ans):
                 blur(page)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             on = page.evaluate(SHAPE_JS, [el, SHAPE_PROPS])
@@ -1204,6 +1217,7 @@ def check_release(run, line, ans):
                 pointer.press(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             acted = (
@@ -1425,8 +1439,9 @@ def check_slider_keys(run, line, ans):
                     wrong.append("a click on its track (leaves the page)")
                 elif _value(page, el) >= high:
                     wrong.append("a click on its track")
-            except pointer.PointerError:
+            except pointer.PointerError as exc:
                 # A track the pointer cannot click is the fault (#312).
+                expected(exc, "said as a miss")
                 wrong.append("a click on its track (covered)")
             if wrong:
                 ans.miss(
@@ -1450,6 +1465,7 @@ def check_direction(run, line, ans):
                     at_end = _value(page, el)
                 except pointer.PointerError as exc:
                     # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                    expected(exc, "said as not judged")
                     unreached(page, line, ans, el, exc=exc)
                     continue
                 side = "right to left" if rtl else "left to right"
@@ -1495,6 +1511,7 @@ def check_drag(run, line, ans):
                 pointer.drag(page, el, (dx, dy), hold=True)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             value = _value(page, el)
@@ -1561,6 +1578,7 @@ def check_wheel(run, line, ans):
                     ans.miss(line, at, "Shift with the wheel does not move it")
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             box = page.evaluate_handle(CAROUSEL_JS, el).as_element()
@@ -1579,8 +1597,9 @@ def check_wheel(run, line, ans):
                         left = page.evaluate("(el) => el.scrollLeft", el)
                         try:
                             pointer.click(page, b)
-                        except pointer.PointerError:
+                        except pointer.PointerError as exc:
                             # A control no pointer reaches is no way to move it (#312).
+                            expected(exc, "not a way to move it")
                             continue
                         now = page.evaluate("(el) => el.scrollLeft", el)
                         if (now > left and way == "next") or (
@@ -1716,6 +1735,7 @@ def check_target(run, line, ans):
                 pointer.click(page, link)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, link, exc=exc)
                 continue
             after = style(page, target, TARGET_PROPS)
@@ -1788,6 +1808,7 @@ def check_visited(run, line, ans):
             )
         except PlaywrightError as exc:
             # A browser that will not launch leaves visited colours unread, said as not judged (#312).
+            fail_open(exc, "visited colours are said as not judged")
             ans.unjudged(
                 line,
                 None,
@@ -2082,9 +2103,9 @@ def check_on_input(run, line, ans):
                 page.evaluate("(el) => el.blur()", el)
             try:
                 pointer.settle(page)
-            except PlaywrightError:
+            except PlaywrightError as exc:
                 # The choice navigated mid-settle; gone() below reads it (#312).
-                pass
+                expected(exc, "gone() reads the navigation")
             changed = []
             if gone(page, url0):
                 changed.append("loads another page")
@@ -2128,6 +2149,7 @@ def check_enter(run, line, ans):
                 got = form.submit(page, sel, by="enter")
             except form.FormError as exc:
                 # A form Enter cannot submit is the fault (#312).
+                expected(exc, "said as a miss")
                 ans.miss(line, at, f"Enter cannot submit it: {exc}")
                 continue
             if not got.submits and not got.navigated:
@@ -2146,8 +2168,9 @@ def _submit(page, sel):
     """The form at `sel` submitted by its button, or None where it has none."""
     try:
         return form.submit(page, sel)
-    except form.FormError:
+    except form.FormError as exc:
         # A form with no submit button leaves its caller nothing to read (#312).
+        expected(exc, "no submission to read")
         return None
 
 
@@ -2522,6 +2545,7 @@ def check_ellipsis(run, line, ans):
                     pointer.click(page, item)
                 except pointer.PointerError as exc:
                     # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                    expected(exc, "said as not judged")
                     unreached(page, line, ans, item, exc=exc)
                     continue
                 asks = not gone(page, url0) and not submenu and page.evaluate(ASKS_JS)
@@ -2698,13 +2722,14 @@ def check_exit(run, line, ans):
                 pointer.click(page, link)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, link, exc=exc)
                 continue
             try:
                 page.wait_for_load_state()
-            except PlaywrightError:
+            except PlaywrightError as exc:
                 # A load the guard's blank answer cut short still names the page reached (#312).
-                pass
+                expected(exc, "the page reached is read")
             pages = [page, *run.popups]
             arrived = any(
                 urllib.parse.urlsplit(p.url).netloc
@@ -2828,6 +2853,7 @@ def findings(run, table):
             RUNS[line.check](run, line, ans)
         except (PlaywrightError, form.FormError) as exc:
             # One check stopping leaves the others to run; it is said as not judged (#312).
+            fail_open(exc, f"{line.check} is said as not judged")
             ans.unjudged(line, None, f"the check stopped: {flow.first_line(exc)}")
     return ans.done()
 
