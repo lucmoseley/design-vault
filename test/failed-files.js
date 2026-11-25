@@ -19,7 +19,7 @@ async function* recorded(events) {
   const named = new Set();
   const began = new Map();
   const last = new Map();
-  const took = (file, at) => {
+  const recordSeconds = (file, at) => {
     const seconds = ((at - began.get(file)) / 1000).toFixed(3);
     fs.appendFileSync(process.env.VAULT_FILE_SECONDS, `${fromRoot(file)}\t${seconds}\n`);
     began.delete(file);
@@ -37,12 +37,11 @@ async function* recorded(events) {
     if (file && process.env.VAULT_FILE_SECONDS) {
       if (event.type === "test:dequeue" && !began.has(file)) began.set(file, performance.now());
       last.set(file, performance.now());
-      // A summary naming a file is that file's own; the run's last one names none.
-      if (event.type === "test:summary" && began.has(file)) took(file, last.get(file));
+      if (event.type === "test:summary" && began.has(file)) recordSeconds(file, last.get(file));
     }
     yield event;
   }
-  for (const file of began.keys()) took(file, last.get(file));
+  for (const file of began.keys()) recordSeconds(file, last.get(file));
 }
 
 module.exports = async function* failedFiles(events) {

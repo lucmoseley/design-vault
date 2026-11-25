@@ -59,12 +59,12 @@ test("a node --test run under the reporter writes each file with a failing test 
   assert.match(r.stdout, /✔ green/);
 });
 
+// guess, #370: a load the real clock shows counted, a floor a slow machine only raises
+const LOAD_MS = 400;
 test("the reporter writes each file's own wall seconds once, its module load counted, from the run's root (#370)", () => {
   const root = scratch("seconds");
-  // It crosses the real clock, as only a real load shows the load counted (#370): 400 ms of it at least, a floor a
-  // slow machine only raises.
   fs.writeFileSync(path.join(root, "test", "slow-load.test.js"),
-    `const start = Date.now(); while (Date.now() - start < 400);\n${T}test("quick", () => {});\n`);
+    `const start = Date.now(); while (Date.now() - start < ${LOAD_MS});\n${T}test("quick", () => {});\n`);
   const seconds = path.join(dir, "seconds.tsv");
   const files = ["test/slow-load.test.js", "test/green.test.js", "test/red.test.js", "test/unloadable.test.js"];
   const r = spawnSync("bash", ["-c", `${NODE} "$@"`, "node", ...files],
@@ -73,7 +73,7 @@ test("the reporter writes each file's own wall seconds once, its module load cou
   const rows = fs.readFileSync(seconds, "utf8").trim().split("\n").map((l) => l.split("\t"));
   assert.deepEqual(rows.map(([f]) => f).sort(), [...files].sort());
   const took = Object.fromEntries(rows.map(([f, s]) => [f, Number(s)]));
-  assert.ok(took["test/slow-load.test.js"] >= 0.4, `${took["test/slow-load.test.js"]} s`);
+  assert.ok(took["test/slow-load.test.js"] >= LOAD_MS / 1000, `${took["test/slow-load.test.js"]} s`);
 });
 
 test("without VAULT_FAILED_FILES the reporter still prints Node's report and the run's red", () => {

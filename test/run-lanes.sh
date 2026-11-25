@@ -77,9 +77,9 @@ trap 'stop 130' INT
 trap 'stop 143' TERM
 
 named_files() { # named_files <suite>: the test files its command line names, one a line
-  local word
-  # shellcheck disable=SC2086 # a suite is a command line, split into its words as it was run
-  for word in $1; do [[ $word == *.test.* && -f $word ]] && printf '%s\n' "$word"; done
+  local word words
+  read -ra words <<<"$1"
+  for word in "${words[@]}"; do [[ $word == *.test.* && -f $word ]] && printf '%s\n' "$word"; done
 }
 
 failing() { # failing <suite> <its VAULT_FAILED_FILES>
@@ -191,24 +191,11 @@ while ((${#queue[@]} || ${#lane[@]})); do
   wait -n -p ended "${!lane[@]}"
   finish "$ended" $?
 done
-# Through the core's own module, which keeps the budget and the wording, called on this tree: its program entry reads
-# its root as the main checkout of a worktree, so from a worktree it would judge the wrong tree's files.
+# Its program entry would judge a worktree's main checkout, not this tree (#370).
 if [[ -z ${CI:-} && -s $logs/seconds ]]; then
-  # shellcheck disable=SC2016 # the ${…} are JavaScript's template literals
-  if ! root="$(git rev-parse --show-toplevel 2>/dev/null)" || ! node -e '
-const fs = require("node:fs");
-const [vault, root, seconds] = process.argv.slice(1);
-const core = require(`${vault}/scripts/lib/resolve-core.js`).resolveCore({ root: vault });
-const report = require(`${core}/scripts/lib/run-cost-report.js`);
-const timings = {};
-for (const line of fs.readFileSync(seconds, "utf8").split("\n").filter(Boolean)) {
-  const [file, secs] = line.split("\t");
-  timings[file] = Number(secs);
-}
-for (const line of report.reportForRun(root, timings)) console.log(line);' \
-    "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" "$root" "$logs/seconds"; then
+  root="$(git rev-parse --show-toplevel 2>/dev/null)" || root=$PWD
+  node "$(dirname "${BASH_SOURCE[0]}")/run-cost.js" "$root" "$logs/seconds" 2>/dev/null ||
     echo "test/run-lanes.sh: workflow-core's run-cost report would not run, so no test file's cost is judged; the suites' verdict stands (#370)."
-  fi
 fi
 if ((${#reds[@]})); then
   printf '%s\n' "${reds[@]}" >&2

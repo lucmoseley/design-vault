@@ -2378,6 +2378,12 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/run-cost.js": [
+			"test/failed-files.test.js",
+			"test/ledger-check.test.js",
+			"test/run-lanes.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/run-lanes.sh": [
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
