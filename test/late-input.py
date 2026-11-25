@@ -38,7 +38,7 @@ FLOW = os.path.join(
     "scripts",
     "check-flow.py",
 )
-SCRIPTS = os.path.dirname(FLOW)
+SCRIPTS = os.path.dirname(FLOW)  # #562
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 

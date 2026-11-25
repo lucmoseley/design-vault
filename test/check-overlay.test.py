@@ -36,10 +36,11 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 REQUIREMENTS = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", "plugin", "requirements.txt")
 )
-sys.path.insert(0, os.path.dirname(SCRIPT))
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-overlay = siblings.load(os.path.dirname(SCRIPT), "check-overlay.py")
+overlay = siblings.load(SCRIPTS, "check-overlay.py")
 ARCH = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">'
     '<g transform="translate({dx} 0)"><path d="M20 70 C20 20 100 20 100 70 Z" fill="#222"/>'

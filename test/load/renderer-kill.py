@@ -32,7 +32,7 @@ shot = load("check_overlay_shot", os.path.join(HERE, "check-overlay-shot.py"))
 FLOW = os.path.join(
     HERE, "..", "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
 )
-SCRIPTS = os.path.dirname(FLOW)
+SCRIPTS = os.path.dirname(FLOW)  # #562
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
