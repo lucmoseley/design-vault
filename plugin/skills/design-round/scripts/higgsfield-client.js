@@ -10,6 +10,8 @@ const LEDGER = "higgsfield-spend.jsonl";
 const LOCK = "higgsfield.lock";
 const ENV_FILE = path.join(os.homedir(), ".higgsfield.env");
 const SETTINGS = ["HIGGSFIELD_API_KEY", "HIGGSFIELD_ROUND_CEILING_USD"];
+// #587: guess.
+const MAX_TRIES = 3;
 const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
 const STEM = /^v\d+-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUND = /^r\d+$/;
@@ -278,12 +280,13 @@ function unlockAll(held, log) {
 }
 
 // The key goes to api.higgsfield.ai alone: every URL this sends it to is built from API.
-async function call(ctx, method, url, body, headers = {}) {
+async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
   const response = await ctx.fetch(url, {
     method,
     headers: { Authorization: `Key ${ctx.credentials}`, ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
     redirect: "error",
+    signal,
   });
   const text = await response.text();
   let json;
@@ -300,24 +303,27 @@ async function call(ctx, method, url, body, headers = {}) {
   return json;
 }
 
-// Retries a network fault or a 5xx; the API's own guidance (docs.higgsfield.ai, Errors and retries). That page
-// asks for exponential backoff, with jitter, and a most-attempts cap, but gives no numbers: three tries, 2 s then 4 s
-// apart, are guesses. No jitter: one job is retried at a time (docs/research/house-audit-constants.md O1).
-// Residual: no total retry deadline, which the page also asks for; the three tries bound the waits, not the calls.
-// An error after a transient try is marked `afterFault`, since that earlier try may have reached the API.
-async function withRetry(ctx, attempt) {
+// docs.higgsfield.ai's Errors page: retry a network fault or a 5xx, with exponential backoff and jitter, a most-attempts
+// cap and a total retry deadline; it gives no numbers.
+async function withRetry(ctx, method, url, request = {}) {
+  const deadline = ctx.now() + ctx.retryDeadlineMs;
   let faulted = false;
   for (let tries = 1; ; tries++) {
+    const tryMs = Math.ceil(Math.min(deadline - ctx.now(), ctx.retryDeadlineMs / MAX_TRIES));
+    const signal = ctx.timeout(Math.max(0, tryMs));
     try {
-      return await attempt();
-    } catch (error) {
+      return await call(ctx, method, url, { ...request, signal });
+    } catch (thrown) {
+      const error = signal.aborted && thrown === signal.reason ? new Error(`${method} ${new URL(url).pathname} gave no answer within ${tryMs / 1000} s, its try's share of the ${ctx.retryDeadlineMs / 1000} s retry deadline`, { cause: thrown }) : thrown;
       const transient = !(error instanceof ApiError) || error.status >= 500;
-      if (!transient || tries >= 3) {
+      // #587: guess.
+      const wait = 1000 * 2 ** tries;
+      if (!transient || tries >= MAX_TRIES || ctx.now() + wait >= deadline) {
         if (faulted && error instanceof Error) error.afterFault = true;
         throw error;
       }
       faulted = true;
-      await ctx.sleep(1000 * 2 ** tries);
+      await ctx.sleep(wait);
     }
   }
 }
@@ -331,7 +337,7 @@ function readUsd(value) {
 
 /** The job's price: the estimate's usd figure, or for a price rule the job's max_usd, left undefined where the job has none. */
 async function estimate(ctx, job) {
-  const answer = await withRetry(ctx, () => call(ctx, "POST", `${API}/estimate/${job.model}`, job.input));
+  const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input });
   const usd = readUsd(answer?.usd);
   if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
@@ -346,7 +352,7 @@ function priceText(price, suffix = "") {
 }
 
 async function submit(ctx, job, idempotencyKey) {
-  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": idempotencyKey }));
+  const accepted = await withRetry(ctx, "POST", `${API}/${job.model}`, { body: job.input, headers: { "Idempotency-Key": idempotencyKey } });
   if (typeof accepted?.request_id !== "string" || !accepted.request_id) throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
   return accepted;
 }
@@ -363,7 +369,7 @@ async function poll(ctx, accepted) {
     if (ctx.now() >= deadline) return { status: "timed-out", request_id: accepted.request_id };
     await ctx.sleep(delay);
     delay = Math.min(delay * 1.5, 10000);
-    state = await withRetry(ctx, () => call(ctx, "GET", statusUrl));
+    state = await withRetry(ctx, "GET", statusUrl);
   }
   return state;
 }
@@ -401,6 +407,9 @@ async function render(jobs, options = {}) {
     // Ten minutes a job: a guess. The Polling page asks for a timeout fit to the model and gives no number; timing
     // each model's jobs to completion would set it (docs/research/house-audit-constants.md H2).
     timeoutMs: options.timeoutMs ?? 10 * 60 * 1000,
+    // #590: guess.
+    retryDeadlineMs: options.retryDeadlineMs ?? 60 * 1000,
+    timeout: options.timeout ?? AbortSignal.timeout,
   };
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
