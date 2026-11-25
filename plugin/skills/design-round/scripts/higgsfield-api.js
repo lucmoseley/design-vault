@@ -65,6 +65,8 @@ async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
   return json;
 }
 
+const isTransient = (error) => !(error instanceof RefusalError) || error.retryable;
+
 // #583, #587
 async function withRetry(ctx, method, url, request = {}) {
   const deadline = ctx.now() + ctx.retryDeadlineMs;
@@ -75,7 +77,7 @@ async function withRetry(ctx, method, url, request = {}) {
       return await call(ctx, method, url, { ...request, signal });
     } catch (thrown) {
       const error = signal.aborted && thrown === signal.reason ? new Error(`${method} ${new URL(url).pathname} gave no answer within ${tryMs / 1000} s, its try's share of the ${ctx.retryDeadlineMs / 1000} s retry deadline`, { cause: thrown }) : thrown;
-      const transient = !(error instanceof RefusalError) || error.retryable;
+      const transient = isTransient(error);
       const wait = FIRST_RETRY_WAIT_MS * 2 ** (tries - 1);
       if (!transient || tries >= MAX_TRIES || ctx.now() + wait >= deadline) {
         if ((transient || tries > 1) && error instanceof Error) error.mayHaveReached = true;
@@ -86,4 +88,4 @@ async function withRetry(ctx, method, url, request = {}) {
   }
 }
 
-module.exports = { API, RETRY_DEADLINE_MS, RefusalError, withRetry };
+module.exports = { API, QUOTED_BODY_CHARS, RETRY_DEADLINE_MS, RefusalError, isTransient, withRetry };
