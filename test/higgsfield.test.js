@@ -390,6 +390,22 @@ test("one round reached by two spellings is held to its ceiling once, for the wh
   await assert.rejects(render([job(dir, "v1-dusk"), job(path.join(alias, "r1"), "v1-dusk")], api.options()), /r1\/v1-dusk appears twice in the batch/);
 });
 
+test("a round behind a symlink to a folder only a later job of the batch makes is made and rendered (#574)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "real"), path.join(base, "alias"));
+  const behindTheSymlink = path.join(base, "alias", "r2");
+  assert.equal(await render([job(behindTheSymlink), job(path.join(base, "real", "r1"))], fakeApi().options()), 0);
+  assert.equal(ledger(behindTheSymlink).length, 1);
+});
+
+test("a round behind a symlink to a folder no job of the batch makes refuses the batch, submitting nothing (#574)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "nowhere"), path.join(base, "alias"));
+  const api = fakeApi();
+  await assert.rejects(render([job(path.join(base, "real", "r1")), job(path.join(base, "alias", "r2"))], api.options()), { code: "ENOENT" });
+  assert.equal(api.calls.length, 0);
+});
+
 test("a round not yet made, reached by two spellings through a symlink to a folder not yet made, is one round (#559)", async () => {
   const base = path.dirname(roundDir());
   const alias = path.join(base, "alias");
@@ -655,18 +671,26 @@ test("the estimate's discount is recorded on the ledger line beside the usd, whi
   assert.deepEqual(entry.discount, discount);
 });
 
-test("a 403 part-way through a batch names the jobs that ran and says the rest were not submitted", async () => {
-  const dir = roundDir();
-  const api = fakeApi({ statuses: ["completed"], submit: [undefined, reply(403, { detail: "Not enough credits" })] });
-  await assert.rejects(
-    render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options()),
-    /answered 403: Not enough credits \(the balance is too low[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v2-tide, r1\/v3-reef/,
-  );
-  assert.equal(api.submissions().length, 2);
-  assert.deepEqual(
-    ledger(dir).map((entry) => entry.candidate),
-    ["r1/v1-dusk"],
-  );
+test("a refusal at the first try part-way through a batch, a 403 or any other, keeps the API's message and names the jobs that ran and those not submitted (#570)", async () => {
+  const cases = {
+    "a 403": [reply(403, { detail: "Not enough credits" }), /answered 403: Not enough credits \(the balance is too low[^]*/],
+    "a 422": [reply(422, { detail: "aspect_ratio is invalid" }), /answered 422: aspect_ratio is invalid/],
+  };
+  for (const [what, [refusal, apiMessage]] of Object.entries(cases)) {
+    const dir = roundDir();
+    const api = fakeApi({ statuses: ["completed"], submit: [undefined, refusal] });
+    await assert.rejects(
+      render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options()),
+      new RegExp(`${apiMessage.source}\\. Ran: r1\\/v1-dusk\\. Not submitted: r1\\/v2-tide, r1\\/v3-reef$`),
+      what,
+    );
+    assert.equal(api.submissions().length, 2, what);
+    assert.deepEqual(
+      ledger(dir).map((entry) => entry.candidate),
+      ["r1/v1-dusk"],
+      what,
+    );
+  }
 });
 
 test("a completed video answer with no url is counted as failed, with nothing downloaded", async () => {
@@ -675,14 +699,6 @@ test("a completed video answer with no url is counted as failed, with nothing do
   assert.equal(await render([job(dir, "v1-drift")], api.options()), 1);
   assert.deepEqual(ledger(dir)[0].urls, []);
   assert.equal(api.calls.filter((call) => call.url.startsWith("https://cdn.example.com/")).length, 0);
-});
-
-test("a submission refused for any reason but the balance stops the batch with the API's own message", async () => {
-  const api = fakeApi({ statuses: ["completed"], submit: [undefined, reply(422, { detail: "aspect_ratio is invalid" })] });
-  await assert.rejects(render([job(roundDir(), "v1-dusk"), job(roundDir(), "v2-tide")], api.options()), (error) => {
-    assert.match(error.message, /answered 422: aspect_ratio is invalid$/);
-    return true;
-  });
 });
 
 test("a 403 on the batch's first job says no job ran", async () => {

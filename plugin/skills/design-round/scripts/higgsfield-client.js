@@ -132,6 +132,22 @@ function isHolderAlive(pid) {
   }
 }
 
+function tryMakeFolder(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return false;
+  }
+}
+
+// #574
+function makeRoundFolders(jobs) {
+  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir));
+  for (const job of waitingOnAnotherJobsFolder) fs.mkdirSync(job.roundDir, { recursive: true });
+}
+
 // #559
 function lock(roundDir) {
   const file = path.join(roundDir, LOCK);
@@ -304,17 +320,7 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
-  if (!options.estimateOnly) {
-    // #559
-    for (const job of checked) {
-      try {
-        fs.mkdirSync(job.roundDir, { recursive: true });
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
-    }
-    for (const job of checked) fs.mkdirSync(job.roundDir, { recursive: true });
-  }
+  if (!options.estimateOnly) makeRoundFolders(checked);
   const byKey = new Map();
   for (const job of checked) {
     const key = roundKey(job.roundDir);
@@ -385,7 +391,6 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
-        if (error.status !== 403) throw error;
         const rest = priced.slice(index).map((other) => other.name);
         throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
       }
