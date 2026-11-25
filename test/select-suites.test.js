@@ -79,7 +79,7 @@ test("a commit staging only docs/, data/ or images/ files runs the fast checks a
 test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py loads back; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
-  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
@@ -123,7 +123,7 @@ const relist = (from, to) => {
 
 const FAST = [NODE, "bash test/design-round-pointer.test.sh"];
 // What a commit staging contact-sheet.py alone runs.
-const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
+const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
 const relisting = (after) => plan(SUITES, ["test/all.sh"], { before: ALL_SH, after });
 const runs = (p) => p.suites.filter((s) => !s.why).map((s) => s.suite);
 
