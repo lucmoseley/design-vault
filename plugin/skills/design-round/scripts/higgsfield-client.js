@@ -20,6 +20,7 @@ const PRICE_DECIMALS = 3; // #583 guess
 const QUOTED_BODY_CHARS = 200; // #583 guess
 const MAX_TRIES = 3; // #583 guess
 const FIRST_RETRY_WAIT_MS = 2000; // #583 guess
+const RETRY_DEADLINE_MS = 60 * 1000; // #590 guess
 const JOB_TIMEOUT_MS = 10 * 60 * 1000; // #183 guess
 // Higgsfield's recommended poll schedule: https://docs.higgsfield.ai/docs/concepts/polling.md
 const POLL_FIRST_WAIT_MS = 2000;
@@ -280,12 +281,13 @@ function unlockAll(held, log) {
 }
 
 // #583
-async function call(ctx, method, url, body, headers = {}) {
+async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
   const response = await ctx.fetch(url, {
     method,
     headers: { Authorization: `Key ${ctx.credentials}`, ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
     redirect: "error",
+    signal,
   });
   const text = await response.text();
   let json;
@@ -301,20 +303,23 @@ async function call(ctx, method, url, body, headers = {}) {
   return json;
 }
 
-// #583
-async function withRetry(ctx, attempt) {
-  let faulted = false;
+// #583, #587
+async function withRetry(ctx, method, url, request = {}) {
+  const deadline = ctx.now() + ctx.retryDeadlineMs;
   for (let tries = 1; ; tries++) {
+    const tryMs = Math.ceil(Math.min(deadline - ctx.now(), ctx.retryDeadlineMs / MAX_TRIES));
+    const signal = ctx.timeout(Math.max(0, tryMs));
     try {
-      return await attempt();
-    } catch (error) {
+      return await call(ctx, method, url, { ...request, signal });
+    } catch (thrown) {
+      const error = signal.aborted && thrown === signal.reason ? new Error(`${method} ${new URL(url).pathname} gave no answer within ${tryMs / 1000} s, its try's share of the ${ctx.retryDeadlineMs / 1000} s retry deadline`, { cause: thrown }) : thrown;
       const transient = !(error instanceof ApiError) || error.status >= 500;
-      if (!transient || tries >= MAX_TRIES) {
-        if (faulted && error instanceof Error) error.afterFault = true;
+      const wait = FIRST_RETRY_WAIT_MS * 2 ** (tries - 1);
+      if (!transient || tries >= MAX_TRIES || ctx.now() + wait >= deadline) {
+        if ((transient || tries > 1) && error instanceof Error) error.mayHaveReached = true;
         throw error;
       }
-      faulted = true;
-      await ctx.sleep(FIRST_RETRY_WAIT_MS * 2 ** (tries - 1));
+      await ctx.sleep(wait);
     }
   }
 }
@@ -326,7 +331,7 @@ function readUsd(value) {
 }
 
 async function estimate(ctx, job) {
-  const answer = await withRetry(ctx, () => call(ctx, "POST", `${API}/estimate/${job.model}`, job.input));
+  const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input });
   const usd = readUsd(answer?.usd);
   if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
@@ -341,7 +346,7 @@ function priceText(price, suffix = "") {
 }
 
 async function submit(ctx, job, idempotencyKey) {
-  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": idempotencyKey }));
+  const accepted = await withRetry(ctx, "POST", `${API}/${job.model}`, { body: job.input, headers: { "Idempotency-Key": idempotencyKey } });
   if (typeof accepted?.request_id !== "string" || !accepted.request_id) throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
   return accepted;
 }
@@ -355,7 +360,7 @@ async function poll(ctx, accepted) {
     if (ctx.now() >= deadline) return { status: "timed-out", request_id: accepted.request_id };
     await ctx.sleep(delay);
     delay = Math.min(delay * POLL_WAIT_GROWTH, POLL_LONGEST_WAIT_MS);
-    state = await withRetry(ctx, () => call(ctx, "GET", statusUrl));
+    state = await withRetry(ctx, "GET", statusUrl);
   }
   return state;
 }
@@ -386,6 +391,8 @@ async function render(jobs, options = {}) {
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     now: options.now ?? Date.now,
     timeoutMs: options.timeoutMs ?? JOB_TIMEOUT_MS,
+    retryDeadlineMs: options.retryDeadlineMs ?? RETRY_DEADLINE_MS,
+    timeout: options.timeout ?? AbortSignal.timeout,
   };
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
@@ -481,7 +488,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
       // #583
-      if (error instanceof ApiError && !error.afterFault) {
+      if (error instanceof ApiError && !error.mayHaveReached) {
         recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { submissionSent: false });
         throw batchStopped(error.message, priced, index, { submissionSent: false, cause: error });
       }
