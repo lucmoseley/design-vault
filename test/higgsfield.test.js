@@ -46,6 +46,7 @@ function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "complete
   const calls = [];
   let polls = 0;
   let submits = 0;
+  let accepted = 0;
   let clock = 0;
   const fetch = async (url, init = {}) => {
     calls.push({ url, method: init.method ?? "GET", headers: init.headers ?? {}, redirect: init.redirect, body: init.body && JSON.parse(init.body) });
@@ -60,7 +61,7 @@ function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "complete
     const answer = submit?.[submits++];
     if (answer instanceof Error) throw answer;
     if (answer) return answer;
-    return reply(200, { status: "queued", request_id: "req-1" });
+    return reply(200, { status: "queued", request_id: `req-${++accepted}` });
   };
   return {
     calls,
@@ -86,6 +87,7 @@ const ledger = (dir) =>
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+const outcomes = (dir) => ledger(dir).filter((entry) => entry.status !== "submitting" && entry.status !== "submitted");
 
 test("a job is priced, submitted, polled, saved under its sniffed type and charged to the round's ledger", async () => {
   const dir = roundDir();
@@ -100,7 +102,12 @@ test("a job is priced, submitted, polled, saved under its sniffed type and charg
   assert.deepEqual(submit.body, { prompt: "a manta over an ink sea", aspect_ratio: "16:9" });
   assert.equal(submit.headers.Authorization, `Key ${KEY}`);
   assert.match(submit.headers["Idempotency-Key"], /^[0-9a-f-]{36}$/);
-  const [entry] = ledger(dir);
+  const [submitting, submitted, entry] = ledger(dir);
+  assert.deepEqual([submitting.status, submitting.usd, submitting.request_id], ["submitting", 0.094, null]);
+  assert.deepEqual([submitted.status, submitted.usd, submitted.request_id], ["submitted", 0.094, "req-1"]);
+  assert.match(entry.idempotency_key, /^[0-9a-f-]{36}$/);
+  assert.ok([submitting, submitted].every((line) => line.idempotency_key === entry.idempotency_key), "each line of a request carries its idempotency key");
+  assert.equal(entry.idempotency_key, submit.headers["Idempotency-Key"]);
   assert.equal(entry.usd, 0.094);
   assert.equal(entry.status, "completed");
   assert.equal(entry.request_id, "req-1");
@@ -135,7 +142,7 @@ test("a batch that fits under the ceiling with what the round has spent runs", a
   const api = fakeApi();
   assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], api.options()), 0);
   assert.equal(api.submissions().length, 2);
-  assert.equal(ledger(dir).length, 3);
+  assert.equal(outcomes(dir).length, 3);
 });
 
 test("generation refuses to run with no ceiling set; --estimate runs without one and submits nothing", async () => {
@@ -161,8 +168,15 @@ test("a failed request is not charged, and the batch carries on to the next job"
   assert.equal(fs.existsSync(path.join(dir, "v1-dusk.png")), false);
   assert.ok(fs.existsSync(path.join(dir, "v2-tide.png")));
   assert.deepEqual(
-    ledger(dir).map((entry) => entry.status),
-    ["completed"],
+    ledger(dir).map((entry) => [entry.candidate, entry.status, entry.usd]),
+    [
+      ["r1/v1-dusk", "submitting", 0.094],
+      ["r1/v1-dusk", "submitted", 0.094],
+      ["r1/v1-dusk", "failed", 0],
+      ["r1/v2-tide", "submitting", 0.094],
+      ["r1/v2-tide", "submitted", 0.094],
+      ["r1/v2-tide", "completed", 0.094],
+    ],
   );
 });
 
@@ -170,9 +184,10 @@ test("a request still running at the timeout is recorded at its estimate, since 
   const dir = roundDir();
   const api = fakeApi({ statuses: ["in_progress"] });
   assert.equal(await render([job(dir)], api.options({ timeoutMs: 30000 })), 1);
-  const [entry] = ledger(dir);
-  assert.equal(entry.status, "timed-out");
-  assert.equal(entry.usd, 0.094);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.094], ["submitted", 0.094], ["timed-out", 0.094]],
+  );
 });
 
 test("a submitted job whose status poll fails is recorded at its estimate, the batch carries on, and a rerun counts it against the ceiling", async () => {
@@ -182,11 +197,114 @@ test("a submitted job whose status poll fails is recorded at its estimate, the b
   assert.equal(failing.submissions().length, 2);
   assert.deepEqual(
     ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
-    [["unpolled", 0.25, "req-1"], ["unpolled", 0.25, "req-1"]],
+    [
+      ["submitting", 0.25, null],
+      ["submitted", 0.25, "req-1"],
+      ["unpolled", 0.25, "req-1"],
+      ["submitting", 0.25, null],
+      ["submitted", 0.25, "req-2"],
+      ["unpolled", 0.25, "req-2"],
+    ],
   );
   const rerun = fakeApi({ usd: "0.25" });
   await assert.rejects(render([job(dir, "v3-ebb")], rerun.options({ ceiling: "0.60" })), /past its \$0\.600 ceiling/);
   assert.equal(rerun.submissions().length, 0);
+});
+
+test("a run abandoned mid-poll leaves its charge on the ledger, so a rerun's ceiling counts it (#571)", async () => {
+  const dir = roundDir();
+  const stopped = fakeApi({ usd: "0.20", pollReply: new Promise(() => {}) });
+  const lines = [];
+  render([job(dir, "v1-dusk")], stopped.options({ ceiling: "0.30", log: (line) => lines.push(line) }));
+  for (let turns = 0; !stopped.calls.some((call) => call.url.includes("/requests/")); turns++) {
+    assert.ok(turns < 100, "the run never reached its first poll");
+    await new Promise(setImmediate);
+  }
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
+    [["submitting", 0.2, null], ["submitted", 0.2, "req-1"]],
+  );
+  assert.ok(lines.includes("r1/v1-dusk: accepted as request req-1"), "the request id is printed before polling");
+  const rerun = fakeApi({ usd: "0.20" });
+  await assert.rejects(render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), /past its \$0\.300 ceiling/);
+  assert.equal(rerun.submissions().length, 0);
+});
+
+test("a finished request's outcome supersedes its submitted line, so the ceiling counts it once (#571)", async () => {
+  const dir = roundDir();
+  assert.equal(await render([job(dir, "v1-dusk")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
+  const rerun = fakeApi({ usd: "0.10" });
+  assert.equal(await render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), 0);
+  assert.equal(rerun.submissions().length, 1);
+});
+
+test("a run stopped while a lost submission waits to be retried leaves its charge on the ledger (#571)", async () => {
+  const dir = roundDir();
+  const stopped = fakeApi({ usd: "0.20", submit: [new TypeError("fetch failed")] });
+  render([job(dir, "v1-dusk")], stopped.options({ ceiling: "0.30", sleep: () => new Promise(() => {}) }));
+  for (let turns = 0; stopped.submissions().length === 0; turns++) {
+    assert.ok(turns < 100, "the run never submitted");
+    await new Promise(setImmediate);
+  }
+  const rerun = fakeApi({ usd: "0.20" });
+  await assert.rejects(render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), /past its \$0\.300 ceiling/);
+  assert.equal(rerun.submissions().length, 0);
+});
+
+test("two submissions the API answers with one request_id are still two charges (#571)", async () => {
+  const dir = roundDir();
+  const same = fakeApi({ usd: "0.20", submit: [reply(200, { status: "queued", request_id: "same" }), reply(200, { status: "queued", request_id: "same" })] });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], same.options({ ceiling: "0.50" })), 0);
+  const rerun = fakeApi({ usd: "0.20" });
+  await assert.rejects(render([job(dir, "v3-reef")], rerun.options({ ceiling: "0.50" })), /past its \$0\.500 ceiling/);
+});
+
+test("a submission answered with an empty request_id is recorded at its estimate, since it may have been charged", async () => {
+  const dir = roundDir();
+  await assert.rejects(render([job(dir)], fakeApi({ submit: [reply(200, { status: "queued", request_id: "" })] }).options()), /may have reached Higgsfield/);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.094], ["unanswered", 0.094]],
+  );
+});
+
+test("a submission refused at its first try is recorded at $0, so its estimate leaves the ceiling (#571)", async () => {
+  const dir = roundDir();
+  await assert.rejects(render([job(dir)], fakeApi({ usd: "0.20", submit: [reply(422, { detail: "aspect_ratio is invalid" })] }).options({ ceiling: "0.30" })), /422/);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.2], ["refused", 0]],
+  );
+  assert.equal(ledger(dir)[1].http_status, 422);
+  assert.equal(ledger(dir)[1].error, undefined, "the API's message, which may echo the request, stays off the ledger");
+  assert.equal(await render([job(dir, "v2-tide")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
+});
+
+test("a ledger write that fails once the API accepts a job still leaves its request id on screen (#571)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const lines = [];
+  const options = api.options({ log: (line) => lines.push(line) });
+  const fetch = options.fetch;
+  options.fetch = async (url, init = {}) => {
+    if (init.method === "POST" && !new URL(url).pathname.startsWith("/estimate/")) fs.chmodSync(path.join(dir, LEDGER), 0o444);
+    return fetch(url, init);
+  };
+  await assert.rejects(render([job(dir)], options), { code: "EACCES" });
+  assert.ok(lines.includes("r1/v1-dusk: accepted as request req-1"));
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd]),
+    [["submitting", 0.094]],
+  );
+});
+
+test("a failed request's $0 outcome takes its submitted charge off the ceiling (#571)", async () => {
+  const dir = roundDir();
+  assert.equal(await render([job(dir, "v1-dusk")], fakeApi({ usd: "0.20", statuses: ["failed"] }).options({ ceiling: "0.30" })), 1);
+  assert.equal(ledger(dir).at(-1).error, undefined, "the API's text stays off the ledger");
+  const rerun = fakeApi({ usd: "0.20" });
+  assert.equal(await render([job(dir, "v2-tide")], rerun.options({ ceiling: "0.30" })), 0);
+  assert.equal(rerun.submissions().length, 1);
 });
 
 test("an estimate that is not a positive usd figure is refused before anything is submitted", async () => {
@@ -268,7 +386,7 @@ test("a download that fails after the charge is logged as failed, keeps its ledg
   assert.equal(fs.existsSync(path.join(dir, "v1-dusk.png")), false);
   assert.ok(fs.existsSync(path.join(dir, "v2-tide.png")));
   assert.deepEqual(
-    ledger(dir).map((entry) => entry.urls),
+    outcomes(dir).map((entry) => entry.urls),
     [[CDN], [CDN]],
   );
 });
@@ -277,7 +395,10 @@ test("a request that completes with no image is counted as failed", async () => 
   const dir = roundDir();
   const api = fakeApi({ statuses: ["completed"], images: [] });
   assert.equal(await render([job(dir)], api.options()), 1);
-  assert.equal(ledger(dir).length, 1);
+  assert.deepEqual(
+    ledger(dir).map((entry) => entry.status),
+    ["submitting", "submitted", "completed"],
+  );
 });
 
 test("a network fault on submission is retried under the same idempotency key", async () => {
@@ -297,7 +418,7 @@ test("a submission whose every try ends on a network fault is recorded at its es
     /fetch failed\. r1\/v2-tide may have reached Higgsfield[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v3-reef/,
   );
   assert.deepEqual(
-    ledger(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.request_id]),
+    outcomes(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.request_id]),
     [["r1/v1-dusk", "completed", 0.25, "req-1"], ["r1/v2-tide", "unanswered", 0.25, null]],
   );
   const rerun = fakeApi({ usd: "0.25" });
@@ -315,8 +436,8 @@ test("a submission that may have reached the API is recorded at its estimate: 5x
     const dir = roundDir();
     await assert.rejects(render([job(dir)], fakeApi({ submit }).options()), /may have reached Higgsfield/, what);
     assert.deepEqual(
-      ledger(dir).map((entry) => [entry.status, entry.request_id]),
-      [["unanswered", null]],
+      ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
+      [["submitting", 0.094, null], ["unanswered", 0.094, null]],
       what,
     );
   }
@@ -370,7 +491,7 @@ test("a job priced by a rule runs under its max_usd and is charged to the ledger
   assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.25 })], api.options({ log: (line) => lines.push(line) })), 0);
   const [submit] = api.submissions();
   assert.equal(submit.body.max_usd, undefined, "max_usd is ours, not the API's");
-  const [entry] = ledger(dir);
+  const [entry] = outcomes(dir);
   assert.equal(entry.usd, 0.25);
   assert.deepEqual(entry.rule, RULE);
   assert.ok(lines.some((line) => line.includes("at most $0.250") && line.includes("first output megapixel")));
@@ -380,7 +501,7 @@ test("a job whose estimate carries a usd figure is charged at that figure, whate
   const dir = roundDir();
   const api = fakeApi();
   assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.01 })], api.options()), 0);
-  assert.equal(ledger(dir)[0].usd, 0.094);
+  assert.equal(outcomes(dir)[0].usd, 0.094);
 });
 
 test("a max_usd that is not a positive number is refused before any call", async () => {
@@ -421,7 +542,7 @@ test("a job priced by a rule that times out is recorded at its max_usd, with the
   const dir = roundDir();
   const api = fakeApi({ estimate: RULE, statuses: ["in_progress"] });
   assert.equal(await render([job(dir, "v1-dusk", { max_usd: 0.25 })], api.options({ timeoutMs: 30000 })), 1);
-  const [entry] = ledger(dir);
+  const [entry] = outcomes(dir);
   assert.equal(entry.status, "timed-out");
   assert.equal(entry.usd, 0.25);
   assert.deepEqual(entry.rule, RULE);
@@ -470,7 +591,7 @@ test("a completed video is saved under its sniffed type, with its URL in the led
     const lines = [];
     assert.equal(await render([job(dir, "v1-drift")], api.options({ log: (line) => lines.push(line) })), 0);
     assert.deepEqual(fs.readFileSync(path.join(dir, `v1-drift.${type}`)), bytes);
-    assert.deepEqual(ledger(dir)[0].urls, [CLIP]);
+    assert.deepEqual(outcomes(dir)[0].urls, [CLIP]);
     assert.ok(lines.some((line) => line.startsWith(`saved r1/v1-drift.${type}`)));
   }
 });
@@ -481,7 +602,7 @@ test("a video whose download fails keeps its URL in the ledger, counted as faile
   const lines = [];
   assert.equal(await render([job(dir, "v1-drift")], api.options({ log: (line) => lines.push(line) })), 1);
   assert.deepEqual(fs.readdirSync(dir), [LEDGER]);
-  assert.deepEqual(ledger(dir)[0].urls, [CLIP]);
+  assert.deepEqual(outcomes(dir)[0].urls, [CLIP]);
   assert.ok(lines.some((line) => line.includes("charged, but not saved") && line.includes("The ledger keeps its URL")));
 });
 
@@ -509,7 +630,7 @@ test("the estimate's discount is recorded on the ledger line beside the usd, whi
   const discount = { percentage: 15, credits: "1.008", usd: "0.063" };
   const api = fakeApi({ video: { url: CLIP }, cdn: () => reply(200, MP4), estimate: { credits: "5.712", usd: "0.357", discount } });
   assert.equal(await render([job(dir, "v1-drift")], api.options()), 0);
-  const [entry] = ledger(dir);
+  const [entry] = outcomes(dir);
   assert.equal(entry.usd, 0.357);
   assert.deepEqual(entry.discount, discount);
 });
@@ -523,8 +644,8 @@ test("a 403 part-way through a batch names the jobs that ran and says the rest w
   );
   assert.equal(api.submissions().length, 2);
   assert.deepEqual(
-    ledger(dir).map((entry) => entry.candidate),
-    ["r1/v1-dusk"],
+    outcomes(dir).map((entry) => [entry.candidate, entry.status, entry.usd]),
+    [["r1/v1-dusk", "completed", 0.094], ["r1/v2-tide", "refused", 0]],
   );
 });
 
@@ -532,7 +653,7 @@ test("a completed video answer with no url is counted as failed, with nothing do
   const dir = roundDir();
   const api = fakeApi({ statuses: ["completed"], video: {} });
   assert.equal(await render([job(dir, "v1-drift")], api.options()), 1);
-  assert.deepEqual(ledger(dir)[0].urls, []);
+  assert.deepEqual(outcomes(dir)[0].urls, []);
   assert.equal(api.calls.filter((call) => call.url.startsWith("https://cdn.example.com/")).length, 0);
 });
 
