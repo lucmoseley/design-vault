@@ -30,7 +30,9 @@ const ruled = {
   missed_by: "gate",
   ruling: "rule: vault.proof",
 };
-const run = { model: "claude-opus-5-5", claude_code: "2.1.299", round: "hero-r1" };
+// Each round's packet folder, named for its project and slug.
+const FOLDER = { "hero-r1": "mmm-infra.hero-r1", "hero-r2": "mmm-infra.hero-r2" };
+const run = { model: "claude-opus-5-5", claude_code: "2.1.299", round: FOLDER["hero-r1"] };
 const say = (answer) => ({ answer, evidence: `seen: ${answer}` });
 // His verdicts: v2-slow passes vault.proof (his first pick), v1-arches fails it (entry 2), v1-arches breaks both
 // entries' principles. Critic a agrees with all; b and c each disagree twice on answers and b once on the pick.
@@ -46,7 +48,7 @@ const critic = ({ proof, v1, leader }) => ({
   leader: { candidate: leader, turned_on: `lens of ${leader}` },
 });
 
-const HERO_R2_ANSWER = { run: { ...run, round: "hero-r2" }, answers: { "v2a-still": { "vault.proof": say("yes") } }, principles: {}, leader: { candidate: "v2a-still", turned_on: "lens of v2a-still" } };
+const HERO_R2_ANSWER = { run: { ...run, round: FOLDER["hero-r2"] }, answers: { "v2a-still": { "vault.proof": say("yes") } }, principles: {}, leader: { candidate: "v2a-still", turned_on: "lens of v2a-still" } };
 const PACKED = {
   "hero-r1": { ticket: "lucmoseley/mmm-infra#9", round: 1, tag: "rounds/hero-r1", brief: fixture("hero-r1", "brief.md"), gate_list: fixture("hero-r1", "gate-list.md"),
     gate_list_then: fixture("hero-r1", "gate-list.md"), copy_bans: fixture("hero-r1", "copy-bans.md"),
@@ -74,10 +76,10 @@ function setUp({ canary = { held: true, verdict: "held", model: run.model, claud
   const logs = ["--round-log", roundLog, "--corrections-log", corrections];
   const built = runInProcess(path.join(ROOT, "calibration-packet.js"), ["--manifest", manifest, "--out", path.join(dir, "packet"), ...logs]);
   assert.equal(built.status, 0, built.stderr);
-  for (const r of rounds) fs.mkdirSync(path.join(dir, "answers", r), { recursive: true });
+  for (const r of rounds) fs.mkdirSync(path.join(dir, "answers", FOLDER[r]), { recursive: true });
   fs.writeFileSync(path.join(dir, "answers", "canary.json"), JSON.stringify(canary));
   const answer = { "hero-r1": (name) => change[name] ?? critic(critics[name]), "hero-r2": () => HERO_R2_ANSWER };
-  for (const r of rounds) for (const name of Object.keys(critics)) fs.writeFileSync(path.join(dir, "answers", r, `critic-${name}.json`), JSON.stringify(answer[r](name)));
+  for (const r of rounds) for (const name of Object.keys(critics)) fs.writeFileSync(path.join(dir, "answers", FOLDER[r], `critic-${name}.json`), JSON.stringify(answer[r](name)));
   const calibrationLog = path.join(dir, "calibration-log.jsonl");
   fs.writeFileSync(calibrationLog, "");
   const score = (...more) =>
@@ -263,7 +265,7 @@ test("a canary that did not hold, or a critic file missing, scores nothing", () 
   assert.match(notHeld.stderr, /the canary did not hold \(broken: the confined child read the canary\) — no critic of this run may be scored; run calibration-critic\.js --packet again/);
 
   const { dir, score } = setUp();
-  fs.rmSync(path.join(dir, "answers", "hero-r1", "critic-c.json"));
+  fs.rmSync(path.join(dir, "answers", FOLDER["hero-r1"], "critic-c.json"));
   const missing = score();
   assert.equal(missing.status, 2);
   assert.match(missing.stderr, /critic-c\.json does not exist — run calibration-critic\.js --packet for the whole run/);
@@ -273,7 +275,7 @@ test("a critic that ran off the canary's version or model, on another round, or 
   const cases = [
     [{ ...critic(critics.a), run: { ...run, claude_code: "2.1.300" } }, /ran on claude-opus-5-5 and Claude Code 2\.1\.300, and the canary held on claude-opus-5-5 and 2\.1\.299/],
     [{ ...critic(critics.a), run: { ...run, model: "claude-sonnet-5-5" } }, /ran on claude-sonnet-5-5/],
-    [{ ...critic(critics.a), run: { ...run, round: "hero-r2" } }, /answers round "hero-r2", not hero-r1/],
+    [{ ...critic(critics.a), run: { ...run, round: FOLDER["hero-r2"] } }, /answers round "mmm-infra\.hero-r2", not mmm-infra\.hero-r1/],
     [{ ...critic(critics.a), answers: { "v1-arches": {}, "v2-slow": critic(critics.a).answers["v2-slow"] } }, /leaves vault\.proof unanswered/],
   ];
   for (const [a, message] of cases) {
@@ -301,4 +303,50 @@ test("a missing argument is a usage error", () => {
   const result = runInProcess(SCRIPT, ["--manifest", "m.json"]);
   assert.equal(result.status, 2);
   assert.match(result.stderr, /--packet, --answers, --where, --row needed/);
+});
+
+test("two projects' rounds of one tag pack each project's entries into its own folder, and score them (#551)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-score-"));
+  scratch.push(dir);
+  const [mmmRow] = fs.readFileSync(fixture("round-log.jsonl"), "utf8").split("\n");
+  const mantaRow = { date: "2026-10-15", project: "manta", ticket: "lucmoseley/mantahostels#50", round: 1, first_pick: "v1-arches", reason: "the arches frame the sea", confidence: 60, critic_pick: "v1-arches", agree: true };
+  const roundLog = path.join(dir, "round-log.jsonl");
+  fs.writeFileSync(roundLog, `${mmmRow}\n${JSON.stringify(mantaRow)}\n`);
+  const [gold] = fs.readFileSync(fixture("corrections-log.jsonl"), "utf8").split("\n");
+  const mantaEntry = { ...JSON.parse(gold), project: "manta", where: "https://github.com/lucmoseley/mantahostels/issues/50#issuecomment-1", candidate: "rounds/hero-r1 v2-slow", words: "too sleepy for a hostel", principle: "the hero moves at a walking pace" };
+  const corrections = path.join(dir, "corrections-log.jsonl");
+  fs.writeFileSync(corrections, `${gold}\n${JSON.stringify(mantaEntry)}\n`);
+  const manifest = path.join(dir, "manifest.json");
+  fs.writeFileSync(manifest, JSON.stringify({ rounds: [PACKED["hero-r1"], { ...PACKED["hero-r1"], ticket: "lucmoseley/mantahostels#50" }] }));
+  const logs = ["--round-log", roundLog, "--corrections-log", corrections];
+  const packet = path.join(dir, "packet");
+  const built = runInProcess(path.join(ROOT, "calibration-packet.js"), ["--manifest", manifest, "--out", packet, ...logs]);
+  assert.equal(built.status, 0, built.stderr);
+  const packed = (folder) => JSON.parse(fs.readFileSync(path.join(packet, folder, "entries.json"), "utf8"));
+  assert.deepEqual(packed("mmm-infra.hero-r1"), [{ entry: 1, principle: "the accent gold stays muted against the navy" }]);
+  assert.deepEqual(packed("manta.hero-r1"), [{ entry: 2, principle: "the hero moves at a walking pace" }]);
+
+  // Every critic agrees with him: his first pick passes vault.proof and leads, and the candidate each entry faults breaks its principle.
+  const agreeing = (folder, pick, entry, faulted) => ({
+    run: { ...run, round: folder },
+    answers: Object.fromEntries(["v1-arches", "v2-slow"].map((c) => [c, { "vault.proof": say(c === pick ? "yes" : "no") }])),
+    principles: Object.fromEntries(["v1-arches", "v2-slow"].map((c) => [c, { [entry]: say(c === faulted ? "no" : "yes") }])),
+    leader: { candidate: pick, turned_on: `lens of ${pick}` },
+  });
+  fs.mkdirSync(path.join(dir, "answers"));
+  fs.writeFileSync(path.join(dir, "answers", "canary.json"), JSON.stringify({ held: true, verdict: "held", model: run.model, claude_code: run.claude_code }));
+  for (const [folder, pick, entry, faulted] of [["mmm-infra.hero-r1", "v2-slow", 1, "v1-arches"], ["manta.hero-r1", "v1-arches", 2, "v2-slow"]]) {
+    fs.mkdirSync(path.join(dir, "answers", folder));
+    for (const c of Object.keys(critics)) fs.writeFileSync(path.join(dir, "answers", folder, `critic-${c}.json`), JSON.stringify(agreeing(folder, pick, entry, faulted)));
+  }
+  const calibrationLog = path.join(dir, "calibration-log.jsonl");
+  fs.writeFileSync(calibrationLog, "");
+  const result = runInProcess(SCRIPT, ["--manifest", manifest, "--packet", packet, "--answers", path.join(dir, "answers"), "--where", "session f521adbb, 2026-10-15",
+    "--row", path.join(dir, "row.jsonl"), ...logs, "--calibration-log", calibrationLog]);
+  assert.equal(result.status, 0, result.stderr);
+  const r = JSON.parse(fs.readFileSync(path.join(dir, "row.jsonl"), "utf8"));
+  assert.deepEqual(r.rounds, ["lucmoseley/mmm-infra#9 r1", "lucmoseley/mantahostels#50 r1"]);
+  assert.deepEqual(r.pick, { agree: 6, of: 6 });
+  assert.deepEqual(r.entries, { 1: { agree: 3, of: 3, unsure: 0 }, 2: { agree: 3, of: 3, unsure: 0 } });
+  assert.deepEqual(r.disagreements, []);
 });

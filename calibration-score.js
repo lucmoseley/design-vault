@@ -32,14 +32,13 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const { readLog, ROUND_LOG, CORRECTIONS_LOG } = require("./calibration-packet.js");
+const { readLog, roundFolder, namesRound, ROUND_LOG, CORRECTIONS_LOG } = require("./calibration-packet.js");
 const roundLog = require("./round-log.js");
 const correctionsLog = require("./corrections-log.js");
 const { roundAsked, answerFaults, questionTexts } = require("./calibration-critic.js");
 const { checkCalibrationLog, CRITICS } = require("./calibration-log.js");
 
 const CALIBRATION_LOG = "data/calibration-log.jsonl";
-const TAG = /^rounds\/([\w.-]+-r[1-9]\d*)$/;
 const RULE = /^rule: (\S+)$/;
 // A round as the logs and the calibration row name it, "owner/repo#n r<k>", from a manifest round or a round-log row.
 const roundName = ({ ticket, round }) => `${ticket} r${round}`;
@@ -194,7 +193,10 @@ function main(argv) {
     });
     rounds = readJson(options.manifest).rounds.map((r) => {
       const name = roundName(r);
-      const folder = (r.tag.match(TAG) ?? [])[1];
+      const logged = roundRows.find(({ row: x }) => x.ticket === r.ticket && x.round === r.round);
+      if (!logged) throw new Error(`the round log holds no row for ${name}`);
+      const folder = roundFolder(logged.row.project, r.tag);
+      if (!folder) throw new Error(`${name}: ${JSON.stringify(logged.row.project)}'s ${JSON.stringify(r.tag)} names no packet folder — build the packet with calibration-packet.js`);
       const asked = roundAsked(path.join(options.packet, folder));
       let unchanged = [];
       if (typeof r.gate_list_then !== "string")
@@ -204,10 +206,8 @@ function main(argv) {
         // Residual: wording is compared exactly, so a question whose punctuation alone changed loses his Yes too.
         unchanged = asked.questions.filter((q) => then.get(q) === asked.texts.get(q));
       }
-      const logged = roundRows.find(({ row: x }) => x.ticket === r.ticket && x.round === r.round);
-      if (!logged) throw new Error(`the round log holds no row for ${name}`);
       const entries = corrections
-        .filter(({ row: e }) => e.candidate !== null && e.candidate.split(" ")[0] === r.tag)
+        .filter(({ row: e }) => namesRound(e, logged.row.project, r.tag))
         .map(({ row: e, line }) => ({ line, candidate: e.candidate.split(" ")[1], principle: e.principle, ruling: e.ruling, expected: e.stance === "kept" ? "yes" : "no" }));
       if (logged.row.first_pick !== null && !asked.candidates.includes(logged.row.first_pick))
         faults.push(`${name}: his first pick ${logged.row.first_pick} is not one of the packet's candidates — add it to the manifest`);

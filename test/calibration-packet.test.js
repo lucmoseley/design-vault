@@ -49,19 +49,19 @@ test("a clean round packs its brief, gate list, copy bans, candidates and the en
   assert.equal(status, 0, stderr);
   assert.match(stdout, /1 round\(s\), 1 corrections entry/);
   assert.deepEqual(listing(out), [
-    "hero-r1",
-    "hero-r1/brief.md",
-    "hero-r1/candidates",
-    "hero-r1/candidates/v1-arches.html",
-    "hero-r1/candidates/v2-slow",
-    "hero-r1/candidates/v2-slow/index.html",
-    "hero-r1/copy-bans.md",
-    "hero-r1/entries.json",
-    "hero-r1/gate-list.md",
+    "mmm-infra.hero-r1",
+    "mmm-infra.hero-r1/brief.md",
+    "mmm-infra.hero-r1/candidates",
+    "mmm-infra.hero-r1/candidates/v1-arches.html",
+    "mmm-infra.hero-r1/candidates/v2-slow",
+    "mmm-infra.hero-r1/candidates/v2-slow/index.html",
+    "mmm-infra.hero-r1/copy-bans.md",
+    "mmm-infra.hero-r1/entries.json",
+    "mmm-infra.hero-r1/gate-list.md",
   ]);
   // The entry keeps its pointer and its principle; the candidate he faulted, his words, his ruling and where he said
   // it stay out.
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, "hero-r1", "entries.json"), "utf8")), [
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, "mmm-infra.hero-r1", "entries.json"), "utf8")), [
     { entry: 1, principle: "the accent gold stays muted against the navy" },
   ]);
 });
@@ -70,7 +70,7 @@ test("a verdict field in a packed file refuses the packet, and nothing is left w
   const { status, stderr, out, dir } = build([round({ candidates: { ...round().candidates, report: fixture("leaks", "critic-report.json") } })]);
   assert.equal(status, 1);
   assert.deepEqual(rules(stderr), ["verdict-field"]);
-  assert.match(stderr, /hero-r1\/candidates\/report\.json holds the verdict field critic_pick/);
+  assert.match(stderr, /mmm-infra\.hero-r1\/candidates\/report\.json holds the verdict field critic_pick/);
   assert.equal(fs.existsSync(out), false);
   assert.deepEqual(fs.readdirSync(dir), ["manifest.json"], "the staging folder is removed too");
 });
@@ -79,7 +79,7 @@ test("a verdict field written as a bare key refuses the packet, and a bare Engli
   const { status, stderr } = build([round({ brief: fixture("leaks", "brief-bare-key.md") })]);
   assert.equal(status, 1);
   assert.deepEqual(rules(stderr), ["verdict-field"]);
-  assert.match(stderr, /hero-r1\/brief\.md holds the verdict field first_pick/);
+  assert.match(stderr, /mmm-infra\.hero-r1\/brief\.md holds the verdict field first_pick/);
   assert.match(fs.readFileSync(fixture("hero-r1", "brief.md"), "utf8"), /^reason: /m, "the clean brief, which the first test packs, holds a bare reason:");
 });
 
@@ -96,21 +96,21 @@ test("a brief naming its asset class packs, and one holding a correction's stanc
   assert.equal(asset.status, 0, asset.stderr);
   const stance = build([round({ brief: brief("stance.md", '{"stance": "kept"}') })]);
   assert.equal(stance.status, 1);
-  assert.match(stance.stderr, /hero-r1\/brief\.md holds the verdict field stance/);
+  assert.match(stance.stderr, /mmm-infra\.hero-r1\/brief\.md holds the verdict field stance/);
 });
 
 test("a log line pasted into a brief refuses the packet", () => {
   const { status, stderr } = build([round({ brief: fixture("leaks", "brief-pasted-row.md") })]);
   assert.equal(status, 1);
   assert.ok(rules(stderr).includes("log-line"), stderr);
-  assert.match(stderr, /log-line: hero-r1\/brief\.md holds the round log line 1/);
+  assert.match(stderr, /log-line: mmm-infra\.hero-r1\/brief\.md holds the round log line 1/);
 
   // A log saved with a byte-order mark: its first row is still found pasted without one.
   const { dir } = build([round()]);
   const marked = path.join(dir, "round-log.jsonl");
   fs.writeFileSync(marked, `\uFEFF${fs.readFileSync(fixture("round-log.jsonl"), "utf8")}`);
   const result = build([round({ brief: fixture("leaks", "brief-pasted-row.md") })], { roundLog: marked });
-  assert.match(result.stderr, /log-line: hero-r1\/brief\.md holds the round log line 1/);
+  assert.match(result.stderr, /log-line: mmm-infra\.hero-r1\/brief\.md holds the round log line 1/);
 });
 
 test("his words or his reason quoted in a brief refuse the packet", () => {
@@ -139,8 +139,8 @@ test("a later round's brief quoting an earlier round's words and reason is packe
   });
   const { status, stderr, out } = build([round(), r2]);
   assert.equal(status, 0, stderr);
-  assert.match(fs.readFileSync(path.join(out, "hero-r2", "brief.md"), "utf8"), /the gold is too yellow/);
-  assert.match(fs.readFileSync(path.join(out, "hero-r2", "brief.md"), "utf8"), /the water reads as one line/);
+  assert.match(fs.readFileSync(path.join(out, "mmm-infra.hero-r2", "brief.md"), "utf8"), /the gold is too yellow/);
+  assert.match(fs.readFileSync(path.join(out, "mmm-infra.hero-r2", "brief.md"), "utf8"), /the water reads as one line/);
 });
 
 test("a symbolic link inside a candidate refuses the packet, since a critic following it reads past the packet", () => {
@@ -151,7 +151,7 @@ test("a symbolic link inside a candidate refuses the packet, since a critic foll
   const { status, stderr, out } = build([round({ candidates: { ...round().candidates, linked: candidate } })]);
   assert.equal(status, 1);
   assert.deepEqual(rules(stderr), ["link"]);
-  assert.match(stderr, /hero-r1\/candidates\/linked\/index\.html is a symbolic link/);
+  assert.match(stderr, /mmm-infra\.hero-r1\/candidates\/linked\/index\.html is a symbolic link/);
   assert.equal(fs.existsSync(out), false);
 });
 
@@ -197,4 +197,17 @@ test("an existing --out, a missing argument, or a log missing or refused by its 
     assert.equal(result.status, 2, result.stderr);
     assert.match(result.stderr, message);
   }
+});
+
+test("a round whose logged project cannot lead a folder name is refused", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-packet-"));
+  scratch.push(dir);
+  const roundLog = path.join(dir, "round-log.jsonl");
+  const [first] = fs.readFileSync(fixture("round-log.jsonl"), "utf8").split("\n");
+  fs.writeFileSync(roundLog, `${JSON.stringify({ ...JSON.parse(first), project: "mmm.infra" })}\n`);
+  const { status, stderr, out } = build([round()], { roundLog });
+  assert.equal(status, 1);
+  assert.deepEqual(rules(stderr), ["project"]);
+  assert.match(stderr, /the round log's project "mmm\.infra" is not a folder name/);
+  assert.equal(fs.existsSync(out), false);
 });

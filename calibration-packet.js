@@ -16,14 +16,16 @@
  * calibration-score.js reads and the packet leaves out; copy_bans is the copy bans that round's critics were given
  * (#232).
  *
- * The packet holds one folder per round, named for its tag less `rounds/`: brief, gate-list and copy-bans (each
- * keeping its extension), candidates/<name>, and entries.json, the corrections entries naming one of its candidates as
- * { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names, so a
+ * The packet holds one folder per round, named `<project>.<slug>-r<n>` for the project its round-log row names and its
+ * tag less `rounds/`, since a tag is set per project and two projects may reuse a brief's slug: brief, gate-list and
+ * copy-bans (each keeping its extension), candidates/<name>, and entries.json, the corrections entries of its project
+ * naming one of its candidates as { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names, so a
  * critic asks each principle of every candidate and cannot tell which one he faulted.
  *
  * Refused, with the packet left unwritten:
  *   - a log its own gate refuses (round-log.js, corrections-log.js), as a usage error;
- *   - a round the round log holds no row for, a source path that does not exist, an empty copy_bans, or a
+ *   - a round the round log holds no row for, or whose row's project holds a character other than a letter, digit,
+ *     _ or -, a source path that does not exist, an empty copy_bans, or a
  *     corrections entry naming a candidate of a packed round that the manifest does not;
  *   - verdict-field: a verdict field name anywhere in the packet, quoted as JSON spells a key, or bare where the
  *     name holds an underscore and so is no English word (`first_pick: v2-slow` in a brief);
@@ -56,6 +58,14 @@ const VERDICT_KEY = new RegExp(`"(${VERDICT_FIELDS.join("|")})"\\s*:|\\b(${VERDI
 const TAG = /^rounds\/([\w.-]+-r([1-9]\d*))$/;
 // A candidate's name becomes a path in the packet, so it may not climb out of it.
 const NAME = /^(?!\.\.?$)[\w.-]+$/;
+// A project leads its round's folder name, so it holds no dot: the first one parts it from the slug.
+const PROJECT = /^[\w-]+$/;
+
+/** The packet folder of a round of `project` tagged `tag`, or null where either cannot name one. */
+function roundFolder(project, tag) {
+  const slug = typeof tag === "string" ? tag.match(TAG) : null;
+  return slug && typeof project === "string" && PROJECT.test(project) ? `${project}.${slug[1]}` : null;
+}
 
 function parseArgs(argv) {
   const options = { manifest: null, out: null, "round-log": null, "corrections-log": null };
@@ -67,6 +77,9 @@ function parseArgs(argv) {
   if (!options.manifest || !options.out) throw new Error("--manifest and --out are both needed");
   return options;
 }
+
+/** Whether corrections entry `e` names a candidate of `project`'s round tagged `tag`; corrections-log.js holds a candidate to `<round tag> <name>`. */
+const namesRound = (e, project, tag) => e.project === project && e.candidate !== null && e.candidate.split(" ")[0] === tag;
 
 /** Each round the manifest names, with its folder, logged row and the entries naming its candidates, and the faults in it. */
 function planRounds(manifest, base, roundRows, corrections) {
@@ -86,11 +99,18 @@ function planRounds(manifest, base, roundRows, corrections) {
       fault("manifest", `${at}: tag ${JSON.stringify(round.tag)} is not rounds/<slug>-r<n> for round ${JSON.stringify(round.round)}`);
       continue;
     }
-    const folder = tag[1];
-    if (folders.has(folder)) fault("manifest", `${at}: ${round.tag} is packed twice`);
-    folders.add(folder);
     const row = roundRows.find((r) => r.ticket === round.ticket && r.round === round.round);
-    if (!row) fault("unlogged", `${at}: the round log holds no row for ${round.ticket} r${round.round}`);
+    if (!row) {
+      fault("unlogged", `${at}: the round log holds no row for ${round.ticket} r${round.round}`);
+      continue;
+    }
+    const folder = roundFolder(row.project, round.tag);
+    if (!folder) {
+      fault("project", `${at}: the round log's project ${JSON.stringify(row.project)} is not a folder name of letters, digits, _ and -`);
+      continue;
+    }
+    if (folders.has(folder)) fault("manifest", `${at}: ${row.project}'s ${round.tag} is packed twice`);
+    folders.add(folder);
     const candidates = round.candidates && typeof round.candidates === "object" ? round.candidates : {};
     if (Object.keys(candidates).length === 0) fault("manifest", `${at}: candidates names no candidate`);
     for (const name of Object.keys(candidates)) if (!NAME.test(name)) fault("manifest", `${at}: candidate name ${JSON.stringify(name)} is not a file name`);
@@ -101,12 +121,11 @@ function planRounds(manifest, base, roundRows, corrections) {
     }
     if (typeof round.copy_bans === "string" && fs.existsSync(path.resolve(base, round.copy_bans)) && !fs.readFileSync(path.resolve(base, round.copy_bans), "utf8").trim())
       fault("copy-bans", `${at}: copy_bans's source ${JSON.stringify(round.copy_bans)} is empty — write "none" where the round's critics were given no copy bans`);
-    // corrections-log.js holds a candidate to `<round tag> <name>`.
     const entries = corrections
-      .filter(({ row: e }) => e.candidate !== null && e.candidate.split(" ")[0] === round.tag)
+      .filter(({ row: e }) => namesRound(e, row.project, round.tag))
       .map(({ row: e, line }) => ({ line, name: e.candidate.split(" ")[1], principle: e.principle, words: e.words }));
     for (const { line, name } of entries)
-      if (!(name in candidates)) fault("entry-candidate", `${at}: corrections-log line ${line} names ${round.tag} ${name}, which the manifest does not pack`);
+      if (!(name in candidates)) fault("entry-candidate", `${at}: corrections-log line ${line} names ${row.project}'s ${round.tag} ${name}, which the manifest does not pack`);
     rounds.push({ round, folder, row, candidates, entries });
   }
   return { rounds, faults };
@@ -210,4 +229,4 @@ function main(argv) {
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { readLog, ROUND_LOG, CORRECTIONS_LOG };
+module.exports = { readLog, roundFolder, namesRound, ROUND_LOG, CORRECTIONS_LOG };
