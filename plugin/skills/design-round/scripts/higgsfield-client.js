@@ -415,7 +415,6 @@ async function render(jobs, options = {}) {
       if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
-      // #577
       throw new Error(`a round folder went away before the batch could lock it (${error.message}), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun`, { cause: error });
     }
     return await runBatch(ctx, checked, roundDirs, ceiling, options, log);

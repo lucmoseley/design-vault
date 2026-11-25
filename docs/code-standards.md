@@ -6,12 +6,13 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 
 | Path | Code kind |
 |---|---|
-| `app.js`, `specimens.js` | library, presentational tier: the library page's script and its static specimen table |
+| `app.js` | library, composition root: the library page's entry point, which loads the library by `fetch` or a script tag, keeps the selection, project and preferences in `localStorage`, writes the clipboard and the address bar, and hands what to show and copy to `view.js` and `search.js` (#381) |
+| `specimens.js` | library: the style guide's static specimen table |
 | `search.js` | library: the search box's rule, shared by the page and its tests (#27, #42) |
 | `view.js` | library: what the page shows and copies, shared by the page and its tests (#84) |
 | `server.py` | program: the read-only local server |
 | `ledger-stop-numbers.py` | program: the coverage ledger's stop numbers per area, run by hand at a re-scan (#352) |
-| `data/vault-data.js` | library, presentational tier: a static data table derived from `data/gallery.json` and `data/styles.json` by `node bundle.js`, so a fault in it is fixed in `bundle.js` (#32) |
+| `data/vault-data.js` | library: a static data table derived from `data/gallery.json` and `data/styles.json` by `node bundle.js`, so a fault in it is fixed in `bundle.js` (#32) |
 | `plugin/review-page/review.js` | library: the shared review page's logic: checking the data file and the feedback boxes (#120) |
 | `git-read.js` | library: git run for the programs that judge a commit from the index or HEAD, under one read cap (#141) |
 | `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line, and the row reader the calibration packet and critic examples use (#166, #168) |
@@ -42,7 +43,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/fall-motion.js` | library: the fall and settle maths fall.js prints, split out so its tests call what the program calls (#187) |
 | `plugin/skills/design-round/scripts/higgsfield-client.js` | library, risk path: higgsfield.js's command line, settings and render client, split out so its tests call what the program calls (#187) |
 | `plugin/skills/design-round/scripts/gate-form.js` | library: the gate question form gate.js reads and checks, and the asset vocabulary corrections-log.js and critic-examples.js share with it (#187) |
-| `plugin/review-page/page.js` | library, presentational tier: the review page's DOM, which draws the cards and hands every rule to review.js (#120) |
+| `plugin/review-page/page.js` | library, composition root: the review page's entry point, which reads `items.json` by `fetch`, opens the artifact store through `window.claude`, and hands every rule on checking and saving answers to review.js (#120, #381) |
 | `kits/planted-faults/tools/*.py` | program: the planted-fault kit's research scripts, run by hand for a test of a critic's load; `runner.py` and `score.py` are also imported by the scripts beside them (#238) |
 
 **Risk paths.** `plugin/skills/design-round/scripts/higgsfield.js` and `plugin/skills/design-round/scripts/higgsfield-client.js`, the client it runs, spend money: they call Higgsfield's pay-per-request API under `HIGGSFIELD_ROUND_CEILING_USD` and hold `HIGGSFIELD_API_KEY`.
