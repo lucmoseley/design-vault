@@ -385,7 +385,6 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
-        if (error.status !== 403) throw error;
         const rest = priced.slice(index).map((other) => other.name);
         throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
       }
