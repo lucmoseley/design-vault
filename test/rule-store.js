@@ -7,8 +7,6 @@ const path = require("node:path");
 const { parseGate } = require("../plugin/skills/design-round/scripts/gate-form.js");
 
 const STORE = path.join(__dirname, "..", "plugin", "skills", "design-critique", "rules");
-// The store's record count, pinned so an accidental add or loss fails; a record added or removed on purpose changes it,
-// and the commit that does so says why.
 const RECORD_COUNT = 487;
 
 const storeRecords = () =>

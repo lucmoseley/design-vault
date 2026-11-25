@@ -6,6 +6,7 @@ vault.fluid-type | size | 2
 vault.false-floor | fold | none
 vault.nav-by-width | nav-place | under 600
 vault.nav-wide | nav-wide | from 1024
+vault.visible-nav | visible-nav | at most 4 links
 vault.rtl-image-order | rtl-order | none
 vault.fluid-zoom | fluid-zoom | zoom 5, grow 2
 vault.joined-fills | seams | scales 1.25, 1.5, 1.75

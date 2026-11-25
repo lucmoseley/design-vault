@@ -16,7 +16,9 @@ Record: `vault.text-tint`.
 
 ### The link rule
 
-Records: `vault.colour-script`, `vault.link-style`, `vault.carry-navigate`.
+Records: `vault.colour-script`, `vault.link-style`.
+
+Each context's link carrier is `vault.carry-navigate`'s, in [carriers](house-principles.md#carriers-and-reserved-properties).
 
 - **Why.** A dark link beside dark body text rarely reaches 3:1, and is hard to tell apart even when it does, so the underline is the default. Where navigation, a link list or a card that links as a whole holds it, the context already says "link". A hover that changes only colour fails the visitor who cannot see the colour.
 - **Trade-off.** Underlines add noise in a dense list of links; colour alone fails colour-blind readers and, with dark colours, everyone.

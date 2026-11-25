@@ -466,20 +466,20 @@ def read_artboard(path, box):
     return artboard.convert("RGB")
 
 
-def read_page(browser, at):
-    """The full page drawn at at.scale, and the --at element's box in its device pixels."""
+def read_page(browser, args):
+    """The full page drawn at args.scale, and the --at element's box in its device pixels."""
     from PIL import Image
     import io
 
     context = browser.new_context(
-        viewport=at.viewport_size, device_scale_factor=at.scale
+        viewport=args.viewport_size, device_scale_factor=args.scale
     )
-    context.set_default_timeout(at.timeout)
+    context.set_default_timeout(args.timeout)
     try:
         page = context.new_page()
-        page.goto(at.url, wait_until="load")
-        if at.wait:
-            page.wait_for_selector(at.wait)
+        page.goto(args.url, wait_until="load")
+        if args.wait:
+            page.wait_for_selector(args.wait)
         endless = page.evaluate(FINISH_JS)
         if endless:
             raise flow.UnmeasurableError(
@@ -487,16 +487,16 @@ def read_page(browser, at):
                     f"{endless} animation(s) never end, so the logo may be read mid-motion"
                 ]
             )
-        found = page.locator(at.at)
+        found = page.locator(args.at)
         if found.count() != 1:
             raise flow.UnmeasurableError(
-                [f"--at {at.at} matches {found.count()} elements, not one"]
+                [f"--at {args.at} matches {found.count()} elements, not one"]
             )
         r = found.element_handle().evaluate(RECT_JS)
         png = page.screenshot(full_page=True)
     finally:
         context.close()
-    s = at.scale
+    s = args.scale
     box = (
         round(r["x"] * s),
         round(r["y"] * s),
@@ -504,7 +504,7 @@ def read_page(browser, at):
         round((r["y"] + r["height"]) * s) - round(r["y"] * s),
     )
     if box[2] <= 0 or box[3] <= 0:
-        raise flow.UnmeasurableError([f"--at {at.at} is not drawn: its box is empty"])
+        raise flow.UnmeasurableError([f"--at {args.at} is not drawn: its box is empty"])
     return Image.open(io.BytesIO(png)).convert("RGB"), box
 
 
@@ -524,35 +524,35 @@ def drawn_logo(browser, kind, logo, size, *, scale):
     return logo.resize(size, Image.LANCZOS), logo
 
 
-def measure(at, kind, logo, browser):
-    if at.box:
-        placed_image, box = read_artboard(at.target, at.box), at.box
+def measure(args, kind, logo, browser):
+    if args.box:
+        placed_image, box = read_artboard(args.target, args.box), args.box
         scale = 1
     else:
-        placed_image, box = read_page(browser, at)
-        scale = at.scale
+        placed_image, box = read_page(browser, args)
+        scale = args.scale
     size = box[2:]
     resampled, own = drawn_logo(browser, kind, logo, size, scale=scale)
     if kind == "svg":
-        refuse_opaque(own, at.logo)
+        refuse_opaque(own, args.logo)
     band = band_px(kind, logo.size if kind == "raster" else size, size)
-    if not at.box and (
+    if not args.box and (
         box[0] < 0
         or box[1] < 0
         or box[0] + box[2] > placed_image.width
         or box[1] + box[3] > placed_image.height
     ):
-        raise flow.UnmeasurableError([f"--at {at.at} is drawn partly off the page"])
+        raise flow.UnmeasurableError([f"--at {args.at} is drawn partly off the page"])
     grid = build_grid(placed_image, box, resampled, band)
     colours = Colours()
     unchanged_marks, ground_marks = set(), set()
     unchanged = check_unchanged(grid, colours, unchanged_marks)
     ground = check_ground(grid, own, colours, ground_marks)
-    if at.out:
-        os.makedirs(at.out, exist_ok=True)
-        resampled.save(os.path.join(at.out, "expected.png"))
-        write_marks(grid, unchanged_marks, os.path.join(at.out, "unchanged.png"))
-        write_marks(grid, ground_marks, os.path.join(at.out, "ground.png"))
+    if args.out:
+        os.makedirs(args.out, exist_ok=True)
+        resampled.save(os.path.join(args.out, "expected.png"))
+        write_marks(grid, unchanged_marks, os.path.join(args.out, "unchanged.png"))
+        write_marks(grid, ground_marks, os.path.join(args.out, "ground.png"))
     return box, band, unchanged, ground
 
 
@@ -586,22 +586,22 @@ def parse(argv):
     p.add_argument("--wait", metavar="SELECTOR")
     p.add_argument("--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS")
     p.add_argument("--out", metavar="DIR", help="where the marked PNGs go")
-    at = p.parse_args(argv)
+    args = p.parse_args(argv)
     try:
-        if at.box:
-            at.box = parse_box(at.box)
-            if not os.path.isfile(at.target):
-                raise UsageError(f"no such file: {at.target}")
+        if args.box:
+            args.box = parse_box(args.box)
+            if not os.path.isfile(args.target):
+                raise UsageError(f"no such file: {args.target}")
         else:
-            at.viewport_size = flow.size_arg(p, "--viewport", at.viewport)
-            at.url = flow.page_url(p, at.target)
+            args.viewport_size = flow.size_arg(p, "--viewport", args.viewport)
+            args.url = flow.page_url(p, args.target)
     except UsageError as err:
         p.error(str(err))
-    return at
+    return args
 
 
 def main(argv):
-    at = parse(argv)
+    args = parse(argv)
     try:
         import PIL  # noqa: F401
     except ImportError as err:
@@ -611,26 +611,26 @@ def main(argv):
         )
         return 3
     try:
-        kind, logo = read_logo(at.logo)
+        kind, logo = read_logo(args.logo)
         if kind == "raster":
-            refuse_opaque(logo, at.logo)
+            refuse_opaque(logo, args.logo)
     except (UsageError, RefusedLogoError) as err:
         print(f"check-logo: {err}", file=sys.stderr)
         return 2
 
     def work():
-        if kind == "raster" and at.box:
-            return measure(at, kind, logo, None)
+        if kind == "raster" and args.box:
+            return measure(args, kind, logo, None)
         with flow.chromium() as browser:
-            return measure(at, kind, logo, browser)
+            return measure(args, kind, logo, browser)
 
     try:
         result, code = flow.run_browser(
             work,
-            at.timeout,
-            None if at.box else at.url,
+            args.timeout,
+            None if args.box else args.url,
             (
-                f"cannot check the logo on {at.target}, because:",
+                f"cannot check the logo on {args.target}, because:",
                 "Compare it with the file by eye.",
             ),
         )
@@ -640,9 +640,9 @@ def main(argv):
     if code:
         return code
     box, band, (u_verdict, u_detail), (g_verdict, g_lines) = result
-    where = f"--at {at.at}" if at.at else "--box"
+    where = f"--at {args.at}" if args.at else "--box"
     print(
-        f"{at.target} — {at.logo} in {box[2]}x{box[3]} px at ({box[0]},{box[1]}) ({where}), "
+        f"{args.target} — {args.logo} in {box[2]}x{box[3]} px at ({box[0]},{box[1]}) ({where}), "
         f"edge band {band} px"
     )
     print(f"  unchanged: {u_verdict} — {u_detail}")
@@ -650,8 +650,8 @@ def main(argv):
     if len(g_lines) > 1:
         for line in g_lines:
             print(f"    {line}")
-    if at.out:
-        print(f"  wrote {os.path.join(at.out, '')}{{expected,unchanged,ground}}.png")
+    if args.out:
+        print(f"  wrote {os.path.join(args.out, '')}{{expected,unchanged,ground}}.png")
     verdicts = (u_verdict, g_verdict)
     if FAIL in verdicts:
         return 1

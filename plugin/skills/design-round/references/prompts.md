@@ -4,6 +4,8 @@ Claude writes each prompt from the brief. It renders a Higgsfield API model's pr
 
 ## Art direction — the model-agnostic template
 
+Records: `vault.render-palette-look`, `vault.headline-plain-look`.
+
 Every image prompt starts here.
 
 ```text
@@ -87,7 +89,7 @@ Write one line: a noun phrase first, then the parameters. Midjourney ignores hex
 
 `--sref <url> --sw 100` to `400` locks a reference style. `--oref` locks an object, not a style. Inpainting an HD image drops it back to SD.
 
-Check a saved render with `check-render.py <render> --model midjourney/v8.1 --aspect 21:9` (`midjourney/v7` for a V7 upscale). No V8.1 `--hd` size is on record yet, so it reads NOT JUDGED until one is measured into [render-sizes.json](render-sizes.json).
+Check a saved render with `check-render.py <render> --model midjourney/v8.1 --aspect 21:9` (`midjourney/v7` for a V7 upscale). No Midjourney size is on record yet, so either reads NOT JUDGED until one is measured into [render-sizes.json](render-sizes.json).
 
 ### Nano Banana Pro · Seedream
 
@@ -106,6 +108,8 @@ prompt: [SUBJECT] [PLACED IN] [SETTING], [ONE OR TWO COMPOSITION DETAILS]
 Once the project has a finished artwork, build a custom style from it and reuse it by id.
 
 ### Video — image to video
+
+Record: `vault.clip-loop`.
 
 Use the same still as the start frame and the end frame, so the prompt describes **motion only**, never the scene. Length, resolution and sound are the project's ruling. Kling caps a same-frame clip at 5 s.
 

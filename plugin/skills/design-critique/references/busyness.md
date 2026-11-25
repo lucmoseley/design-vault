@@ -6,7 +6,7 @@ Where a project's rules file and a record here disagree, [source precedence](hou
 
 ## What makes a page busy
 
-Records: `vault.busy-cues`, `vault.element-count`.
+Record: `vault.busy-cues`.
 
 - **Why.** A page looks busy when parts of low value compete with the parts the visitor needs, not when it holds many parts (NN/g, 2021), and a busy-looking page can pass by showing "sufficient information, and only sufficient information". Clutter's usual sources are redundant items, decorative icons, type flourishes, over-detailed or watermark images (NN/g homepage guidelines; Whitenton 2013) and borders, backgrounds and shadows used to group what space should group (Gordon 2021; Polaris). Perceived complexity is predicted (R2 .65, Reinecke et al. 2013, 450 sites) mostly by how much of the page is text and non-text content, how many text groups and how many image areas it holds; colour adds little, and symmetry and balance dropped out of the model. Screenshot metrics explain about half of complexity ratings along three lines: amount, organisation and how well parts stand apart (Miniukovich and De Angeli, abstracts). Rosenholtz's Feature Congestion measures clutter as how hard it is to add an item that still draws the eye. No source sets a value above which a web page is too busy, so the record is judged by eye, by the squint test.
 - **Trade-off.** Cutting to look minimal can drop what the task needs; `vault.element-count` keeps the needed parts however busy they look.

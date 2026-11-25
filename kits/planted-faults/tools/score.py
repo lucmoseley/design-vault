@@ -29,7 +29,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import runner
 
 ROOT, WORK = runner.ROOT, runner.WORK
-RUNS = [1, 2, 3]
+RUNS = []
+
+
+def use_runs(runs):
+    RUNS[:] = runs
+
+
 # {gate load: the passes scored}, from --passes as runner.py gate takes it.
 PASSES = None
 CRITICS = [
@@ -620,12 +626,12 @@ def main():
     ap.add_argument("mode", choices=["match", "judge", "third", "tally"])
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--critics", default=",".join(CRITICS), help="the critics that ran")
-    ap.add_argument("--runs", default="1,2,3")
+    runner.add_runs(ap)
     ap.add_argument("--cands", help="candidate names; default all")
     ap.add_argument("--passes", help="the gate passes that ran; default every pass")
     a = ap.parse_args()
     CRITICS[:] = a.critics.split(",")
-    RUNS[:] = [int(r) for r in a.runs.split(",")]
+    use_runs(a.runs)
     if a.cands:
         CANDS[:] = a.cands.split(",")
     unknown = [c for c in CANDS if c not in runner.CID]

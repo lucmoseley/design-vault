@@ -24,7 +24,9 @@ Records: `vault.hover-signal`, `vault.press-state`, `vault.control-states`.
 
 ### Depth only for what floats or acts
 
-Records: `vault.depth`, `vault.shadow-levels`, `vault.border-shadow`, `vault.grouping`, `vault.surface-shadow`.
+Records: `vault.depth`, `vault.shadow-levels`, `vault.surface-shadow`.
+
+A border paired with a shadow is `vault.border-shadow`'s, in [interactions](#interactions), and grouping by shadow `vault.grouping`'s, in [dividers against space and fill](#dividers-against-space-and-fill).
 
 - **Why.** A shadow means "above other content" or "you can act on this", and nothing else says "above". Atlassian ships three shadows, enough for a page with no drag and no nested overlays.
 - **Trade-off.** A rest shadow on every clickable card makes the cue strong, then worthless once everything has it.
@@ -246,7 +248,7 @@ Where two of the treatments above meet, the record that settles it:
 2. Border and fill: `vault.border-fill`. Below Carbon's tile step a fill alone does not survive a poor screen.
 3. Border and space, divider and card: `vault.grouping`, `vault.dividers`.
 4. Radius and nesting: `vault.radius-nesting`.
-5. Radius, density and pointer: `vault.radius-density`. Capsules bring focus to touch layouts; in dense desktop rows they waste space (Apple WWDC25 session 356). The capsule for tags is Apple's convention: Atlassian's Radius gives tags 4 px and Material's filter chip a small rounded rectangle, so a project on either system may set tags that way.
+5. Radius, density and pointer: `vault.radius-density`, with `vault.key-action` for the main action's capsule and `vault.tag-shape` for a tag's. Capsules bring focus to touch layouts; in dense desktop rows they waste space (Apple WWDC25 session 356). The capsule for tags is Apple's convention: Atlassian's Radius gives tags 4 px and Material's filter chip a small rounded rectangle, so a project on either system may set tags that way.
 6. Radius and meaning: `vault.radius-meaning`. A square box means many choices and a circle one; a brand radius must not erase that.
 7. Tint and state: `vault.carry-select`, with the hover exemption in `vault.colour-look`. Hover is feedback on the visitor's own pointer; a selected state is a fact to read later.
 8. Focus, ground, border and sticky bars: `vault.focus-ring`, `vault.scroll-padding`.

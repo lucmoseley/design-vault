@@ -697,12 +697,18 @@ def usage():
         )
 
 
+def add_runs(ap):
+    ap.add_argument(
+        "--runs", type=lambda s: [int(r) for r in s.split(",")], default="1,2,3"
+    )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "mode", choices=["packets", "critics", "chain", "gate-lists", "gate", "usage"]
     )
-    ap.add_argument("--runs", default="1,2,3")
+    add_runs(ap)
     ap.add_argument(
         "--critics", default="W,W2,W3,T-function,T-type,T-colour,T-layout,T-trust"
     )
@@ -723,7 +729,6 @@ def main():
     if a.mode == "packets":
         return render_packets()
     require_canary()
-    runs = [int(x) for x in a.runs.split(",")]
     gate_pages = {CID[n] for n in META["gate_pages"]}
     cands = (
         [c if c in NAME else CID.get(c, c) for c in a.cands.split(",")]
@@ -746,7 +751,7 @@ def main():
         if a.mode == "critics":
             jobs = [
                 ex.submit(critic_job, r, c, cid)
-                for r in runs
+                for r in a.runs
                 for c in a.critics.split(",")
                 for cid in cands
             ]
@@ -755,14 +760,14 @@ def main():
                 parts_key(NAME[cid])
             jobs = [
                 ex.submit(gate_job, r, load, n, critic=critic, group=group)
-                for r in runs
+                for r in a.runs
                 for load, passes in plan.items()
                 for n in passes
                 for critic in GATE_CRITICS
                 for group in gate_groups(cands)
             ]
         else:
-            jobs = [ex.submit(chain_job, r, cid) for r in runs for cid in cands]
+            jobs = [ex.submit(chain_job, r, cid) for r in a.runs for cid in cands]
         results = [j.result() for j in jobs]
     print(
         f"{sum(results)} of {len(results)} finished"
