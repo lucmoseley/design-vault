@@ -416,6 +416,41 @@ test("a round not yet made, reached by two spellings through a symlink to a fold
   assert.equal(api.submissions().length, 0);
 });
 
+test("--estimate prices two spellings of a round not yet made, through a symlink to a folder not yet made, as one round, making no folder (#576)", async () => {
+  const base = path.dirname(roundDir());
+  const alias = path.join(base, "alias");
+  fs.symlinkSync(path.join(base, "real"), alias);
+  const api = fakeApi();
+  const lines = [];
+  const twoSpellings = [job(path.join(alias, "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v2-tide")];
+  assert.equal(await render(twoSpellings, api.options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("past its $0.150 ceiling, so a run would be refused")));
+  assert.equal(fs.existsSync(path.join(base, "real")), false);
+  await assert.rejects(render([job(path.join(alias, "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v1-dusk")], api.options({ estimateOnly: true })), /r1\/v1-dusk appears twice in the batch/);
+  assert.equal(api.submissions().length, 0);
+});
+
+test("--estimate prices two different rounds behind a symlink to a folder not yet made as two rounds (#576)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "real"), path.join(base, "alias"));
+  const lines = [];
+  const twoRounds = [job(path.join(base, "alias", "r1")), job(path.join(base, "real", "r2"))];
+  assert.equal(await render(twoRounds, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.equal(lines.filter((line) => line.includes("this batch $0.094")).length, 2);
+  assert.ok(!lines.some((line) => line.includes("would be refused")));
+});
+
+test("--estimate follows a symlink a target reaches by .. out of a folder not yet made, as a run does (#576)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync("x/../l", path.join(base, "alias"));
+  fs.symlinkSync("y", path.join(base, "l"));
+  const lines = [];
+  const twoSpellings = [job(path.join(base, "x", "r1"), "v1-dusk"), job(path.join(base, "alias", "r1"), "v2-tide"), job(path.join(base, "y", "r1"), "v3-reef")];
+  assert.equal(await render(twoSpellings, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("this batch $0.188")));
+  assert.ok(lines.some((line) => line.includes("so a run would be refused")));
+});
+
 test("a video answered as a list keeps its URL (#559)", async () => {
   const dir = roundDir();
   assert.equal(await render([job(dir)], fakeApi({ statuses: ["completed"], video: [{ url: CDN }] }).options()), 0);
