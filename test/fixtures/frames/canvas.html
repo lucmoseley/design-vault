@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+canvas { display: block; }
+</style></head>
+<body>
+<canvas id="stage" width="600" height="200"></canvas>
+<script>
+const ctx = document.getElementById("stage").getContext("2d");
+const began = performance.now();
+const tick = (now) => {
+  const t = Math.min(1, (now - began) / 3000);
+  ctx.clearRect(0, 0, 600, 200);
+  ctx.fillStyle = "#2a2a2a";
+  ctx.fillRect(t * 400, 40, 80, 80);
+  if (t < 1) requestAnimationFrame(tick);
+};
+requestAnimationFrame(tick);
+</script>
+</body></html>

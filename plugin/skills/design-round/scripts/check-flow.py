@@ -473,20 +473,12 @@ STATUS_JS = (
 """
 )
 
-# Everything that moves the page some way this sampler cannot seek.
-BLOCKERS_JS = (
-    r"""
-({ before, frames, span, shown }) => {
-  """
-    + LABEL_JS
-    + LOOP_JS
-    + r"""
-  const f = window.__flow;
-  f.scan();
-  f.stopped = true;
+DRAWN_JS = r"""
+const listing = (els, shown) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
+const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
+const drawn = (f, { frames, span, shown, morphs }) => {
   const reasons = [];
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const name = (els) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
   // [selector, why, whether only a visible one counts]
   const kinds = [
     ['canvas', 'draws on a canvas', true],
@@ -496,21 +488,40 @@ BLOCKERS_JS = (
   ];
   for (const [sel, why, onlyVisible] of kinds) {
     const els = [...document.querySelectorAll(sel)].filter((e) => !onlyVisible || visible(e));
-    if (els.length) reasons.push(why + ' (' + name(els) + ')');
+    if (els.length) reasons.push(why + ' (' + listing(els, shown) + ')');
   }
   const shadowed = [...document.querySelectorAll('*')].filter((e) => e.shadowRoot);
-  if (shadowed.length) reasons.push('has shadow DOM (' + name(shadowed) + ')');
+  if (shadowed.length) reasons.push('has shadow DOM (' + listing(shadowed, shown) + ')');
+  const rewritten = looping(f.rewrites, frames, span);
+  if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + listing(rewritten, shown) + ')');
+  const morphed = morphs ? looping(f.morphs, frames, span) : [];
+  if (morphed.length) reasons.push('morphs ' + morphed.length + ' path(s) by rewriting their d from a script, frame by frame (' + listing(morphed, shown) + ')');
+  return reasons;
+};
+"""
+
+# Everything that moves the page some way this sampler cannot seek.
+BLOCKERS_JS = (
+    r"""
+({ before, frames, span, shown }) => {
+  """
+    + LABEL_JS
+    + LOOP_JS
+    + DRAWN_JS
+    + r"""
+  const f = window.__flow;
+  f.scan();
+  f.stopped = true;
+  const reasons = drawn(f, { frames, span, shown, morphs: false });
   const scrolled = [...f.seen.keys()].filter((a) => a.timeline !== document.timeline);
   if (scrolled.length) reasons.push('drives ' + scrolled.length + ' animation(s) by scroll position, not time');
   const reversed = [...f.seen.keys()].filter((a) => a.playbackRate <= 0);
   if (reversed.length) reasons.push('plays ' + reversed.length + ' animation(s) in reverse or at zero speed');
   const seeked = [...f.seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused');
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
-  const rewritten = [...f.rewrites].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
-  if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + name(rewritten) + ')');
-  f.morphing = [...f.morphs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
+  f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
-  if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + name(scrollMorphed) + ')');
+  if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
   if (f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
   return reasons;
 }

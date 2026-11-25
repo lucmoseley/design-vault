@@ -344,6 +344,25 @@ class StagedBuilds(unittest.TestCase):
                     "starts animations when others finish (div#bottom)", proc.stdout
                 )
 
+    def test_a_frame_loop_build_cannot_be_rendered_naming_it_unlike_every_contact_cropped(
+        self,
+    ):  # #546
+        for mode, extra in (
+            ("contacts", ["--contact", "joint=#logo@105,85"]),
+            ("bends", []),
+        ):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as out:
+                proc = run(
+                    mode, os.path.join(self.FRAMES, "raf-asset.html"), *extra, "--out", out
+                )  # fmt: skip
+                self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+                self.assertIn(
+                    "by rewriting their style or attributes from a script, frame by frame (path#arch)",
+                    proc.stdout,
+                )
+                self.assertIn("\nShoot it by hand with look.py zoom", proc.stdout)
+                self.assertFalse(os.path.exists(os.path.join(out, "renders.json")))
+
 
 class Arguments(unittest.TestCase):
     def test_a_contact_without_a_point_is_a_usage_error(self):

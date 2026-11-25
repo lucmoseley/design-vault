@@ -1191,6 +1191,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/canvas.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/chained.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1215,11 +1219,31 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/morph.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/raf-asset.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/raf.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/restless.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/ring.svg": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/seeked.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/smil.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
