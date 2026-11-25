@@ -63,7 +63,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
-import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+import siblings  # noqa: E402
 
 
 frames = siblings.load(HERE, "check-frames.py")

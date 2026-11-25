@@ -76,12 +76,12 @@ test("a commit staging only docs/, data/ or images/ files runs the fast checks a
   assert.ok(p.suites.filter((s) => s.why).every((s) => /none of the 3 staged file\(s\) is one it reads/.test(s.why)));
 });
 
-test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py; contact-sheet.py runs its own alone", () => {
+test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py loads back; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
   assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
-  assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), [...fast, "python3 test/check-flow-records.test.py", "python3 test/check-measure.test.py", "python3 test/face-profile.test.py", "python3 test/contact-sheet.test.py", "python3 test/check-layout.test.py", "python3 test/check-access.test.py", "python3 test/check-access-contrast.test.py", "python3 test/check-access-pointer.test.py", "python3 test/probe.test.py", "python3 test/parts-map.test.py", "python3 test/look.test.py", "python3 test/check-load.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py", "python3 test/check-markup.test.py", "python3 test/check-style.test.py", "python3 test/check-state.test.py", "python3 test/check-text.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
 
 test("a suite runs for its own test file, its fixtures, and a script its test runs", () => {

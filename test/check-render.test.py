@@ -25,6 +25,9 @@ SCRIPT = os.path.join(
 SPEND_LOG = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "spend-log.py"
 )
+SIBLINGS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "siblings.py"
+)
 SIZES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "references", "render-sizes.json"
 )
@@ -232,6 +235,7 @@ class Size(unittest.TestCase):
         os.makedirs(references)
         copy = shutil.copy(SCRIPT, scripts)
         shutil.copy(SPEND_LOG, scripts)
+        shutil.copy(SIBLINGS, scripts)
         render = self.render("v1-a", (10, 10))
         for broken in (
             None,

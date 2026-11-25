@@ -81,7 +81,7 @@ def white_columns(img):
 
 
 class Siblings(unittest.TestCase):  # #558
-    def test_it_and_look_share_one_check_frames(self):
+    def test_look_renders_and_look_share_one_check_frames(self):
         self.assertIs(look_renders.frames, look_renders.look.frames)
 
 

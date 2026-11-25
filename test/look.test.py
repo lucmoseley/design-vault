@@ -89,11 +89,13 @@ class Height(unittest.TestCase):
         self,
     ):  # #548
         with tempfile.TemporaryDirectory() as out:
-            _, frames = look.sibling("check-frames.py").parse(
+            _, frames = look.siblings.load(look.HERE, "check-frames.py").parse(
                 ["hash", PAGE, "--out", out]
             )
-            sheet = look.sibling("contact-sheet.py").parse([PAGE, "--out", out])
-            renders = look.sibling("look-renders.py")
+            sheet = look.siblings.load(look.HERE, "contact-sheet.py").parse(
+                [PAGE, "--out", out]
+            )
+            renders = look.siblings.load(look.HERE, "look-renders.py")
             shots = {
                 mode: renders.parse([mode, PAGE, "--out", out, *extra]).viewport_size
                 for mode, extra in (("contacts", ["--contact", "a=1,1"]), ("bends", []))
@@ -107,7 +109,9 @@ class Height(unittest.TestCase):
 
     def test_a_phone_scrub_frames_the_contact_sheets_phone(self):  # #548
         with tempfile.TemporaryDirectory() as out:
-            sheet = look.sibling("contact-sheet.py").parse([PAGE, "--out", out])
+            sheet = look.siblings.load(look.HERE, "contact-sheet.py").parse(
+                [PAGE, "--out", out]
+            )
         phone = look.parse(["scrub", PAGE, "--out", "x", "--width", "390"])
         self.assertEqual({"width": 390, "height": phone.height}, sheet.phone)
 

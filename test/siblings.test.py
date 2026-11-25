@@ -1,12 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/siblings.py (#558): python3 test/siblings.test.py
-
-Each design-round script loads its siblings through it, so one process holds
-one copy of each and an error class one copy raises is the class another
-catches. Break the cache and a second load runs the file again; break the
-part-built entry and a circular load recurses; leave a failed load cached and
-its retry returns a half-run module.
-"""
-
 import importlib.util
 import os
 import subprocess
@@ -18,6 +9,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "siblings.py"
 )
+# A guess, unmeasured: one bare Python start that loads two empty files (#558).
+PROGRAM_RUN_S = 60
 spec = importlib.util.spec_from_file_location("siblings_under_test", SCRIPT)
 siblings = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(siblings)
@@ -105,7 +98,7 @@ class Load(unittest.TestCase):
             [sys.executable, os.path.join(self.dir, "prog.py")],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=PROGRAM_RUN_S,
         )
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "True True")

@@ -1,26 +1,9 @@
-"""siblings.py — loads a design-round script beside the caller once per
-process, so every caller shares one module and one copy of each error class
-(#558). A script imports it by name after putting its own folder on the path:
-
-    HERE = os.path.dirname(os.path.abspath(__file__))
-    if HERE not in sys.path:
-        sys.path.insert(0, HERE)
-    import siblings  # noqa: E402
-
-    flow = siblings.load(HERE, "check-flow.py")
-
-A module is cached in sys.modules under its file's real path before it runs,
-as importlib's own imports are, so a circular load gets the module part-built
-rather than a second copy. A script run as the program is that file's module.
-"""
-
 import importlib.util
 import os
 import sys
 
 
 def load(here, file):
-    """The module in `file` in the folder `here`, run on its first load only."""
     path = os.path.realpath(os.path.join(here, file))
     module = sys.modules.get(path)
     if module is not None:

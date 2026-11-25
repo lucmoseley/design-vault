@@ -41,7 +41,7 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
-import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+import siblings  # noqa: E402
 
 SIZES = HERE.parent / "references" / "render-sizes.json"
 REQUIREMENTS = HERE.parents[2] / "requirements.txt"

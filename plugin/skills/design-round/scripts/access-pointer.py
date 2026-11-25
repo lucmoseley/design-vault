@@ -33,7 +33,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
-import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+import siblings  # noqa: E402
 
 rule_table = siblings.load(HERE, "rule-table.py")
 

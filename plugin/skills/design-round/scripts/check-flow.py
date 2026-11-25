@@ -1866,7 +1866,7 @@ def report(at, sample, result, *, svg_path, json_path, morph_path):
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
-import siblings  # noqa: E402 - imported once the line above puts this folder on the path
+import siblings  # noqa: E402
 
 TABLE = os.path.join(HERE, "check-flow.table")
 
