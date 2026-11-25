@@ -1,31 +1,26 @@
 #!/usr/bin/env python3
 """video-sheet.py — a reference clip laid out for a technique study: ten frames
-a second, every frame either side of each cut, tiled and labelled with their
-times (design-vault#408).
+a second and every frame either side of each cut, tiled and labelled with their
+times.
 
 USAGE
-  python3 video-sheet.py <clip> --out DIR [--fps N] [--around S] [--cut PCT]
+  python3 video-sheet.py <clip> --out DIR [--fps N] [--around S] [--cut SCORE]
         [--per-sheet N]
 
-It decodes the clip with PyAV, ffmpeg's own libraries, twice: once to find the
-cuts, once to keep the frames. It keeps the first frame at or after every
-1/--fps s (10 a second by default), every frame within --around s of each cut
-(0.2 s), and the last frame. A cut is scored as ffmpeg's scdet filter scores
-one: the mean absolute difference from the frame before, as a percentage of
-full range, less its change from the previous difference, so steady motion
-scores low and a hard change high. scdet sums every plane at full size; this
-reads a greyscale copy 160 px wide, and a score at or over --cut (scdet's
-default of 10) is a cut.
+It keeps the first frame at or after every 1/--fps s, every frame within
+--around s of each cut, and the last frame. A cut is a frame whose score, as
+ffmpeg's scdet filter scores one, reaches --cut; the score is read on a
+greyscale copy SCORE_WIDTH px wide.
 
-It writes every kept frame at full size as DIR/frames/frame-<ms>.png, the
-tiles in time order as DIR/sheet-1.png, DIR/sheet-2.png and on, --per-sheet
-(30) to a sheet, each labelled with its time in seconds, `cut` on the first
-frame of a new shot and `end` on the last, and DIR/sheet.json naming the clip,
-its length, its cuts and each tile's time, sheet and box in its sheet's pixels.
+It writes every kept frame at full size as DIR/frames/frame-<ms>.png; the tiles
+in time order as DIR/sheet-1.png, DIR/sheet-2.png and on, --per-sheet to a
+sheet, each labelled with its time in seconds, `cut` on the first frame of a new
+shot and `end` on the last; and DIR/sheet.json naming the clip, its length, its
+cuts and each tile's time, sheet and box in its sheet's pixels.
 
 EXITS 0 the sheets are written / 2 the arguments are wrong / 3 PyAV, numpy or
-Pillow is missing / 4 the file is no clip PyAV can decode. Exit 0 prints on
-stdout; the rest print on stderr.
+Pillow is missing / 4 the file is no clip PyAV can decode / 5 DIR cannot be
+written. Exit 0 prints on stdout; the rest print on stderr.
 """
 
 import argparse
@@ -48,16 +43,14 @@ except ImportError as e:
     )
     sys.exit(3)
 
-# The greyscale copy cuts are scored on: small enough to decode fast, wide
-# enough that a cut between two shots of one palette still differs. A guess.
-SCORE_WIDTH = 160
-# A tile's width, the gaps between tiles and around a sheet, its columns and
-# its label's size, in the sheet's pixels: picked by eye, five tiles to a row
-# so a sheet stays under 1700 px wide.
-TILE = 320
-GAP = PAD = 16
-COLUMNS = 5
-LABEL = 16
+SCORE_WIDTH = 160  # guess, #408
+TILE = 320  # px; guess, #408
+GAP = PAD = 16  # px; guess, #408
+COLUMNS = 5  # guess, #408
+LABEL = 16  # px; guess, #408
+LABEL_GAP = 4  # px; guess, #408
+CAPTION = LABEL + 3 * LABEL_GAP
+EPS = 1e-6  # s; guess, #408: float rounding on a step's time
 
 
 class ClipError(Exception):
@@ -75,19 +68,13 @@ def open_clip(path):
     return container, container.streams.video[0]
 
 
-def frame_time(frame, index, stream):
-    if frame.time is not None:
-        return float(frame.time)
-    rate = stream.average_rate or 25
-    return index / float(rate)
-
-
 def decode(path, each):
-    """Calls each(index, seconds, frame) for every frame in decode order."""
     container, stream = open_clip(path)
     try:
         for index, frame in enumerate(container.decode(stream)):
-            each(index, frame_time(frame, index, stream), frame)
+            if frame.time is None:
+                raise ClipError(f"frame {index} carries no timestamp")
+            each(index, float(frame.time), frame)
     except av.error.FFmpegError as e:
         raise ClipError(f"it stopped decoding: {e}") from e
     finally:
@@ -95,22 +82,19 @@ def decode(path, each):
 
 
 def scores(diffs):
-    """scdet's score for each frame from its mean absolute difference (MAFD) from
-    the frame before: min(MAFD, |MAFD - the previous MAFD|), within 0 to 100.
-    The first frame has nothing before it and scores 0."""
-    out, previous = [], None
+    # libavfilter/vf_scdet.c: min(MAFD, |MAFD - previous MAFD|) within 0 to 100;
+    # the first frame scores 0 and the previous MAFD starts at 0.
+    out, previous = [], 0.0
     for mafd in diffs:
         if mafd is None:
             out.append(0.0)
-        else:
-            delta = abs(mafd - previous) if previous is not None else mafd
-            out.append(max(0.0, min(100.0, min(mafd, delta))))
+            continue
+        out.append(max(0.0, min(100.0, mafd, abs(mafd - previous))))
         previous = mafd
     return out
 
 
 def survey(path):
-    """Each frame's time and cut score, in decode order."""
     times, diffs, last = [], [], [None]
 
     def each(_, t, frame):
@@ -124,7 +108,7 @@ def survey(path):
         diffs.append(
             None
             if last[0] is None
-            else float(np.abs(grey - last[0]).mean() * 100 / 255)
+            else float(np.abs(grey - last[0]).mean() * 100 / 256)
         )
         last[0] = grey
 
@@ -135,18 +119,15 @@ def survey(path):
 
 
 def keep(times, cut_at, fps, around):
-    """The indices of the frames to keep: the first at or after each 1/fps step,
-    every one within `around` s of a cut, and the last."""
     kept = set()
     step, k = 1 / fps, 0
     for i, t in enumerate(times):
-        # A step's time can land a hair past a frame's from float rounding.
-        while k * step <= t + 1e-6:
+        while k * step <= t + EPS:
             kept.add(i)
             k += 1
     cuts = [times[i] for i in cut_at]
     for i, t in enumerate(times):
-        if any(abs(t - c) <= around + 1e-6 for c in cuts):
+        if any(abs(t - c) <= around + EPS for c in cuts):
             kept.add(i)
     kept.add(len(times) - 1)
     return sorted(kept)
@@ -157,88 +138,90 @@ def label(t, *, cut, end):
     return f"{t:.2f} s" + (f" ({', '.join(marks)})" if marks else "")
 
 
-def sheet(tiles, size):
-    """One sheet of (label, image) tiles, and each tile's box."""
-    w, h = size
-    tile_h = round(TILE * h / w)
+def sheet(tiles, tile_h):
     rows = -(-len(tiles) // COLUMNS)
     columns = min(COLUMNS, len(tiles))
-    cell_h = tile_h + LABEL + 12
+    cell_h = tile_h + CAPTION
     canvas = Image.new(
         "RGB",
         (columns * (TILE + GAP) - GAP + 2 * PAD, rows * (cell_h + GAP) - GAP + 2 * PAD),
         "white",
     )
     draw, face, boxes = ImageDraw.Draw(canvas), ImageFont.load_default(size=LABEL), []
-    for n, (text, image) in enumerate(tiles):
+    for n, (text, thumb) in enumerate(tiles):
         x = PAD + (n % COLUMNS) * (TILE + GAP)
         y = PAD + (n // COLUMNS) * (cell_h + GAP)
-        canvas.paste(image.resize((TILE, tile_h), Image.LANCZOS), (x, y))
+        canvas.paste(thumb, (x, y))
         draw.rectangle((x - 1, y - 1, x + TILE, y + tile_h), outline="#bbbbbb")
-        draw.text((x, y + tile_h + 4), text, fill="#111111", font=face)
+        draw.text((x, y + tile_h + LABEL_GAP), text, fill="#111111", font=face)
         boxes.append({"x": x, "y": y, "width": TILE, "height": tile_h})
     return canvas, boxes
 
 
-def run(at):
-    times, score = survey(at.clip)
-    cut_at = [i for i, s in enumerate(score) if s >= at.cut]
-    kept = keep(times, cut_at, at.fps, at.around)
-    wanted, frames = set(kept), {}
+def run(args):
+    times, score = survey(args.clip)
+    cut_at = [i for i, s in enumerate(score) if s >= args.cut]
+    kept = keep(times, cut_at, args.fps, args.around)
+    wanted, thumbs, size = set(kept), {}, []
+    folder = os.path.join(args.out, "frames")
+    os.makedirs(folder, exist_ok=True)
 
-    def each(i, _, frame):
-        if i in wanted:
-            frames[i] = frame.to_image().convert("RGB")
+    def each(i, t, frame):
+        if i not in wanted:
+            return
+        image = frame.to_image().convert("RGB")
+        image.save(os.path.join(folder, f"frame-{round(t * 1000)}.png"))
+        if not size:
+            size.extend(image.size)
+        thumbs[i] = image.resize(
+            (TILE, round(TILE * image.height / image.width)), Image.LANCZOS
+        )
 
-    decode(at.clip, each)
-    os.makedirs(os.path.join(at.out, "frames"), exist_ok=True)
+    decode(args.clip, each)
     cuts, last = set(cut_at), len(times) - 1
-    tiles = []
-    for i in kept:
-        ms = round(times[i] * 1000)
-        frames[i].save(os.path.join(at.out, "frames", f"frame-{ms}.png"))
-        tiles.append(
-            {
-                "ms": ms,
-                "label": label(times[i], cut=i in cuts, end=i == last),
-                "cut": i in cuts,
-            }
-        )
-    size = frames[kept[0]].size
+    tiles = [
+        {
+            "ms": round(times[i] * 1000),
+            "label": label(times[i], cut=i in cuts, end=i == last),
+            "cut": i in cuts,
+        }
+        for i in kept
+    ]
+    tile_h = thumbs[kept[0]].height
     sheets = []
-    for start in range(0, len(kept), at.per_sheet):
-        group = list(range(start, min(start + at.per_sheet, len(kept))))
+    for start in range(0, len(kept), args.per_sheet):
+        group = range(start, min(start + args.per_sheet, len(kept)))
         canvas, boxes = sheet(
-            [(tiles[n]["label"], frames[kept[n]]) for n in group], size
+            [(tiles[n]["label"], thumbs[kept[n]]) for n in group], tile_h
         )
-        path = os.path.join(at.out, f"sheet-{len(sheets) + 1}.png")
+        path = os.path.join(args.out, f"sheet-{len(sheets) + 1}.png")
         canvas.save(path)
         sheets.append(path)
         for n, box in zip(group, boxes, strict=True):
             tiles[n].update(sheet=len(sheets), **box)
     record = {
-        "clip": at.clip,
+        "clip": args.clip,
         "width": size[0],
         "height": size[1],
         "frames": len(times),
         "end_ms": round(times[last] * 1000),
-        "fps": at.fps,
-        "around_s": at.around,
-        "cut_threshold": at.cut,
+        "fps": args.fps,
+        "around_s": args.around,
+        "cut_threshold": args.cut,
         "cuts_ms": [round(times[i] * 1000) for i in cut_at],
         "sheets": sheets,
         "tiles": tiles,
     }
-    with open(os.path.join(at.out, "sheet.json"), "w", encoding="utf8") as fh:
+    with open(os.path.join(args.out, "sheet.json"), "w", encoding="utf8") as fh:
         json.dump(record, fh, indent=1)
         fh.write("\n")
     return record
 
 
-def report(at, record):
+def report(args, record):
     cuts = record["cuts_ms"]
     where = (
-        f"and every frame within {at.around:g} s of {len(cuts)} cut(s), at "
+        f"and every frame within {args.around:g} s of {len(cuts)} cut(s), at "
         + ", ".join(f"{ms / 1000:.2f} s" for ms in cuts)
         if cuts
         else "and no cut found"
@@ -247,9 +230,9 @@ def report(at, record):
         [
             f"video-sheet: {record['clip']} — {record['width']}x{record['height']}, "
             f"{record['frames']} frames to {record['end_ms'] / 1000:.2f} s",
-            f"  {len(record['tiles'])} kept: {at.fps:g} a second, {where}",
+            f"  {len(record['tiles'])} kept: {args.fps:g} a second, {where}",
             f"  {len(record['sheets'])} sheet(s): " + ", ".join(record["sheets"]),
-            f"tiles listed in {os.path.join(at.out, 'sheet.json')}",
+            f"tiles listed in {os.path.join(args.out, 'sheet.json')}",
         ]
     )
 
@@ -262,23 +245,20 @@ def parse(argv):
     p.add_argument("clip", help="a video file: MP4, WebM, MOV or any PyAV decodes")
     p.add_argument("--out", required=True, metavar="DIR")
     p.add_argument(
-        "--fps",
-        type=float,
-        default=10,
-        help="frames kept a second; 10, the rate design-vault#403 item 7 names",
+        "--fps", type=float, default=10, help="frames kept a second; 10, set by #408"
     )
     p.add_argument(
         "--around",
         type=float,
         default=0.2,
         metavar="S",
-        help="every frame this many seconds either side of a cut is kept; 0.2, two steps at 10 a second",
+        help="every frame this many seconds either side of a cut is kept; 0.2, guess, #408",
     )
     p.add_argument(
         "--cut",
         type=float,
         default=10,
-        metavar="PCT",
+        metavar="SCORE",
         help="the score a cut reaches; 10, ffmpeg scdet's default (libavfilter/vf_scdet.c)",
     )
     p.add_argument(
@@ -286,28 +266,31 @@ def parse(argv):
         type=int,
         default=30,
         metavar="N",
-        help="tiles to a sheet: 30, three seconds at 10 a second",
+        help="tiles to a sheet; 30, guess, #408",
     )
-    at = p.parse_args(argv)
-    if at.fps <= 0:
+    args = p.parse_args(argv)
+    if args.fps <= 0:
         p.error("--fps wants a number above 0")
-    if at.around < 0:
+    if args.around < 0:
         p.error("--around wants 0 or more")
-    if at.per_sheet < 1:
+    if args.per_sheet < 1:
         p.error("--per-sheet wants at least 1")
-    if not os.path.isfile(at.clip):
-        p.error(f"no file at {at.clip}")
-    return at
+    if not os.path.isfile(args.clip):
+        p.error(f"no file at {args.clip}")
+    return args
 
 
 def main(argv):
-    at = parse(argv)
+    args = parse(argv)
     try:
-        record = run(at)
+        record = run(args)
     except ClipError as e:
-        print(f"cannot sheet {at.clip}, because {e}", file=sys.stderr)
+        print(f"cannot sheet {args.clip}, because {e}", file=sys.stderr)
         return 4
-    print(report(at, record))
+    except OSError as e:
+        print(f"cannot write the sheets under {args.out}: {e}", file=sys.stderr)
+        return 5
+    print(report(args, record))
     return 0
 
 

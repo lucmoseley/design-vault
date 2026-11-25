@@ -1,11 +1,4 @@
-"""Tests plugin/skills/design-round/scripts/video-sheet.py (#408): python3 test/video-sheet.test.py
-
-The clip is made here, lossless, 30 frames a second for 2 s: frame n's red is 4n,
-so each tile's time is read back from its pixels, and its green and blue jump
-at frame 30, a hard cut at 1.00 s. Loosen it and a study's sheet names moments
-its frames are not, or skips the frames either side of a cut where a technique
-study reads how one shot hands over to the next.
-"""
+"""Tests plugin/skills/design-round/scripts/video-sheet.py: python3 test/video-sheet.test.py"""
 
 import importlib.util
 import json
@@ -27,7 +20,13 @@ spec = importlib.util.spec_from_file_location("video_sheet", SCRIPT)
 sheet = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sheet)
 
+# The clip: 30 frames a second for 2 s, frame n's red 4n, a hard cut at frame 30 (1.00 s).
 FPS, FRAMES, CUT = 30, 60, 30
+RED_STEP = 4
+RED_SLACK = (
+    1  # guess, #408: PNG frames are lossless, so a tile's resample alone moves red
+)
+TIMEOUT_S = 120  # guess, #408: one run takes seconds here
 
 
 def make_clip(path):
@@ -36,7 +35,7 @@ def make_clip(path):
         stream.width, stream.height, stream.pix_fmt = 128, 72, "rgb24"
         for n in range(FRAMES):
             pixels = np.zeros((72, 128, 3), np.uint8)
-            pixels[..., 0] = 4 * n
+            pixels[..., 0] = RED_STEP * n
             if n >= CUT:
                 pixels[..., 1], pixels[..., 2] = 200, 255
             frame = av.VideoFrame.from_ndarray(pixels, format="rgb24")
@@ -49,12 +48,17 @@ def make_clip(path):
 
 def run(*args):
     return subprocess.run(
-        [sys.executable, SCRIPT, *args], capture_output=True, text=True, timeout=120
+        [sys.executable, SCRIPT, *args],
+        capture_output=True,
+        text=True,
+        timeout=TIMEOUT_S,
     )
 
 
-# Every third frame (ten a second), every frame within 0.2 s of the cut, and the last.
-KEPT = sorted(set(range(0, FRAMES, 3)) | set(range(CUT - 6, CUT + 7)) | {FRAMES - 1})
+TEN_A_SECOND = set(range(0, FRAMES, FPS // 10))
+AROUND_CUT = set(range(CUT - 6, CUT + 7))
+KEPT = sorted(TEN_A_SECOND | AROUND_CUT | {FRAMES - 1})
+PER_SHEET = 10
 
 
 class Clip(unittest.TestCase):
@@ -64,7 +68,7 @@ class Clip(unittest.TestCase):
         cls.clip = os.path.join(cls.dir.name, "ramp.mov")
         make_clip(cls.clip)
         cls.out = os.path.join(cls.dir.name, "study")
-        cls.proc = run(cls.clip, "--out", cls.out)
+        cls.proc = run(cls.clip, "--out", cls.out, "--per-sheet", str(PER_SHEET))
         if cls.proc.returncode != 0:
             cls.dir.cleanup()
             raise AssertionError(
@@ -104,11 +108,16 @@ class Clip(unittest.TestCase):
             red = images[path].getpixel(
                 (t["x"] + t["width"] // 2, t["y"] + t["height"] // 2)
             )[0]
-            self.assertLessEqual(abs(red - 4 * n), 1, f"{t['label']}: red {red}")
+            self.assertLessEqual(
+                abs(red - RED_STEP * n), RED_SLACK, f"{t['label']}: red {red}"
+            )
 
-    def test_the_tiles_run_thirty_to_a_sheet(self):
-        self.assertEqual(len(self.record["sheets"]), -(-len(KEPT) // 30))
-        self.assertEqual([t["sheet"] for t in self.record["tiles"]][29:31], [1, 2])
+    def test_the_tiles_run_per_sheet_to_a_sheet_in_time_order(self):
+        self.assertEqual(
+            [t["sheet"] for t in self.record["tiles"]],
+            [n // PER_SHEET + 1 for n in range(len(KEPT))],
+        )
+        self.assertEqual(len(self.record["sheets"]), -(-len(KEPT) // PER_SHEET))
 
     def test_each_frame_is_kept_at_full_size(self):
         names = os.listdir(os.path.join(self.out, "frames"))
@@ -125,13 +134,39 @@ class Refusals(unittest.TestCase):
                 fh.write("not a video")
             proc = run(path, "--out", os.path.join(d, "out"))
         self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
-        self.assertIn("cannot sheet", proc.stderr)
+        self.assertIn(f"cannot sheet {path}, because cannot open it", proc.stderr)
 
     def test_a_missing_file_is_a_usage_error(self):
         with tempfile.TemporaryDirectory() as d:
-            proc = run(os.path.join(d, "gone.mp4"), "--out", d)
+            path = os.path.join(d, "gone.mp4")
+            proc = run(path, "--out", d)
         self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
-        self.assertIn("no file at", proc.stderr)
+        self.assertIn(f"no file at {path}", proc.stderr)
+
+    def test_a_missing_package_names_the_install_step(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "av.py"), "w") as fh:
+                fh.write("raise ImportError('no av here', name='av')\n")
+            proc = subprocess.run(
+                [sys.executable, SCRIPT, "clip.mp4", "--out", d],
+                capture_output=True,
+                text=True,
+                timeout=TIMEOUT_S,
+                env={**os.environ, "PYTHONPATH": d},
+            )
+        self.assertEqual(proc.returncode, 3, proc.stdout + proc.stderr)
+        self.assertIn("video-sheet.py needs av: python3 -m pip install", proc.stderr)
+        self.assertIn("requirements.txt", proc.stderr)
+
+    def test_an_out_dir_that_cannot_be_written_exits_5(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = os.path.join(d, "ramp.mov")
+            make_clip(clip)
+            blocker = os.path.join(d, "file")
+            open(blocker, "w").close()
+            proc = run(clip, "--out", os.path.join(blocker, "out"))
+        self.assertEqual(proc.returncode, 5, proc.stdout + proc.stderr)
+        self.assertIn("cannot write the sheets under", proc.stderr)
 
 
 class Scores(unittest.TestCase):
@@ -143,12 +178,12 @@ class Scores(unittest.TestCase):
 
 
 class Keep(unittest.TestCase):
-    def test_the_first_frame_at_or_after_each_step(self):
-        times = [n * 0.04 for n in range(10)]  # 25 a second
+    def test_it_keeps_the_first_frame_at_or_after_each_step(self):
+        times = [n / 25 for n in range(10)]
         self.assertEqual(sheet.keep(times, [], 10, 0.2), [0, 3, 5, 8, 9])
 
-    def test_every_frame_within_around_of_a_cut(self):
-        times = [n * 0.04 for n in range(30)]
+    def test_it_keeps_every_frame_within_around_of_a_cut(self):
+        times = [n / 25 for n in range(30)]
         self.assertEqual(
             sheet.keep(times, [20], 1, 0.08), [0, 18, 19, 20, 21, 22, 25, 29]
         )
