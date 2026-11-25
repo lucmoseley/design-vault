@@ -49,7 +49,12 @@ finishes those too, and refuses a page that keeps starting them. An animation a
 timer or an event starts after the first sits where that load's clock put it,
 which moves from load to load, so `hash` renders every frame on the timeline
 its first load timed, and --save keeps that timeline for --check, which names
-any start its own load put more than STAGE_JITTER_MS away (#259).
+any start its own load put more than STAGE_JITTER_MS away (#259). Both refuse,
+naming it, motion that list does not hold, which check-flow.py refuses too: a
+canvas, a video, an embedded document, SMIL, shadow DOM, or a script rewriting
+an element or a path's d frame by frame. One such part refuses the whole page,
+its listed animations included: no seek places it and no finish ends it, so no
+frame of the page is fixed (#546).
 
 EXITS 0 every frame matches / 1 a frame differs (each printed) / 2 the arguments
 are wrong / 3 Playwright or its browser is missing / 4 the page did not render
@@ -175,6 +180,24 @@ async ({ quiet, cap, shown, timeline }) => {
   }
   window.__frames = { anims: new Set(anims), rows, t0 };
   return { reasons, end, keys, timeline: rows.map((r) => ({ name: name(r.a), ms: r.start - t0 })) };
+}
+"""
+)
+
+# Names the motion no seek or finish reaches, by check-flow.py's probe (#546),
+# and stops its collector.
+DRAWN_JS = (
+    r"""
+({ frames, span, shown }) => {
+  """
+    + flow.LABEL_JS
+    + flow.LOOP_JS
+    + flow.DRAWN_JS
+    + r"""
+  const f = window.__flow;
+  f.scan();
+  f.stopped = true;
+  return drawn(f, { frames, span, shown, morphs: true });
 }
 """
 )
@@ -414,6 +437,7 @@ def open_page(browser, at, scale, *, device=None, timeline=None):
         viewport=at.viewport_size, device_scale_factor=scale, **(device or {})
     )
     context.set_default_timeout(at.timeout)
+    context.add_init_script(flow.COLLECTOR_JS)
     page = context.new_page()
     page.goto(at.url, wait_until="load")
     if at.wait:
@@ -427,8 +451,18 @@ def open_page(browser, at, scale, *, device=None, timeline=None):
             "timeline": timeline,
         },
     )
-    if prep["reasons"]:
-        raise UnmeasurableError(sorted(set(prep["reasons"])))
+    # After PREPARE_JS, whose quiet window gives a frame loop frames to show in.
+    reasons = prep["reasons"] + page.evaluate(
+        DRAWN_JS,
+        {
+            "frames": flow.REWRITE_FRAMES,
+            "span": flow.REWRITE_SPAN_MS,
+            "shown": flow.NAMES_SHOWN,
+        },
+    )
+    if reasons:
+        context.close()
+        raise UnmeasurableError(sorted(set(reasons)))
     return context, page, prep
 
 
@@ -860,7 +894,7 @@ def main(argv):
         at.url,
         (
             f"cannot check {at.url}, because this page:",
-            "Check its frames by eye: seek it to each frame and compare.",
+            "Check its frames by eye.",
         ),
     )
     if code:
