@@ -432,29 +432,40 @@ test("design-round §1c's three stage commands run as written on the vault's sto
   }
 });
 
-// One record writing `writes` at `stage` (none: a project's record with no stage), resting on `strength`.
-const clashing = (id, stage, writes, strength = "house judgement") =>
-  record(id, { by: "look", stage }).replace(`- writes: ${id}`, `- writes: ${writes}`).replace("strength: house judgement", `strength: ${strength}`);
+const lookWriting = (id, stage, writes, { strength = "house judgement", yields = "none" } = {}) =>
+  record(id, { by: "look", stage })
+    .replace(`- writes: ${id}`, `- writes: ${writes}`)
+    .replace("strength: house judgement", `strength: ${strength}`)
+    .replace("- yields-to: none", `- yields-to: ${yields}`);
 const clashLine = (out, a, b) => out.split("\n").find((l) => l.startsWith("- ") && l.includes(` ${a} and `) && l.includes(` ${b} both`));
 
-test("a clash between two stages is settled by the dependency order, the earlier standing over any level; within a stage, or with no stage, the level decides (#549)", () => {
+test("a clash between two stages is settled by the dependency order, the earlier standing over any level unless whether it yields is unread; within a stage, or with no stage, the level decides (#549)", () => {
   const vault = writeText("vault.md", `# vault\n\n${[
-    clashing("vault.edge-style", "function", "part-edge"),
-    clashing("vault.law-gap", "value", "gap", "law: a made-up statute"),
-    clashing("vault.tone", "treatment", "tone"),
-    clashing("vault.pace", "role", "pace"),
+    lookWriting("vault.edge-style", "function", "part-edge"),
+    lookWriting("vault.law-gap", "value", "gap", { strength: "law: a made-up statute" }),
+    lookWriting("vault.early-edge", "function", "edge-width", { yields: "level 4" }),
+    lookWriting("vault.late-edge", "treatment", "edge-width"),
+    lookWriting("vault.early-fill", "function", "fill"),
+    lookWriting("vault.late-fill", "treatment", "fill", { yields: "level 4" }),
+    lookWriting("vault.tone", "treatment", "tone"),
+    lookWriting("vault.pace", "role", "pace"),
   ].join("\n\n")}\n`);
   const project = writeText("acme.md", `# acme\n\n${[
-    clashing("acme.edge-style", "treatment", "part-edge"),
-    clashing("acme.gap", "role", "gap"),
-    clashing("acme.tone", "treatment", "tone"),
-    clashing("acme.pace", undefined, "pace"),
+    lookWriting("acme.edge-style", "treatment", "part-edge"),
+    lookWriting("acme.gap", "role", "gap"),
+    lookWriting("acme.tone", "treatment", "tone"),
+    lookWriting("acme.pace", undefined, "pace"),
+    lookWriting("acme.early-gap", "role", "inset"),
+    lookWriting("acme.late-gap", "value", "inset"),
   ].join("\n\n")}\n`);
   assert.equal(run("check", vault, project).status, 0);
   const out = ok(list(["--asset", "web-surface"], [vault, project]));
   const byOrder = "Settled by precedence (the dependency order decides first, and a later step never changes an earlier one)";
   assert.match(clashLine(out, "vault.edge-style", "acme.edge-style"), new RegExp(`^- ${byOrder.replace(/[()]/g, "\\$&")}: .*; vault\\.edge-style stands\\.$`));
   assert.match(clashLine(out, "vault.law-gap", "acme.gap"), /\(the dependency order .*; acme\.gap stands\.$/);
-  assert.match(clashLine(out, "vault.tone", "acme.tone"), /^- Settled by precedence \(the project beats .*; acme\.tone stands\.$/);
-  assert.match(clashLine(out, "vault.pace", "acme.pace"), /^- Settled by precedence \(the project beats .*; acme\.pace stands\.$/);
+  assert.match(clashLine(out, "vault.tone", "acme.tone"), /^- Settled by precedence \(within one step, the project beats .*; acme\.tone stands\.$/);
+  assert.match(clashLine(out, "vault.pace", "acme.pace"), /^- Settled by precedence \(within one step, the project beats .*; acme\.pace stands\.$/);
+  assert.match(clashLine(out, "acme.early-gap", "acme.late-gap"), /\(the dependency order .*; acme\.early-gap stands\.$/);
+  assert.match(clashLine(out, "vault.early-fill", "vault.late-fill"), /\(the dependency order .*; vault\.early-fill stands\.$/);
+  assert.match(clashLine(out, "vault.early-edge", "vault.late-edge"), /^- For the founder \(it turns on a vault level the rule records do not record\)/);
 });
