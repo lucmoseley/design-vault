@@ -13,7 +13,8 @@
  * model's request body; a value that parses as JSON is sent as JSON
  * (`--set 'colors=[{"rgb":[40,90,150]}]'`). A jobs file is a JSON array of
  * `{ out, model, prompt, aspect_ratio?, resolution?, params?, max_usd? }`.
- * `--estimate` prices the jobs and stops.
+ * `--estimate` prices the jobs and stops, taking back any round folder it made
+ * to learn whether a run could make it.
  *
  * Some models, among them FLUX.2, GPT Image 2.5 and Seedance 2.0 and 2.5,
  * estimate as a price rule in words with no usd figure (design-vault#49). Such

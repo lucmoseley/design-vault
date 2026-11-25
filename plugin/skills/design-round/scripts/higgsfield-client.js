@@ -20,8 +20,6 @@ const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
 const STEM = /^v\d+-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUND = /^r\d+$/;
 const STILL_BRAND = /^(?:avif|avis|heic|heix|heim|heis|hevc|hevx|mif1|msf1)$/;
-// Linux's MAXSYMLINKS, the hops past which a path fails ELOOP: https://man7.org/linux/man-pages/man7/path_resolution.7.html
-const MAX_SYMLINK_HOPS = 40;
 const ENDPOINT_ID = /^[a-z0-9][a-z0-9.-]*(?:\/[a-z0-9][a-z0-9.-]*)*$/;
 const HINTS = {
   401: " (check HIGGSFIELD_API_KEY)",
@@ -127,47 +125,10 @@ function record(job, line) {
   fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
 }
 
-// #576
-function pathOnceMade(dir) {
-  const segments = (spelling) =>
-    spelling
-      .slice(path.parse(spelling).root.length)
-      .split(path.sep === "\\" ? /[\\/]+/ : /\/+/)
-      .filter((segment) => segment && segment !== ".");
-  let resolved = path.isAbsolute(dir) ? path.parse(dir).root : process.cwd();
-  const pending = segments(dir);
-  let hops = 0;
-  while (pending.length) {
-    const part = pending.shift();
-    if (part === "..") {
-      resolved = path.dirname(resolved);
-      continue;
-    }
-    const next = path.join(resolved, part);
-    let target;
-    try {
-      target = fs.readlinkSync(next);
-    } catch (error) {
-      // EINVAL: not a symlink. ENOENT: a folder the run will make, a plain one.
-      if (error.code === "EINVAL" || error.code === "ENOENT") {
-        resolved = next;
-        continue;
-      }
-      throw error;
-    }
-    if (++hops > MAX_SYMLINK_HOPS) throw Object.assign(new Error(`${dir} passes through too many symlinks`), { code: "ELOOP", path: dir });
-    if (path.isAbsolute(target)) resolved = path.parse(target).root;
-    pending.unshift(...segments(target));
-  }
-  return resolved;
-}
-
-function roundKey(roundDir) {
-  const madeAt = pathOnceMade(roundDir);
-  let existing = madeAt;
-  while (!fs.existsSync(existing)) existing = path.dirname(existing);
-  const { dev, ino } = fs.statSync(existing);
-  return `${dev}:${ino}/${path.relative(existing, madeAt)}`;
+// Bigint: drvfs on /mnt/c hands out inode numbers past 2^53, where two folders' numbers round to one.
+function readFolderId(dir) {
+  const { dev, ino } = fs.statSync(dir, { bigint: true });
+  return `${dev}:${ino}`;
 }
 
 const asList = (value) => (value == null ? [] : Array.isArray(value) ? value : [value]);
@@ -181,9 +142,40 @@ function isHolderAlive(pid) {
   }
 }
 
-function tryMakeFolder(dir) {
+// The birth time too: ext4 hands a freed inode number straight to the next folder made, so another run's folder in
+// place of one this run made would otherwise read as the same.
+function readMadeId(dir) {
+  const { dev, ino, birthtimeNs } = fs.statSync(dir, { bigint: true });
+  return `${dev}:${ino}:${birthtimeNs}`;
+}
+
+// One level at a time, as mkdir -p does, recording each folder this call made the moment it is made, so an estimate
+// takes back only its own, a partial failure included.
+function makeFolder(dir, made) {
+  const missing = [];
+  for (let at = dir; ; at = path.dirname(at)) {
+    try {
+      fs.lstatSync(at);
+      break;
+    } catch (error) {
+      if (error.code !== "ENOENT" || path.dirname(at) === at) throw error;
+      missing.unshift(at);
+    }
+  }
+  for (const at of missing) {
+    try {
+      fs.mkdirSync(at);
+    } catch (error) {
+      if (error.code === "EEXIST" && fs.statSync(at).isDirectory()) continue;
+      throw error;
+    }
+    made.push({ at: fs.realpathSync.native(at), id: readMadeId(at) });
+  }
+}
+
+function tryMakeFolder(dir, made) {
   try {
-    fs.mkdirSync(dir, { recursive: true });
+    makeFolder(dir, made);
     return true;
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
@@ -192,9 +184,21 @@ function tryMakeFolder(dir) {
 }
 
 // #574
-function makeRoundFolders(jobs) {
-  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir));
-  for (const job of waitingOnAnotherJobsFolder) fs.mkdirSync(job.roundDir, { recursive: true });
+function makeRoundFolders(jobs, made) {
+  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir, made));
+  for (const job of waitingOnAnotherJobsFolder) makeFolder(job.roundDir, made);
+}
+
+// #577: deepest first by real path, so a folder made under another spelling still empties its parent; a folder
+// that is no longer the one made is another run's.
+function takeBack(made, log) {
+  for (const { at, id } of [...made].sort((a, b) => b.at.length - a.at.length)) {
+    try {
+      if (readMadeId(at) === id) fs.rmdirSync(at);
+    } catch (error) {
+      if (error.code !== "ENOENT" && error.code !== "ENOTEMPTY") log(`✗ could not take back ${at}: ${error.message}; delete it by hand if it is empty`);
+    }
+  }
 }
 
 // #559
@@ -369,24 +373,39 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
-  if (!options.estimateOnly) makeRoundFolders(checked);
-  const byKey = new Map();
-  for (const job of checked) {
-    const key = roundKey(job.roundDir);
-    if (!byKey.has(key)) byKey.set(key, job.roundDir);
-    job.roundDir = byKey.get(key);
-    job.round = path.basename(job.roundDir);
-    job.name = `${job.round}/${job.stem}`;
-  }
-  const roundDirs = [...byKey.values()];
-
+  const made = [];
   // #559
   const held = [];
   try {
-    if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
+    try {
+      makeRoundFolders(checked, made);
+    } catch (error) {
+      // An error with no code is a fault in this script, not the filesystem refusing a folder.
+      if (!options.estimateOnly || error.code === undefined) throw error;
+      log(`a round folder cannot be made (${error.message}), so a run would be refused`);
+      return 0;
+    }
+    let roundDirs;
+    try {
+      const byKey = new Map();
+      for (const job of checked) {
+        const key = readFolderId(job.roundDir);
+        if (!byKey.has(key)) byKey.set(key, job.roundDir);
+        job.roundDir = byKey.get(key);
+        job.round = path.basename(job.roundDir);
+        job.name = `${job.round}/${job.stem}`;
+      }
+      roundDirs = [...byKey.values()];
+      if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      // #577: an --estimate running beside this one takes back the empty folders it made.
+      throw new Error(`a round folder went away before the batch could lock it (${error.message}), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun`, { cause: error });
+    }
     return await runBatch(ctx, checked, roundDirs, ceiling, options, log);
   } finally {
     unlockAll(held, log);
+    if (options.estimateOnly) takeBack(made, log);
   }
 }
 
