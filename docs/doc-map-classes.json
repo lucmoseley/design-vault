@@ -133,14 +133,6 @@
 		"route": null,
 		"consumes": null
 	},
-	"docs/data/ledger-script-split-2026-10-15.csv": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "The #248 sample: 227 ledger rows with the second coder's code, primitives and reason beside #216's route, so docs/research/ledger-script-split.md's figures can be rechecked",
-		"route": null,
-		"consumes": null
-	},
 	"docs/data/outcome-signatures.jsonl": {
 		"section": "Governance & process docs",
 		"class": "generated-only",
@@ -343,24 +335,6 @@
 		"consumes": null,
 		"reader": "both"
 	},
-	"docs/research/brand-print-social-checkers.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Which open-source tools could check the house's brand-art, print and social rules: build on Pillow, pypdf and the vault's colour maths, adopt only a vendored text detector, svgo breaks the morph rule, no Playwright H.264 decode, first-party social specs (#262)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/browser-audit-tools.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Which open-source browser audit tools measure the accessibility, load and SEO rules the gate holds and leaves out: none replaces a vault Access script, axe-core covers 2.4.2 and 3.1.1 and part of 1.1.1, 1.3.1 and 4.1.2, CLS and the meta description are unbuilt (#246)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
 	"docs/research/carry-source-checks.md": {
 		"section": "Research notes",
 		"class": "free-edit",
@@ -402,33 +376,6 @@
 		"class": "free-edit",
 		"classQualifier": null,
 		"role": "Which critic shape finds the most real faults without inventing more, on planted faults and clean pages: the whole-page critic plus a type critic (#224)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/critic-shape.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Which critic shape the evidence favours for a strong model: one whole-page critic, topic critics, or a coarse-to-fine chain; order inside one critic, independent eyes, and the in-house test that settles it (#212)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/critic-transcripts.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "How the design critic ran in 50 production runs: impeccable's critique always in one context with no degraded banner, critique.md mostly read whole, about 170k tokens at the verdict (#212)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/css-colour-linters.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Which open-source CSS, design-token, colour and font-metric linters or libraries could check the house's styling value rules on a rendered page: no source linter can, so one computed-style script on Playwright; the vault's CIEDE2000 matches Sharma's pairs; ex for x-height (#247)",
 		"route": null,
 		"consumes": null,
 		"reader": "both"
@@ -532,15 +479,6 @@
 		"consumes": null,
 		"reader": "both"
 	},
-	"docs/research/higgsfield-model-discount.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Higgsfield's API-console offer of picked models at a maximum discount: where it lives, how many picks, finality, expiry, API against web billing, web plan and API prices, balance reads, credit expiry (#61)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
 	"docs/research/house-audit-constants.md": {
 		"section": "Research notes",
 		"class": "free-edit",
@@ -586,47 +524,11 @@
 		"consumes": null,
 		"reader": "both"
 	},
-	"docs/research/image-cutout-tools.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Background-removal tools checked against the roster's fact bar: licences, marks, retention, size caps, prices, and the scant evidence on illustrations (#54)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/image-model-benchmarks.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Every image model the roster considered, on the public arenas (LMArena, Artificial Analysis, with categories) and on 14 benchmark papers, each figure dated and tagged by who measured it (#51)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/image-model-dialects.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "How to prompt Grok Image 2.0, Qwen Image 3 and Ideogram 4.0, and the Higgsfield API fields that steer each, with draft prompts.md dialects (#45)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
 	"docs/research/image-model-fact-bar.md": {
 		"section": "Research notes",
 		"class": "free-edit",
 		"classQualifier": null,
 		"role": "Grok Image 2.0, Qwen Image 3 and Ideogram 4.0 on Higgsfield's API against the roster's fact bar: licence, watermark, deletion, ceiling, price (#44)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/image-model-openai-terms.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "OpenAI's and Higgsfield's terms on commercial use of GPT Image 2.5 output, and the provenance marks on the delivered files (#55)",
 		"route": null,
 		"consumes": null,
 		"reader": "both"
@@ -640,29 +542,11 @@
 		"consumes": null,
 		"reader": "both"
 	},
-	"docs/research/image-model-profiles-b.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "What rigorous sources find GPT Image 2 and 2.5, Nano Banana Pro, Seedream 4.5 and 5.0 Lite, Midjourney and Higgsfield's SOUL family best and worst at, per brand-art job (#51)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
 	"docs/research/impeccable-checks.md": {
 		"section": "Research notes",
 		"class": "free-edit",
 		"classQualifier": null,
 		"role": "What impeccable's critique, audit, build reviewer and detector already check, against the business-correspondence check's mechanisms (#97)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/impeccable-detector-trial.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "impeccable's detector (61 rules, engine 0.1.11) against #250's five adoption criteria on the fixtures and #169's 12 pages: Apache-2.0 open source, not a closed binary; fails (a) finds and (b) threshold, so no rule counts in the gate's tally; its single-file in-page bundle passes packaging on form; which of its rules the shared probe builds instead (#263)",
 		"route": null,
 		"consumes": null,
 		"reader": "both"
@@ -690,51 +574,6 @@
 		"class": "free-edit",
 		"classQualifier": null,
 		"role": "The outside sources checked and the Chromium measurements behind tier 0 ledger jobs 13–16: table markup and print headers, chart contrast, visual order, safe centring, seams between fills, wheel input on scrollers (#278)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/ledger-script-split.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "How many of the 574 coverage-ledger rows routed to script are fully deterministic, part measurable or judgement, by sample and second coder, with the measurement primitives they need; #212 Q6 (A) holds (#248)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/library-browse-survey.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Survey of how 15 design-inspiration libraries let people browse: ways in, page-part names, motion (#22)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/library-grouping-audit.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Audit of how the 92 references are grouped, with draft page-part and motion tags (#21)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/library-lookup-walk.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Walk of the founder's real searches on the library page: clicks, routes, what is held (#20)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/look-list-length.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "How long a gate critic's look list can grow before subtle faults are missed, and whether a split by stage restores them, on planted faults (#225)",
 		"route": null,
 		"consumes": null,
 		"reader": "both"
@@ -775,33 +614,6 @@
 		"consumes": null,
 		"reader": "both"
 	},
-	"docs/research/mmm-infra-photo-review.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "What the founder's review of every photo score (mmm-infra#38) and the photo store fixed in the method (#90)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/mmm-infra-photos-to-reply.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Why the critiques of Mark's photos were wrong up to the mmm-infra#32 reply, and what design-critique lacked (#89)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/mmm-infra-setup-library.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "How design-vault's setup, library and research steps served mmm-infra (#92)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
 	"docs/research/mmm-infra-site-look-round.md": {
 		"section": "Research notes",
 		"class": "free-edit",
@@ -816,15 +628,6 @@
 		"class": "free-edit",
 		"classQualifier": null,
 		"role": "The founder's 15 Oct 2026 design-topic notes N1-N19 checked one by one: where the house holds each, whether it is sourced, conditioned and reaches a critic, and whether the note's own claim holds (#205)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/outside-checkers-trial.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "What axe-core, IBM's engine and Lighthouse find beside the vault's scripts on the fixtures and #169's 12 pages: none replaces a vault Access script, axe ties the vault only on 1.4.1 and (rule switched on) 2.5.8, every page contrast fault sits in axe's review list, Lighthouse's window misses a 3 s headline and shift, and the tools add 3.1.1, 2.4.2, 4.1.2, 2.5.3 and the meta description (#249)",
 		"route": null,
 		"consumes": null,
 		"reader": "both"
@@ -897,15 +700,6 @@
 		"class": "free-edit",
 		"classQualifier": null,
 		"role": "How borders, shadows, radius, dividers, fills, scrims, focus outlines and icon stroke are chosen, with conditions and conflicts, against what the house holds (#117)",
-		"route": null,
-		"consumes": null,
-		"reader": "both"
-	},
-	"docs/research/text-linters.md": {
-		"section": "Research notes",
-		"class": "free-edit",
-		"classQualifier": null,
-		"role": "Which open-source text and content linters could check the house's rules about words on the page: Vale the only candidate, most rules need the DOM, word lists kept as data in a Playwright script, bans as warnings (#245)",
 		"route": null,
 		"consumes": null,
 		"reader": "both"

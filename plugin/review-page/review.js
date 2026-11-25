@@ -29,7 +29,6 @@
       const src = String(raw).replace(/^[\u0000-\u0020]+|[\u0000-\u0020]+$/g, '').replace(/[\t\n\r]/g, '');
       return /^https:\/\//i.test(src) || !(/^[a-z][a-z0-9+.-]*:/i.test(src) || /^[\\/]{2}/.test(src));
     };
-    if (data.figure && !fileOrHttps(data.figure)) problems.push('"figure" must be a file beside the page or an https:// address');
     const seen = new Set();
     (Array.isArray(data.items) ? data.items : []).forEach((item, i) => {
       const where = `item ${i + 1}${item && item.id ? ` (${item.id})` : ''}`;
@@ -38,7 +37,7 @@
       else if (seen.has(item.id)) problems.push(`${where}: the id is used twice`);
       if (item && item.id) seen.add(item.id);
       if (item && !item.name) problems.push(`${where} needs a "name"`);
-      if (item && !item.image && !item.link && !data.figure) problems.push(`${where} needs an "image" or a "link"`);
+      if (item && !item.image && !item.link) problems.push(`${where} needs an "image" or a "link"`);
       if (item && 'pickable' in item && typeof item.pickable !== 'boolean') problems.push(`${where}: "pickable" must be true or false`);
       // Each opens the card's full view, so a javascript: address is refused here rather than at the click.
       if (item && item.link && !/^https?:\/\//i.test(item.link)) problems.push(`${where}: "link" must start with http:// or https://`);
