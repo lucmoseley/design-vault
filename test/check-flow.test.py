@@ -42,9 +42,11 @@ CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
-spec = importlib.util.spec_from_file_location("check_flow", SCRIPT)
-flow = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(flow)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+flow = siblings.load(SCRIPTS, "check-flow.py")
 
 STEP = 1000 / flow.FPS
 
@@ -95,6 +97,46 @@ def jolts_at(speeds, dropped=()):
 
 # Speeds px per frame of a move easing in and out to 3% of its top speed.
 EASED = [1, 3, 6, 10, 10, 6, 3, 1, 0.3]
+
+
+def run_records_layout(subject):
+    """The check-layout module `subject.run_records` loads, stopped before any browser starts."""
+    loaded = []
+    real = siblings.load
+
+    def spy(here, file):
+        module = real(here, file)
+        if file == "check-layout.py":
+            loaded.append(module)
+        return module
+
+    class StopError(Exception):
+        pass
+
+    with (
+        mock.patch.object(siblings, "load", spy),
+        mock.patch.object(subject, "chromium", side_effect=StopError),
+        contextlib.suppress(StopError),
+    ):
+        subject.run_records(types.SimpleNamespace(lines=[]))
+    (layout,) = loaded
+    return layout
+
+
+class OneCopy(unittest.TestCase):
+    def test_run_records_check_layout_shares_this_copy_paired_with_a_private_load(
+        self,
+    ):  # #562
+        self.assertIs(run_records_layout(flow).flow, flow)
+
+    def test_a_private_load_s_run_records_reaches_a_second_copy(self):  # #562
+        spec = importlib.util.spec_from_file_location("private_check_flow", SCRIPT)
+        private = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(private)
+        self.assertIsNot(run_records_layout(private).flow, private)
+
+    def test_the_probe_parse_loads_shares_this_copy(self):  # #562
+        self.assertIs(siblings.load(SCRIPTS, "probe.py").flow, flow)
 
 
 class Pauses(unittest.TestCase):

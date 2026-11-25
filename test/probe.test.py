@@ -7,7 +7,6 @@ beside a twin that meets the rule, and must name exactly those misses.
 """
 
 import contextlib
-import importlib.util
 import json
 import os
 import pathlib
@@ -34,26 +33,13 @@ CONDITIONS = (
 SWEEP = ["--widths", "320-1920", "--step", "400"]
 
 
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-probe = load("probe", SCRIPT)
-flow = load(
-    "check_flow",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-    ),
-)
-layout = load(
-    "check_layout",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "check-layout.py"
-    ),
-)
+probe = siblings.load(SCRIPTS, "probe.py")
+flow = siblings.load(SCRIPTS, "check-flow.py")
+layout = siblings.load(SCRIPTS, "check-layout.py")
 STACK = contextlib.ExitStack()
 BROWSER = None
 
@@ -103,6 +89,13 @@ def values(url, table, parts=None):
         ]
     finally:
         page.close()
+
+
+class OneCopy(unittest.TestCase):
+    def test_probe_and_this_suite_share_one_check_flow_and_check_layout(self):  # #562
+        self.assertIs(probe.flow, flow)
+        self.assertIs(probe.layout, layout)
+        self.assertIs(layout.flow, flow)
 
 
 class TheTable(unittest.TestCase):
