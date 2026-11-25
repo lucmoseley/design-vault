@@ -132,6 +132,22 @@ function isHolderAlive(pid) {
   }
 }
 
+function tryMakeFolder(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return false;
+  }
+}
+
+// #574
+function makeRoundFolders(jobs) {
+  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir));
+  for (const job of waitingOnAnotherJobsFolder) fs.mkdirSync(job.roundDir, { recursive: true });
+}
+
 // #559
 function lock(roundDir) {
   const file = path.join(roundDir, LOCK);
@@ -304,17 +320,7 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
-  if (!options.estimateOnly) {
-    // #559
-    for (const job of checked) {
-      try {
-        fs.mkdirSync(job.roundDir, { recursive: true });
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
-    }
-    for (const job of checked) fs.mkdirSync(job.roundDir, { recursive: true });
-  }
+  if (!options.estimateOnly) makeRoundFolders(checked);
   const byKey = new Map();
   for (const job of checked) {
     const key = roundKey(job.roundDir);
