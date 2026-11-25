@@ -771,7 +771,7 @@ class Pause(unittest.TestCase):
                     url = "file://" + os.path.abspath(
                         os.path.join(FIXTURES, f"tier01-{name}.html")
                     )
-                    got[name] = access.pause_answer(ctx, url)
+                    got[name] = access.pause_answer(ctx, url, [], [])
                     ctx.close()
             finally:
                 browser.close()
@@ -780,7 +780,19 @@ class Pause(unittest.TestCase):
             [f["subject"] for f in faults],
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
         )
-        self.assertEqual(got["clean"], ([], []))
+        # Its live dot blinks forever and its carousel turns on a timer, neither
+        # declared, so past 5 s neither can be measured (#545).
+        tried = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
+        self.assertEqual(
+            got["clean"],
+            (
+                [],
+                [
+                    f"section:nth-of-type(2) > div.carousel {tried}",
+                    f"section:nth-of-type(1) {tried}",
+                ],
+            ),
+        )
 
 
 if __name__ == "__main__":

@@ -577,6 +577,10 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/carousel.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/clean.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -634,6 +638,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/access/ended.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/access/entrance.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
