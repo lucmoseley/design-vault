@@ -386,7 +386,6 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
         record(job, { ...entry, usd: 0, status: "refused", http_status: error.status, files: [] });
-        if (error.status !== 403) throw error;
         const rest = priced.slice(index).map((other) => other.name);
         throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
       }
