@@ -115,7 +115,16 @@ TableError = rule_table.TableError
 
 def parse(text):
     """The table's lines as Line records, in order."""
-    return rule_table.parse(text, CHECKS, _line_value)
+    lines = rule_table.parse(text, CHECKS, _line_value)
+    first_by_check = {}
+    for line in lines:
+        first = first_by_check.setdefault(line.check, line)
+        if first.value != line.value:
+            raise TableError(
+                f"{line.text!r}: {line.check} is already given a different value by "
+                f"{first.text!r}, and the table gives each check one value"
+            )
+    return lines
 
 
 def _line_value(n, check, m):
@@ -280,25 +289,20 @@ def findings(table, pages, walks, *, phones, home):
     `walks` holds a Walk for each flow; `phones` is phone_urls()'s result, or
     None where the table has no phone line."""
     answers = rule_table.Answers(table, "page")
-    lines = {line.check: line for line in table}
-    if "phone" in lines and phones is not None:
-        _phone(answers, lines["phone"], phones)
-    if "order" in lines:
-        _order(answers, lines["order"], pages)
-    if "ways" in lines:
-        _ways(
-            answers,
-            lines["ways"],
-            lines.get("home-hub"),
-            pages=pages,
-            walks=walks,
-            home=home,
-        )
-    for w in walks:
-        if "back" in lines:
-            _back(answers, lines["back"], w)
-        if "repeat" in lines:
-            _repeat(answers, lines["repeat"], w)
+    hub = next((line for line in table if line.check == "home-hub"), None)
+    for line in {(line.id, line.check): line for line in table}.values():
+        if line.check == "phone" and phones is not None:
+            _phone(answers, line, phones)
+        elif line.check == "order":
+            _order(answers, line, pages)
+        elif line.check == "ways":
+            _ways(answers, line, hub, pages=pages, walks=walks, home=home)
+        elif line.check == "back":
+            for w in walks:
+                _back(answers, line, w)
+        elif line.check == "repeat":
+            for w in walks:
+                _repeat(answers, line, w)
     return answers.done()
 
 
@@ -494,10 +498,10 @@ def main(argv):
     json_path = os.path.join(at.out, "cross.json")
     with contextlib.suppress(FileNotFoundError):
         os.unlink(json_path)
-    checks = {line.check: line for line in at.lines}
+    phone_line = next((line for line in at.lines if line.check == "phone"), None)
 
     def run():
-        phone = device(checks["phone"].value) if "phone" in checks else None
+        phone = device(phone_line.value) if phone_line else None
         with flow.chromium() as browser:
             pages, unread = crawl(browser, at.url)
             walks = []

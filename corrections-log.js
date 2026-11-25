@@ -76,4 +76,11 @@ const main = (argv) => runGate(argv, { log: LOG, name: "corrections-log.js", nou
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { checkCorrectionsLog, FIELDS, LANDED, STANCES };
+const roundCandidate = ({ candidate }) => {
+  if (candidate === null) return null;
+  const [tag, name] = candidate.split(" ");
+  return { tag, name };
+};
+const isEntryOfRound = (e, project, tag) => e.project === project && roundCandidate(e)?.tag === tag;
+
+module.exports = { checkCorrectionsLog, roundCandidate, isEntryOfRound, FIELDS, LANDED, STANCES };

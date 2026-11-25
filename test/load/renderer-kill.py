@@ -29,12 +29,14 @@ def load(name, path):
 
 
 shot = load("check_overlay_shot", os.path.join(HERE, "check-overlay-shot.py"))
-flow = load(
-    "check_flow",
-    os.path.join(
-        HERE, "..", "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-    ),
+FLOW = os.path.join(
+    HERE, "..", "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
 )
+SCRIPTS = os.path.dirname(FLOW)  # #562
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+flow = siblings.load(SCRIPTS, "check-flow.py")
 
 # A guess, far under the test's own 0.05 s, so most kills land in a renderer's first milliseconds.
 KILL_POLL_S = 0.001

@@ -246,4 +246,6 @@ const main = (argv) =>
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { checkRoundLog, FIELDS, CALIBRATION_EVERY };
+const isRowOfRound = (row, { ticket, round }) => row.ticket === ticket && row.round === round;
+
+module.exports = { checkRoundLog, isRowOfRound, FIELDS, CALIBRATION_EVERY };

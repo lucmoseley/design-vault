@@ -49,4 +49,4 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 
 ## Local rules
 
-**§LG1 · Python file names (workflow-core#1252).** A Python file run or loaded by path takes a kebab-case name, as its JS siblings do: a program, its test `test/<program>.test.py`, and a hand-run harness under `test/load/`. None is imported by module name (tests load their subject through `importlib.util`), so workflow-core#1252's reason for snake_case, that a hyphenated module cannot be imported, does not reach them. A module imported by name takes snake_case.
+**§LG1 · Python file names (workflow-core#1252).** A Python file run or loaded by path takes a kebab-case name, as its JS siblings do: a program, its test `test/<program>.test.py`, and a hand-run harness under `test/load/`. None is imported by module name (tests load their subject through `siblings.load`), so workflow-core#1252's reason for snake_case, that a hyphenated module cannot be imported, does not reach them. A module imported by name takes snake_case.

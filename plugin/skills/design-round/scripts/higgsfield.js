@@ -28,15 +28,19 @@
  *   HIGGSFIELD_ROUND_CEILING_USD  the most one round may spend, set by the founder
  *
  * For a batch, in order:
- *   1. prices every job through Higgsfield's estimate endpoint, and prints the prices;
- *   2. refuses the whole batch, before submitting anything, where that total
+ *   1. takes each round's lock, `r<n>/higgsfield.lock`, until the batch ends, so a
+ *      second run on the round is refused, as is a run finding the lock of one that
+ *      ended without releasing it; a round reached by two spellings, through a
+ *      symlink or a case-differing path on /mnt/c, is one round;
+ *   2. prices every job through Higgsfield's estimate endpoint, and prints the prices;
+ *   3. refuses the whole batch, before submitting anything, where that total
  *      would take a round past its ceiling;
- *   3. appends each job's charge at its estimate to the round's ledger,
+ *   4. appends each job's charge at its estimate to the round's ledger,
  *      `r<n>/higgsfield-spend.jsonl`, with any discount the estimate names,
  *      which its usd is already net of, before submitting it; then submits it,
  *      polls it to the end, and appends each step's line under the job's
  *      idempotency_key, the last of which is the job's charge;
- *   4. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
+ *   5. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
  *
  * A submission refused 403 means the balance ran out: the batch stops there,
  * naming the jobs that ran, since the API has no balance to read beforehand
@@ -49,7 +53,8 @@
  * outlives the timeout, or whose status cannot be read, is recorded at its
  * estimate, since it may still complete and be charged. An
  * estimate that is not a positive usd figure is refused before anything is
- * submitted.
+ * submitted. A completed request is recorded whatever it returns; an output
+ * carrying no URL counts the job failed.
  */
 "use strict";
 const { render, parseArgs, settings } = require("./higgsfield-client.js");
