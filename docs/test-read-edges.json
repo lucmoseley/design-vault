@@ -245,6 +245,9 @@
 			"test/client-originals.test.js",
 			"test/select-suites.test.js"
 		],
+		"plugin/skills/design-project/scripts/colour_space.py": [
+			"test/select-suites.test.js"
+		],
 		"plugin/skills/design-round/SKILL.md": [
 			"test/gate-wording.test.js"
 		],

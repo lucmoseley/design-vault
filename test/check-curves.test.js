@@ -797,10 +797,9 @@ test("#541: a cover through a filter, or with an opacity or colour it cannot rea
 
 test("#324: a cover's style declarations are read in any case, an !important one over a later plain one, and only the -webkit- forms browsers apply", () => {
   const styled = (style) => `<path id="strip" style="${style}" d="M48 10 H52 V50 H48 Z"/>`;
-  for (const style of ["fill:#0c0; Opacity:.5", "fill:#0c0; opacity: .5 !important", "fill:#0c0; FILL-OPACITY: 50%", "fill:#0c0; opacity:.3 !important; opacity:1", "fill: rgba(0,204,0,.3); -webkit-fill: #0c0", "fill:#0c0; opacity:.3; -webkit-opacity:1", "fill:#0c0; fill-opacity:.3; -webkit-fill-opacity:1", "fill: NONE", "fill:#0c0; display: None", "fill:#0c0; -webkit-mask-image: linear-gradient(#000, transparent)", "fill:#0c0; -webkit-mask-box-image: url(m.png)"]) {
+  for (const style of ["fill:#0c0; Opacity:.5", "fill:#0c0; opacity: .5 !important", "fill:#0c0; FILL-OPACITY: 50%", "fill:#0c0; opacity:.3 !important; opacity:1", "fill: rgba(0,204,0,.3); -webkit-fill: #0c0", "fill:#0c0; opacity:.3; -webkit-opacity:1", "fill:#0c0; fill-opacity:.3; -webkit-fill-opacity:1", "fill: NONE", "fill:#0c0; display: None", "fill:#0c0; -webkit-mask-image: linear-gradient(#000, transparent)", "fill:#0c0; -webkit-mask-box-image: url(m.png)", "fill:#0c0; mask-border: url(m.png) 30", "fill:#0c0; -webkit-mask-box-image-source: url(m.png)"]) {
     assertUncovered(styled(style));
   }
-  assertUncovered(STRIP(' OPACITY=".3"'));
   assertUnproved(STRIP(' style="-webkit-filter: opacity(.2)"'), "filter opacity(.2) on line 4");
   assertUnproved(STRIP(' class="t"'), "a stylesheet rule setting filter: blur(1px)", "<style>.t{-webkit-filter:blur(1px)}</style>\n");
   const ok = contactsIn(`${A(49)}\n${B(51)}\n${styled("FILL:#0c0; Opacity: 1 !important; opacity: .5; -webkit-filter: none; Visibility: Visible")}`);

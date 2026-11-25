@@ -596,7 +596,7 @@ function viewport(attrs) {
 /** A tag's attributes, and its style attribute's declarations over them, as presentation attributes yield (SVG 2, §6.4). */
 function parseAttrs(text) {
   const attrs = {};
-  for (const [, name, dq, sq] of text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) attrs[name.toLowerCase() in PAINT_PROPS ? name.toLowerCase() : name] = dq ?? sq;
+  for (const [, name, dq, sq] of text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) attrs[name] = dq ?? sq;
   const important = new Set();
   for (const decl of (attrs.style ?? "").split(";")) {
     const [name, ...value] = decl.split(":");
@@ -660,7 +660,7 @@ const DRAWN = new Set(["path", "polygon", "polyline", "circle", "ellipse", "rect
 
 const isNone = (v) => v === undefined || ["none", "initial", "unset"].includes(keyword(v));
 
-const MASK_IMAGES = ["mask-image", "-webkit-mask-box-image", "mask-border-source"];
+const isMaskImage = (prop) => /^(?:-webkit-)?mask-(?:image|border|box-image)/.test(prop);
 
 function parseAlpha(v) {
   const m = v.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(%?)$/i);
@@ -671,7 +671,7 @@ function parseAlpha(v) {
 const CSS_WIDE = new Set(["inherit", "initial", "unset", "revert", "revert-layer"]);
 
 // https://www.w3.org/TR/css-cascade-5/#inherit-initial: on an inherited property unset acts as inherit
-const takesParent = (v) => v === undefined || ["inherit", "unset"].includes(keyword(v));
+const isInheritedValue = (v) => v === undefined || ["inherit", "unset"].includes(keyword(v));
 
 function colourAlpha(v) {
   const s = v.trim().toLowerCase();
@@ -703,9 +703,9 @@ const PAINT_PROPS = {
   visibility: (v) => keyword(v) === "visible",
   display: (v) => keyword(v) !== "none",
   "mix-blend-mode": (v) => keyword(v) === "normal",
-  filter: (v) => keyword(v) === "none",
-  "clip-path": (v) => keyword(v) === "none",
-  mask: (v) => keyword(v) === "none",
+  filter: isNone,
+  "clip-path": isNone,
+  mask: isNone,
   "stop-color": (v) => colourAlpha(v) >= 1,
   "stop-opacity": (v) => parseAlpha(v) >= 1,
 };
@@ -770,7 +770,7 @@ function drawnShapes(text) {
     const href = attrs.href ?? attrs["xlink:href"];
     if (href?.startsWith("#")) refs.add(href.slice(1));
     const step = parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
-    const inherit = (prop, from) => (takesParent(attrs[prop]) ? from : attrs[prop].trim());
+    const inherit = (prop, from) => (isInheritedValue(attrs[prop]) ? from : attrs[prop].trim());
     const unInherited = (prop, initial, from) => {
       const v = attrs[prop];
       if (v === undefined || ["initial", "unset"].includes(keyword(v))) return initial;
@@ -789,24 +789,24 @@ function drawnShapes(text) {
       root: parent.root ?? (name === "svg" ? m.index : null),
       ids: id ? [...parent.ids, id] : parent.ids,
       matrix: parent.matrix,
-      fill: takesParent(attrs.fill) ? parent.fill : keyword(attrs.fill) !== "none",
+      fill: isInheritedValue(attrs.fill) ? parent.fill : keyword(attrs.fill) !== "none",
       paint: inherit("fill", parent.paint),
       fillOpacity: inherit("fill-opacity", parent.fillOpacity),
       color: inherit("color", parent.color),
       stopColour: unInherited("stop-color", "black", parent.stopColour),
       stopOpacity: unInherited("stop-opacity", "1", parent.stopOpacity),
-      evenodd: takesParent(attrs["fill-rule"]) ? parent.evenodd : keyword(attrs["fill-rule"]) === "evenodd",
+      evenodd: isInheritedValue(attrs["fill-rule"]) ? parent.evenodd : keyword(attrs["fill-rule"]) === "evenodd",
       undrawn: parent.undrawn || UNDRAWN.has(name) || (attrs.display !== undefined && keyword(attrs.display) === "none"),
       thin:
         parent.thin ??
         (opacity !== null && opacity < 1 ? own("opacity") : undefined) ??
         (isNone(attrs["clip-path"]) ? undefined : own("clip-path")) ??
         (isNone(attrs.mask) ? undefined : own("mask")) ??
-        MASK_IMAGES.filter((k) => !isNone(attrs[k])).map(own)[0] ??
+        Object.keys(attrs).filter((k) => isMaskImage(k) && !isNone(attrs[k])).map(own)[0] ??
         (attrs["mix-blend-mode"] === undefined || keyword(attrs["mix-blend-mode"]) === "normal" ? undefined : own("mix-blend-mode")),
       unread: parent.unread ?? (opacity === null ? own("opacity") : undefined) ?? (isNone(attrs.filter) ? undefined : own("filter")),
       // visibility is inherited, and a descendant may set it back to visible (SVG 2, §3.2.3).
-      visible: takesParent(attrs.visibility) ? parent.visible : keyword(attrs.visibility) === "visible",
+      visible: isInheritedValue(attrs.visibility) ? parent.visible : keyword(attrs.visibility) === "visible",
       transformError: parent.transformError,
     };
     try {
