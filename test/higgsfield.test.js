@@ -153,7 +153,7 @@ test("generation refuses to run with no ceiling set; --estimate runs without one
   await assert.rejects(render([job(dir)], api.options({ ceiling: undefined })), /HIGGSFIELD_ROUND_CEILING_USD must be set/);
   assert.equal(await render([job(dir)], api.options({ ceiling: undefined, estimateOnly: true })), 0);
   assert.equal(api.submissions().length, 0);
-  assert.equal(fs.existsSync(path.join(dir, LEDGER)), false);
+  assert.equal(fs.existsSync(dir), false);
 });
 
 test("a key without its secret is refused before any call", async () => {
@@ -280,7 +280,7 @@ test("a submission refused at its first try is recorded at $0, so its estimate l
     [["submitting", 0.2], ["refused", 0]],
   );
   assert.equal(ledger(dir)[1].http_status, 422);
-  assert.equal(ledger(dir)[1].error, undefined, "the API's message, which may echo the request, stays off the ledger");
+  assert.equal(ledger(dir)[1].error, undefined, "the API's text stays off the ledger");
   assert.equal(await render([job(dir, "v2-tide")], fakeApi({ usd: "0.20" }).options({ ceiling: "0.30" })), 0);
 });
 
@@ -674,6 +674,92 @@ test("--estimate follows a symlink a target reaches by .. out of a folder not ye
   assert.equal(await render(twoSpellings, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
   assert.ok(lines.some((line) => line.includes("this batch $0.188")));
   assert.ok(lines.some((line) => line.includes("so a run would be refused")));
+});
+
+test("--estimate of a round behind a symlink to a folder no job of the batch makes says a run would be refused, calling nothing and leaving no folder (#577)", async () => {
+  const base = path.dirname(roundDir());
+  fs.symlinkSync(path.join(base, "nowhere"), path.join(base, "alias"));
+  const api = fakeApi();
+  const lines = [];
+  assert.equal(await render([job(path.join(base, "real", "deeper", "r1")), job(path.join(base, "alias", "r2"))], api.options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => /^a round folder cannot be made \(ENOENT.*\), so a run would be refused$/.test(line)), lines.join("\n"));
+  assert.equal(api.calls.length, 0);
+  assert.deepEqual(fs.readdirSync(base), ["alias"]);
+});
+
+test("--estimate takes back every folder it made, under any spelling, and none it found (#577)", async () => {
+  const base = path.dirname(roundDir());
+  fs.mkdirSync(path.join(base, "kept"));
+  fs.symlinkSync(path.join(base, "made", "deep"), path.join(base, "alias"));
+  const lines = [];
+  const jobs = [job(path.join(base, "alias", "r1")), job(path.join(base, "made", "deep", "er", "r2")), job(path.join(base, "kept", "r3"))];
+  assert.equal(await render(jobs, fakeApi().options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.equal(lines.filter((line) => line.includes("this batch $0.094")).length, 3);
+  assert.deepEqual(fs.readdirSync(base).sort(), ["alias", "kept"]);
+  assert.deepEqual(fs.readdirSync(path.join(base, "kept")), []);
+});
+
+test("--estimate leaves a folder another run put in place of one it made, and one it found through a symlink (#577)", async () => {
+  const base = path.dirname(roundDir());
+  const api = fakeApi();
+  const inner = api.options().fetch;
+  const swapped = path.join(base, "swapped", "r1");
+  let swaps = 0;
+  const fetch = async (url, init) => {
+    if (swaps++ === 0) {
+      fs.rmdirSync(swapped);
+      fs.mkdirSync(swapped);
+    }
+    return inner(url, init);
+  };
+  fs.mkdirSync(path.join(base, "old", "r2"), { recursive: true });
+  fs.symlinkSync("made/../old", path.join(base, "through"));
+  const jobs = [job(swapped), job(path.join(base, "made", "r3")), job(path.join(base, "through", "r2"))];
+  assert.equal(await render(jobs, api.options({ fetch, estimateOnly: true })), 0);
+  assert.deepEqual(fs.readdirSync(base).sort(), ["old", "swapped", "through"]);
+  assert.deepEqual(fs.readdirSync(path.join(base, "swapped")), ["r1"]);
+  assert.deepEqual(fs.readdirSync(path.join(base, "old")), ["r2"]);
+});
+
+test("--estimate whose round folder fails partway takes back the folders it made before the failure (#577)", async () => {
+  const base = path.dirname(roundDir());
+  const lines = [];
+  const jobs = [job(path.join(base, "ok", "r1")), job(path.join(base, "bad", "x".repeat(300), "r2"))];
+  assert.equal(await render(jobs, fakeApi().options({ estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => /^a round folder cannot be made \(ENAMETOOLONG.*\), so a run would be refused$/.test(line)), lines.join("\n"));
+  assert.deepEqual(fs.readdirSync(base), []);
+});
+
+test("a run whose round folder goes before its lock is taken is refused plainly, submitting nothing (#577)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const write = fs.writeFileSync;
+  fs.writeFileSync = (file, ...rest) => {
+    if (String(file).endsWith("higgsfield.lock")) fs.rmdirSync(path.dirname(file));
+    return write(file, ...rest);
+  };
+  try {
+    await assert.rejects(render([job(dir)], api.options()), /^Error: a round folder went away before the batch could lock it \(ENOENT.*\), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun$/);
+  } finally {
+    fs.writeFileSync = write;
+  }
+  assert.equal(api.calls.length, 0);
+});
+
+// Runs where the scratch folder folds case, as macOS's APFS and /mnt/c on WSL do; TMPDIR=/mnt/c/... runs it on WSL.
+const foldsCase = (() => {
+  const probe = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-case-"));
+  scratch.push(probe);
+  fs.mkdirSync(path.join(probe, "a"));
+  return fs.existsSync(path.join(probe, "A"));
+})();
+test("--estimate prices two case spellings of a round not yet made as one round, where the filesystem folds case (#577)", { skip: !foldsCase && "the scratch folder is case-sensitive" }, async () => {
+  const base = path.dirname(roundDir());
+  const lines = [];
+  const twoSpellings = [job(path.join(base, "Real", "r1"), "v1-dusk"), job(path.join(base, "real", "r1"), "v2-tide")];
+  assert.equal(await render(twoSpellings, fakeApi().options({ ceiling: "0.15", estimateOnly: true, log: (line) => lines.push(line) })), 0);
+  assert.ok(lines.some((line) => line.includes("past its $0.150 ceiling, so a run would be refused")));
+  assert.deepEqual(fs.readdirSync(base), []);
 });
 
 test("a video answered as a list keeps its URL (#559)", async () => {

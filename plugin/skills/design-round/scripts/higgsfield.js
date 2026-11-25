@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Renders brand-art and video candidates through Higgsfield's pay-per-request
- * API (design-vault#18, design-vault#62).
+ * API.
  *
  * Usage:
  *   node higgsfield.js [--estimate] --out <r<n>/v<n>-<name>> --model <endpoint id> --prompt <text>
@@ -13,14 +13,14 @@
  * model's request body; a value that parses as JSON is sent as JSON
  * (`--set 'colors=[{"rgb":[40,90,150]}]'`). A jobs file is a JSON array of
  * `{ out, model, prompt, aspect_ratio?, resolution?, params?, max_usd? }`.
- * `--estimate` prices the jobs and stops.
+ * `--estimate` prices the jobs and stops, taking back any round folder it made
+ * to learn whether a run could make it.
  *
  * Some models, among them FLUX.2, GPT Image 2.5 and Seedance 2.0 and 2.5,
- * estimate as a price rule in words with no usd figure (design-vault#49). Such
- * a job runs only with a `max_usd`: the most it can cost, worked out from the
- * rule by whoever writes the job. The ceiling binds on that figure and the
- * ledger records it, since the API reports no actual charge; the console shows
- * what was taken.
+ * estimate as a price rule in words with no usd figure. Such a job runs only
+ * with a `max_usd`: the most it can cost, worked out from the rule by whoever
+ * writes the job. The ceiling binds on that figure and the ledger records it,
+ * since the API reports no actual charge; the console shows what was taken.
  *
  * Environment, read from `~/.higgsfield.env` (`export NAME=value` lines, chmod 600)
  * wherever the process environment lacks it:
