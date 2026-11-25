@@ -3,6 +3,7 @@
 import argparse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
+import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -70,6 +71,6 @@ if __name__ == "__main__":
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        pass
+        sys.exit(0)  # Ctrl-C is how the server is stopped
     finally:
         server.server_close()

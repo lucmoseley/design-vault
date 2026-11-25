@@ -38,6 +38,10 @@ import sys
 from datetime import date
 
 REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
+sys.path.append(
+    str(pathlib.Path(__file__).resolve().parents[2] / "design-round/scripts")
+)
+from fail_open import expected  # noqa: E402
 
 STORE = "private/client-originals"
 MANIFEST = "docs/brand/client-originals.json"
@@ -92,7 +96,8 @@ def describe(path):
     try:
         with Image.open(path) as im:
             w, h = im.size
-    except UnidentifiedImageError:
+    except UnidentifiedImageError as exc:
+        expected(exc, "no pixel size")
         w = h = None
     return {"w": w, "h": h, "bytes": os.path.getsize(path), "sha256": sha256(path)}
 

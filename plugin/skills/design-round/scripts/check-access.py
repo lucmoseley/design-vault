@@ -271,6 +271,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
 layout = siblings.load(HERE, "check-layout.py")
@@ -1578,7 +1579,8 @@ def pause_answer(context, url, carousels, spans):
             page.evaluate_handle("(i) => window.__pauses[i]", i).as_element().click(
                 force=True  # #536
             )
-        except PlaywrightError:
+        except PlaywrightError as exc:
+            expected(exc, "counted unclickable")
             unclickable += 1
             continue
         # Off it, so a carousel held while the pointer is over it is not taken

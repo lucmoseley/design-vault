@@ -90,12 +90,13 @@ MEASURE_JS = r"""
 
 
 def numbers(p, flag, value, count):
+    wants = f"{flag} wants {count} numbers joined by commas — got {value!r}"
     try:
         out = [float(n) for n in value.split(",")]
     except ValueError:
-        out = []
+        p.error(wants)
     if len(out) != count:
-        p.error(f"{flag} wants {count} numbers joined by commas — got {value!r}")
+        p.error(wants)
     return out
 
 
@@ -217,7 +218,7 @@ def pixels(args):
     try:
         from PIL import Image
     except ImportError as err:
-        return flow.missing(err)
+        sys.exit(flow.missing(err))
     import numpy as np  # loaded, guarded, with access-pixels.py
 
     try:
