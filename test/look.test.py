@@ -82,10 +82,14 @@ class Arguments(unittest.TestCase):
         self.assertEqual(proc.returncode, 2, proc.stderr)
         self.assertIn("--width 200 is outside", proc.stderr)
 
-    def test_a_step_scale_or_until_below_its_least_is_a_usage_error(self):
+    def test_a_step_scale_or_until_below_its_least_is_a_usage_error(self):  # #154
         for args, message in (
             (("scrub", PAGE, "--out", "x", "--step", "0"), "--step wants 1 or more"),
             (("scrub", PAGE, "--out", "x", "--until", "-1"), "--until wants 0 or more"),
+            (
+                ("scrub", PAGE, "--out", "x", "--height", "0"),
+                "--height wants 1 or more",
+            ),
             (
                 ("zoom", PAGE, "--clip", "1,2,3,4", "--out", "x.png", "--scale", "0"),
                 "--scale wants 1 or more",
@@ -95,7 +99,7 @@ class Arguments(unittest.TestCase):
             self.assertEqual(proc.returncode, 2, proc.stderr)
             self.assertIn(message, proc.stderr)
 
-    def test_pixels_on_a_missing_image_is_a_usage_error(self):
+    def test_pixels_on_a_missing_image_is_a_usage_error(self):  # #154
         proc = run("pixels", "no-such.png", "--at", "1,1", "--against", "2,2")
         self.assertEqual(proc.returncode, 2, proc.stderr)
         self.assertIn("no-such.png is no image it can read", proc.stderr)

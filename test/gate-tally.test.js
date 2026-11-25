@@ -101,7 +101,7 @@ test("a critic whose candidates were split across dispatches is tallied from its
   refused(tally({ critics: [twice, ...CRITICS.slice(1)] }), /critic-a\.json: answers for v1-arches, which another of \S+ answers too/);
 });
 
-test("one critic's file named under two --critic flags is refused, so one critic cannot count as two", () => {
+test("one critic's file named under two --critic flags is refused, so one critic cannot count as two (#154)", () => {
   const usage = (r) => {
     assert.equal(r.status, 2, r.out + r.err);
     assert.match(r.err, /critic-a\.json is named under two --critic flags/);

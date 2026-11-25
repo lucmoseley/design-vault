@@ -146,7 +146,7 @@ test("the build stage reads a parts map's roles as the candidate's parts, and jo
   assert.deepEqual(ids(ok(list(builder("build", "--parts", carried)))), both);
 });
 
-test("the build stage refuses a parts map holding a part that is not an object, naming it, rather than crashing", () => {
+test("the build stage refuses a parts map holding a part that is not an object, naming it, rather than crashing (#154)", () => {
   const hollow = buildCopy(PARTS_MAP, (data) => data.parts.push(null));
   const r = list(builder("build", "--parts", hollow));
   assert.equal(r.status, 1, r.out + r.err);

@@ -953,7 +953,6 @@ function readText(file) {
   }
 }
 
-/** Why the --critic values are not three critics' own files, or null: one file named under two --critic flags is one critic counted twice. */
 function sharedCriticFile(critics) {
   const owner = new Map();
   for (const [index, files] of critics.entries()) {

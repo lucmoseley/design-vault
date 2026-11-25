@@ -28,7 +28,6 @@ const CANDIDATE = /^rounds\/[\w.-]+-r[1-9]\d* [\w.-]+$/;
 const MISSED_BY = ["lint", "gate", "critic", "building session", "no rule"];
 const STANCES = ["kept", "rejected"];
 
-// A landed ruling: a gate id or a rules-file line, which may hold spaces.
 const LANDED = /^rule: \S/;
 const isRuling = (value) => value === "pending" || value === "no rule" || (typeof value === "string" && LANDED.test(value));
 

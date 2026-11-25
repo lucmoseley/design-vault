@@ -78,6 +78,8 @@ first_line, PageTimeoutError, RefusedError = (
 # docs/research/house-audit-craft.md §1.1). The error reads high, so at 4x a mark
 # 0.02 px off can fail.
 LIMITS = {True: (0.1, "an SVG"), False: (0.5, "a raster")}
+# The SVG elements that draw a raster: an image, a filter's image, or HTML holding one.
+RASTER_TAGS = {"image", "feImage", "foreignObject"}
 # Measured on a 120x80 arch shifted 0 to 1 px (#73 review): the offset read
 # up to 0.05 px high at 8x, 0.08 at 4x, 0.18 at 2x and 0.30 at 1x, so below 4x
 # a mark 0.3 px off can fail.
@@ -111,8 +113,7 @@ def px(value):
 def read(path):
     """A file as {path, data, mime, size, viewbox, vector}: size is its own,
     viewbox whether it can be drawn at another, vector whether it is an SVG
-    that draws no raster image, whose edges are then known no better than a
-    raster's."""
+    that draws no raster image."""
     with open(path, "rb") as fh:
         data = fh.read()
     if path.lower().endswith(".svg"):
@@ -139,7 +140,9 @@ def read(path):
             "mime": "image/svg+xml",
             "size": size,
             "viewbox": box is not None,
-            "vector": not any(e.tag.rpartition("}")[2] == "image" for e in root.iter()),
+            "vector": not any(
+                e.tag.rpartition("}")[2] in RASTER_TAGS for e in root.iter()
+            ),
         }
     try:
         image = Image.open(io.BytesIO(data))

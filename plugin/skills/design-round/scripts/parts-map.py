@@ -103,6 +103,7 @@ MAP_JS = (
     '[role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=menuitem], ' +
     '[role=option], [role=combobox], [role=slider], [role=textbox], iframe';
   const CLICKS = REACT_PROPS_JSON;
+  const EVENTS = ACT_EVENTS_JSON;
   const css = (el) => getComputedStyle(el);
   const shown = (el) => {
     for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
@@ -119,7 +120,7 @@ MAP_JS = (
     return !!(el._vei && CLICKS.some((k) => el._vei[k]));
   };
   const all = [...document.body.querySelectorAll('*')].filter((el) => !el.closest('svg') || el.localName === 'svg');
-  const listened = (el) => el !== document.body && (el.__partsMapClick || frameworkClick(el) || typeof el.onclick === 'function');
+  const listened = (el) => el !== document.body && (el.__partsMapClick || frameworkClick(el) || EVENTS.some((k) => typeof el['on' + k] === 'function'));
   const marked = all.filter((el) => (el.matches(ACTION) || listened(el)) && !disabled(el) && shown(el));
   // A listener on an element holding every other actable part delegates the page's clicks.
   const actable = new Set(marked.filter((el) => el.matches(ACTION) || marked.some((o) => o !== el && !el.contains(o))));
@@ -271,7 +272,9 @@ MAP_JS = (
   scrollTo({ top: 0, left: 0, behavior: 'instant' });
   return { unread, parts: parts.map(({ el, ...p }) => p) };
 }
-""".replace("REACT_PROPS_JSON", json.dumps(access.REACT_PROPS))
+""".replace("REACT_PROPS_JSON", json.dumps(access.REACT_PROPS)).replace(
+        "ACT_EVENTS_JSON", json.dumps(access.ACT_EVENTS)
+    )
 )
 
 # Outlines each part on the page with its id beside it, for the key screenshot.

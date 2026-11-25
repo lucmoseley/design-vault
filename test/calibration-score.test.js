@@ -57,7 +57,7 @@ const PACKED = {
 };
 
 // The fixture round log's rows the run reads (by default hero-r1's alone), the rounds the manifest judges, entry 1's
-// stance, the settle counts hero-r1's row gains, and hero-r1's gate list of its round's time, by default its gate list.
+// stance and gold ruling, the settle counts hero-r1's row gains, and hero-r1's gate list of its round's time, by default its gate list.
 function setUp({ canary = { held: true, verdict: "held", model: run.model, claude_code: run.claude_code }, change = {}, roundRows = 1, rounds = ["hero-r1"], firstPick, stance = "rejected", goldRuling, settle, then } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-score-"));
   scratch.push(dir);
@@ -118,8 +118,7 @@ test("each critic's answers are counted against his verdicts, and every disagree
   assert.match(result.stdout, /critic b: v1-arches holds "the accent gold stays muted against the navy" \(corrections-log line 1, an unlanded rule\)/);
 });
 
-// hero-r1's then-list words vault.proof otherwise, or holds no question: his first pick v2-slow is no Yes on it.
-test("an entry ruled onto a rules-file line is reported as that rule, not as an unlanded one", () => {
+test("an entry ruled onto a rules-file line is reported as that rule, not as an unlanded one (#154)", () => {
   const line = "rule: rules.md §2 accent gold stays muted";
   const { score, row } = setUp({ goldRuling: line });
   const result = score();
@@ -128,6 +127,7 @@ test("an entry ruled onto a rules-file line is reported as that rule, not as an 
   assert.match(result.stdout, /\(corrections-log line 1, rule: rules\.md §2 accent gold stays muted\)/);
 });
 
+// hero-r1's then-list words vault.proof otherwise, or holds no question: his first pick v2-slow is no Yes on it.
 test("a question added or reworded since the round counts no Yes on his first pick, and its answers there are counted apart", () => {
   for (const then of [fixture("hero-r1", "gate-list-reworded.md"), fixture("hero-r1", "gate-list-empty.md")]) {
     const { score, row } = setUp({ then });

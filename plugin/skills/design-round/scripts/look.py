@@ -142,8 +142,15 @@ def parse(argv):
         return args
     if not layout.LOW <= args.width <= layout.HIGH:
         p.error(f"--width {args.width} is outside {layout.LOW}–{layout.HIGH}")
-    for flag, least in (("scale", 1), ("step", 1), ("until", 0)):
-        if getattr(args, flag, least) < least:
+    for flag, least in (
+        ("scale", 1),
+        ("step", 1),
+        ("until", 0),
+        ("height", 1),
+        ("width", 1),
+    ):
+        value = getattr(args, flag, None)
+        if value is not None and value < least:
             p.error(f"--{flag} wants {least} or more")
     if args.height is None:
         args.height = layout.height_at(args.width, layout.HEIGHTS)
