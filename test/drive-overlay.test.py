@@ -1,7 +1,7 @@
 """Tests plugin/skills/design-round/scripts/drive-overlay.py (#303): python3 test/drive-overlay.test.py
 
 Lose the settle and the fading panel reads shut while it opens; lose the trial and a dialog only a script
-opens is never found. It drives a real Chromium on two fixture pages, since what it pins is what the browser
+opens is never found. It drives a real Chromium on three fixture pages, since what it pins is what the browser
 opens, focuses and draws under real clicks and keys. One browser serves the module and each test opens a
 fresh page in it, so no test sees another's open overlay; the driver's trial cache does outlive a test, so a
 test that watches the trial clears it first.
@@ -10,7 +10,10 @@ test that watches the trial clears it first.
 import importlib.util
 import os
 import pathlib
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 HERE = os.path.dirname(__file__)
@@ -20,6 +23,9 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 FIXTURE = pathlib.Path(HERE, "fixtures", "drivers", "overlay.html").resolve().as_uri()
 AT_LOAD = (
     pathlib.Path(HERE, "fixtures", "drivers", "overlay-at-load.html").resolve().as_uri()
+)
+TOUCH = (
+    pathlib.Path(HERE, "fixtures", "drivers", "overlay-touch.html").resolve().as_uri()
 )
 
 
@@ -239,6 +245,92 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.page.evaluate(opacity), "1")
         self.assertFalse(overlay.close(self.page, ov, by="escape")["open"])
         self.assertEqual(self.page.evaluate(opacity), "0")
+
+
+class Trial(unittest.TestCase):
+    """The trial page under the caller's context options (#552)."""
+
+    def opened(self, width=None, **options):
+        context = browser.new_context(**options)
+        self.addCleanup(context.close)
+        page = context.new_page()
+        if width:
+            page.set_viewport_size({"width": width, "height": 664})
+        page.goto(TOUCH)
+        return {key(ov): ov.target.get_attribute("id") for ov in overlay.find(page)}
+
+    def test_an_opener_drawn_for_touch_alone_is_found_at_phone_width_and_kept_apart(
+        self,
+    ):
+        overlay._trials.clear()
+        phone = {"width": 390, "height": 664}
+        both = {"info-button": "info", "map-button": "map"}
+        self.assertEqual(self.opened(viewport=phone), both)
+        self.assertEqual(
+            self.opened(viewport=phone, has_touch=True), {"book-button": "book", **both}
+        )
+
+    def test_the_trial_takes_the_pages_viewport_where_the_caller_resized_it(self):
+        overlay._trials.clear()
+        self.assertEqual(self.opened(), {"info-button": "info"})
+        self.assertEqual(
+            self.opened(width=390), {"info-button": "info", "map-button": "map"}
+        )
+
+    def test_every_option_the_caller_set_reaches_the_trial_context(self):
+        options = dict(
+            viewport={"width": 390, "height": 664},
+            screen={"width": 390, "height": 844},
+            ignore_https_errors=True,
+            java_script_enabled=False,
+            bypass_csp=True,
+            user_agent="trial-test",
+            locale="de-DE",
+            timezone_id="Europe/Berlin",
+            geolocation={"latitude": 52.5, "longitude": 13.4},
+            permissions=["geolocation"],
+            extra_http_headers={"X-Trial": "1"},
+            offline=True,
+            http_credentials={"username": "u", "password": "p"},
+            device_scale_factor=3,
+            is_mobile=True,
+            has_touch=True,
+            color_scheme="dark",
+            reduced_motion="reduce",
+            forced_colors="active",
+            contrast="more",
+            base_url="http://localhost/",
+            strict_selectors=True,
+            service_workers="block",
+        )
+        folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, folder)
+        cert, private = (os.path.join(folder, n) for n in ("c.pem", "k.pem"))
+        subprocess.run(
+            ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes"]
+            + ["-keyout", private, "-out", cert, "-days", "1", "-subj", "/CN=t"],
+            check=True,
+            capture_output=True,
+        )
+        options["client_certificates"] = [
+            {"origin": "https://localhost", "certPath": cert, "keyPath": private}
+        ]
+
+        def kept(context):
+            return {
+                k: v
+                for k, v in context._impl_obj._options.items()
+                if k not in overlay.UNCARRIED
+            }
+
+        for given in (options, {"no_viewport": True, "color_scheme": "null"}):
+            with self.subTest(given=sorted(given)):
+                context = browser.new_context(**given)
+                self.addCleanup(context.close)
+                carried = overlay._trial_options(context.new_page())
+                trial = browser.new_context(**carried)
+                self.addCleanup(trial.close)
+                self.assertEqual(kept(trial), kept(context))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay driver fixture: an opener for touch alone</title>
+<style>
+  #book-button { display: none; }
+  @media (pointer: coarse) { #book-button { display: inline-block; } }
+  @media (min-width: 600px) { #map-button { display: none; } }
+</style>
+</head>
+<body>
+<!-- test/drive-overlay.test.py: a trial run without the caller's has_touch never draws the Book button, so never finds
+     what opens its dialog; the Map button shows on a narrow screen alone, and the Info button always. -->
+<button id="book-button" type="button">Book</button>
+<button id="info-button" type="button">Info</button>
+<button id="map-button" type="button">Map</button>
+<dialog id="book" aria-label="Book"><form method="dialog"><button>Close</button></form></dialog>
+<dialog id="info" aria-label="Info"><form method="dialog"><button>Close</button></form></dialog>
+<dialog id="map" aria-label="Map"><form method="dialog"><button>Close</button></form></dialog>
+<script>
+  document.getElementById("book-button").addEventListener("click", () => document.getElementById("book").showModal());
+  document.getElementById("info-button").addEventListener("click", () => document.getElementById("info").showModal());
+  document.getElementById("map-button").addEventListener("click", () => document.getElementById("map").showModal());
+</script>
+</body>
+</html>
