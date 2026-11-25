@@ -65,4 +65,4 @@ The gates `.husky/pre-commit.local` adds to the floor. Each refuses the commit o
 | `node corrections-log.js --staged` | a malformed row, or a row that changes one HEAD holds beyond answering its pending ruling (#166) | `data/corrections-log.jsonl` |
 | `node calibration-log.js --staged` | a malformed row, a run whose figures disagree with the disagreements listed under them, or any change to or removal of a row HEAD holds (#168) | `data/calibration-log.jsonl` |
 
-CI runs no gate beyond the floor: `workflow-core-lander.yml` runs `commands.test` (`bash test/all.sh`) in four shards on a push to `lander/batch*` or `lander/iso-suite-*`, refusing the landing on a red, and `workflow-core-named-rerun.yml` reruns the test files a dispatch names.
+No CI job runs: with `landingTester` pinned `local` (#531), the lander's own run of `commands.test` before `main` moves is the only gate past a commit.
