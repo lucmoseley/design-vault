@@ -239,6 +239,6 @@ Comparisons with the outside models (rigorous sources only): Nano Banana Pro lea
 ## Bound
 - Read in full or near full (tables checked): Qwen-Image report (2508.02324); Z-Image report (2511.22699, Table 7 checked in raw HTML); BizGenEval (2603.25732, table checked in raw HTML); IMG.LY methodology and 11 model pages and 3 prompt pages.
 - Read in part (abstract, main tables, key sections through a fetch summariser): Qwen-Image-2.0 report, Qwen-Image-Bench, WeGenBench, ACBench/Paint-Anything, EdiVal-Agent, MultiBanana, VIF-Bench, persistent-identity paper, MEF, OneIG, RealGen, Perle, TLab quantization paper, diversity-collapse paper, GenColorBench, NumColor, TextPecker, FEPBench abstract; maker pages for Ideogram 4.0 (blog, model card, JSON guide), Recraft V4 and V4.1 (blog, docs, API), FLUX.2 (blog, prompting guide), Grok Imagine 2.0 and Aurora posts, Qwen-Image-2512 card.
-- Could not reach: WACV 2026 workshop paper "We Still See Broken Limbs" (HTTP 403); Artificial Analysis per-style categories (page gives no category data; see `image-model-benchmarks.md`).
+- Could not reach: WACV 2026 workshop paper "We Still See Broken Limbs" (HTTP 403); Artificial Analysis per-style categories (page gives no category data; see [image-model-benchmarks.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/image-model-benchmarks.md)).
 - Not searched: LMArena and Artificial Analysis rankings (the other agent's scope); YouTube and blog reviews (excluded by the source bar).
 
