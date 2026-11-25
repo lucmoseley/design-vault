@@ -213,6 +213,20 @@ class Edges(unittest.TestCase):
         self.assertIn("could not read the shape", proc.stdout)
         self.assertIn("judge them under vault.contacts-code", proc.stdout)
 
+    def test_a_cover_check_curves_cannot_prove_opaque_is_unmeasured(self):
+        # #541: the strip fills the gap, but a stylesheet rule may thin it; its other contacts are coincident.
+        page = self.page(
+            "<style>.t{opacity:.5}</style>"
+            '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
+            '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
+            '<path id="strip" fill="#0c0" d="M46 10 H54 V50 H46 Z"/>'
+        )
+        proc = run(page, self.tmp.name)
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn("NOT MEASURED a.2-b.4 (covered): ", proc.stdout)
+        self.assertIn("judge it under vault.contacts-code.", proc.stdout)
+        self.assertNotIn("pass a.2-b.4", proc.stdout)
+
     def test_a_missing_file_or_a_url_is_a_usage_error(self):
         for page in (os.path.join(self.tmp.name, "none.html"), "https://example.com/"):
             proc = run(page, self.tmp.name)
