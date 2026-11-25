@@ -475,16 +475,16 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - status: staged
 
 ### vault.gradient-function
-- applies-when: web-surface; every gradient, glow or pattern drawn behind content
-- question: Does every gradient, glow or pattern behind content do one job (a scrim under text on an image, a light or depth cue on a raised surface, a brand ground where vault.tone-colour-share lets the surface go committed, an ambient pattern on a message or promotional area, a chart or progress ring), with none behind a region visitors work in, per vault.decoration-place?
+- applies-when: web-surface; every gradient, glow, orb or pattern drawn behind content
+- question: Does every gradient, glow, blurred or glowing orb drawn as an object, or pattern behind content do one job (a scrim under text on an image, a light or depth cue on a raised surface, a brand ground where vault.tone-colour-share lets the surface go committed, an ambient pattern on a message or promotional area, a chart or progress ring), with none behind a region visitors work in, per vault.decoration-place?
 - answered-by: look
 - writes: gradient use
 - yields-to: vault.gradient-place, vault.decoration-place, vault.brand-layer, vault.ai-look
-- source: Atlassian Design, Illustrations, Ambient pattern, "Use patterns for messages or promotional areas that need visual interest but don't require a specific conceptual image" (as read Nov 2026); Krehel, "Understanding gradients" (as read Nov 2026), radial "for glows, backgrounds or depth lighting", conic "for charts, rings"; NN/g, "Text Over Images" (updated 13 Jan 2026), a fade under text; impeccable 4.5.0 `quieter.md`, "Remove decorative elements: Gradients, shadows, patterns, textures that don't serve purpose", and engine 0.1.11 rules radial-halo and radial-spotlight-glow; strength: design-system guidance
+- source: Atlassian Design, Illustrations, Ambient pattern, "Use patterns for messages or promotional areas that need visual interest but don't require a specific conceptual image" (as read Nov 2026); Krehel, "Understanding gradients" (as read Nov 2026), radial "for glows, backgrounds or depth lighting", conic "for charts, rings"; NN/g, "Text Over Images" (updated 13 Jan 2026), a fade under text; impeccable 4.5.0 `quieter.md`, "Remove decorative elements: Gradients, shadows, patterns, textures that don't serve purpose", and engine 0.1.11 rules radial-halo and radial-spotlight-glow; Hallmark `sloplint.mjs` gate 29 (`check29Glow`), a blurred orb over 40 px; strength: design-system guidance
 - era: dated 2027-11-13
 - owner: vault
 - stage: role
-- target: Give every gradient, glow or pattern one job (a text scrim, a light cue, a brand ground where colour may lead, an ambient pattern on a promotion, a chart), and keep all of them out of working regions.
+- target: Give every gradient, glow, orb or pattern one job (a text scrim, a light cue, a brand ground where colour may lead, an ambient pattern on a promotion, a chart), and keep all of them out of working regions.
 - reasons: design-critique/references/grounds-and-gradients.md#when-a-gradient-has-a-function
 - ledger: COL-80
 - status: staged

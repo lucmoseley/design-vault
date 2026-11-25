@@ -172,6 +172,14 @@ Records: `vault.motion-frequency`, `vault.delight-frequency`, `vault.motion-freq
 - **Trade-off.** A product kept plain everywhere it is used often can feel flat; its character then rests on the brand layer and the rare moments.
 - **Clash.** `vault.high-stakes` and `vault.brand-layer` win: no delight goes on a price, a booking handover or an error. `vault.motion-duration` sets the range for every move; `vault.motion-frequency` keeps frequent parts at its short end.
 
+### Motion that starts by itself
+
+Record: `vault.motion-purpose`.
+
+- **Why.** Motion a visitor did not start pulls the eye whether or not anything is there to see, so it is spent on the one thing the brief wants noticed. Anthropic's `frontend-design` keeps it "only to draw attention", impeccable asks for "one authored moment", and its slop catalogue lists wobbling icons and drifting badges among the generated defaults.
+- **Trade-off.** A brand whose character is restless motion loses it here unless the brief names that motion as the thing to notice.
+- **Clash.** `vault.pause` still gives any such motion over 5 s a control.
+
 ### Distinct from the category leaders
 
 Record: `vault.brand-distinct`.
