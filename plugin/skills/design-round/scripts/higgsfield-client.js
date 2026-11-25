@@ -33,6 +33,17 @@ class ApiError extends Error {
   }
 }
 
+class BatchStoppedError extends Error {
+  constructor(message, { stoppedAt, ran, notSubmitted, mayBeCharged, cause }) {
+    super(message, { cause });
+    this.name = "BatchStoppedError";
+    this.stoppedAt = stoppedAt;
+    this.ran = ran;
+    this.notSubmitted = notSubmitted;
+    this.mayBeCharged = mayBeCharged;
+  }
+}
+
 /** The image or video type by its first bytes; null for anything else. */
 function sniff(bytes) {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
@@ -392,11 +403,11 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
         const rest = priced.slice(index).map((other) => other.name);
-        throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
+        throw new BatchStoppedError(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { stoppedAt: name, ran, notSubmitted: rest, mayBeCharged: false, cause: error });
       }
       record(job, { ...entry, status: "unanswered", files: [] });
       const rest = priced.slice(index + 1).map((other) => other.name);
-      throw new Error(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { cause: error });
+      throw new BatchStoppedError(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { stoppedAt: name, ran, notSubmitted: rest, mayBeCharged: true, cause: error });
     }
     entry.request_id = accepted.request_id;
     let state;
