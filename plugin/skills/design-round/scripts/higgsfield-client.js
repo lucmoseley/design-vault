@@ -46,6 +46,16 @@ class BatchStoppedError extends Error {
   }
 }
 
+class LedgerLineError extends Error {
+  constructor(file, line, text, fault) {
+    super(`${file} line ${line} ${fault}: ${text}`);
+    this.name = "LedgerLineError";
+    this.file = file;
+    this.line = line;
+    this.text = text;
+  }
+}
+
 /** The image or video type by its first bytes; null for anything else. */
 function sniff(bytes) {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
@@ -118,30 +128,46 @@ function spentIn(roundDir) {
     } catch {
       entry = undefined;
     }
-    const where = `${file} line ${index + 1}`;
+    const refuse = (fault) => new LedgerLineError(file, index + 1, line, fault);
     // #575
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new Error(`${where} is not a ledger entry, as a run killed mid-write leaves: ${line}. Check the Higgsfield console for that job's charge, then mend the line to carry it`);
+      const error = refuse("is not a ledger entry, as a run killed mid-write leaves");
+      error.message += ". Check the Higgsfield console for that job's charge, then mend the line to carry it";
+      throw error;
     }
     const usd = Number(entry.usd);
     // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
-    if (!Number.isFinite(usd)) throw new Error(`${where} holds no usd figure: ${line}`);
+    if (!Number.isFinite(usd)) throw refuse("holds no usd figure");
     // A negative line would free room under the ceiling.
-    if (usd < 0) throw new Error(`${where} holds a negative usd figure: ${line}`);
+    if (usd < 0) throw refuse("holds a negative usd figure");
     if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
     else unkeyed += usd;
   }
   return [...bySubmission.values()].reduce((sum, usd) => sum + usd, unkeyed);
 }
 
+// #575
 function record(job, line) {
   fs.mkdirSync(job.roundDir, { recursive: true });
-  fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
+  const file = path.join(job.roundDir, LEDGER);
+  const before = fs.existsSync(file) ? fs.statSync(file).size : 0;
+  try {
+    fs.appendFileSync(file, `${JSON.stringify(line)}\n`);
+  } catch (error) {
+    if (fs.existsSync(file) && fs.statSync(file).size > before) {
+      try {
+        fs.truncateSync(file, before);
+      } catch (cutError) {
+        error.message += `; the part it wrote is left torn, as cutting it back failed: ${cutError.message}`;
+      }
+    }
+    throw error;
+  }
 }
 
-function batchStopped(message, priced, index, { thisJobSubmitted, mayBeCharged = thisJobSubmitted, cause }) {
+function batchStopped(message, priced, index, { submissionSent, mayBeCharged = submissionSent, cause }) {
   const ran = priced.slice(0, index).map((other) => other.name);
-  const notSubmitted = priced.slice(thisJobSubmitted ? index + 1 : index).map((other) => other.name);
+  const notSubmitted = priced.slice(submissionSent ? index + 1 : index).map((other) => other.name);
   const text = `${message}. ${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${notSubmitted.length ? notSubmitted.join(", ") : "none"}`;
   return new BatchStoppedError(text, { stoppedAt: priced[index].name, ran, notSubmitted, mayBeCharged, cause });
 }
@@ -353,9 +379,8 @@ async function download(ctx, url) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-/** Saves every output a completed request returned; the first takes the stem, any more take -2, -3. */
-async function save(ctx, job, outputs) {
-  const files = [];
+/** Saves every output a completed request returned into files; the first takes the stem, any more take -2, -3. */
+async function save(ctx, job, outputs, files) {
   for (const [index, output] of outputs.entries()) {
     const bytes = await download(ctx, output.url);
     const type = sniff(bytes);
@@ -364,7 +389,6 @@ async function save(ctx, job, outputs) {
     fs.writeFileSync(file, bytes);
     files.push(path.join(job.round, path.basename(file)));
   }
-  return files;
 }
 
 /**
@@ -449,15 +473,15 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
     const ledgerFault = (status, error) => `${name}: its ${status} line could not be written to ${path.join(job.roundDir, LEDGER)} (${error.message})`;
     // #575
-    const recordOrStop = (line, howFar, { thisJobSubmitted = true, mayBeCharged = thisJobSubmitted } = {}) => {
+    const recordOrStop = (line, howFar, { submissionSent = true, mayBeCharged } = {}) => {
       try {
         record(job, line);
       } catch (error) {
-        throw batchStopped(`${ledgerFault(line.status, error)}; ${howFar}`, priced, index, { thisJobSubmitted, mayBeCharged, cause: error });
+        throw batchStopped(`${ledgerFault(line.status, error)}; ${howFar}`, priced, index, { submissionSent, mayBeCharged, cause: error });
       }
     };
     // #571
-    recordOrStop({ ...entry, status: "submitting", files: [] }, "it was not submitted", { thisJobSubmitted: false });
+    recordOrStop({ ...entry, status: "submitting", files: [] }, "it was not submitted", { submissionSent: false });
     let accepted;
     try {
       accepted = await submit(ctx, job, entry.idempotency_key);
@@ -465,11 +489,11 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
-        recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { thisJobSubmitted: false });
-        throw batchStopped(error.message, priced, index, { thisJobSubmitted: false, cause: error });
+        recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { submissionSent: false });
+        throw batchStopped(error.message, priced, index, { submissionSent: false, cause: error });
       }
       recordOrStop({ ...entry, status: "unanswered", files: [] }, `it may have reached Higgsfield: ${error.message}`);
-      throw batchStopped(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate`, priced, index, { thisJobSubmitted: true, cause: error });
+      throw batchStopped(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate`, priced, index, { submissionSent: true, cause: error });
     }
     entry.request_id = accepted.request_id;
     log(`${name}: accepted as request ${accepted.request_id}`);
@@ -506,21 +530,29 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     // and the ledger then keeps the output's URL, live for at least seven days.
     const urls = outputs.map((output) => output.url);
     const unreadableText = unreadable ? `, and ${unreadable} output${unreadable > 1 ? "s" : ""} with no URL` : "";
-    recordOrStop(
-      { ...entry, status: "completed", urls, ...(unreadable ? { unreadable } : {}) },
-      `request ${accepted.request_id} completed and is charged, ${urls.length ? `its outputs at ${urls.join(" ")}, live for at least seven days` : "with no output URL"}${unreadableText}`,
-    );
+    let ledgerError;
+    try {
+      record(job, { ...entry, status: "completed", urls, ...(unreadable ? { unreadable } : {}) });
+    } catch (error) {
+      ledgerError = error;
+    }
     let succeeded = outputs.length > 0 && !unreadable;
     if (unreadable) log(`✗ ${name}: charged, but ${unreadable} of its ${listed.length} outputs carried no URL`);
     else if (!outputs.length) log(`✗ ${name}: completed with no image or video`);
+    const files = [];
     if (outputs.length) {
       try {
-        const files = await save(ctx, job, outputs);
+        await save(ctx, job, outputs, files);
         log(`saved ${files.join(", ")}  cost ${priceText(job.price)}`);
       } catch (error) {
-        log(`✗ ${name}: charged, but not saved: ${error.message}. The ledger keeps its URL`);
+        log(`✗ ${name}: charged, but not saved: ${error.message}. ${ledgerError ? "Its URLs are below" : "The ledger keeps its URLs"}`);
         succeeded = false;
       }
+    }
+    // #575
+    if (ledgerError) {
+      const outputsText = urls.length ? `its outputs at ${urls.join(" ")}, live for at least seven days, ${files.length === urls.length ? `saved as ${files.join(", ")}` : files.length ? `only ${files.join(", ")} saved` : "not saved"}` : "with no output URL";
+      throw batchStopped(`${ledgerFault("completed", ledgerError)}; request ${accepted.request_id} completed and is charged, ${outputsText}${unreadableText}`, priced, index, { submissionSent: true, cause: ledgerError });
     }
     if (!succeeded) failed++;
   }
