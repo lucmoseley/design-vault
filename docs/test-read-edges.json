@@ -316,33 +316,10 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"scripts/lib/resolve-core.js": [
-			"test/bundle.test.js",
-			"test/calibration-critic.test.js",
-			"test/calibration-packet.test.js",
-			"test/calibration-score.test.js",
-			"test/check-curves.test.js",
-			"test/chromium-suites.test.js",
-			"test/client.test.js",
-			"test/corrections-log.test.js",
-			"test/critic-examples.test.js",
 			"test/failed-files.test.js",
-			"test/fall-check.test.js",
-			"test/fall.test.js",
-			"test/fit-gate-template.test.js",
-			"test/gate-affordance.test.js",
-			"test/gate-list.test.js",
-			"test/gate-recheck.test.js",
-			"test/gate-select.test.js",
-			"test/gate-tally.test.js",
-			"test/gate.test.js",
-			"test/higgsfield.test.js",
-			"test/ingest.test.js",
 			"test/ledger-check.test.js",
-			"test/ledger-upkeep.test.js",
-			"test/release-check.test.js",
-			"test/round-log.test.js",
-			"test/select-suites.test.js",
-			"test/validate.test.js"
+			"test/run-lanes.test.js",
+			"test/select-suites.test.js"
 		],
 		"search.js": [
 			"test/rule-store-pointers.test.js"
@@ -2407,6 +2384,12 @@
 		],
 		"test/rule-table.test.py": [
 			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/run-cost.js": [
+			"test/failed-files.test.js",
+			"test/ledger-check.test.js",
+			"test/run-lanes.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/run-lanes.sh": [
