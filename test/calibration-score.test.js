@@ -58,12 +58,12 @@ const PACKED = {
 
 // The fixture round log's rows the run reads (by default hero-r1's alone), the rounds the manifest judges, entry 1's
 // stance, the settle counts hero-r1's row gains, and hero-r1's gate list of its round's time, by default its gate list.
-function setUp({ canary = { held: true, verdict: "held", model: run.model, claude_code: run.claude_code }, change = {}, roundRows = 1, rounds = ["hero-r1"], firstPick, stance = "rejected", settle, then } = {}) {
+function setUp({ canary = { held: true, verdict: "held", model: run.model, claude_code: run.claude_code }, change = {}, roundRows = 1, rounds = ["hero-r1"], firstPick, stance = "rejected", goldRuling, settle, then } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-score-"));
   scratch.push(dir);
   const corrections = path.join(dir, "corrections-log.jsonl");
   const [gold, ...rest] = fs.readFileSync(fixture("corrections-log.jsonl"), "utf8").trim().split("\n");
-  fs.writeFileSync(corrections, [JSON.stringify({ ...JSON.parse(gold), stance }), ...rest, JSON.stringify(ruled)].join("\n") + "\n");
+  fs.writeFileSync(corrections, [JSON.stringify({ ...JSON.parse(gold), stance, ...(goldRuling ? { ruling: goldRuling } : {}) }), ...rest, JSON.stringify(ruled)].join("\n") + "\n");
   const roundLog = path.join(dir, "round-log.jsonl");
   const rows = fs.readFileSync(fixture("round-log.jsonl"), "utf8").trim().split("\n").slice(0, roundRows).map((l) => JSON.parse(l));
   if (firstPick) rows[0] = { ...rows[0], first_pick: firstPick, agree: firstPick === rows[0].critic_pick };
@@ -119,6 +119,15 @@ test("each critic's answers are counted against his verdicts, and every disagree
 });
 
 // hero-r1's then-list words vault.proof otherwise, or holds no question: his first pick v2-slow is no Yes on it.
+test("an entry ruled onto a rules-file line is reported as that rule, not as an unlanded one", () => {
+  const line = "rule: rules.md §2 accent gold stays muted";
+  const { score, row } = setUp({ goldRuling: line });
+  const result = score();
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(row().disagreements.find((d) => d.kind === "entry" && d.on === 1).rule, line);
+  assert.match(result.stdout, /\(corrections-log line 1, rule: rules\.md §2 accent gold stays muted\)/);
+});
+
 test("a question added or reworded since the round counts no Yes on his first pick, and its answers there are counted apart", () => {
   for (const then of [fixture("hero-r1", "gate-list-reworded.md"), fixture("hero-r1", "gate-list-empty.md")]) {
     const { score, row } = setUp({ then });

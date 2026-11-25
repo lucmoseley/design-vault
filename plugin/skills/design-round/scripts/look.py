@@ -142,6 +142,9 @@ def parse(argv):
         return args
     if not layout.LOW <= args.width <= layout.HIGH:
         p.error(f"--width {args.width} is outside {layout.LOW}–{layout.HIGH}")
+    for flag, least in (("scale", 1), ("step", 1), ("until", 0)):
+        if getattr(args, flag, least) < least:
+            p.error(f"--{flag} wants {least} or more")
     if args.height is None:
         args.height = layout.height_at(args.width, layout.HEIGHTS)
     args.url = flow.page_url(p, args.page)
@@ -203,7 +206,11 @@ def pixels(args):
         return flow.missing(err)
     import numpy as np  # loaded, guarded, with access-pixels.py
 
-    shot = np.asarray(Image.open(args.png).convert("RGB"))
+    try:
+        shot = np.asarray(Image.open(args.png).convert("RGB"))
+    except OSError as err:
+        print(f"look.py: {args.png} is no image it can read: {err}", file=sys.stderr)
+        return 2
     h, w, _ = shot.shape
     colours = []
     for x, y in (args.at, args.against):

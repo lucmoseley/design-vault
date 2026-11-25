@@ -30,7 +30,7 @@ Record: `vault.colour-distance`.
 
 - **Why.** Under 2 is one just-noticeable difference, so two such colours are one colour with two names. Between 2 and the line, a pair reads as a mistake rather than a choice. Large grey surfaces near the ground that share an edge are judged side by side, so they part at a smaller gap than small marks, which need more. ΔEOK divided by 100 ranks pairs differently from ΔE00. Two colours that never share a view may sit closer, and a ramp's own steps are judged by contrast instead.
 - **Trade-off.** Keeping every pair far apart costs richness: fewer colours, or colours further from the brand's hue.
-- **Clash.** Against "make distinctions as subtle as possible" (Tufte), the job decides: a difference of identity or meaning takes this record, a difference of rank inside one family takes Tufte, with WCAG as its floor. Against a fixed logo colour, the logo never moves. No source measures the near-miss line directly: 10 is the founder's ruling on #178 over four proxies that meet near it.
+- **Clash.** Against "make distinctions as subtle as possible" (Tufte), the job decides: a difference of identity or meaning takes this record, a difference of rank inside one family takes Tufte, with WCAG as its floor. Against a fixed logo colour, the logo never moves. No source measures the near-miss line directly: 10 is where four proxies meet (#178, `docs/research/de00-thresholds.md`).
 
 ### A logo's grounds follow its lightness
 

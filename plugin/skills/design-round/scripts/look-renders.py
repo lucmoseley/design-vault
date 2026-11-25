@@ -174,7 +174,9 @@ SVG_ROOT_JS = r"""
 }
 """
 
-CONTACT = re.compile(r"^([\w.-]+)=(?:(.+)@)?(-?[\d.]+),(-?[\d.]+)$")
+CONTACT = re.compile(
+    r"^([\w.-]+)=(?:(.+)@)?(-?\d+(?:\.\d+)?|-?\.\d+),(-?\d+(?:\.\d+)?|-?\.\d+)$"
+)
 
 
 def parse(argv):

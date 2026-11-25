@@ -141,7 +141,7 @@ docs/reference-to-design.md # skill installation and usage
 - **design_words** — the design-word list: `{ word, means[] }` pairs, each a word the founder types (one lower-case word, each once) and the words the data uses for it, which search also looks for. The copied brief never prints it
 - **collection** — a deployable look → `vocabulary` block, `deployFor`, `risk` suggestion, `accent`, collection-level `imageStyle` template, and optional `styles[]`, the ids of the Style guide styles its pages share, each once. The link lives on the collection so `data/styles.json` stays as upstream ships it
 - **dna** — `constants[]` + `never[]`, optionally included via My preferences
-- **project** — `projects.<key>`: `name`, `rules` (its rules file as `<path> in <owner>/<repo>`), `verdicts[]`, `groups[]`, and optional `gate`, its gate file written like `rules` (#159)
+- **project** — `projects.<key>`: `name`, `rules` (its rules file as `<path> in <owner>/<repo>`), `verdicts[]`, `groups[]`, optional `gate`, its gate file written like `rules` (#159), and optional `desktop`, the desktop screen size its visitors use most, as `1536x864` (#196)
 
 ## Validating the library
 

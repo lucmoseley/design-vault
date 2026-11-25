@@ -3,8 +3,10 @@
 
 Research set the palette's near-miss line at about ΔE00 10 for colours that
 differ in hue or strength, but its sources contradict each other for two greys
-(docs/research/de00-thresholds.md), so the founder sets the grey line by eye
-(#178 Q3). This script builds that look: for each ΔE00 in TARGETS it moves two
+(docs/research/de00-thresholds.md), so the founder was to set the grey line
+by eye (#178 Q3). He had no basis to judge it, so the test was withdrawn
+unmarked and grey-specific research set the line instead
+(docs/research/de00-greys.md). This script builds that look: for each ΔE00 in TARGETS it moves two
 greys in lightness (the mmm-infra logo grey lighter, a pale panel grey darker),
 and draws every pair large and small.
 
