@@ -17,8 +17,7 @@
  * (#232).
  *
  * The packet holds one folder per round, named `<project>.<slug>-r<n>` for the project its round-log row names and its
- * tag less `rounds/`, since a tag is set per project and two projects may reuse a brief's slug: brief, gate-list and
- * copy-bans (each keeping its extension), candidates/<name>, and entries.json, the corrections entries of its project
+ * tag less `rounds/` (#551): brief, gate-list and copy-bans (each keeping its extension), candidates/<name>, and entries.json, the corrections entries of its project
  * naming one of its candidates as { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names, so a
  * critic asks each principle of every candidate and cannot tell which one he faulted.
  *

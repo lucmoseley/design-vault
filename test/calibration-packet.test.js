@@ -222,7 +222,7 @@ test("two projects' rounds of one tag pack apart, and an entry under a project n
   const both = build([round(), manta], { roundLog });
   assert.equal(both.status, 0, both.stderr);
   assert.deepEqual(fs.readdirSync(both.out).sort(), ["manta.hero-r1", "mmm-infra.hero-r1"]);
-  assert.deepEqual(rules(build([manta, manta], { roundLog }).stderr), ["manifest"], "one project's round packed twice");
+  assert.deepEqual(rules(build([manta, manta], { roundLog }).stderr), ["manifest"]);
 
   const [gold] = fs.readFileSync(fixture("corrections-log.jsonl"), "utf8").split("\n");
   const correctionsLog = path.join(dir, "corrections-log.jsonl");
