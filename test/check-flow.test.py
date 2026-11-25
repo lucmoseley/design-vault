@@ -42,10 +42,11 @@ CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
-sys.path.insert(0, os.path.dirname(SCRIPT))
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-flow = siblings.load(os.path.dirname(SCRIPT), "check-flow.py")
+flow = siblings.load(SCRIPTS, "check-flow.py")
 
 STEP = 1000 / flow.FPS
 
@@ -99,11 +100,36 @@ EASED = [1, 3, 6, 10, 10, 6, 3, 1, 0.3]
 
 
 class OneCopy(unittest.TestCase):
-    def test_the_siblings_that_load_check_flow_back_share_this_copy(self):
-        # run_records' check-layout and parse's probe, as each loads them (#562).
-        for file in ("check-layout.py", "probe.py"):
-            with self.subTest(file):
-                self.assertIs(siblings.load(flow.HERE, file).flow, flow)
+    def test_run_records_check_layout_shares_this_copy_beside_a_private_load(
+        self,
+    ):  # #562
+        loaded = []
+        real = siblings.load
+
+        def spy(here, file):
+            module = real(here, file)
+            if file == "check-layout.py":
+                loaded.append(module)
+            return module
+
+        class StopError(Exception):
+            pass
+
+        with (
+            mock.patch.object(siblings, "load", spy),
+            mock.patch.object(flow, "chromium", side_effect=StopError),
+            self.assertRaises(StopError),
+        ):
+            flow.run_records(types.SimpleNamespace(lines=[]))
+        (layout,) = loaded
+        self.assertIs(layout.flow, flow)
+        spec = importlib.util.spec_from_file_location("private_check_flow", SCRIPT)
+        private = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(private)
+        self.assertIsNot(layout.flow, private)
+
+    def test_the_probe_parse_loads_shares_this_copy(self):  # #562
+        self.assertIs(siblings.load(SCRIPTS, "probe.py").flow, flow)
 
 
 class Pauses(unittest.TestCase):

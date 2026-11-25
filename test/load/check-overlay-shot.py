@@ -31,10 +31,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPT = os.path.join(
     HERE, "..", "..", "plugin", "skills", "design-round", "scripts", "check-overlay.py"
 )
-sys.path.insert(0, os.path.dirname(SCRIPT))
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-overlay = siblings.load(os.path.dirname(SCRIPT), "check-overlay.py")
+overlay = siblings.load(SCRIPTS, "check-overlay.py")
 spec = importlib.util.spec_from_file_location(
     "overlay_test", os.path.join(HERE, "..", "check-overlay.test.py")
 )

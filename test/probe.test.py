@@ -33,12 +33,13 @@ CONDITIONS = (
 SWEEP = ["--widths", "320-1920", "--step", "400"]
 
 
-sys.path.insert(0, os.path.dirname(SCRIPT))
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-probe = siblings.load(os.path.dirname(SCRIPT), "probe.py")
-flow = siblings.load(os.path.dirname(SCRIPT), "check-flow.py")
-layout = siblings.load(os.path.dirname(SCRIPT), "check-layout.py")
+probe = siblings.load(SCRIPTS, "probe.py")
+flow = siblings.load(SCRIPTS, "check-flow.py")
+layout = siblings.load(SCRIPTS, "check-layout.py")
 STACK = contextlib.ExitStack()
 BROWSER = None
 
@@ -91,7 +92,7 @@ def values(url, table, parts=None):
 
 
 class OneCopy(unittest.TestCase):
-    def test_probe_and_this_suite_share_one_check_flow_and_check_layout(self):
+    def test_probe_and_this_suite_share_one_check_flow_and_check_layout(self):  # #562
         self.assertIs(probe.flow, flow)
         self.assertIs(probe.layout, layout)
         self.assertIs(layout.flow, flow)

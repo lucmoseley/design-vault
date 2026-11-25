@@ -9,7 +9,6 @@ one fail (test/load/check-overlay-shot.py).
 """
 
 import base64
-import importlib.util
 import io
 import math
 import os
@@ -37,9 +36,10 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 REQUIREMENTS = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", "plugin", "requirements.txt")
 )
-spec = importlib.util.spec_from_file_location("check_overlay", SCRIPT)
-overlay = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(overlay)
+sys.path.insert(0, os.path.dirname(SCRIPT))
+import siblings  # noqa: E402
+
+overlay = siblings.load(os.path.dirname(SCRIPT), "check-overlay.py")
 ARCH = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">'
     '<g transform="translate({dx} 0)"><path d="M20 70 C20 20 100 20 100 70 Z" fill="#222"/>'

@@ -39,10 +39,11 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-layout.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "layout")
-sys.path.insert(0, os.path.dirname(SCRIPT))
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-layout = siblings.load(os.path.dirname(SCRIPT), "check-layout.py")
+layout = siblings.load(SCRIPTS, "check-layout.py")
 
 SCRATCH = tempfile.TemporaryDirectory()
 TEXT = ["--widths", "620-700", "--step", "40"]
@@ -235,8 +236,8 @@ def spans(name, kind):
 
 
 class OneCopy(unittest.TestCase):
-    def test_parse_s_probe_loads_back_this_copy(self):
-        self.assertIs(siblings.load(layout.HERE, "probe.py").layout, layout)
+    def test_the_probe_parse_loads_shares_this_copy(self):  # #562
+        self.assertIs(siblings.load(SCRIPTS, "probe.py").layout, layout)
 
 
 class Ranges(unittest.TestCase):
