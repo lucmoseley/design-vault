@@ -33,6 +33,17 @@ class ApiError extends Error {
   }
 }
 
+class BatchStoppedError extends Error {
+  constructor(message, { stoppedAt, ran, notSubmitted, mayBeCharged, cause }) {
+    super(message, { cause });
+    this.name = "BatchStoppedError";
+    this.stoppedAt = stoppedAt;
+    this.ran = ran;
+    this.notSubmitted = notSubmitted;
+    this.mayBeCharged = mayBeCharged;
+  }
+}
+
 /** The image or video type by its first bytes; null for anything else. */
 function sniff(bytes) {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
@@ -126,10 +137,11 @@ function record(job, line) {
   fs.appendFileSync(path.join(job.roundDir, LEDGER), `${JSON.stringify(line)}\n`);
 }
 
-function batchText(priced, index, { thisJobSubmitted }) {
+function batchStopped(message, priced, index, { thisJobSubmitted, mayBeCharged = thisJobSubmitted, cause }) {
   const ran = priced.slice(0, index).map((other) => other.name);
-  const rest = priced.slice(thisJobSubmitted ? index + 1 : index).map((other) => other.name);
-  return `${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`;
+  const notSubmitted = priced.slice(thisJobSubmitted ? index + 1 : index).map((other) => other.name);
+  const text = `${message}. ${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${notSubmitted.length ? notSubmitted.join(", ") : "none"}`;
+  return new BatchStoppedError(text, { stoppedAt: priced[index].name, ran, notSubmitted, mayBeCharged, cause });
 }
 
 function roundKey(roundDir) {
@@ -148,6 +160,22 @@ function isHolderAlive(pid) {
   } catch (error) {
     return error.code === "EPERM";
   }
+}
+
+function tryMakeFolder(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return false;
+  }
+}
+
+// #574
+function makeRoundFolders(jobs) {
+  const waitingOnAnotherJobsFolder = jobs.filter((job) => !tryMakeFolder(job.roundDir));
+  for (const job of waitingOnAnotherJobsFolder) fs.mkdirSync(job.roundDir, { recursive: true });
 }
 
 // #559
@@ -319,17 +347,7 @@ async function render(jobs, options = {}) {
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
-  if (!options.estimateOnly) {
-    // #559
-    for (const job of checked) {
-      try {
-        fs.mkdirSync(job.roundDir, { recursive: true });
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
-    }
-    for (const job of checked) fs.mkdirSync(job.roundDir, { recursive: true });
-  }
+  if (!options.estimateOnly) makeRoundFolders(checked);
   const byKey = new Map();
   for (const job of checked) {
     const key = roundKey(job.roundDir);
@@ -393,11 +411,11 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
     const ledgerFault = (status, error) => `${name}: its ${status} line could not be written to ${path.join(job.roundDir, LEDGER)} (${error.message})`;
     // #575
-    const recordOrStop = (line, howFar, { thisJobSubmitted = true } = {}) => {
+    const recordOrStop = (line, howFar, { thisJobSubmitted = true, mayBeCharged = thisJobSubmitted } = {}) => {
       try {
         record(job, line);
       } catch (error) {
-        throw new Error(`${ledgerFault(line.status, error)}; ${howFar}. ${batchText(priced, index, { thisJobSubmitted })}`, { cause: error });
+        throw batchStopped(`${ledgerFault(line.status, error)}; ${howFar}`, priced, index, { thisJobSubmitted, mayBeCharged, cause: error });
       }
     };
     // #571
@@ -410,10 +428,10 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
         recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { thisJobSubmitted: false });
-        throw new Error(`${error.message}. ${batchText(priced, index, { thisJobSubmitted: false })}`, { cause: error });
+        throw batchStopped(error.message, priced, index, { thisJobSubmitted: false, cause: error });
       }
       recordOrStop({ ...entry, status: "unanswered", files: [] }, `it may have reached Higgsfield: ${error.message}`);
-      throw new Error(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${batchText(priced, index, { thisJobSubmitted: true })}`, { cause: error });
+      throw batchStopped(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate`, priced, index, { thisJobSubmitted: true, cause: error });
     }
     entry.request_id = accepted.request_id;
     log(`${name}: accepted as request ${accepted.request_id}`);
@@ -437,7 +455,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       continue;
     }
     if (state.status !== "completed") {
-      recordOrStop({ ...entry, usd: 0, status: state.status, files: [] }, `request ${accepted.request_id} ended ${state.status}, not charged`);
+      recordOrStop({ ...entry, usd: 0, status: state.status, files: [] }, `request ${accepted.request_id} ended ${state.status}, not charged`, { mayBeCharged: false });
       log(`✗ ${name}: ${state.status}${state.error ? ` (${state.error})` : ""}; not charged`);
       failed++;
       continue;
