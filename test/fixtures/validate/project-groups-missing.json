@@ -98,6 +98,7 @@
     },
     "acme": {
       "name": "Acme",
+      "rules": "docs/brand/brand-sheet.md in acme/acme",
       "verdicts": [
         "fit"
       ]
