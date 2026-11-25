@@ -42,27 +42,23 @@ import argparse
 import collections
 import contextlib
 import datetime
-import importlib.util
 import json
 import os
 import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
 AXE = os.path.join(HERE, "..", "vendor", "axe-core", "axe.min.js")
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-layout = _load("check_layout", os.path.join(HERE, "check-layout.py"))
-probe = _load("probe", os.path.join(HERE, "probe.py"))
-rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
+flow = siblings.load(HERE, "check-flow.py")
+layout = siblings.load(HERE, "check-layout.py")
+probe = siblings.load(HERE, "probe.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-markup.table")
 SEP = " | "

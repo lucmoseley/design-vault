@@ -3,12 +3,10 @@ scripts that read a page in a state only a pointer reaches (design-vault#301): a
 button, where a dragged element comes to rest, a layer that moves with the scroll. A library the check
 scripts load; it judges nothing itself.
 
-Its only I/O is the Playwright page it is handed, which the caller opens and closes. A check loads it by
-path, as the others load check-flow.py:
+Its only I/O is the Playwright page it is handed, which the caller opens and closes. A check loads it
+through siblings.py, as the others load check-flow.py:
 
-    spec = importlib.util.spec_from_file_location("drive_pointer", os.path.join(HERE, "drive-pointer.py"))
-    pointer = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(pointer)
+    pointer = siblings.load(HERE, "drive-pointer.py")
 
 and drives a Playwright page it has loaded:
 
