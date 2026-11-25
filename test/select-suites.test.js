@@ -76,6 +76,15 @@ test("a commit staging only docs/, data/ or images/ files runs the fast checks a
   assert.ok(p.suites.filter((s) => s.why).every((s) => /none of the 3 staged file\(s\) is one it reads/.test(s.why)));
 });
 
+test("a script a named directory holds is followed, so colour_space.py, which probe.py there loads, runs the suites naming design-round's scripts (#382)", () => {
+  const got = ran(["plugin/skills/design-project/scripts/colour_space.py"]);
+  for (const suite of ["python3 test/check-dom.test.py", "python3 test/check-load-files.test.py"]) assert.ok(got.includes(suite), suite);
+});
+
+test("a directory named by a lone bare word is not followed: check-flow.test.py's \"load\" is a mock target, not test/load/ (#382)", () => {
+  assert.ok(!ran([`${SCRIPTS}/cutout.py`]).includes("python3 test/check-flow.test.py"));
+});
+
 test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py loads back; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
