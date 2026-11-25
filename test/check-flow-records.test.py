@@ -81,12 +81,17 @@ class Table(unittest.TestCase):
             "vault.x | nosuch | none",
             "vault.x | frequent",
             "vault.parallax | replay | none",
-            "vault.a | frequent | under 150\nvault.b | frequent | under 400",
         ):
             with self.subTest(bad=bad), self.assertRaises(records.TableError):
                 records.parse_table(bad)
 
-    def test_a_check_named_twice_at_one_value_is_kept(self):
+    def test_a_check_given_two_values_is_refused_unlike_one_value_twice_553(self):
+        with self.assertRaisesRegex(records.TableError, r"line 2: frequent .* line 1"):
+            records.parse_table(
+                "vault.a | frequent | under 150\nvault.b | frequent | under 400"
+            )
+
+    def test_a_check_named_twice_at_one_value_is_kept_553(self):
         got = records.parse_table(
             "vault.a | frequent | under 150\nvault.b | frequent | under 150"
         )
