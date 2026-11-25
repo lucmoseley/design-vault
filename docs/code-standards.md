@@ -52,3 +52,15 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 ## Local rules
 
 **§LG1 · Python file names (workflow-core#1252).** A Python file run or loaded by path takes a kebab-case name, as its JS siblings do: a program, its test `test/<program>.test.py`, and a hand-run harness under `test/load/`. None is imported by module name (tests load their subject through `siblings.load`), so workflow-core#1252's reason for snake_case, that a hyphenated module cannot be imported, does not reach them. A module imported by name takes snake_case.
+
+## §W — what tooling already enforces
+
+The gates `.husky/pre-commit.local` adds to the floor. Each refuses the commit on any fault its checker prints, and where git cannot be read.
+
+| Gate | Refuses | Staged paths that arm it |
+|---|---|---|
+| `node validate.js --staged` | a library that is not a well-formed schema v3 one: an unknown keyword, group, verdict, project, style or collection, a duplicate id, a missing image or still, and the rest of its rule names (#1) | `data/gallery.json`, `data/styles.json`, anything under `images/` |
+| `node bundle.js --staged` | a staged `data/vault-data.js` that does not match the staged JSON (#32) | `data/gallery.json`, `data/styles.json`, `data/vault-data.js` |
+| `node round-log.js --staged` | a malformed row, or a row that changes one HEAD holds beyond adding its `final_pick`, `rejections` or `on_weakest` (#95) | `data/round-log.jsonl` |
+| `node corrections-log.js --staged` | a malformed row, or a row that changes one HEAD holds beyond answering its pending ruling (#166) | `data/corrections-log.jsonl` |
+| `node calibration-log.js --staged` | a malformed row, a run whose figures disagree with the disagreements listed under them, or any change to or removal of a row HEAD holds (#168) | `data/calibration-log.jsonl` |
