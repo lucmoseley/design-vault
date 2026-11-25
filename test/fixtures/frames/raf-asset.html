@@ -1,6 +1,4 @@
 <!doctype html>
-<!-- alone.html's build with its arch dropped by a requestAnimationFrame
-     loop beside the ring's listed animation, ending on the mark alone (#546). -->
 <html><head><style>
 body { margin: 0; background: #f4efe4; }
 svg { display: block; margin: 40.25px 0 0 60.5px; }
@@ -34,7 +32,6 @@ const archDone = new Promise((done) => {
   };
   requestAnimationFrame(tick);
 });
-// The hand-over once both pieces land: the finished mark alone.
 Promise.all([ring.finished, archDone]).then(() => {
   ring.cancel();
   document.getElementById("pieces").style.display = "none";

@@ -472,12 +472,6 @@ STATUS_JS = (
 """
 )
 
-# Motion drawn where no seek through document.getAnimations() reaches it: on a
-# canvas, in a video or an embedded document, by SMIL, inside shadow DOM (whose
-# animations that list leaves out), or by a script rewriting an element frame by
-# frame. With `morphs`, a path whose d a frame loop rewrites counts too. Needs
-# LABEL_JS, LOOP_JS and COLLECTOR_JS's window.__flow; check-frames.py shares it
-# (#546).
 DRAWN_JS = r"""
 const listing = (els, shown) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
 const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);

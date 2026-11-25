@@ -308,32 +308,53 @@ class LateStart(unittest.TestCase):
 
 class Scripted(unittest.TestCase):
     """#546: motion no Web Animations API animation holds is answered
-    cannot-measure, naming what draws it, in every mode: a seek cannot place
-    it, nor a finish end it, so a correct build would fail."""
+    cannot-measure, naming what draws it, in every mode. The positive pairs,
+    builds of listed animations only measured as before: Hash's steady draft
+    and Last's mark alone."""
 
-    def test_a_frame_loop_build_cannot_be_hashed(self):
-        proc = hash_page(os.path.join(FIXTURES, "raf.html"))
+    TRAILER = "\nCheck its frames by eye.\n"
+
+    def refused(self, proc, why):
         self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
-        self.assertIn(
+        self.assertIn(f"because this page:\n  - {why}\n", proc.stdout)
+        self.assertTrue(proc.stdout.endswith(self.TRAILER), proc.stdout)
+
+    def test_a_frame_loop_build_cannot_be_hashed_naming_it_unlike_a_steady_draft(self):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "raf.html")),
             "moves 1 element(s) by rewriting their style or attributes from a script, "
             "frame by frame (div#box)",
-            proc.stdout,
         )
 
-    def test_a_canvas_build_cannot_be_hashed(self):
-        proc = hash_page(os.path.join(FIXTURES, "canvas.html"))
-        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
-        self.assertIn("draws on a canvas (canvas#stage)", proc.stdout)
+    def test_a_canvas_build_cannot_be_hashed_naming_it_unlike_a_steady_draft(self):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "canvas.html")),
+            "draws on a canvas (canvas#stage)",
+        )
 
-    def test_a_path_a_frame_loop_morphs_cannot_be_hashed(self):
-        proc = hash_page(os.path.join(FIXTURES, "morph.html"))
-        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
-        self.assertIn(
+    def test_a_smil_build_cannot_be_hashed_naming_it_unlike_a_steady_draft(self):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "smil.html")),
+            "animates SVG with SMIL (rect#slab > animate)",
+        )
+
+    def test_a_path_a_frame_loop_morphs_cannot_be_hashed_naming_it_unlike_a_steady_draft(
+        self,
+    ):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "morph.html")),
             "morphs 1 path(s) by rewriting their d from a script, frame by frame (path#wave)",
-            proc.stdout,
         )
 
-    def test_a_frame_loop_build_ending_on_its_asset_cannot_be_checked_beside_listed_animations(
+    def test_an_animation_a_script_seeks_by_hand_cannot_be_hashed_naming_it_unlike_a_steady_draft(
+        self,
+    ):
+        self.refused(
+            hash_page(os.path.join(FIXTURES, "seeked.html")),
+            "holds 1 paused animation(s) that a script seeks by hand (div#box)",
+        )
+
+    def test_a_frame_loop_build_ending_on_its_asset_cannot_be_checked_beside_listed_animations_unlike_the_mark_alone(
         self,
     ):
         why = (
@@ -341,12 +362,9 @@ class Scripted(unittest.TestCase):
             "frame by frame (path#arch)"
         )
         proc, written = last("raf-asset.html")
-        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
-        self.assertIn(why, proc.stdout)
+        self.refused(proc, why)
         self.assertEqual(written, [])
-        proc = hash_page(os.path.join(FIXTURES, "raf-asset.html"))
-        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
-        self.assertIn(why, proc.stdout)
+        self.refused(hash_page(os.path.join(FIXTURES, "raf-asset.html")), why)
 
 
 class StagedBuilds(unittest.TestCase):

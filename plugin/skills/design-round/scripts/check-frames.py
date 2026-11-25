@@ -50,11 +50,11 @@ timer or an event starts after the first sits where that load's clock put it,
 which moves from load to load, so `hash` renders every frame on the timeline
 its first load timed, and --save keeps that timeline for --check, which names
 any start its own load put more than STAGE_JITTER_MS away (#259). Both refuse,
-naming it, motion that list does not hold, which check-flow.py refuses too: a
-canvas, a video, an embedded document, SMIL, shadow DOM, or a script rewriting
-an element or a path's d frame by frame. One such part refuses the whole page,
-its listed animations included: no seek places it and no finish ends it, so no
-frame of the page is fixed (#546).
+naming it, a page holding what that list does not: a visible canvas, video or
+embedded document, SMIL or shadow DOM, moving or not; a script rewriting an
+element or a path's d frame by frame; or an animation the page itself paused,
+which a script seeks by hand. One such part refuses the whole page, its listed
+animations included.
 
 EXITS 0 every frame matches / 1 a frame differs (each printed) / 2 the arguments
 are wrong / 3 Playwright or its browser is missing / 4 the page did not render
@@ -123,6 +123,7 @@ async ({ quiet, cap, shown, timeline }) => {
   let lastNew = began;
   let latest = [];
   let quietNow = false;
+  const held = [];
   for (;;) {
     const fresh = document.getAnimations().filter((a) => !starts.has(a));
     // An animation cancelled while it waits rejects its ready promise; it is
@@ -130,6 +131,7 @@ async ({ quiet, cap, shown, timeline }) => {
     await Promise.all(fresh.map((a) => a.ready.catch(() => null)));
     const now = document.timeline.currentTime;
     for (const a of fresh) {
+      if (a.playState === 'paused') held.push(a);
       starts.set(a, a.startTime !== null ? a.startTime : now - a.currentTime / a.playbackRate);
       a.pause();
     }
@@ -141,6 +143,7 @@ async ({ quiet, cap, shown, timeline }) => {
   }
   const reasons = [];
   if (!quietNow) reasons.push('is still starting animations ' + cap + ' ms after it loaded and its fonts were ready (' + [...new Set(latest.map(name))].sort().slice(0, shown).join(', ') + '), so its frames have no fixed timeline; start its motion once and let it end');
+  if (held.length) reasons.push('holds ' + held.length + ' paused animation(s) that a script seeks by hand (' + [...new Set(held.map(name))].sort().slice(0, shown).join(', ') + ')');
   const anims = [...starts.keys()];
   const rows = [];
   for (const a of anims) {
@@ -184,9 +187,7 @@ async ({ quiet, cap, shown, timeline }) => {
 """
 )
 
-# Names the motion no seek or finish reaches, by check-flow.py's probe (#546),
-# and stops its collector.
-DRAWN_JS = (
+SCRIPTED_JS = (
     r"""
 ({ frames, span, shown }) => {
   """
@@ -451,9 +452,8 @@ def open_page(browser, at, scale, *, device=None, timeline=None):
             "timeline": timeline,
         },
     )
-    # After PREPARE_JS, whose quiet window gives a frame loop frames to show in.
     reasons = prep["reasons"] + page.evaluate(
-        DRAWN_JS,
+        SCRIPTED_JS,
         {
             "frames": flow.REWRITE_FRAMES,
             "span": flow.REWRITE_SPAN_MS,
