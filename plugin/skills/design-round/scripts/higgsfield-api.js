@@ -4,6 +4,7 @@ const API = "https://api.higgsfield.ai";
 const QUOTED_BODY_CHARS = 200; // #583 guess
 const MAX_TRIES = 3; // #583 guess
 const FIRST_RETRY_WAIT_MS = 2000; // #583 guess
+const RETRY_DEADLINE_MS = 60 * 1000; // #590 guess
 const HINTS = {
   401: " (check HIGGSFIELD_API_KEY)",
   403: " (the balance is too low: top up at open.higgsfield.ai)",
@@ -40,7 +41,7 @@ class OffApiUrlError extends RefusalError {
 }
 
 // #583
-async function call(ctx, method, url, body, headers = {}) {
+async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
   // #588
   if (typeof url !== "string" || !url.startsWith(`${API}/`)) throw new OffApiUrlError(method, url);
   const response = await ctx.fetch(url, {
@@ -48,6 +49,7 @@ async function call(ctx, method, url, body, headers = {}) {
     headers: { Authorization: `Key ${ctx.credentials}`, ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
     redirect: "error",
+    signal,
   });
   const text = await response.text();
   let json;
@@ -63,22 +65,25 @@ async function call(ctx, method, url, body, headers = {}) {
   return json;
 }
 
-// #583
-async function withRetry(ctx, attempt) {
-  let faulted = false;
+// #583, #587
+async function withRetry(ctx, method, url, request = {}) {
+  const deadline = ctx.now() + ctx.retryDeadlineMs;
   for (let tries = 1; ; tries++) {
+    const tryMs = Math.ceil(Math.min(deadline - ctx.now(), ctx.retryDeadlineMs / MAX_TRIES));
+    const signal = ctx.timeout(Math.max(0, tryMs));
     try {
-      return await attempt();
-    } catch (error) {
+      return await call(ctx, method, url, { ...request, signal });
+    } catch (thrown) {
+      const error = signal.aborted && thrown === signal.reason ? new Error(`${method} ${new URL(url).pathname} gave no answer within ${tryMs / 1000} s, its try's share of the ${ctx.retryDeadlineMs / 1000} s retry deadline`, { cause: thrown }) : thrown;
       const transient = !(error instanceof RefusalError) || error.retryable;
-      if (!transient || tries >= MAX_TRIES) {
-        if (faulted && error instanceof Error) error.afterFault = true;
+      const wait = FIRST_RETRY_WAIT_MS * 2 ** (tries - 1);
+      if (!transient || tries >= MAX_TRIES || ctx.now() + wait >= deadline) {
+        if ((transient || tries > 1) && error instanceof Error) error.mayHaveReached = true;
         throw error;
       }
-      faulted = true;
-      await ctx.sleep(FIRST_RETRY_WAIT_MS * 2 ** (tries - 1));
+      await ctx.sleep(wait);
     }
   }
 }
 
-module.exports = { API, RefusalError, call, withRetry };
+module.exports = { API, RETRY_DEADLINE_MS, RefusalError, withRetry };

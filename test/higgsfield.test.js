@@ -13,7 +13,7 @@ const { runInProcessAsync } = require("./core-run-in-process.js");
 
 const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield.js");
 const { render, parseArgs, settings } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-client.js"));
-const { RefusalError, call, withRetry } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-api.js"));
+const { RefusalError, withRetry } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-api.js"));
 // The round's ledger, as higgsfield.js's header names it.
 const LEDGER = "higgsfield-spend.jsonl";
 
@@ -893,24 +893,100 @@ test("a submission that may have reached the API is recorded at its estimate and
 test("a call to any URL off the API is refused, unretried and unsent, while one on the API is sent with the key (#588)", async () => {
   const api = fakeApi();
   const sleeps = [];
-  const ctx = { credentials: KEY, fetch: api.options().fetch, sleep: async (ms) => sleeps.push(ms) };
+  const ctx = { credentials: KEY, fetch: api.options().fetch, sleep: async (ms) => sleeps.push(ms), now: () => 0, retryDeadlineMs: 60000, timeout: () => new AbortController().signal };
   for (const url of [CDN, "https://api.higgsfield.ai:443/requests/req-1/status", "https://api.higgsfield.ai.example.com/requests/req-1/status", "http://api.higgsfield.ai/requests/req-1/status", "https://api.higgsfield.ai", "https://cdn.example.com/out.png?token=signed-secret", "https://cdn.example.com/out.png#token=signed-secret", "https://user:signed-secret@cdn.example.com/out.png", "https://cdn.example.com/signed-secret/out.png", undefined]) {
     await assert.rejects(
-      withRetry(ctx, () => call(ctx, "GET", url)),
-      (error) => error instanceof RefusalError && error.name === "OffApiUrlError" && error.url === url && error.afterFault === undefined && !error.message.includes("signed-secret"),
+      withRetry(ctx, "GET", url),
+      (error) => error instanceof RefusalError && error.name === "OffApiUrlError" && error.url === url && error.mayHaveReached === undefined && !error.message.includes("signed-secret"),
       String(url),
     );
   }
-  await assert.rejects(call(ctx, "GET", "https://api.higgsfield.ai:443/requests/req-1/status"), {
+  await assert.rejects(withRetry(ctx, "GET", "https://api.higgsfield.ai:443/requests/req-1/status"), {
     message: "GET to https://api.higgsfield.ai was not sent: only a string starting https://api.higgsfield.ai/ is",
   });
   assert.deepEqual(api.calls, []);
   assert.deepEqual(sleeps, []);
-  await call(ctx, "GET", "https://api.higgsfield.ai/requests/req-1/status");
+  await withRetry(ctx, "GET", "https://api.higgsfield.ai/requests/req-1/status");
   assert.deepEqual(
     api.calls.map((sent) => [sent.url, sent.headers.Authorization]),
     [["https://api.higgsfield.ai/requests/req-1/status", `Key ${KEY}`]],
   );
+});
+
+test("a call's retries stop at its total deadline, starting no try whose wait would reach it, and the submission is named as maybe charged (#587)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ submit: [reply(502, {}), reply(502, {}), reply(502, {})] });
+  await assert.rejects(render([job(dir)], api.options({ retryDeadlineMs: 2000 + 4000 - 1 })), (error) => {
+    assert.match(error.message, /answered 502[^]*may have reached Higgsfield/);
+    assert.equal(stopFields(error).mayBeCharged, true);
+    return true;
+  });
+  assert.equal(api.submissions().length, 2);
+});
+
+test("a 5xx the deadline leaves unretried is recorded at its estimate as maybe charged (#587)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ submit: [reply(502, {})] });
+  await assert.rejects(render([job(dir)], api.options({ retryDeadlineMs: 2000 })), (error) => {
+    assert.match(error.message, /answered 502[^]*may have reached Higgsfield/);
+    assert.equal(stopFields(error).mayBeCharged, true);
+    return true;
+  });
+  assert.equal(api.submissions().length, 1);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["unanswered", 0.094]]);
+});
+
+function hangingSubmits(hangs) {
+  const api = fakeApi();
+  const timers = new Map();
+  const tryTimeouts = [];
+  const options = api.options({
+    timeout: (ms) => {
+      const controller = new AbortController();
+      timers.set(controller.signal, { ms, controller });
+      return controller.signal;
+    },
+  });
+  const answer = options.fetch;
+  options.fetch = async (url, init = {}) => {
+    if (init.method !== "POST" || new URL(url).pathname.startsWith("/estimate/")) return answer(url, init);
+    const { ms, controller } = timers.get(init.signal);
+    tryTimeouts.push(ms);
+    if (hangs-- <= 0) return answer(url, init);
+    await options.sleep(ms);
+    controller.abort(new DOMException("The operation was aborted due to timeout", "TimeoutError"));
+    throw init.signal.reason;
+  };
+  return { options, tryTimeouts };
+}
+
+test("a try hanging to its share of the deadline is aborted and retried, so the job keeps its request id (#587)", async () => {
+  const dir = roundDir();
+  const { options, tryTimeouts } = hangingSubmits(1);
+  assert.equal(await render([job(dir)], options), 0);
+  assert.deepEqual(tryTimeouts, [20000, 20000]);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.request_id]), [["completed", "req-1"]]);
+});
+
+test("a submission whose every try hangs stops at the total deadline, naming it, recorded at its estimate as maybe charged (#587)", async () => {
+  const dir = roundDir();
+  const { options, tryTimeouts } = hangingSubmits(Infinity);
+  await assert.rejects(render([job(dir)], options), (error) => {
+    assert.match(error.message, /gave no answer within 14 s, its try's share of the 60 s retry deadline[^]*may have reached Higgsfield/);
+    assert.equal(stopFields(error).mayBeCharged, true);
+    return true;
+  });
+  assert.deepEqual(tryTimeouts, [20000, 20000, 14000]);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["unanswered", 0.094]]);
+});
+
+test("a refusal that lands as its try times out keeps the API's message (#587)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  const options = api.options({ timeout: () => AbortSignal.abort() });
+  const answer = options.fetch;
+  options.fetch = (url, init) => (new URL(url).pathname.startsWith("/estimate/") ? reply(403, { detail: "Not enough credits" }) : answer(url, init));
+  await assert.rejects(render([job(dir)], options), /answered 403: Not enough credits/);
 });
 
 test("every call to the API refuses to follow a redirect", async () => {

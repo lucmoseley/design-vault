@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { inspect } = require("util");
-const { API, RefusalError, call, withRetry } = require("./higgsfield-api.js");
+const { API, RETRY_DEADLINE_MS, RefusalError, withRetry } = require("./higgsfield-api.js");
 
 const LEDGER = "higgsfield-spend.jsonl";
 const LOCK = "higgsfield.lock";
@@ -273,7 +273,7 @@ function readUsd(value) {
 }
 
 async function estimate(ctx, job) {
-  const answer = await withRetry(ctx, () => call(ctx, "POST", `${API}/estimate/${job.model}`, job.input));
+  const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input });
   const usd = readUsd(answer?.usd);
   if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
@@ -288,7 +288,7 @@ function priceText(price, suffix = "") {
 }
 
 async function submit(ctx, job, idempotencyKey) {
-  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": idempotencyKey }));
+  const accepted = await withRetry(ctx, "POST", `${API}/${job.model}`, { body: job.input, headers: { "Idempotency-Key": idempotencyKey } });
   if (typeof accepted?.request_id !== "string" || !accepted.request_id) throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
   return accepted;
 }
@@ -302,7 +302,7 @@ async function poll(ctx, accepted) {
     if (ctx.now() >= deadline) return { status: "timed-out", request_id: accepted.request_id };
     await ctx.sleep(delay);
     delay = Math.min(delay * POLL_WAIT_GROWTH, POLL_LONGEST_WAIT_MS);
-    state = await withRetry(ctx, () => call(ctx, "GET", statusUrl));
+    state = await withRetry(ctx, "GET", statusUrl);
   }
   return state;
 }
@@ -333,6 +333,8 @@ async function render(jobs, options = {}) {
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     now: options.now ?? Date.now,
     timeoutMs: options.timeoutMs ?? JOB_TIMEOUT_MS,
+    retryDeadlineMs: options.retryDeadlineMs ?? RETRY_DEADLINE_MS,
+    timeout: options.timeout ?? AbortSignal.timeout,
   };
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
@@ -428,7 +430,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
       // #583
-      if (error instanceof RefusalError && !error.afterFault) {
+      if (error instanceof RefusalError && !error.mayHaveReached) {
         recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { submissionSent: false });
         throw batchStopped(error.message, priced, index, { submissionSent: false, cause: error });
       }
