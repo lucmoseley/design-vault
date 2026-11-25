@@ -101,6 +101,16 @@ test("a critic whose candidates were split across dispatches is tallied from its
   refused(tally({ critics: [twice, ...CRITICS.slice(1)] }), /critic-a\.json: answers for v1-arches, which another of \S+ answers too/);
 });
 
+test("one critic's file named under two --critic flags is refused, so one critic cannot count as two", () => {
+  const usage = (r) => {
+    assert.equal(r.status, 2, r.out + r.err);
+    assert.match(r.err, /critic-a\.json is named under two --critic flags/);
+  };
+  usage(tally({ critics: [CRITICS[0], CRITICS[0], CRITICS[0]] }));
+  const half = buildBrokenCopy(CRITICS[1], (d) => (d.answers = { "v1-arches": d.answers["v1-arches"] }));
+  usage(tally({ critics: [CRITICS[0], `${half},${CRITICS[0]}`, CRITICS[2]] }));
+});
+
 test("a fault or a founder question shows each critic's answer and evidence, a pass shows none", () => {
   const { out } = tally();
   const v2 = out.slice(out.indexOf("v2-water:"));
