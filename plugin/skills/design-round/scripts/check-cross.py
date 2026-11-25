@@ -41,7 +41,8 @@ where it reads one. Blank lines and lines starting with # are skipped.
                       or a search field)
   home-hub pages <= N on a site of N pages or fewer whose home page links
                       every other page, a page that links back to the home
-                      page passes the ways line however many ways it has
+                      page passes its own record's ways line however many
+                      ways it has; a record with no ways line is refused
   back                in a flow, Back from a step shows the step before at
                       its own URL with every value typed into it
   repeat              in a flow, a field whose autocomplete token an
@@ -115,7 +116,14 @@ TableError = rule_table.TableError
 
 def parse(text):
     """The table's lines as Line records, in order."""
-    return rule_table.parse(text, CHECKS, _line_value)
+    table = rule_table.parse(text, CHECKS, _line_value)
+    ways = {line.id for line in table if line.check == "ways"}
+    for line in table:
+        if line.check == "home-hub" and line.id not in ways:
+            raise TableError(
+                f"{line.text!r}: home-hub relaxes its own record's ways line, and {line.id} has none"
+            )
+    return table
 
 
 def _line_value(n, check, m):
@@ -289,7 +297,14 @@ def findings(table, pages, walks, *, phones, home):
         _ways(
             answers,
             lines["ways"],
-            lines.get("home-hub"),
+            next(
+                (
+                    line
+                    for line in table
+                    if line.check == "home-hub" and line.id == lines["ways"].id
+                ),
+                None,
+            ),
             pages=pages,
             walks=walks,
             home=home,
