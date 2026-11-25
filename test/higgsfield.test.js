@@ -32,9 +32,10 @@ function roundDir() {
   return path.join(dir, "r1");
 }
 
-const reply = (status, body) => ({
+const reply = (status, body, headers = {}) => ({
   ok: status >= 200 && status < 300,
   status,
+  headers: new Headers(headers),
   text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
   arrayBuffer: async () => body,
 });
@@ -43,16 +44,18 @@ const reply = (status, body) => ({
  * A stand-in for api.higgsfield.ai and its CDN. `statuses` is what successive
  * status polls answer; `submit` may answer a list of replies, one per attempt.
  */
-function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "completed"], pollReply, submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
+function fakeApi({ usd = "0.094", estimate, estimates = [], statuses = ["in_progress", "completed"], pollReply, submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
   const calls = [];
   let polls = 0;
   let submits = 0;
+  let estimated = 0;
   let accepted = 0;
   let clock = 0;
   const fetch = async (url, init = {}) => {
     calls.push({ url, method: init.method ?? "GET", headers: init.headers ?? {}, redirect: init.redirect, body: init.body && JSON.parse(init.body) });
     if (url.startsWith("https://cdn.example.com/")) return cdn();
     const { pathname } = new URL(url);
+    if (pathname.startsWith("/estimate/") && estimates[estimated]) return estimates[estimated++];
     if (pathname.startsWith("/estimate/")) return reply(200, estimate === undefined ? { credits: "1.500", usd } : estimate);
     if (pathname.startsWith("/requests/")) {
       if (pollReply) return pollReply;
@@ -525,6 +528,94 @@ for (const status of [408, 429]) {
     assert.deepEqual(outcomes(dir).map((entry) => entry.status), ["completed"]);
   });
 }
+
+for (const status of [408, 429]) {
+  test(`an estimate answered ${status} is asked again, and the batch runs (#591)`, async () => {
+    const dir = roundDir();
+    const api = fakeApi({ estimates: [reply(status, { detail: "Try again later" })] });
+    assert.equal(await render([job(dir)], api.options()), 0);
+    assert.equal(api.calls.filter((call) => new URL(call.url).pathname.startsWith("/estimate/")).length, 2);
+    assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["completed", 0.094]]);
+  });
+}
+
+test("a submission answered 429 waits its Retry-After and is submitted again under the same idempotency key (#591)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ submit: [reply(429, { detail: { code: "account_queue_full" } }, { "Retry-After": "30" })] });
+  const waits = [];
+  const options = api.options();
+  const sleep = options.sleep;
+  options.sleep = async (ms) => {
+    waits.push(ms);
+    await sleep(ms);
+  };
+  assert.equal(await render([job(dir)], options), 0);
+  const keys = api.submissions().map((call) => call.headers["Idempotency-Key"]);
+  assert.equal(keys.length, 2);
+  assert.equal(keys[0], keys[1]);
+  assert.equal(waits[0], 30000);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["completed", 0.094]]);
+});
+
+test("a submission answered 429 at every try is recorded refused at $0 (#591)", async () => {
+  const cases = {
+    "three tries": { submit: Array(3).fill(reply(429, { detail: "Too many queued generations" }, { "Retry-After": "1" })), tries: 3 },
+    "a Retry-After past the deadline": { submit: [reply(429, { detail: "Too many queued generations" }, { "Retry-After": "90" })], tries: 1 },
+    "a Retry-After that leaves no full try before the deadline": { submit: [reply(429, { detail: "Too many queued generations" }, { "Retry-After": "59" })], tries: 1 },
+    "a 422 after a 429": { submit: [reply(429, { detail: "Too many queued generations" }), reply(422, { detail: "aspect_ratio is invalid" })], tries: 2, status: 422 },
+  };
+  for (const [what, { submit, tries, status = 429 }] of Object.entries(cases)) {
+    const dir = roundDir();
+    const api = fakeApi({ submit });
+    await assert.rejects(render([job(dir)], api.options()), (error) => {
+      assert.match(error.message, new RegExp(`answered ${status}`), what);
+      assert.deepEqual(stopFields(error), { stoppedAt: "r1/v1-dusk", ran: [], notSubmitted: ["r1/v1-dusk"], mayBeCharged: false }, what);
+      return true;
+    });
+    assert.equal(api.submissions().length, tries, what);
+    assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd, entry.http_status]), [["refused", 0, status]], what);
+  }
+});
+
+test("a try after a Retry-After wait keeps a whole share of the retry deadline, at every later try too (#591)", async () => {
+  const dir = roundDir();
+  const api = fakeApi({ submit: [reply(429, { detail: "Too many queued generations" }, { "Retry-After": "35" }), reply(429, { detail: "Too many queued generations" })] });
+  const tryTimeouts = [];
+  const options = api.options({
+    timeout: (ms) => {
+      tryTimeouts.push(ms);
+      return new AbortController().signal;
+    },
+  });
+  const answer = options.fetch;
+  let submits = 0;
+  options.fetch = async (url, init = {}) => {
+    if (init.method === "POST" && !new URL(url).pathname.startsWith("/estimate/") && submits++ === 1) await options.sleep(19900);
+    return answer(url, init);
+  };
+  await assert.rejects(render([job(dir)], options), /answered 429/);
+  assert.equal(api.submissions().length, 2);
+  assert.deepEqual(tryTimeouts.slice(-2), [20000, 20000]);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["refused", 0]]);
+});
+
+test("a submission whose tries end on a 408, or on a 429 after one that may have reached it, is recorded at its estimate as maybe charged (#591)", async () => {
+  const cases = {
+    "408 to the last try": Array(3).fill(reply(408, { detail: "Request timeout" })),
+    "a 429 after a lost answer": [new TypeError("fetch failed"), reply(429, { detail: "Too many queued generations" }), reply(429, { detail: "Too many queued generations" })],
+  };
+  for (const [what, submit] of Object.entries(cases)) {
+    const dir = roundDir();
+    const api = fakeApi({ submit });
+    await assert.rejects(render([job(dir)], api.options()), (error) => {
+      assert.match(error.message, /may have reached Higgsfield/, what);
+      assert.equal(stopFields(error).mayBeCharged, true, what);
+      return true;
+    });
+    assert.equal(api.submissions().length, 3, what);
+    assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["unanswered", 0.094]], what);
+  }
+});
 
 test("a status read answered 200 with no status leaves the job polled on to its outputs (#589)", async () => {
   const dir = roundDir();
