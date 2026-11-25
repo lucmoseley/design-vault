@@ -2,7 +2,7 @@
 
 Why type size, weight, line height, tracking, axes and width follow the face rather than a fixed number, and how faces, figures, features and smoothing are chosen (#282, #275). The records are `vault.type-size`, `vault.type-floor`, `vault.type-weight`, `vault.type-leading`, `vault.type-tracking`, `vault.type-axes`, `vault.type-width`, `vault.code-size`, `vault.weight-count`, `vault.glyph-distinct`, `vault.figure-face`, `vault.figures`, `vault.font-features`, `vault.font-smoothing`, `vault.face-roles` and `vault.fluid-type`, in [rules/](../rules/). The research behind #282's lines is `docs/research/typeface-traits.md` in the design vault, and behind #275's `docs/research/carry-source-checks.md`.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new type scale.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new type scale.
 
 ## The face profile
 

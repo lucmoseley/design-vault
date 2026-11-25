@@ -2,7 +2,7 @@
 
 Why a page is built from native elements and landmarks, names its controls by what they show, and gives a visitor more than one way in and a working way back (#280). The source checks behind this file's records are `docs/research/markup-navigation-defaults.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
 
 ## Principles
 

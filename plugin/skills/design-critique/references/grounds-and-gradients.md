@@ -2,7 +2,7 @@
 
 Why a section, region, bar or footer takes its own background, how far apart neighbouring grounds sit, and when a gradient, a wash or a frame does a job (#284). The research behind every line is on design-vault#284's research comment.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when CSS changes how gradients blend or a design system cited here changes its surface model.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when CSS changes how gradients blend or a design system cited here changes its surface model.
 
 ## Principles
 

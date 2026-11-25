@@ -68,7 +68,7 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - answered-by: builder
 - writes: colour difference
 - yields-to: vault.logo-anchors, vault.contrast, level 2
-- source: W3C CSS Color 4 §14.2.1 for under 2; Brychtová and Çöltekin 2016 for 10 between meanings; the founder's ruling on #178 for 20 on small marks; four proxies for the near-miss line at 10 (docs/research/de00-thresholds.md); design systems' surface layering for 3 on surfaces (docs/research/de00-greys.md); Williams, The Non-Designer's Design Book, and Apple HIG Color for the rule; strength: founder ruling for 20, 10 and 3, standard and peer-reviewed research for the rest
+- source: W3C CSS Color 4 §14.2.1 for under 2; Brychtová and Çöltekin 2016 for 10 between meanings; the founder's ruling on #178 for 20 on small marks; four proxies for the near-miss line at 10 (docs/research/de00-thresholds.md); design systems' surface layering for 3 on surfaces (docs/research/de00-greys.md); Williams, The Non-Designer's Design Book, and Apple HIG Color for the rule; strength: founder ruling for 20, practitioner research for 10 and 3, standard and peer-reviewed research for the rest
 - era: timeless
 - owner: vault
 - stage: value
