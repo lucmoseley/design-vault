@@ -22,8 +22,6 @@ const JOB_TIMEOUT_MS = 10 * 60 * 1000; // #183 guess
 const POLL_FIRST_WAIT_MS = 2000;
 const POLL_WAIT_GROWTH = 1.5;
 const POLL_LONGEST_WAIT_MS = 10000;
-// https://www.rfc-editor.org/rfc/rfc9110#section-15.5.9 https://www.rfc-editor.org/rfc/rfc6585#section-4
-const READ_AGAIN_STATUSES = new Set([408, 429]);
 
 class BatchStoppedError extends Error {
   constructor(message, { stoppedAt, ran, notSubmitted, mayBeCharged, cause }) {
@@ -313,7 +311,7 @@ async function poll(ctx, accepted) {
       state = read;
       lastReadFault = undefined;
     } catch (error) {
-      if (!isTransient(error) && !READ_AGAIN_STATUSES.has(error.status)) return unpolled(error);
+      if (!isTransient(error)) return unpolled(error);
       lastReadFault = error;
     }
   }
