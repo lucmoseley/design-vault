@@ -133,10 +133,11 @@ function yieldsTo(a, b) {
 /**
  * The static clashes among questions that all apply to one asset (#158): two that write the same property where
  * neither gives way to the other, or each does, or whether one does turns on an unrecorded level. Each is { a, b,
- * yielding, reason, winner }: `yielding` is `neither`, `each` or `unread`. Precedence keeps `winner` where the two
- * stand at different levels, a null level ranking below 2: `reason` is `law` where the winner is law or WCAG,
- * `project` where it is the project's. Otherwise `winner` is null and the founder settles it, `reason` saying why:
- * `same-owner` within one project's gate (#154 story 34), `same-level`, `vault-levels` for two vault questions below
+ * yielding, reason, winner }: `yielding` is `neither`, `each` or `unread`. Precedence keeps `winner`: first by the
+ * dependency order, where both give a stage and the stages differ, the earlier standing and `reason` being `stage`
+ * (#549); else where the two stand at different levels, a null level ranking below 2: `reason` is `law` where the
+ * winner is law or WCAG, `project` where it is the project's. Otherwise `winner` is null and the founder settles it,
+ * `reason` saying why: `same-owner` within one project's gate (#154 story 34), `same-level`, `vault-levels` for two vault questions below
  * level 1, `unread`, or `evidence` where the project's, resting on no domain evidence of its own, would beat a level-3
  * vault question that does not give way to the project (#192).
  */
@@ -150,6 +151,11 @@ function clashes(questions) {
       const yielding = ab === null || ba === null ? "unread" : ab ? "each" : "neither";
       const owner = a.fields.owner.value;
       const [la, lb] = [ownLevel(a) ?? Infinity, ownLevel(b) ?? Infinity];
+      const [sa, sb] = [stageRank(a), stageRank(b)];
+      if (sa !== sb && Math.max(sa, sb) < STAGES.length) {
+        found.push({ a, b, yielding, reason: "stage", winner: sa < sb ? a : b });
+        continue;
+      }
       let reason;
       if (yielding === "unread") reason = "unread";
       else if (owner !== "vault" && owner === b.fields.owner.value) reason = "same-owner";
@@ -731,7 +737,7 @@ function readAssetArgs({ asset, fact: facts = [] }) {
   return { asset, facts: [...new Set(facts)] };
 }
 
-const SETTLED = { law: "law and WCAG beat every other rule", project: "the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own" };
+const SETTLED = { stage: "the dependency order decides first, and a later step never changes an earlier one", law: "law and WCAG beat every other rule", project: "the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own" };
 const FOR_FOUNDER = {
   "same-owner": "both are {owner}'s own",
   "same-level": "both at one precedence level",

@@ -431,3 +431,30 @@ test("design-round §1c's three stage commands run as written on the vault's sto
     assert.equal(r.status, 0, `${c}: ${r.err}`);
   }
 });
+
+// One record writing `writes` at `stage` (none: a project's record with no stage), resting on `strength`.
+const clashing = (id, stage, writes, strength = "house judgement") =>
+  record(id, { by: "look", stage }).replace(`- writes: ${id}`, `- writes: ${writes}`).replace("strength: house judgement", `strength: ${strength}`);
+const clashLine = (out, a, b) => out.split("\n").find((l) => l.startsWith("- ") && l.includes(` ${a} and `) && l.includes(` ${b} both`));
+
+test("a clash between two stages is settled by the dependency order, the earlier standing over any level; within a stage, or with no stage, the level decides (#549)", () => {
+  const vault = writeText("vault.md", `# vault\n\n${[
+    clashing("vault.edge-style", "function", "part-edge"),
+    clashing("vault.law-gap", "value", "gap", "law: a made-up statute"),
+    clashing("vault.tone", "treatment", "tone"),
+    clashing("vault.pace", "role", "pace"),
+  ].join("\n\n")}\n`);
+  const project = writeText("acme.md", `# acme\n\n${[
+    clashing("acme.edge-style", "treatment", "part-edge"),
+    clashing("acme.gap", "role", "gap"),
+    clashing("acme.tone", "treatment", "tone"),
+    clashing("acme.pace", undefined, "pace"),
+  ].join("\n\n")}\n`);
+  assert.equal(run("check", vault, project).status, 0);
+  const out = ok(list(["--asset", "web-surface"], [vault, project]));
+  const byOrder = "Settled by precedence (the dependency order decides first, and a later step never changes an earlier one)";
+  assert.match(clashLine(out, "vault.edge-style", "acme.edge-style"), new RegExp(`^- ${byOrder.replace(/[()]/g, "\\$&")}: .*; vault\\.edge-style stands\\.$`));
+  assert.match(clashLine(out, "vault.law-gap", "acme.gap"), /\(the dependency order .*; acme\.gap stands\.$/);
+  assert.match(clashLine(out, "vault.tone", "acme.tone"), /^- Settled by precedence \(the project beats .*; acme\.tone stands\.$/);
+  assert.match(clashLine(out, "vault.pace", "acme.pace"), /^- Settled by precedence \(the project beats .*; acme\.pace stands\.$/);
+});
