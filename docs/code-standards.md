@@ -59,8 +59,10 @@ The gates `.husky/pre-commit.local` adds to the floor. Each refuses the commit o
 
 | Gate | Refuses | Staged paths that arm it |
 |---|---|---|
-| `node validate.js --staged` | a library that is not a well-formed schema v3 one: an unknown keyword, group, verdict, project, style or collection, a duplicate id, a missing image or still, and the rest of its rule names (#1) | `data/gallery.json`, `data/styles.json`, anything under `images/` |
-| `node bundle.js --staged` | a staged `data/vault-data.js` that does not match the staged JSON (#32) | `data/gallery.json`, `data/styles.json`, `data/vault-data.js` |
+| `node validate.js --staged` | a library that is not a well-formed schema v3 one: an unknown keyword, group, verdict, project, style or collection, a duplicate id, a missing image or still (#1) | `data/gallery.json`, `data/styles.json`, anything under `images/` |
+| `node bundle.js --staged` | a `data/vault-data.js` missing from the index or not matching the staged JSON (#32) | `data/gallery.json`, `data/styles.json`, `data/vault-data.js` |
 | `node round-log.js --staged` | a malformed row, or a row that changes one HEAD holds beyond adding its `final_pick`, `rejections` or `on_weakest` (#95) | `data/round-log.jsonl` |
 | `node corrections-log.js --staged` | a malformed row, or a row that changes one HEAD holds beyond answering its pending ruling (#166) | `data/corrections-log.jsonl` |
 | `node calibration-log.js --staged` | a malformed row, a run whose figures disagree with the disagreements listed under them, or any change to or removal of a row HEAD holds (#168) | `data/calibration-log.jsonl` |
+
+CI runs no gate beyond the floor: `workflow-core-lander.yml` runs `commands.test` (`bash test/all.sh`) in four shards on a push to `lander/batch*` or `lander/iso-suite-*`, refusing the landing on a red, and `workflow-core-named-rerun.yml` reruns the test files a dispatch names.
