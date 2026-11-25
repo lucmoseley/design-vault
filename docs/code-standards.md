@@ -55,7 +55,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 
 ## §W — what tooling already enforces
 
-The gates `.husky/pre-commit.local` adds to the floor. Each refuses the commit on any fault its checker prints, and where git cannot be read.
+The gates `.husky/pre-commit.local` adds to the floor. Each refuses the commit on any fault its checker prints.
 
 | Gate | Refuses | Staged paths that arm it |
 |---|---|---|
@@ -65,4 +65,4 @@ The gates `.husky/pre-commit.local` adds to the floor. Each refuses the commit o
 | `node corrections-log.js --staged` | a malformed row, or a row that changes one HEAD holds beyond answering its pending ruling (#166) | `data/corrections-log.jsonl` |
 | `node calibration-log.js --staged` | a malformed row, a run whose figures disagree with the disagreements listed under them, or any change to or removal of a row HEAD holds (#168) | `data/calibration-log.jsonl` |
 
-No CI job runs: with `landingTester` pinned `local` (#531), the lander's own run of `commands.test` before `main` moves is the only gate past a commit.
+No CI job runs: `landingTester` is pinned `local` (#531).
