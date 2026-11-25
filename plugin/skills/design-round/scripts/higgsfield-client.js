@@ -15,11 +15,20 @@ const STEM = /^v\d+-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUND = /^r\d+$/;
 const STILL_BRAND = /^(?:avif|avis|heic|heix|heim|heis|hevc|hevx|mif1|msf1)$/;
 const ENDPOINT_ID = /^[a-z0-9][a-z0-9.-]*(?:\/[a-z0-9][a-z0-9.-]*)*$/;
+const DOCTYPE_WITHIN_BYTES = 64; // #583 guess
+const PRICE_DECIMALS = 3; // #583 guess
+const QUOTED_BODY_CHARS = 200; // #583 guess
+const MAX_TRIES = 3; // #583 guess
+const FIRST_RETRY_WAIT_MS = 2000; // #583 guess
+const JOB_TIMEOUT_MS = 10 * 60 * 1000; // #183 guess
+// Higgsfield's recommended poll schedule: https://docs.higgsfield.ai/docs/concepts/polling.md
+const POLL_FIRST_WAIT_MS = 2000;
+const POLL_WAIT_GROWTH = 1.5;
+const POLL_LONGEST_WAIT_MS = 10000;
 const HINTS = {
   401: " (check HIGGSFIELD_API_KEY)",
   403: " (the balance is too low: top up at open.higgsfield.ai)",
 };
-/** An HTTP error the API answered with; anything else thrown is a network fault. */
 class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -48,21 +57,18 @@ class LedgerLineError extends Error {
   }
 }
 
-/** The image or video type by its first bytes; null for anything else. */
 function sniff(bytes) {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
   if (bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return "jpg";
   if (bytes.subarray(0, 4).toString("latin1") === "RIFF" && bytes.subarray(8, 12).toString("latin1") === "WEBP") return "webp";
-  // AVIF and HEIC stills share MP4's ftyp box; any other brand is taken for a clip.
+  // HEIF stills (AVIF, HEIC) share MP4's ftyp box, told apart by brand: https://mp4ra.org/registered-types/brands
   if (bytes.subarray(4, 8).toString("latin1") === "ftyp" && !STILL_BRAND.test(bytes.subarray(8, 12).toString("latin1"))) return "mp4";
-  // Matroska shares WebM's EBML header; WebM names itself in the header's DocType.
-  // Looked for in the first 64 bytes: a guess at room for the header's fields before DocType.
-  if (bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) && bytes.subarray(4, 64).includes("webm")) return "webm";
+  // Matroska shares WebM's EBML header; WebM names itself in the DocType: https://www.webmproject.org/docs/container/
+  if (bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])) && bytes.subarray(4, DOCTYPE_WITHIN_BYTES).includes("webm")) return "webm";
   return null;
 }
 
-// To a tenth of a cent: a guess at enough to tell one render's price from another's.
-const dollars = (usd) => `$${usd.toFixed(3)}`;
+const dollars = (usd) => `$${usd.toFixed(PRICE_DECIMALS)}`;
 
 function readCredentials(value) {
   const colon = (value ?? "").indexOf(":");
@@ -80,7 +86,6 @@ function readCeiling(value) {
   return ceiling;
 }
 
-/** A job as the API takes it, with the round folder and file stem it saves to. */
 function checkJob(job, index) {
   const where = `job ${index + 1}`;
   if (typeof job?.out !== "string") throw new Error(`${where}: no out path`);
@@ -128,9 +133,7 @@ function spentIn(roundDir) {
       throw error;
     }
     const usd = Number(entry.usd);
-    // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
     if (!Number.isFinite(usd)) throw refuse("holds no usd figure");
-    // A negative line would free room under the ceiling.
     if (usd < 0) throw refuse("holds a negative usd figure");
     if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
     else unkeyed += usd;
@@ -164,7 +167,7 @@ function batchStopped(message, priced, index, { submissionSent, mayBeCharged = s
   return new BatchStoppedError(text, { stoppedAt: priced[index].name, ran, notSubmitted, mayBeCharged, cause });
 }
 
-// Bigint: drvfs on /mnt/c hands out inode numbers past 2^53, where two folders' numbers round to one.
+// #583
 function readFolderId(dir) {
   const { dev, ino } = fs.statSync(dir, { bigint: true });
   return `${dev}:${ino}`;
@@ -181,15 +184,13 @@ function isHolderAlive(pid) {
   }
 }
 
-// The birth time too: ext4 hands a freed inode number straight to the next folder made, so another run's folder in
-// place of one this run made would otherwise read as the same.
+// #583
 function readMadeId(dir) {
   const { dev, ino, birthtimeNs } = fs.statSync(dir, { bigint: true });
   return `${dev}:${ino}:${birthtimeNs}`;
 }
 
-// One level at a time, as mkdir -p does, recording each folder this call made the moment it is made, so an estimate
-// takes back only its own, a partial failure included.
+// #583
 function makeFolder(dir, made) {
   const missing = [];
   for (let at = dir; ; at = path.dirname(at)) {
@@ -228,8 +229,7 @@ function makeRoundFolders(jobs, made) {
   for (const job of waitingOnAnotherJobsFolder) makeFolder(job.roundDir, made);
 }
 
-// #577: deepest first by real path, so a folder made under another spelling still empties its parent; a folder
-// that is no longer the one made is another run's.
+// #577
 function takeBack(made, log) {
   for (const { at, id } of [...made].sort((a, b) => b.at.length - a.at.length)) {
     try {
@@ -279,7 +279,7 @@ function unlockAll(held, log) {
   }
 }
 
-// The key goes to api.higgsfield.ai alone: every URL this sends it to is built from API.
+// #583
 async function call(ctx, method, url, body, headers = {}) {
   const response = await ctx.fetch(url, {
     method,
@@ -295,18 +295,13 @@ async function call(ctx, method, url, body, headers = {}) {
     json = undefined;
   }
   if (!response.ok) {
-    // A body with no `detail` is quoted to 200 characters: a guess at enough to name the fault.
-    const detail = json?.detail === undefined ? text.slice(0, 200) : typeof json.detail === "string" ? json.detail : JSON.stringify(json.detail);
+    const detail = json?.detail === undefined ? text.slice(0, QUOTED_BODY_CHARS) : typeof json.detail === "string" ? json.detail : JSON.stringify(json.detail);
     throw new ApiError(`${method} ${new URL(url).pathname} answered ${response.status}: ${detail}${HINTS[response.status] ?? ""}`, response.status);
   }
   return json;
 }
 
-// Retries a network fault or a 5xx; the API's own guidance (docs.higgsfield.ai, Errors and retries). That page
-// asks for exponential backoff, with jitter, and a most-attempts cap, but gives no numbers: three tries, 2 s then 4 s
-// apart, are guesses. No jitter: one job is retried at a time (docs/research/house-audit-constants.md O1).
-// Residual: no total retry deadline, which the page also asks for; the three tries bound the waits, not the calls.
-// An error after a transient try is marked `afterFault`, since that earlier try may have reached the API.
+// #583
 async function withRetry(ctx, attempt) {
   let faulted = false;
   for (let tries = 1; ; tries++) {
@@ -314,24 +309,22 @@ async function withRetry(ctx, attempt) {
       return await attempt();
     } catch (error) {
       const transient = !(error instanceof ApiError) || error.status >= 500;
-      if (!transient || tries >= 3) {
+      if (!transient || tries >= MAX_TRIES) {
         if (faulted && error instanceof Error) error.afterFault = true;
         throw error;
       }
       faulted = true;
-      await ctx.sleep(1000 * 2 ** tries);
+      await ctx.sleep(FIRST_RETRY_WAIT_MS * 2 ** (tries - 1));
     }
   }
 }
 
-/** A usd figure as the estimate gives it, a number or a numeric string; NaN for anything else, since Number(null) and Number("") are 0. */
 function readUsd(value) {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim()) return Number(value);
   return NaN;
 }
 
-/** The job's price: the estimate's usd figure, or for a price rule the job's max_usd, left undefined where the job has none. */
 async function estimate(ctx, job) {
   const answer = await withRetry(ctx, () => call(ctx, "POST", `${API}/estimate/${job.model}`, job.input));
   const usd = readUsd(answer?.usd);
@@ -353,31 +346,27 @@ async function submit(ctx, job, idempotencyKey) {
   return accepted;
 }
 
-/** Polls an accepted request to a terminal status, or to "timed-out". */
 async function poll(ctx, accepted) {
   const statusUrl = `${API}/requests/${encodeURIComponent(accepted.request_id)}/status`;
   const deadline = ctx.now() + ctx.timeoutMs;
   let state = accepted;
-  // The first look after 2 s, then each wait half as long again, to 10 s at most: the sample on docs.higgsfield.ai's
-  // Polling page, less its jitter, which it asks for only when many workers poll at once.
-  let delay = 2000;
+  let delay = POLL_FIRST_WAIT_MS;
   while (!TERMINAL.has(state.status)) {
     if (ctx.now() >= deadline) return { status: "timed-out", request_id: accepted.request_id };
     await ctx.sleep(delay);
-    delay = Math.min(delay * 1.5, 10000);
+    delay = Math.min(delay * POLL_WAIT_GROWTH, POLL_LONGEST_WAIT_MS);
     state = await withRetry(ctx, () => call(ctx, "GET", statusUrl));
   }
   return state;
 }
 
 async function download(ctx, url) {
-  // No Authorization: the output sits on a CDN, not on the API.
+  // #583
   const response = await ctx.fetch(url);
   if (!response.ok) throw new Error(`the download of ${url} answered ${response.status}`);
   return Buffer.from(await response.arrayBuffer());
 }
 
-/** Saves every output a completed request returned into files; the first takes the stem, any more take -2, -3. */
 async function save(ctx, job, outputs, files) {
   for (const [index, output] of outputs.entries()) {
     const bytes = await download(ctx, output.url);
@@ -389,10 +378,6 @@ async function save(ctx, job, outputs, files) {
   }
 }
 
-/**
- * Prices the jobs, holds them to the round ceiling, then renders them.
- * Returns how many jobs it logged as failed (✗).
- */
 async function render(jobs, options = {}) {
   const log = options.log ?? console.log;
   const ctx = {
@@ -400,9 +385,7 @@ async function render(jobs, options = {}) {
     fetch: options.fetch ?? globalThis.fetch,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     now: options.now ?? Date.now,
-    // Ten minutes a job: a guess. The Polling page asks for a timeout fit to the model and gives no number; timing
-    // each model's jobs to completion would set it (docs/research/house-audit-constants.md H2).
-    timeoutMs: options.timeoutMs ?? 10 * 60 * 1000,
+    timeoutMs: options.timeoutMs ?? JOB_TIMEOUT_MS,
   };
   const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
 
@@ -414,7 +397,6 @@ async function render(jobs, options = {}) {
     try {
       makeRoundFolders(checked, made);
     } catch (error) {
-      // An error with no code is a fault in this script, not the filesystem refusing a folder.
       if (!options.estimateOnly || error.code === undefined) throw error;
       log(`a round folder cannot be made (${error.message}), so a run would be refused`);
       return 0;
@@ -433,7 +415,7 @@ async function render(jobs, options = {}) {
       if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
-      // #577: an --estimate running beside this one takes back the empty folders it made.
+      // #577
       throw new Error(`a round folder went away before the batch could lock it (${error.message}), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun`, { cause: error });
     }
     return await runBatch(ctx, checked, roundDirs, ceiling, options, log);
@@ -499,8 +481,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     try {
       accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
-      // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
-      // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
+      // #583
       if (error instanceof ApiError && !error.afterFault) {
         recordOrStop({ ...entry, usd: 0, status: "refused", http_status: error.status, files: [] }, `it was refused, not charged: ${error.message}`, { submissionSent: false });
         throw batchStopped(error.message, priced, index, { submissionSent: false, cause: error });
@@ -535,12 +516,10 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       failed++;
       continue;
     }
-    // An image model answers `images: [...]`, a video model `video: { url }`.
     const listed = [...asList(state.images), ...asList(state.video)];
     const outputs = listed.filter((output) => typeof output?.url === "string" && output.url !== "");
     const unreadable = listed.length - outputs.length;
-    // Recorded before the download: the charge stands even if the download fails,
-    // and the ledger then keeps the output's URL, live for at least seven days.
+    // #583
     const urls = outputs.map((output) => output.url);
     const unreadableText = unreadable ? `, and ${unreadable} output${unreadable > 1 ? "s" : ""} with no URL` : "";
     let ledgerError;
@@ -619,7 +598,6 @@ function parseArgs(argv) {
   return { jobs, estimateOnly };
 }
 
-/** The two settings, each from the environment or else from the key file; the file's other lines are ignored. */
 function settings(env, file = ENV_FILE) {
   const fromFile = {};
   if (fs.existsSync(file)) {
