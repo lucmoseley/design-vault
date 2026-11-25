@@ -364,7 +364,7 @@ def fetch(page, href):
         r = page.request.get(href)
         return r.text() if r.ok else None
     except (OSError, UnicodeDecodeError, PlaywrightError) as exc:
-        # The sheet is left unread, and report() names it (#86).
+        # #86
         fail_open(exc, f"{href} is left unread")
         return None
 

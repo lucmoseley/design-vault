@@ -1343,15 +1343,14 @@ def descendants(pid):
         parent = todo.pop()
         try:
             tasks = os.listdir(f"/proc/{parent}/task")
-        except FileNotFoundError as exc:  # no /proc, or the process has exited (#432)
+        except FileNotFoundError as exc:  # #432
             expected(exc, "no children")
             continue
         for task in tasks:
             try:
                 with open(f"/proc/{parent}/task/{task}/children") as f:
                     kids = [int(k) for k in f.read().split()]
-            except (FileNotFoundError, ProcessLookupError) as exc:
-                # The thread has exited, or the kernel has no children file (#432).
+            except (FileNotFoundError, ProcessLookupError) as exc:  # #432
                 expected(exc, "no children")
                 continue
             found += kids
@@ -1365,7 +1364,7 @@ def process_args(pid):
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return f.read().decode(errors="replace").replace("\0", " ").split()
-    except (FileNotFoundError, ProcessLookupError) as exc:  # it has exited (#432)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #432
         expected(exc, "no command line")
         return []
 
@@ -1389,7 +1388,7 @@ def driver_pid(browser):
         with open(f"/proc/{browser}/stat") as f:
             # The name in brackets may hold spaces; the parent follows the state.
             parent = int(f.read().rsplit(")", 1)[1].split()[1])
-    except (FileNotFoundError, ProcessLookupError) as exc:  # it has exited (#464)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #464
         expected(exc, "no driver")
         return None
     return parent if "run-driver" in process_args(parent) else None

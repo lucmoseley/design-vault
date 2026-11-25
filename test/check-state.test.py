@@ -9,13 +9,16 @@ no static read of a page reaches the states only a visitor drives it into.
 import concurrent.futures
 import contextlib
 import importlib.util
+import io
 import json
 import os
 import pathlib
 import re
 import sys
 import tempfile
+import types
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
@@ -289,6 +292,28 @@ class TheRulesExemptions(unittest.TestCase):
             EXEMPT, "vault.key-shortcuts | single-key | turned off by hotkey"
         )
         self.assertEqual(code, 1, printed)
+
+
+class OneCheckStopping(unittest.TestCase):
+    def test_a_check_that_stops_is_said_as_not_judged_and_printed(self):
+        from playwright.sync_api import Error as PlaywrightError
+
+        def stops(run, line, ans):
+            raise PlaywrightError("Target closed")
+
+        table = state.parse("vault.a | reveal\n")
+        run = types.SimpleNamespace(popups=[])
+        err = io.StringIO()
+        with (
+            mock.patch.dict(state.RUNS, {"reveal": stops}),
+            contextlib.redirect_stderr(err),
+        ):
+            (found,) = state.findings(run, table)
+        self.assertIn("the check stopped: Target closed", json.dumps(found))
+        self.assertEqual(
+            err.getvalue(),
+            "fail-open: reveal is said as not judged: Error: Target closed\n",
+        )
 
 
 class TheTableForm(unittest.TestCase):

@@ -312,7 +312,6 @@ class Clear(unittest.TestCase):
             self.assertEqual(os.listdir(out), ["notes.txt"])
 
     def test_an_unreadable_renders_json_stops_the_run_naming_it(self):
-        # Read as no earlier run, it would leave that run's sheets to be handed on.
         with tempfile.TemporaryDirectory() as out:
             path = os.path.join(out, "renders.json")
             with open(path, "w", encoding="utf8") as fh:

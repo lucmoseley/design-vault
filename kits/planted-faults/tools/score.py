@@ -26,6 +26,12 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+sys.path.append(
+    str(
+        pathlib.Path(__file__).resolve().parents[3]
+        / "plugin/skills/design-round/scripts"
+    )
+)
 import runner
 from fail_open import expected
 

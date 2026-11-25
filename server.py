@@ -71,6 +71,6 @@ if __name__ == "__main__":
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        sys.exit(0)  # Ctrl-C is how the server is stopped
+        sys.exit(0)
     finally:
         server.server_close()

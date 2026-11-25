@@ -157,7 +157,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
-from fail_open import expected  # noqa: E402
+from fail_open import expected, fail_open  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
@@ -1808,7 +1808,7 @@ def check_visited(run, line, ans):
             )
         except PlaywrightError as exc:
             # A browser that will not launch leaves visited colours unread, said as not judged (#312).
-            expected(exc, "said as not judged")
+            fail_open(exc, "visited colours are said as not judged")
             ans.unjudged(
                 line,
                 None,
@@ -2853,7 +2853,7 @@ def findings(run, table):
             RUNS[line.check](run, line, ans)
         except (PlaywrightError, form.FormError) as exc:
             # One check stopping leaves the others to run; it is said as not judged (#312).
-            expected(exc, "said as not judged")
+            fail_open(exc, f"{line.check} is said as not judged")
             ans.unjudged(line, None, f"the check stopped: {flow.first_line(exc)}")
     return ans.done()
 
