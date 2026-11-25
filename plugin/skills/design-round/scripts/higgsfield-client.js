@@ -1,9 +1,3 @@
-/**
- * higgsfield-client.js — the client higgsfield.js runs (design-vault#18, design-vault#62): its command line, its two
- * settings, and render(), which prices the jobs, holds them to the round ceiling, submits, polls, saves and records
- * each charge. higgsfield.js's header says what a run does. It sits apart from higgsfield.js so the tests call
- * what the program calls (#187). It spends money: base's risk-path rules bind it.
- */
 "use strict";
 const crypto = require("crypto");
 const fs = require("fs");
