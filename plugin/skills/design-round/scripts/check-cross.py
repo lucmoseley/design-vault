@@ -41,8 +41,9 @@ where it reads one. Blank lines and lines starting with # are skipped.
                       or a search field)
   home-hub pages <= N on a site of N pages or fewer whose home page links
                       every other page, a page that links back to the home
-                      page passes its own record's ways line however many
-                      ways it has; a record with no ways line is refused
+                      page passes the ways line on the home-hub line's own
+                      record however many ways it has; a home-hub line on a
+                      record with no ways line is refused
   back                in a flow, Back from a step shows the step before at
                       its own URL with every value typed into it
   repeat              in a flow, a field whose autocomplete token an
