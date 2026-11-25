@@ -50,10 +50,13 @@
  * recorded at its estimate.
  *
  * A failed, moderated or cancelled request is not charged, so its outcome is
- * recorded at $0. One that outlives the timeout, or whose status cannot be
- * read, is recorded at its estimate, since it may still complete and be
- * charged. An estimate that is not a positive usd figure is refused before
- * anything is submitted. A completed request is recorded whatever it returns;
+ * recorded at $0. A status read that fails to a network fault, a 5xx, a 408,
+ * a 429 or an answer with no status is read again on the poll schedule. One
+ * that outlives the timeout, whose status read is refused with another 4xx, or
+ * whose status still cannot be read at the timeout, is recorded at its
+ * estimate, since it may still complete and be charged. An estimate that is
+ * not a positive usd figure is refused before anything is submitted. A
+ * completed request is recorded whatever it returns;
  * an output carrying no URL counts the job failed.
  *
  * A ledger line that cannot be written stops the batch, naming how far that
