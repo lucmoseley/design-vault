@@ -26,6 +26,8 @@ const JOB_TIMEOUT_MS = 10 * 60 * 1000; // #183 guess
 const POLL_FIRST_WAIT_MS = 2000;
 const POLL_WAIT_GROWTH = 1.5;
 const POLL_LONGEST_WAIT_MS = 10000;
+// https://www.rfc-editor.org/rfc/rfc9110#section-15.5.9 https://www.rfc-editor.org/rfc/rfc6585#section-4
+const READ_AGAIN_STATUSES = new Set([408, 429]);
 const HINTS = {
   401: " (check HIGGSFIELD_API_KEY)",
   403: " (the balance is too low: top up at open.higgsfield.ai)",
@@ -303,6 +305,8 @@ async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
   return json;
 }
 
+const isTransient = (error) => !(error instanceof ApiError) || error.status >= 500;
+
 // #583, #587
 async function withRetry(ctx, method, url, request = {}) {
   const deadline = ctx.now() + ctx.retryDeadlineMs;
@@ -313,7 +317,7 @@ async function withRetry(ctx, method, url, request = {}) {
       return await call(ctx, method, url, { ...request, signal });
     } catch (thrown) {
       const error = signal.aborted && thrown === signal.reason ? new Error(`${method} ${new URL(url).pathname} gave no answer within ${tryMs / 1000} s, its try's share of the ${ctx.retryDeadlineMs / 1000} s retry deadline`, { cause: thrown }) : thrown;
-      const transient = !(error instanceof ApiError) || error.status >= 500;
+      const transient = isTransient(error);
       const wait = FIRST_RETRY_WAIT_MS * 2 ** (tries - 1);
       if (!transient || tries >= MAX_TRIES || ctx.now() + wait >= deadline) {
         if ((transient || tries > 1) && error instanceof Error) error.mayHaveReached = true;
@@ -354,13 +358,24 @@ async function submit(ctx, job, idempotencyKey) {
 async function poll(ctx, accepted) {
   const statusUrl = `${API}/requests/${encodeURIComponent(accepted.request_id)}/status`;
   const deadline = ctx.now() + ctx.timeoutMs;
+  const unpolled = (fault) => ({ status: "unpolled", error: fault.message, request_id: accepted.request_id });
   let state = accepted;
   let delay = POLL_FIRST_WAIT_MS;
+  let lastReadFault;
   while (!TERMINAL.has(state.status)) {
-    if (ctx.now() >= deadline) return { status: "timed-out", request_id: accepted.request_id };
+    if (ctx.now() >= deadline) return lastReadFault ? unpolled(lastReadFault) : { status: "timed-out", request_id: accepted.request_id };
     await ctx.sleep(delay);
     delay = Math.min(delay * POLL_WAIT_GROWTH, POLL_LONGEST_WAIT_MS);
-    state = await withRetry(ctx, "GET", statusUrl);
+    // #589
+    try {
+      const read = await withRetry(ctx, "GET", statusUrl);
+      if (typeof read?.status !== "string") throw new Error(`GET ${new URL(statusUrl).pathname} answered no status: ${read === undefined ? "its body is not JSON" : JSON.stringify(read).slice(0, QUOTED_BODY_CHARS)}`);
+      state = read;
+      lastReadFault = undefined;
+    } catch (error) {
+      if (!isTransient(error) && !READ_AGAIN_STATUSES.has(error.status)) return unpolled(error);
+      lastReadFault = error;
+    }
   }
   return state;
 }
@@ -503,12 +518,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     } catch (error) {
       log(`${ledgerFault("submitted", error)}; request ${accepted.request_id} is polled on, and its outcome line stands in for it`);
     }
-    let state;
-    try {
-      state = await poll(ctx, accepted);
-    } catch (error) {
-      state = { status: "unpolled", error: error.message };
-    }
+    const state = await poll(ctx, accepted);
     if (state.status === "timed-out" || state.status === "unpolled") {
       const why = state.status === "unpolled" ? `its status could not be read (${state.error})` : `still running after ${ctx.timeoutMs / 1000} s`;
       recordOrStop({ ...entry, status: state.status, files: [] }, `request ${accepted.request_id}: ${why}`);

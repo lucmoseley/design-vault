@@ -78,6 +78,7 @@ function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "complete
       ...extra,
     }),
     submissions: () => calls.filter((call) => call.method === "POST" && !new URL(call.url).pathname.startsWith("/estimate/")),
+    clock: () => clock,
   };
 }
 
@@ -197,6 +198,7 @@ test("a submitted job whose status poll fails is recorded at its estimate, the b
   const failing = fakeApi({ usd: "0.25", pollReply: reply(404, { detail: "Not found" }) });
   assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], failing.options({ ceiling: "0.60" })), 2);
   assert.equal(failing.submissions().length, 2);
+  assert.equal(failing.calls.filter((call) => new URL(call.url).pathname.startsWith("/requests/")).length, 2, "a 4xx status read ends its job's polling at once (#589)");
   assert.deepEqual(
     ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
     [
@@ -476,6 +478,76 @@ test("a 5xx submission is tried three times, 2 s then 4 s apart (#583)", async (
   await assert.rejects(render([job(roundDir())], api.options({ sleep: async (ms) => waits.push(ms) })), /answered 502/);
   assert.equal(api.submissions().length, 3);
   assert.deepEqual(waits, [2000, 4000]);
+});
+
+function failingStatusReads(faults, extra = {}) {
+  const api = fakeApi(extra);
+  const options = api.options(extra.options);
+  const answer = options.fetch;
+  let reads = 0;
+  options.fetch = async (url, init = {}) => {
+    if (!new URL(url).pathname.startsWith("/requests/")) return answer(url, init);
+    const fault = faults[reads++];
+    if (fault === undefined) return answer(url, init);
+    if (fault === "network") throw new TypeError("fetch failed");
+    if (fault === "hang") {
+      await options.sleep(20000);
+      throw init.signal.reason;
+    }
+    return fault;
+  };
+  return { api, options, reads: () => reads };
+}
+
+const abortingAtOnce = { timeout: () => AbortSignal.abort(new DOMException("The operation was aborted due to timeout", "TimeoutError")) };
+
+test("a status read whose every try fails, to a network fault or a 5xx, leaves the job polled on to its outputs (#589)", async () => {
+  const dir = roundDir();
+  const { options, reads } = failingStatusReads(["network", reply(503, { detail: "Service unavailable" }), "network"]);
+  assert.equal(await render([job(dir)], options), 0);
+  assert.equal(reads(), 3 + 2);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.request_id]), [["completed", "req-1"]]);
+  assert.ok(fs.existsSync(path.join(dir, "v1-dusk.png")));
+});
+
+test("a status read whose every try hangs to its share of the retry deadline leaves the job polled on to its outputs (#589)", async () => {
+  const dir = roundDir();
+  const { options } = failingStatusReads(["hang", "hang", "hang"], { options: abortingAtOnce });
+  assert.equal(await render([job(dir)], options), 0);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.request_id]), [["completed", "req-1"]]);
+});
+
+for (const status of [408, 429]) {
+  test(`a status read answered ${status} leaves the job polled on to its outputs (#589)`, async () => {
+    const dir = roundDir();
+    const { options } = failingStatusReads([reply(status, { detail: "Try again later" })]);
+    assert.equal(await render([job(dir)], options), 0);
+    assert.deepEqual(outcomes(dir).map((entry) => entry.status), ["completed"]);
+  });
+}
+
+test("a status read answered 200 with no status leaves the job polled on to its outputs (#589)", async () => {
+  const dir = roundDir();
+  const { options } = failingStatusReads([reply(200, "<html>bad gateway</html>"), reply(200, null)]);
+  assert.equal(await render([job(dir)], options), 0);
+  assert.deepEqual(outcomes(dir).map((entry) => entry.status), ["completed"]);
+});
+
+test("status reads failing to the poll's own deadline record the job unpolled at its estimate, naming the last fault (#589)", async () => {
+  const dir = roundDir();
+  const lines = [];
+  const { api, options } = failingStatusReads(Array(1000).fill(reply(503, { detail: "Service unavailable" })), { options: { log: (line) => lines.push(line) } });
+  assert.equal(await render([job(dir)], options), 1);
+  assert.ok(api.clock() >= 10 * 60 * 1000, `polling gave up at ${api.clock()} ms, before its 10-minute deadline`);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd, entry.request_id]), [["unpolled", 0.094, "req-1"]]);
+  assert.ok(lines.some((line) => /^✗ r1\/v1-dusk: its status could not be read \(.*answered 503: Service unavailable/.test(line)), lines.join("\n"));
+});
+
+test("a job read again after a failed status read, then still running at the deadline, is recorded timed-out (#589)", async () => {
+  const dir = roundDir();
+  const { options } = failingStatusReads(Array(3).fill("network"), { statuses: ["in_progress"] });
+  assert.equal(await render([job(dir)], options), 1);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd]), [["timed-out", 0.094]]);
 });
 
 test("polling waits 2 s, then half as long again each time, to 10 s at most", async () => {
