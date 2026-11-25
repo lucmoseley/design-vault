@@ -19,7 +19,6 @@ const HINTS = {
   401: " (check HIGGSFIELD_API_KEY)",
   403: " (the balance is too low: top up at open.higgsfield.ai)",
 };
-/** An HTTP error the API answered with; anything else thrown is a network fault. */
 class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -228,8 +227,7 @@ function makeRoundFolders(jobs, made) {
   for (const job of waitingOnAnotherJobsFolder) makeFolder(job.roundDir, made);
 }
 
-// #577: deepest first by real path, so a folder made under another spelling still empties its parent; a folder
-// that is no longer the one made is another run's.
+// #577
 function takeBack(made, log) {
   for (const { at, id } of [...made].sort((a, b) => b.at.length - a.at.length)) {
     try {
@@ -433,7 +431,6 @@ async function render(jobs, options = {}) {
       if (!options.estimateOnly) for (const roundDir of roundDirs) held.push(lock(roundDir));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
-      // #577: an --estimate running beside this one takes back the empty folders it made.
       throw new Error(`a round folder went away before the batch could lock it (${error.message}), most likely taken back by an --estimate of the same round, so nothing was submitted; rerun`, { cause: error });
     }
     return await runBatch(ctx, checked, roundDirs, ceiling, options, log);
