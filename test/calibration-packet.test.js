@@ -31,13 +31,13 @@ after(() => {
   for (const dir of scratch) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-function build(rounds, { roundLog = fixture("round-log.jsonl") } = {}) {
+function build(rounds, { roundLog = fixture("round-log.jsonl"), correctionsLog = fixture("corrections-log.jsonl") } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-packet-"));
   scratch.push(dir);
   const manifest = path.join(dir, "manifest.json");
   fs.writeFileSync(manifest, JSON.stringify({ rounds }));
   const out = path.join(dir, "packet");
-  const args = ["--manifest", manifest, "--out", out, "--round-log", roundLog, "--corrections-log", fixture("corrections-log.jsonl")];
+  const args = ["--manifest", manifest, "--out", out, "--round-log", roundLog, "--corrections-log", correctionsLog];
   const result = runInProcess(SCRIPT, args);
   return { ...result, out, dir };
 }
@@ -210,4 +210,25 @@ test("a round whose logged project cannot lead a folder name is refused", () => 
   assert.deepEqual(rules(stderr), ["project"]);
   assert.match(stderr, /the round log's project "mmm\.infra" is not a folder name/);
   assert.equal(fs.existsSync(out), false);
+});
+
+test("two projects' rounds of one tag pack apart, and an entry under a project no round is logged for is refused (#551)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-packet-"));
+  scratch.push(dir);
+  const [first] = fs.readFileSync(fixture("round-log.jsonl"), "utf8").split("\n");
+  const roundLog = path.join(dir, "round-log.jsonl");
+  fs.writeFileSync(roundLog, `${first}\n${JSON.stringify({ ...JSON.parse(first), project: "manta", ticket: "lucmoseley/mantahostels#50", reason: "the arches frame the sea" })}\n`);
+  const manta = round({ ticket: "lucmoseley/mantahostels#50" });
+  const both = build([round(), manta], { roundLog });
+  assert.equal(both.status, 0, both.stderr);
+  assert.deepEqual(fs.readdirSync(both.out).sort(), ["manta.hero-r1", "mmm-infra.hero-r1"]);
+  assert.deepEqual(rules(build([manta, manta], { roundLog }).stderr), ["manifest"], "one project's round packed twice");
+
+  const [gold] = fs.readFileSync(fixture("corrections-log.jsonl"), "utf8").split("\n");
+  const correctionsLog = path.join(dir, "corrections-log.jsonl");
+  fs.writeFileSync(correctionsLog, `${gold}\n${JSON.stringify({ ...JSON.parse(gold), project: "mantahostels", words: "too sleepy" })}\n`);
+  const misspelt = build([round()], { roundLog, correctionsLog });
+  assert.equal(misspelt.status, 1);
+  assert.deepEqual(rules(misspelt.stderr), ["entry-project"]);
+  assert.match(misspelt.stderr, /corrections-log line 2 names rounds\/hero-r1 under project "mantahostels", which no round-log row holds/);
 });

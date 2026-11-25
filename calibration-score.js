@@ -32,7 +32,7 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const { readLog, roundFolder, namesRound, ROUND_LOG, CORRECTIONS_LOG } = require("./calibration-packet.js");
+const { readLog, roundFolder, ROUND_LOG, CORRECTIONS_LOG } = require("./calibration-packet.js");
 const roundLog = require("./round-log.js");
 const correctionsLog = require("./corrections-log.js");
 const { roundAsked, answerFaults, questionTexts } = require("./calibration-critic.js");
@@ -193,7 +193,7 @@ function main(argv) {
     });
     rounds = readJson(options.manifest).rounds.map((r) => {
       const name = roundName(r);
-      const logged = roundRows.find(({ row: x }) => x.ticket === r.ticket && x.round === r.round);
+      const logged = roundRows.find(({ row: x }) => roundLog.isRowOfRound(x, r));
       if (!logged) throw new Error(`the round log holds no row for ${name}`);
       const folder = roundFolder(logged.row.project, r.tag);
       if (!folder) throw new Error(`${name}: ${JSON.stringify(logged.row.project)}'s ${JSON.stringify(r.tag)} names no packet folder — build the packet with calibration-packet.js`);
@@ -207,8 +207,8 @@ function main(argv) {
         unchanged = asked.questions.filter((q) => then.get(q) === asked.texts.get(q));
       }
       const entries = corrections
-        .filter(({ row: e }) => namesRound(e, logged.row.project, r.tag))
-        .map(({ row: e, line }) => ({ line, candidate: e.candidate.split(" ")[1], principle: e.principle, ruling: e.ruling, expected: e.stance === "kept" ? "yes" : "no" }));
+        .filter(({ row: e }) => correctionsLog.isEntryOfRound(e, logged.row.project, r.tag))
+        .map(({ row: e, line }) => ({ line, candidate: correctionsLog.roundCandidate(e).name, principle: e.principle, ruling: e.ruling, expected: e.stance === "kept" ? "yes" : "no" }));
       if (logged.row.first_pick !== null && !asked.candidates.includes(logged.row.first_pick))
         faults.push(`${name}: his first pick ${logged.row.first_pick} is not one of the packet's candidates — add it to the manifest`);
       const critics = CRITICS.map((c) => {

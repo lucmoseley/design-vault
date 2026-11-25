@@ -30,7 +30,6 @@ const ruled = {
   missed_by: "gate",
   ruling: "rule: vault.proof",
 };
-// Each round's packet folder, named for its project and slug.
 const FOLDER = { "hero-r1": "mmm-infra.hero-r1", "hero-r2": "mmm-infra.hero-r2" };
 const run = { model: "claude-opus-5-5", claude_code: "2.1.299", round: FOLDER["hero-r1"] };
 const say = (answer) => ({ answer, evidence: `seen: ${answer}` });
@@ -326,7 +325,6 @@ test("two projects' rounds of one tag pack each project's entries into its own f
   assert.deepEqual(packed("mmm-infra.hero-r1"), [{ entry: 1, principle: "the accent gold stays muted against the navy" }]);
   assert.deepEqual(packed("manta.hero-r1"), [{ entry: 2, principle: "the hero moves at a walking pace" }]);
 
-  // Every critic agrees with him: his first pick passes vault.proof and leads, and the candidate each entry faults breaks its principle.
   const agreeing = (folder, pick, entry, faulted) => ({
     run: { ...run, round: folder },
     answers: Object.fromEntries(["v1-arches", "v2-slow"].map((c) => [c, { "vault.proof": say(c === pick ? "yes" : "no") }])),
