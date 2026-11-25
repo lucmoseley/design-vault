@@ -41,7 +41,7 @@ function packedRound() {
   const built = runInProcess(path.join(ROOT, "calibration-packet.js"), ["--manifest", manifest, "--out", path.join(dir, "packet"),
     "--round-log", fixture("round-log.jsonl"), "--corrections-log", fixture("corrections-log.jsonl")]);
   assert.equal(built.status, 0, built.stderr);
-  return { dir, round: path.join(dir, "packet", "hero-r1") };
+  return { dir, round: path.join(dir, "packet", "mmm-infra.hero-r1") };
 }
 
 function run(args, env = {}) {
@@ -67,7 +67,7 @@ function replyFile(dir, data, fence = false) {
 
 test("a critic runs confined, in its round's folder, and its answers are written with the run beside them", () => {
   const { dir, round } = packedRound();
-  const out = path.join(dir, "answers", "hero-r1", "critic-a.json");
+  const out = path.join(dir, "answers", "mmm-infra.hero-r1", "critic-a.json");
   const result = run(["--round", round, "--model", "claude-opus-5-5", "--out", out], { STUB_REPLY: replyFile(dir, reply, true) });
   assert.equal(result.status, 0, result.stderr);
   const [version, child] = [result.calls.length, result.calls.at(-1)];
@@ -84,7 +84,7 @@ test("a critic runs confined, in its round's folder, and its answers are written
   assert.match(child.prompt, /copy-bans \(the project's bans on what its copy may say, and on any look, which hold for every candidate\)/);
 
   const written = JSON.parse(fs.readFileSync(out, "utf8"));
-  assert.deepEqual(written.run, { model: "claude-opus-5-5", claude_code: "2.1.299", round: "hero-r1" });
+  assert.deepEqual(written.run, { model: "claude-opus-5-5", claude_code: "2.1.299", round: "mmm-infra.hero-r1" });
   assert.deepEqual(written.leader, reply.leader);
   assert.deepEqual(written.principles, reply.principles);
 });
@@ -175,7 +175,7 @@ test("--packet runs the canary, then three critics on each round folder; a canar
   assert.equal(result.calls.length, 5, "the canary's two children, then three critics");
   assert.ok(result.calls.slice(2).every((c) => c.cwd === fs.realpathSync(round)));
   assert.equal(JSON.parse(fs.readFileSync(path.join(answers, "canary.json"), "utf8")).held, true);
-  for (const c of ["a", "b", "c"]) assert.equal(JSON.parse(fs.readFileSync(path.join(answers, "hero-r1", `critic-${c}.json`), "utf8")).run.round, "hero-r1");
+  for (const c of ["a", "b", "c"]) assert.equal(JSON.parse(fs.readFileSync(path.join(answers, "mmm-infra.hero-r1", `critic-${c}.json`), "utf8")).run.round, "mmm-infra.hero-r1");
 
   const leaked = run(["--packet", path.dirname(round), "--model", "m", "--answers", path.join(dir, "leaked")], { STUB_MODE: "leak", STUB_REPLY: replyFile(dir, reply) });
   assert.equal(leaked.status, 1);
@@ -189,7 +189,7 @@ test("--packet runs a refused critic once more, and stops where it is refused tw
   assert.equal(result.status, 1);
   assert.equal(result.calls.length, 4, "the canary's two children, then critic a twice");
   assert.match(result.stderr, /leader is not/);
-  assert.equal(fs.existsSync(path.join(answers, "hero-r1", "critic-b.json")), false);
+  assert.equal(fs.existsSync(path.join(answers, "mmm-infra.hero-r1", "critic-b.json")), false);
 });
 
 // calibration-score.js counts his first pick a Yes only on a question these texts call unchanged since its round (#232).

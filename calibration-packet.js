@@ -16,15 +16,17 @@
  * calibration-score.js reads and the packet leaves out; copy_bans is the copy bans that round's critics were given
  * (#232).
  *
- * The packet holds one folder per round, named for its tag less `rounds/`: brief, gate-list and copy-bans (each
- * keeping its extension), candidates/<name>, and entries.json, the corrections entries naming one of its candidates as
- * { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names, so a
+ * The packet holds one folder per round, named `<project>.<slug>-r<n>` for the project its round-log row names and its
+ * tag less `rounds/` (#551): brief, gate-list and copy-bans (each keeping its extension), candidates/<name>, and entries.json, the corrections entries of its project
+ * naming one of its candidates as { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names, so a
  * critic asks each principle of every candidate and cannot tell which one he faulted.
  *
  * Refused, with the packet left unwritten:
  *   - a log its own gate refuses (round-log.js, corrections-log.js), as a usage error;
- *   - a round the round log holds no row for, a source path that does not exist, an empty copy_bans, or a
+ *   - a round the round log holds no row for, or whose row's project holds a character other than a letter, digit,
+ *     _ or -, a source path that does not exist, an empty copy_bans, or a
  *     corrections entry naming a candidate of a packed round that the manifest does not;
+ *   - entry-project: a corrections entry naming a packed round's tag under a project no round-log row holds;
  *   - verdict-field: a verdict field name anywhere in the packet, quoted as JSON spells a key, or bare where the
  *     name holds an underscore and so is no English word (`first_pick: v2-slow` in a brief);
  *   - log-line: a row of either log, anywhere in the packet;
@@ -56,6 +58,12 @@ const VERDICT_KEY = new RegExp(`"(${VERDICT_FIELDS.join("|")})"\\s*:|\\b(${VERDI
 const TAG = /^rounds\/([\w.-]+-r([1-9]\d*))$/;
 // A candidate's name becomes a path in the packet, so it may not climb out of it.
 const NAME = /^(?!\.\.?$)[\w.-]+$/;
+const PROJECT = /^[\w-]+$/;
+
+function roundFolder(project, tag) {
+  const slug = typeof tag === "string" ? tag.match(TAG) : null;
+  return slug && typeof project === "string" && PROJECT.test(project) ? `${project}.${slug[1]}` : null;
+}
 
 function parseArgs(argv) {
   const options = { manifest: null, out: null, "round-log": null, "corrections-log": null };
@@ -86,11 +94,6 @@ function planRounds(manifest, base, roundRows, corrections) {
       fault("manifest", `${at}: tag ${JSON.stringify(round.tag)} is not rounds/<slug>-r<n> for round ${JSON.stringify(round.round)}`);
       continue;
     }
-    const folder = tag[1];
-    if (folders.has(folder)) fault("manifest", `${at}: ${round.tag} is packed twice`);
-    folders.add(folder);
-    const row = roundRows.find((r) => r.ticket === round.ticket && r.round === round.round);
-    if (!row) fault("unlogged", `${at}: the round log holds no row for ${round.ticket} r${round.round}`);
     const candidates = round.candidates && typeof round.candidates === "object" ? round.candidates : {};
     if (Object.keys(candidates).length === 0) fault("manifest", `${at}: candidates names no candidate`);
     for (const name of Object.keys(candidates)) if (!NAME.test(name)) fault("manifest", `${at}: candidate name ${JSON.stringify(name)} is not a file name`);
@@ -101,14 +104,30 @@ function planRounds(manifest, base, roundRows, corrections) {
     }
     if (typeof round.copy_bans === "string" && fs.existsSync(path.resolve(base, round.copy_bans)) && !fs.readFileSync(path.resolve(base, round.copy_bans), "utf8").trim())
       fault("copy-bans", `${at}: copy_bans's source ${JSON.stringify(round.copy_bans)} is empty — write "none" where the round's critics were given no copy bans`);
-    // corrections-log.js holds a candidate to `<round tag> <name>`.
+    const row = roundRows.find((r) => roundLog.isRowOfRound(r, round));
+    if (!row) {
+      fault("unlogged", `${at}: the round log holds no row for ${round.ticket} r${round.round}`);
+      continue;
+    }
+    const folder = roundFolder(row.project, round.tag);
+    if (!folder) {
+      fault("project", `${at}: the round log's project ${JSON.stringify(row.project)} is not a folder name of letters, digits, _ and -`);
+      continue;
+    }
+    if (folders.has(folder)) fault("manifest", `${at}: ${row.project}'s ${round.tag} is packed twice`);
+    folders.add(folder);
     const entries = corrections
-      .filter(({ row: e }) => e.candidate !== null && e.candidate.split(" ")[0] === round.tag)
-      .map(({ row: e, line }) => ({ line, name: e.candidate.split(" ")[1], principle: e.principle, words: e.words }));
+      .filter(({ row: e }) => correctionsLog.isEntryOfRound(e, row.project, round.tag))
+      .map(({ row: e, line }) => ({ line, name: correctionsLog.roundCandidate(e).name, principle: e.principle, words: e.words }));
     for (const { line, name } of entries)
-      if (!(name in candidates)) fault("entry-candidate", `${at}: corrections-log line ${line} names ${round.tag} ${name}, which the manifest does not pack`);
+      if (!(name in candidates)) fault("entry-candidate", `${at}: corrections-log line ${line} names ${row.project}'s ${round.tag} ${name}, which the manifest does not pack`);
     rounds.push({ round, folder, row, candidates, entries });
   }
+  const projects = new Set(roundRows.map((r) => r.project));
+  const tags = new Set(rounds.map(({ round }) => round.tag));
+  for (const { row: e, line } of corrections)
+    if (tags.has(correctionsLog.roundCandidate(e)?.tag) && !projects.has(e.project))
+      fault("entry-project", `corrections-log line ${line} names ${correctionsLog.roundCandidate(e).tag} under project ${JSON.stringify(e.project)}, which no round-log row holds`);
   return { rounds, faults };
 }
 
@@ -210,4 +229,4 @@ function main(argv) {
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { readLog, ROUND_LOG, CORRECTIONS_LOG };
+module.exports = { readLog, roundFolder, ROUND_LOG, CORRECTIONS_LOG };
