@@ -57,7 +57,7 @@ Scope: small Node or Python command-line tools and scripts. Each source has one 
 - Set a timeout on every remote call, a request timeout as well as a connection timeout. [named expert] AWS Builders' Library, "Timeouts, retries, and backoff with jitter".
 - With no deadline a client can wait "effectively forever"; always set a realistic one, an educated guess validated by load testing. [named expert] gRPC docs, "Deadlines" guide.
 - Higgsfield's API: "Set maximum attempts and a total retry deadline." [standard or field body] docs.higgsfield.ai, Errors page, for its own API.
-- Choose the value from the downstream service's latency at an accepted false-timeout rate (p99.9 for 0.1%). [named expert] AWS Builders' Library, same article. Where no latency is measured, the value is a guess and says so.
+- Choose the value from the downstream service's latency at an accepted false-timeout rate (p99.9 for 0.1%). [named expert] AWS Builders' Library, same article.
 
 ## Open points
 - Usage code 2 has two agreeing sources (argparse, Click). GNU grep uses 2 for any error and 1 for no match. Three sources do not agree; the convention stays a house choice.
