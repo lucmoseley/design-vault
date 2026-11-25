@@ -305,7 +305,7 @@ test("the draft never carries a verdict: off-list keywords and group ids are dro
 
 test("--project keeps every image in the run for that project alone, drops Manta proposals, and refuses a project not in the library", () => {
   const vault = makeVault((gallery) => {
-    gallery.projects.acme = { name: "Acme", rules: "docs/brand/brand-sheet.md in acme", verdicts: ["on-brand"], groups: [{ id: "hero", name: "Hero" }] };
+    gallery.projects.acme = { name: "Acme", rules: "docs/brand/brand-sheet.md in acme/acme", verdicts: ["on-brand"], groups: [{ id: "hero", name: "Hero" }] };
   });
   const rival = [extraction("Rival", { proposed_manta_groups: ["mascot-renderings"] })];
 
