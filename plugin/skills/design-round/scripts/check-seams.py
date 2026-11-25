@@ -87,6 +87,7 @@ REACH = 3
 UNDERLAP_CSS_PX = 1
 
 CURVES = os.path.join(HERE, "check-curves.js")
+GROUNDS = {"black": "#000", "white": "#fff"}
 UNMEASURED = {
     "coincident": "both fills lie on one side of one edge, so no ground lies between them",
     "covered": "a shape painted over both fills its gap",
@@ -130,8 +131,13 @@ def parse(argv):
     return args
 
 
+class UnlistedError(Exception):
+    def __init__(self, code, why):
+        super().__init__(why)
+        self.code = code
+
+
 def list_contacts(file):
-    """check-curves.js --contacts --json's object, or the exit code after saying why it failed."""
     try:
         proc = subprocess.run(
             ["node", CURVES, "--contacts", "--json", file],
@@ -140,25 +146,21 @@ def list_contacts(file):
             check=False,
         )
     except FileNotFoundError:
-        print(
+        raise UnlistedError(
+            3,
             "Node is not on PATH; check-seams.py lists contacts with check-curves.js. Install Node.",
-            file=sys.stderr,
-        )
-        return 3
+        ) from None
     if proc.returncode not in (0, 1, 6):
-        print(
-            f"check-curves.js --contacts cannot read {file}: {proc.stderr.strip()}",
-            file=sys.stderr,
+        raise UnlistedError(
+            2, f"check-curves.js --contacts cannot read {file}: {proc.stderr.strip()}"
         )
-        return 2
     try:
         return json.loads(proc.stdout)
     except ValueError:
-        print(
+        raise UnlistedError(
+            2,
             f"check-curves.js --contacts --json failed on {file} (exit {proc.returncode}): {proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return 2
+        ) from None
 
 
 def look_args(args, measured):
@@ -183,7 +185,7 @@ def shoot_mattes(page, args, *, contact, point, png):
     )
     tangent = [ahead[0] - point[0], ahead[1] - point[1]]
     out = {"tangent": tangent, "drawn": png}
-    for ground, colour in (("black", "#000"), ("white", "#fff")):
+    for ground, colour in GROUNDS.items():
         css = MATTE_CSS.format(
             ground=colour, pair=f"{contact['lower']}, {contact['upper']}"
         )
@@ -263,19 +265,19 @@ def measure(drawn, mattes, tangent, scale):
     return weber / len(sides) * ARCSEC[scale]
 
 
+def matte_name(shot, ground):
+    return shot["file"].replace(".png", f"-{ground}.png")
+
+
 def judge(contact, shots, out):
-    """The contact's verdict line, and whether it fails and whether a crop could not be measured. Writes each shot's
-    mattes into `out` beside its crop, named in the shot's record."""
     seen, lost = {}, []
     for shot in shots:
         mats = {}
-        for ground in ("black", "white"):
-            png = shot.pop(ground)
-            shot[ground] = shot["file"].replace(".png", f"-{ground}.png")
-            with open(os.path.join(out, shot[ground]), "wb") as fh:
-                fh.write(png)
-            mats[ground] = pixels(png)
-        drawn = pixels(shot.pop("drawn"))
+        for ground in GROUNDS:
+            with open(os.path.join(out, matte_name(shot, ground)), "wb") as fh:
+                fh.write(shot[ground])
+            mats[ground] = pixels(shot[ground])
+        drawn = pixels(shot["drawn"])
         wc = measure(drawn, mats, shot["tangent"], shot["scale"])
         where = f"{renders.frames.ms(shot['ms'])} ms {shot['scale']}x"
         if wc is None:
@@ -306,8 +308,6 @@ def judge(contact, shots, out):
 def main(argv):
     args = parse(argv)
     listed = list_contacts(args.file)
-    if isinstance(listed, int):
-        return listed
     for line in listed["notes"] + listed["unread"]:
         print(line)
     contacts = listed["contacts"]
@@ -345,11 +345,16 @@ def main(argv):
             faults += failed
             unmeasured += lost
         # look-renders.py's record, its mattes named, so the next run's clear() deletes them too.
-        result["shots"] += [
-            {"file": s[g]} for s in list(result["shots"]) for g in ("black", "white")
+        shots = [
+            {
+                **{k: v for k, v in s.items() if k not in (*GROUNDS, "drawn")},
+                **{g: matte_name(s, g) for g in GROUNDS},
+            }
+            for s in result["shots"]
         ]
+        shots += [{"file": matte_name(s, g)} for s in result["shots"] for g in GROUNDS]
         with open(os.path.join(look.out, "renders.json"), "w", encoding="utf8") as fh:
-            json.dump({"page": look.url, **result}, fh, indent=1)
+            json.dump({"page": look.url, **result, "shots": shots}, fh, indent=1)
             fh.write("\n")
     print(
         f"check-seams: {args.file}: {len(contacts)} contact(s), {len(measured)} measured at scales "
@@ -366,4 +371,8 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except UnlistedError as err:
+        print(err, file=sys.stderr)
+        sys.exit(err.code)
