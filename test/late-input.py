@@ -29,9 +29,16 @@ BUSY_RELEASE_INIT = (
     % BUSY_RELEASE_MS
 )
 
-SCRIPTS = os.path.join(
-    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
+FLOW = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "plugin",
+    "skills",
+    "design-round",
+    "scripts",
+    "check-flow.py",
 )
+SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
