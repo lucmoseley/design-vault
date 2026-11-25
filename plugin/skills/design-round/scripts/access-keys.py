@@ -742,7 +742,7 @@ def _differs(a, b):
     return a.shape != b.shape or bool((abs(a - b) > ROTATE_NOISE).any())
 
 
-def _change(page, handle, within_ms):
+def change(page, handle, within_ms):
     """How long, in ms, until the carousel changes, or None where it holds for `within_ms`. A change is its
     pixels differing from the first shot, or WATCH_JS seeing a box inside it move or fade on any frame: a
     two-slide carousel shot once a cycle, as on a loaded machine, shows the first slide every time."""
@@ -784,7 +784,7 @@ def _carousels(page, js, carousels):
         elif span is not None:
             hold = span + STILL_SLACK_MS
             page.evaluate(js(FOCUS_IN_JS), n)
-            if _change(page, handle, hold) is not None:
+            if change(page, handle, hold) is not None:
                 faults.append(
                     {
                         "subject": c["subject"],
@@ -795,7 +795,7 @@ def _carousels(page, js, carousels):
             still(handle)
             try:
                 pointer.hover(page, handle)
-                if _change(page, handle, hold) is not None:
+                if change(page, handle, hold) is not None:
                     faults.append(
                         {
                             "subject": c["subject"],
@@ -822,11 +822,11 @@ def _carousels(page, js, carousels):
 def _span(page, handle):
     """A carousel's time from one slide to the next in ms, None where it does not change within ROTATE_MS, or
     why it cannot be timed."""
-    if _change(page, handle, ROTATE_MS) is None:
+    if change(page, handle, ROTATE_MS) is None:
         return None
     if not still(handle):
         return f"never holds still for {ROTATE_POLL_MS} ms within {ROTATE_MS} ms, so its rotation cannot be timed"
-    span = _change(page, handle, ROTATE_MS)
+    span = change(page, handle, ROTATE_MS)
     if span is None:
         return f"changed once and then held for {ROTATE_MS} ms, so its rotation cannot be timed"
     still(handle)
