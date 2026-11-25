@@ -105,7 +105,7 @@ def parse_value(mode, value):
 
 def parse_table(text):
     """The table's lines, each a Line; `#` lines and blank ones are skipped."""
-    lines = []
+    lines, first = [], {}
     for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split("|")]
         if len(fields) != 3 or fields[1] not in CHECKS:
@@ -116,6 +116,14 @@ def parse_table(text):
             value = parse_value(fields[1], fields[2])
         except ValueError as exc:
             raise TableError(f"line {n}: {exc}") from None
+        # A check runs once, at one value, and every line naming it is
+        # judged by that run (#553).
+        seen = first.setdefault(fields[1], (n, value))
+        if seen[1] != value:
+            raise TableError(
+                f"line {n}: {fields[1]} is already given a different value on line {seen[0]}, "
+                "and a check runs once, at one value"
+            )
         lines.append(Line(fields[0], fields[1], value))
     modes = {line.mode for line in lines}
     if "replay" in modes and "parallax" not in modes:

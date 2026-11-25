@@ -81,9 +81,16 @@ class Table(unittest.TestCase):
             "vault.x | nosuch | none",
             "vault.x | frequent",
             "vault.parallax | replay | none",
+            "vault.a | frequent | under 150\nvault.b | frequent | under 400",
         ):
             with self.subTest(bad=bad), self.assertRaises(records.TableError):
                 records.parse_table(bad)
+
+    def test_a_check_named_twice_at_one_value_is_kept(self):
+        got = records.parse_table(
+            "vault.a | frequent | under 150\nvault.b | frequent | under 150"
+        )
+        self.assertEqual([line.id for line in got], ["vault.a", "vault.b"])
 
     def test_a_bad_parts_or_table_flag_is_a_usage_error(self):
         bad = os.path.join(FIXTURES, "nosuch.table")
