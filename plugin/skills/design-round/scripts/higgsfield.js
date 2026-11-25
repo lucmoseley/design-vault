@@ -36,9 +36,11 @@
  *   2. prices every job through Higgsfield's estimate endpoint, and prints the prices;
  *   3. refuses the whole batch, before submitting anything, where that total
  *      would take a round past its ceiling;
- *   4. submits each job, polls it to the end, and appends the charge to the
- *      round's ledger, `r<n>/higgsfield-spend.jsonl`, with any discount the
- *      estimate names, which its usd is already net of;
+ *   4. appends each job's charge at its estimate to the round's ledger,
+ *      `r<n>/higgsfield-spend.jsonl`, with any discount the estimate names,
+ *      which its usd is already net of, before submitting it; then submits it,
+ *      polls it to the end, and appends each step's line under the job's
+ *      idempotency_key, the last of which is the job's charge;
  *   5. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
  *
  * A submission refused 403 means the balance ran out: the batch stops there,
@@ -47,9 +49,10 @@
  * answer with no request_id, or a refusal answering a retry may have reached
  * Higgsfield: the batch stops there too, with that job recorded at its estimate.
  *
- * A failed, moderated or cancelled request is not charged, so nothing is
- * recorded. One that outlives the timeout, or whose status cannot be read, is
- * recorded at its estimate, since it may still complete and be charged. An
+ * A failed, moderated or cancelled request, or a submission refused at its
+ * first try, is not charged, so its outcome is recorded at $0. One that
+ * outlives the timeout, or whose status cannot be read, is recorded at its
+ * estimate, since it may still complete and be charged. An
  * estimate that is not a positive usd figure is refused before anything is
  * submitted. A completed request is recorded whatever it returns; an output
  * carrying no URL counts the job failed.

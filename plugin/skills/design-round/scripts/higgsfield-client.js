@@ -106,18 +106,19 @@ function alreadyRendered(job) {
 function spentIn(roundDir) {
   const file = path.join(roundDir, LEDGER);
   if (!fs.existsSync(file)) return 0;
-  return fs
-    .readFileSync(file, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .reduce((sum, line) => {
-      const usd = Number(JSON.parse(line).usd);
-      // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
-      if (!Number.isFinite(usd)) throw new Error(`${file} holds a line with no usd figure: ${line}`);
-      // A negative line would free room under the ceiling.
-      if (usd < 0) throw new Error(`${file} holds a line with a negative usd figure: ${line}`);
-      return sum + usd;
-    }, 0);
+  const bySubmission = new Map();
+  let unkeyed = 0;
+  for (const line of fs.readFileSync(file, "utf8").split("\n").filter(Boolean)) {
+    const entry = JSON.parse(line);
+    const usd = Number(entry.usd);
+    // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
+    if (!Number.isFinite(usd)) throw new Error(`${file} holds a line with no usd figure: ${line}`);
+    // A negative line would free room under the ceiling.
+    if (usd < 0) throw new Error(`${file} holds a line with a negative usd figure: ${line}`);
+    if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
+    else unkeyed += usd;
+  }
+  return [...bySubmission.values()].reduce((sum, usd) => sum + usd, unkeyed);
 }
 
 function record(job, line) {
@@ -308,12 +309,9 @@ function priceText(price, suffix = "") {
   return `at most ${dollars(price.usd)}${suffix}, by its max_usd (the rule: ${JSON.stringify(price.rule)})`;
 }
 
-async function submit(ctx, job) {
-  // One key per intended output: a resubmission after a lost answer returns the
-  // original request rather than a second, charged one.
-  const key = crypto.randomUUID();
-  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": key }));
-  if (typeof accepted?.request_id !== "string") throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
+async function submit(ctx, job, idempotencyKey) {
+  const accepted = await withRetry(ctx, () => call(ctx, "POST", `${API}/${job.model}`, job.input, { "Idempotency-Key": idempotencyKey }));
+  if (typeof accepted?.request_id !== "string" || !accepted.request_id) throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
   return accepted;
 }
 
@@ -449,16 +447,19 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
   let failed = 0;
   for (const [index, job] of priced.entries()) {
     const { name } = job;
-    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
+    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
+    // #571
+    record(job, { ...entry, status: "submitting", files: [] });
     let accepted;
     try {
-      accepted = await submit(ctx, job);
+      accepted = await submit(ctx, job, entry.idempotency_key);
     } catch (error) {
       const ran = priced.slice(0, index).map((other) => other.name);
       const ranText = ran.length ? `Ran: ${ran.join(", ")}` : "No job ran";
       // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
       // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
       if (error instanceof ApiError && !error.afterFault) {
+        record(job, { ...entry, usd: 0, status: "refused", http_status: error.status, files: [] });
         const rest = priced.slice(index).map((other) => other.name);
         throw new BatchStoppedError(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { stoppedAt: name, ran, notSubmitted: rest, mayBeCharged: false, cause: error });
       }
@@ -467,6 +468,8 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       throw new BatchStoppedError(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { stoppedAt: name, ran, notSubmitted: rest, mayBeCharged: true, cause: error });
     }
     entry.request_id = accepted.request_id;
+    log(`${name}: accepted as request ${accepted.request_id}`);
+    record(job, { ...entry, status: "submitted", files: [] });
     let state;
     try {
       state = await poll(ctx, accepted);
@@ -481,6 +484,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
       continue;
     }
     if (state.status !== "completed") {
+      record(job, { ...entry, usd: 0, status: state.status, files: [] });
       log(`✗ ${name}: ${state.status}${state.error ? ` (${state.error})` : ""}; not charged`);
       failed++;
       continue;
