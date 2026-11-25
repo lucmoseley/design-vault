@@ -33,7 +33,8 @@ const isFile = (rel) => isPath(rel) && fs.statSync(path.join(ROOT, rel)).isFile(
 
 /**
  * The repo paths `file` names, each resolved from its own directory, or else from the repo top where it is more than
- * one bare word (a lone `"data"` is as often a dictionary key), kept where it exists.
+ * one bare word (a lone `"data"` is as often a dictionary key), kept where it exists. Each comes as `{ rel, lone }`,
+ * `lone` where it was a single bare word.
  */
 function pathsNamedIn(file) {
   const out = [];
@@ -41,34 +42,48 @@ function pathsNamedIn(file) {
   if (file.endsWith(".py")) {
     for (const [, name] of text.matchAll(PY_IMPORT)) {
       const rel = path.posix.join(path.posix.dirname(file), `${name}.py`);
-      if (rel !== file && isFile(rel)) out.push(rel);
+      if (rel !== file && isFile(rel)) out.push({ rel, lone: false });
     }
   }
   for (const [run] of text.matchAll(RUN_OF_PARTS)) {
     const parts = [...run.matchAll(/["']([^"']+)["']/g)].map((m) => m[1]);
-    const bases = parts.length > 1 || parts[0].includes("/") ? [path.posix.dirname(file), "."] : [path.posix.dirname(file)];
+    const lone = parts.length === 1 && !parts[0].includes("/");
+    const bases = lone ? [path.posix.dirname(file)] : [path.posix.dirname(file), "."];
     for (const base of bases) {
       const rel = path.posix.join(base, ...parts).replace(/\/+$/, "");
       // `..` to the repo top, or `.`, names the tree the file sits in, not something it reads.
       if (rel === "." || rel.startsWith("..") || file.startsWith(`${rel}/`) || !isPath(rel)) continue;
-      out.push(rel);
+      out.push({ rel, lone });
       break;
     }
   }
   return out;
 }
 
-/** Every path `entries` read, following each code file they name in turn. A directory stands for all under it. */
+const isCode = (rel) => /\.(py|js|sh)$/.test(rel);
+
+/** The code files under directory `dir`, any depth down, as `pathsNamedIn` gives a path. */
+const codeUnder = (dir) => fs.readdirSync(path.join(ROOT, dir), { recursive: true })
+  .map((rel) => path.posix.join(dir, rel.split(path.sep).join("/")))
+  .filter((rel) => isCode(rel) && isFile(rel))
+  .map((rel) => ({ rel, lone: false }));
+
+/**
+ * Every path `entries` read, following each code file they name in turn. A directory stands for all under it, and each
+ * code file under it is followed too, as a suite that loads any script there reads what that script loads; but not
+ * one named by a lone bare word, as `mock.patch.object(siblings, "load", …)` names no `load/` (#382).
+ */
 function reads(entries) {
   const seen = new Set(entries);
   const queue = [...entries];
   while (queue.length) {
     const file = queue.shift();
-    if (!/\.(py|js|sh)$/.test(file) || file === SELF || !isFile(file)) continue;
-    for (const rel of pathsNamedIn(file)) {
+    if (file === SELF || !isPath(file)) continue;
+    const named = !isFile(file) ? codeUnder(file) : isCode(file) ? pathsNamedIn(file) : [];
+    for (const { rel, lone } of named) {
       if (!seen.has(rel)) {
         seen.add(rel);
-        queue.push(rel);
+        if (!lone || isFile(rel)) queue.push(rel);
       }
     }
   }
