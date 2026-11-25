@@ -265,7 +265,9 @@ def main(argv):
             try:
                 with Image.open(render) as image:
                     width, height = image.size
-                    checker = check_checkerboard(image) if args.transparent else None
+                    checkerboard = (
+                        check_checkerboard(image) if args.transparent else None
+                    )
             except OSError as err:
                 raise UnreadableError(f"cannot read {render}: {err}") from err
             model, aspect, where = requested(render, args, logs)
@@ -278,9 +280,9 @@ def main(argv):
             f"{render} — {model or 'model unknown'} at {aspect or 'aspect unknown'} ({where})"
         )
         print(f"  size: {verdict} — {detail}")
-        if checker is not None:
-            results.append(checker[0])
-            print(f"  checkerboard: {checker[0]} — {checker[1]}")
+        if checkerboard is not None:
+            results.append(checkerboard[0])
+            print(f"  checkerboard: {checkerboard[0]} — {checkerboard[1]}")
 
     if FAIL in results:
         return 1
