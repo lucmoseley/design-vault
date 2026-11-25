@@ -32,6 +32,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 VAULT = ROOT.parents[1]
+sys.path.append(str(VAULT / "plugin/skills/design-round/scripts"))
+from fail_open import expected, fail_open  # noqa: E402
+
 # Whoever runs the kit sets KIT_WORK by hand, to keep a test's runs apart from another's (#238).
 WORK = pathlib.Path(
     os.environ.get("KIT_WORK") or VAULT / ".claude/tmp/planted-faults"
@@ -181,7 +184,8 @@ def fence(text):
     for cand in reversed(m):
         try:
             return json.loads(cand)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            expected(e, "the next candidate is read")
             continue
     return None
 
@@ -207,6 +211,7 @@ def run_child(folder, prompt, flags, expect, *, valid=None):
             )
             out = p.stdout
         except subprocess.TimeoutExpired as e:
+            fail_open(e, f"{folder.relative_to(WORK)}'s partial transcript is read")
             out = (
                 (e.stdout or b"").decode()
                 if isinstance(e.stdout, bytes)
@@ -217,7 +222,8 @@ def run_child(folder, prompt, flags, expect, *, valid=None):
         for line in out.splitlines():
             try:
                 ev = json.loads(line)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                expected(e, "the line is skipped")
                 continue
             if ev.get("type") == "result":
                 final = ev

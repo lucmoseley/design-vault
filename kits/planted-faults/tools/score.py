@@ -26,7 +26,14 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+sys.path.append(
+    str(
+        pathlib.Path(__file__).resolve().parents[3]
+        / "plugin/skills/design-round/scripts"
+    )
+)
 import runner
+from fail_open import expected
 
 ROOT, WORK = runner.ROOT, runner.WORK
 RUNS = []
@@ -678,6 +685,7 @@ def match_job(cand, run, scorer):
     try:
         return _match_job(cand, run, scorer)
     except (NotReadyError, FileNotFoundError) as e:
+        expected(e, "scored as not finished")
         runner.log("not ready", e)
         return False
 
@@ -686,6 +694,7 @@ def judge_job(cand, run, jset, scorer, *, only=None):
     try:
         return _judge_job(cand, run, jset, scorer, only=only)
     except (NotReadyError, FileNotFoundError) as e:
+        expected(e, "scored as not finished")
         runner.log("not ready", e)
         return False
 

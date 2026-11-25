@@ -64,6 +64,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
 frames = siblings.load(HERE, "check-frames.py")
@@ -504,11 +505,17 @@ MODES = {
 def clear(out):
     """Deletes the renders an earlier run's renders.json in `out` names, so a
     sheet that run made and this one does not is never handed on."""
+    path = os.path.join(out, "renders.json")
     try:
-        with open(os.path.join(out, "renders.json"), encoding="utf8") as fh:
+        with open(path, encoding="utf8") as fh:
             old = json.load(fh)
-    except (OSError, ValueError):
+    except FileNotFoundError as exc:
+        expected(exc, "no earlier run to clear")
         return
+    except ValueError as exc:
+        sys.exit(
+            f"look-renders.py: {path} does not parse ({exc}); delete it and the renders beside it"
+        )
     named = old.get("sheets", []) + [
         r["file"] for r in old.get("shots", []) + old.get("bends", []) if "file" in r
     ]

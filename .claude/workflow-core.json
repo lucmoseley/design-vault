@@ -347,6 +347,7 @@
 		"plugin/skills/design-round/scripts/access-boxes.py": "library",
 		"plugin/skills/design-round/scripts/rule-table.py": "library",
 		"plugin/skills/design-round/scripts/probe.py": "library",
+		"plugin/skills/design-round/scripts/fail_open.py": "library",
 		"plugin/skills/design-round/scripts/conditions.py": "library",
 		"plugin/skills/design-round/scripts/drive-overlay.py": "library",
 		"plugin/skills/design-round/scripts/drive-form.py": "library",

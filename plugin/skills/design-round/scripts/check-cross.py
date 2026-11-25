@@ -85,6 +85,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
@@ -246,8 +247,9 @@ def walk(browser, start, selector=None):
         while True:
             try:
                 fields = form.fields(page, selector)
-            except form.FormError:
+            except form.FormError as exc:
                 # No form here is where a flow ends, an answer, not a fault (#306).
+                expected(exc, "the walk ends")
                 return Walk(start, steps, "a step with no form")
             url = _bare(page.url)
             if (url, tuple(f.key for f in fields)) in seen:
@@ -279,8 +281,9 @@ def walk(browser, start, selector=None):
 def _has_form(page, selector):
     try:
         form.fields(page, selector)
-    except form.FormError:
+    except form.FormError as exc:
         # FormError is drive-form's word for a page with no form (#306).
+        expected(exc, "no form")
         return False
     return True
 

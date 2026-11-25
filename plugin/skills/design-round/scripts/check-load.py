@@ -104,6 +104,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
@@ -571,6 +572,7 @@ def read_files(browser, url, *, declared, timeout):
                 except PlaywrightError as exc:
                     # A body the browser no longer holds leaves the lines that
                     # read it not judged, never passed (#313).
+                    expected(exc, "said as not judged")
                     unread.append(
                         (r.url, r.request.resource_type, flow.first_line(exc))
                     )
@@ -590,6 +592,7 @@ def read_files(browser, url, *, declared, timeout):
                 except fontfile.FontError as exc:
                     # A file no reader here opens is reported by name, and the
                     # lines on it are not judged (#313).
+                    expected(exc, "said as not judged")
                     fonts[src] = str(exc)
         faces = sorted(
             {

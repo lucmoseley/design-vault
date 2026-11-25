@@ -783,7 +783,8 @@ def dropped_frames(writes):
     gaps = [w["ms"] - w["prev_ms"] for w in writes if w["prev_ms"] is not None]
     try:
         points = morph_points(writes)
-    except ValueError:
+    except ValueError as exc:
+        expected(exc, "no dropped frames")
         return []
     if not gaps:
         return []
@@ -1342,13 +1343,15 @@ def descendants(pid):
         parent = todo.pop()
         try:
             tasks = os.listdir(f"/proc/{parent}/task")
-        except OSError:  # no /proc, or the process has exited: no children (#432)
+        except FileNotFoundError as exc:  # #432
+            expected(exc, "no children")
             continue
         for task in tasks:
             try:
                 with open(f"/proc/{parent}/task/{task}/children") as f:
                     kids = [int(k) for k in f.read().split()]
-            except OSError:  # the thread has exited, or no children file: none (#432)
+            except (FileNotFoundError, ProcessLookupError) as exc:  # #432
+                expected(exc, "no children")
                 continue
             found += kids
             todo += kids
@@ -1361,7 +1364,8 @@ def process_args(pid):
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return f.read().decode(errors="replace").replace("\0", " ").split()
-    except OSError:  # the process has exited, as its docstring says (#432)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #432
+        expected(exc, "no command line")
         return []
 
 
@@ -1384,7 +1388,8 @@ def driver_pid(browser):
         with open(f"/proc/{browser}/stat") as f:
             # The name in brackets may hold spaces; the parent follows the state.
             parent = int(f.read().rsplit(")", 1)[1].split()[1])
-    except OSError:  # the browser has exited, as the docstring says (#464)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #464
+        expected(exc, "no driver")
         return None
     return parent if "run-driver" in process_args(parent) else None
 
@@ -1867,6 +1872,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 TABLE = os.path.join(HERE, "check-flow.table")
 
@@ -2399,7 +2405,7 @@ def records_main(at):
         import PIL  # noqa: F401 - imported only to learn it is installed
     except ImportError as err:
         # Exit 3, naming the package and its pinned install (#256, #477).
-        return missing(err)
+        sys.exit(missing(err))
     got, code = run_browser(lambda: run_records(at), at.timeout, at.url)
     if code:
         return code

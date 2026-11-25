@@ -1499,6 +1499,18 @@ class Refused(unittest.TestCase):
         self.refuses("still.html", "no Web Animations API animation")
 
 
+class GoneProcess(unittest.TestCase):
+    """A process that exits between being listed and being read has no
+    command line, children or driver (#432, #464)."""
+
+    def test_an_exited_process_reads_as_empty(self):
+        gone = subprocess.Popen(["true"])
+        gone.wait()
+        self.assertEqual(flow.process_args(gone.pid), [])
+        self.assertEqual(flow.descendants(gone.pid), [])
+        self.assertIsNone(flow.driver_pid(gone.pid))
+
+
 class Arguments(unittest.TestCase):
     def test_a_viewport_that_is_not_w_by_h_is_a_usage_error(self):
         proc, data, _ = run("still.html", "--viewport", "1280")
