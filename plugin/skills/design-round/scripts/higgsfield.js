@@ -42,19 +42,19 @@
  *      idempotency_key, the last of which is the job's charge;
  *   5. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
  *
- * A submission refused 403 means the balance ran out: the batch stops there,
- * naming the jobs that ran, since the API has no balance to read beforehand
- * (design-vault#61). A submission that ends on a network fault, a 5xx, an
- * answer with no request_id, or a refusal answering a retry may have reached
- * Higgsfield: the batch stops there too, with that job recorded at its estimate.
+ * A submission refused at its first try is not charged: it is recorded at $0
+ * and the batch stops there, naming the jobs that ran and those not submitted.
+ * A 403, at any try, means the balance ran out. A submission that ends on a
+ * network fault, a 5xx, an answer with no request_id, or a refusal answering a
+ * retry may have reached Higgsfield: the batch stops there too, with that job
+ * recorded at its estimate.
  *
- * A failed, moderated or cancelled request, or a submission refused at its
- * first try, is not charged, so its outcome is recorded at $0. One that
- * outlives the timeout, or whose status cannot be read, is recorded at its
- * estimate, since it may still complete and be charged. An
- * estimate that is not a positive usd figure is refused before anything is
- * submitted. A completed request is recorded whatever it returns; an output
- * carrying no URL counts the job failed.
+ * A failed, moderated or cancelled request is not charged, so its outcome is
+ * recorded at $0. One that outlives the timeout, or whose status cannot be
+ * read, is recorded at its estimate, since it may still complete and be
+ * charged. An estimate that is not a positive usd figure is refused before
+ * anything is submitted. A completed request is recorded whatever it returns;
+ * an output carrying no URL counts the job failed.
  */
 "use strict";
 const { render, parseArgs, settings } = require("./higgsfield-client.js");
