@@ -229,6 +229,31 @@ class TheTableGivesTheValues(unittest.TestCase):
             ["vault.nav-order"],
         )
 
+    def test_a_check_given_two_values_is_refused_unlike_one_value_twice(self):  # #568
+        with self.assertRaisesRegex(
+            cross.TableError,
+            r"'vault.b \| ways \| >= 1': ways is already given a different value by "
+            r"'vault.a \| ways \| >= 2'",
+        ):
+            cross.parse("vault.a | ways | >= 2\nvault.b | ways | >= 1")
+        self.assertEqual(
+            len(cross.parse("vault.a | ways | >= 2\nvault.b | ways | >= 2")), 2
+        )
+
+    def test_every_record_naming_a_check_is_judged_once(self):  # #568
+        table = cross.parse("vault.a | back\nvault.b | back\nvault.b | back")
+        s = step("s1", {"#a": "x"}, [("#a", "", "")], back_url="home", held={"#a": "x"})
+        got = cross.findings(
+            table, {}, [cross.Walk("s1", [s], "end")], phones=None, home="h"
+        )
+        self.assertEqual(
+            [(f["id"], [m["what"] for m in f["misses"]]) for f in got],
+            [
+                ("vault.a", ["Back went to home, not this step"]),
+                ("vault.b", ["Back went to home, not this step"]),
+            ],
+        )
+
     def test_the_phone_line_names_the_device_it_loads_as(self):
         self.assertEqual(DEVICES["phone"]["is_mobile"], True)
         self.assertIn(
