@@ -5,7 +5,7 @@ for its main content, answering gate question vault.load (#169 Q3 (A), #170).
 USAGE
   python3 check-load.py <url or file> [--runs N] [--limit MS] [--timeout MS]
 
-It loads the page --runs times (3), each in a fresh browser on Lighthouse's
+It loads the page --runs times (3), each in a fresh browser context on Lighthouse's
 throttled phone (below), and reads Largest Contentful Paint (LCP): the moment
 the largest text block or image in the first screen is drawn, timed from
 navigation. It prints each run's LCP and the element drawn, and passes when the
@@ -247,11 +247,12 @@ def one_run(browser, url, timeout):
         )
         cdp.send("Emulation.setCPUThrottlingRate", {"rate": CPU_SLOWDOWN})
         page.goto(url, wait_until="load")
+        loaded = page.evaluate("performance.now()")
         waited = 0
         while True:
             lcp = page.evaluate("window.__lcp")
             now = page.evaluate("performance.now()")
-            since = now - (lcp["at"] if lcp else 0)
+            since = now - max(lcp["at"] if lcp else 0, loaded)
             if since >= QUIET_MS:
                 return lcp
             if waited >= timeout:

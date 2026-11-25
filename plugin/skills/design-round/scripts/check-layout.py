@@ -53,7 +53,7 @@ range of widths it holds over:
   past the file's edge, or an art shown at no swept width) is listed as not
   measured.
 
-The first five answer vault.reflow, the cta check vault.layout and the
+The first four answer vault.reflow, the cta check vault.layout and the
 focal check vault.focal-crop: the report gives each question pass or fail,
 with its faults under it, vault.layout not checked with no --cta,
 vault.focal-crop not checked with no --focal or "cannot measure" where an art

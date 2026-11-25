@@ -173,6 +173,9 @@ test("an unlogged round, a missing source, empty copy bans, an unpacked candidat
     assert.equal(fs.existsSync(out), false);
   }
   assert.deepEqual(rules(build([round(), round()]).stderr), ["manifest"], "one round packed twice");
+  const hollow = build([null]);
+  assert.equal(hollow.status, 1, hollow.stderr);
+  assert.deepEqual(rules(hollow.stderr), ["manifest"], "a round that is not an object");
 });
 
 test("an existing --out, a missing argument, or a log missing or refused by its gate is a usage error", () => {
@@ -181,7 +184,10 @@ test("an existing --out, a missing argument, or a log missing or refused by its 
   const run = (...args) => runInProcess(SCRIPT, args);
   const broken = path.join(dir, "broken.jsonl");
   fs.writeFileSync(broken, "{ half\n");
+  const empty = path.join(dir, "null-manifest.json");
+  fs.writeFileSync(empty, "null");
   const cases = [
+    [run("--manifest", empty, "--out", path.join(dir, "fresh")), /null-manifest\.json is not a manifest object/],
     [run("--manifest", manifest, "--out", dir), /already exists/],
     [run("--manifest", manifest), /--manifest and --out are both needed/],
     [build([round()], { roundLog: broken }), /the round log is refused by its gate — json: line 1/],

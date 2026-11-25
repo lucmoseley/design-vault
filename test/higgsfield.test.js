@@ -42,7 +42,7 @@ const reply = (status, body) => ({
  * A stand-in for api.higgsfield.ai and its CDN. `statuses` is what successive
  * status polls answer; `submit` may answer a list of replies, one per attempt.
  */
-function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "completed"], submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
+function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "completed"], pollReply, submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
   const calls = [];
   let polls = 0;
   let submits = 0;
@@ -53,8 +53,9 @@ function fakeApi({ usd = "0.094", estimate, statuses = ["in_progress", "complete
     const { pathname } = new URL(url);
     if (pathname.startsWith("/estimate/")) return reply(200, estimate === undefined ? { credits: "1.500", usd } : estimate);
     if (pathname.startsWith("/requests/")) {
+      if (pollReply) return pollReply;
       const status = statuses[Math.min(polls++, statuses.length - 1)];
-      return reply(200, { status, request_id: "req-1", ...(status === "completed" ? (video ? { video } : { images }) : {}), ...(status === "failed" ? { error: "Generation failed" } : {}) });
+      return reply(200, { status, request_id: "req-status", ...(status === "completed" ? (video ? { video } : { images }) : {}), ...(status === "failed" ? { error: "Generation failed" } : {}) });
     }
     const answer = submit?.[submits++];
     if (answer instanceof Error) throw answer;
@@ -174,6 +175,37 @@ test("a request still running at the timeout is recorded at its estimate, since 
   assert.equal(entry.usd, 0.094);
 });
 
+test("a submitted job whose status poll fails is recorded at its estimate, the batch carries on, and a rerun counts it against the ceiling", async () => {
+  const dir = roundDir();
+  const failing = fakeApi({ usd: "0.25", pollReply: reply(404, { detail: "Not found" }) });
+  assert.equal(await render([job(dir, "v1-dusk"), job(dir, "v2-tide")], failing.options({ ceiling: "0.60" })), 2);
+  assert.equal(failing.submissions().length, 2);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.usd, entry.request_id]),
+    [["unpolled", 0.25, "req-1"], ["unpolled", 0.25, "req-1"]],
+  );
+  const rerun = fakeApi({ usd: "0.25" });
+  await assert.rejects(render([job(dir, "v3-ebb")], rerun.options({ ceiling: "0.60" })), /past its \$0\.600 ceiling/);
+  assert.equal(rerun.submissions().length, 0);
+});
+
+test("an estimate that is not a positive usd figure is refused before anything is submitted", async () => {
+  for (const usd of ["-5", "0"]) {
+    const api = fakeApi({ usd });
+    await assert.rejects(render([job(roundDir())], api.options()), /not a positive usd figure/, usd);
+    assert.equal(api.submissions().length, 0, usd);
+  }
+});
+
+test("a ledger line with a negative usd figure is refused, since it would free room under the ceiling", async () => {
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: -5 })}\n`);
+  const api = fakeApi();
+  await assert.rejects(render([job(dir)], api.options()), /negative usd figure/);
+  assert.equal(api.submissions().length, 0);
+});
+
 test("a submission answered 5xx is retried under the same idempotency key", async () => {
   const api = fakeApi({ submit: [reply(502, { detail: "Bad gateway" })] });
   assert.equal(await render([job(roundDir())], api.options()), 0);
@@ -254,6 +286,40 @@ test("a network fault on submission is retried under the same idempotency key", 
   const calls = api.calls.filter((call) => call.method === "POST" && !new URL(call.url).pathname.startsWith("/estimate/"));
   assert.equal(calls.length, 2);
   assert.equal(calls[0].headers["Idempotency-Key"], calls[1].headers["Idempotency-Key"]);
+});
+
+test("a submission whose every try ends on a network fault is recorded at its estimate and stops the batch", async () => {
+  const dir = roundDir();
+  const fault = new TypeError("fetch failed");
+  const api = fakeApi({ usd: "0.25", statuses: ["completed"], submit: [undefined, fault, fault, fault] });
+  await assert.rejects(
+    render([job(dir, "v1-dusk"), job(dir, "v2-tide"), job(dir, "v3-reef")], api.options({ ceiling: "0.80" })),
+    /fetch failed\. r1\/v2-tide may have reached Higgsfield[^]*Ran: r1\/v1-dusk\. Not submitted: r1\/v3-reef/,
+  );
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.candidate, entry.status, entry.usd, entry.request_id]),
+    [["r1/v1-dusk", "completed", 0.25, "req-1"], ["r1/v2-tide", "unanswered", 0.25, null]],
+  );
+  const rerun = fakeApi({ usd: "0.25" });
+  await assert.rejects(render([job(dir, "v4-ebb"), job(dir, "v5-swell")], rerun.options({ ceiling: "0.80" })), /past its \$0\.800 ceiling/);
+});
+
+test("a submission that may have reached the API is recorded at its estimate: 5xx to the last try, no request_id, or a refusal answering a retry", async () => {
+  const cases = {
+    "5xx to the last try": [reply(502, {}), reply(502, {}), reply(502, {})],
+    "no request_id": [reply(200, { status: "queued" })],
+    "a 422 after a lost answer": [new TypeError("fetch failed"), reply(422, { detail: "aspect_ratio is invalid" })],
+    "a 403 after a lost answer": [new TypeError("fetch failed"), reply(403, { detail: "Not enough credits" })],
+  };
+  for (const [what, submit] of Object.entries(cases)) {
+    const dir = roundDir();
+    await assert.rejects(render([job(dir)], fakeApi({ submit }).options()), /may have reached Higgsfield/, what);
+    assert.deepEqual(
+      ledger(dir).map((entry) => [entry.status, entry.request_id]),
+      [["unanswered", null]],
+      what,
+    );
+  }
 });
 
 test("every call to the API refuses to follow a redirect", async () => {

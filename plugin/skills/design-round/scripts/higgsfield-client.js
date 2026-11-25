@@ -102,6 +102,8 @@ function spentIn(roundDir) {
       const usd = Number(JSON.parse(line).usd);
       // A line with no usable figure would turn the sum to NaN, which passes every ceiling.
       if (!Number.isFinite(usd)) throw new Error(`${file} holds a line with no usd figure: ${line}`);
+      // A negative line would free room under the ceiling.
+      if (usd < 0) throw new Error(`${file} holds a line with a negative usd figure: ${line}`);
       return sum + usd;
     }, 0);
 }
@@ -138,13 +140,19 @@ async function call(ctx, method, url, body, headers = {}) {
 // asks for exponential backoff, with jitter, and a most-attempts cap, but gives no numbers: three tries, 2 s then 4 s
 // apart, are guesses. No jitter: one job is retried at a time (docs/research/house-audit-constants.md O1).
 // Residual: no total retry deadline, which the page also asks for; the three tries bound the waits, not the calls.
+// An error after a transient try is marked `afterFault`, since that earlier try may have reached the API.
 async function withRetry(ctx, attempt) {
+  let faulted = false;
   for (let tries = 1; ; tries++) {
     try {
       return await attempt();
     } catch (error) {
       const transient = !(error instanceof ApiError) || error.status >= 500;
-      if (!transient || tries >= 3) throw error;
+      if (!transient || tries >= 3) {
+        if (faulted && error instanceof Error) error.afterFault = true;
+        throw error;
+      }
+      faulted = true;
       await ctx.sleep(1000 * 2 ** tries);
     }
   }
@@ -161,6 +169,7 @@ function readUsd(value) {
 async function estimate(ctx, job) {
   const answer = await withRetry(ctx, () => call(ctx, "POST", `${API}/estimate/${job.model}`, job.input));
   const usd = readUsd(answer?.usd);
+  if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
   if (answer?.type !== "description") throw new Error(`the estimate for ${job.model} is neither a usd figure nor a price rule: ${JSON.stringify(answer)}`);
   return { usd: job.maxUsd, rule: answer };
@@ -277,20 +286,35 @@ async function render(jobs, options = {}) {
   let failed = 0;
   for (const [index, job] of priced.entries()) {
     const { name } = job;
+    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
     let accepted;
     try {
       accepted = await submit(ctx, job);
     } catch (error) {
-      if (error.status !== 403) throw error;
       const ran = priced.slice(0, index).map((other) => other.name);
-      const rest = priced.slice(index).map((other) => other.name);
-      throw new Error(`${error.message}. ${ran.length ? `Ran: ${ran.join(", ")}` : "No job ran"}. Not submitted: ${rest.join(", ")}`, { cause: error });
+      const ranText = ran.length ? `Ran: ${ran.join(", ")}` : "No job ran";
+      // A refusal the API answered at the first try was not charged; a network fault, a 5xx (always retried, so
+      // marked afterFault), an answer with no request_id, or a refusal answering a retry may have been.
+      if (error instanceof ApiError && !error.afterFault) {
+        if (error.status !== 403) throw error;
+        const rest = priced.slice(index).map((other) => other.name);
+        throw new Error(`${error.message}. ${ranText}. Not submitted: ${rest.join(", ")}`, { cause: error });
+      }
+      record(job, { ...entry, status: "unanswered", files: [] });
+      const rest = priced.slice(index + 1).map((other) => other.name);
+      throw new Error(`${error.message}. ${name} may have reached Higgsfield, so it is recorded at its estimate. ${ranText}. Not submitted: ${rest.length ? rest.join(", ") : "none"}`, { cause: error });
     }
-    const state = await poll(ctx, accepted);
-    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, request_id: state.request_id, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
-    if (state.status === "timed-out") {
-      record(job, { ...entry, status: "timed-out", files: [] });
-      log(`✗ ${name}: still running after ${ctx.timeoutMs / 1000} s; recorded at its estimate, since it may yet be charged. Request ${state.request_id}`);
+    entry.request_id = accepted.request_id;
+    let state;
+    try {
+      state = await poll(ctx, accepted);
+    } catch (error) {
+      state = { status: "unpolled", error: error.message };
+    }
+    if (state.status === "timed-out" || state.status === "unpolled") {
+      record(job, { ...entry, status: state.status, files: [] });
+      const why = state.status === "unpolled" ? `its status could not be read (${state.error})` : `still running after ${ctx.timeoutMs / 1000} s`;
+      log(`✗ ${name}: ${why}; recorded at its estimate, since it may yet be charged. Request ${accepted.request_id}`);
       failed++;
       continue;
     }

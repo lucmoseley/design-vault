@@ -8,6 +8,7 @@ run draw() in-process on a stand-in page, since only a stalled renderer makes a 
 one fail (test/load/check-overlay-shot.py).
 """
 
+import base64
 import importlib.util
 import io
 import math
@@ -147,6 +148,18 @@ class Overlay(unittest.TestCase):
             proc.stdout,
             r"px \(FAIL, the limit is 0\.5 px against a raster source\)",
         )
+
+    def test_an_svg_that_only_wraps_a_raster_is_held_to_the_raster_limit(self):
+        with open(self.smooth_png("source.png", 0), "rb") as fh:
+            png = base64.b64encode(fh.read()).decode()
+        source = self.file(
+            "source.svg",
+            '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 80" width="120" height="80">'
+            f'<image width="120" height="80" xlink:href="data:image/png;base64,{png}"/></svg>',
+        )
+        proc = run(self.smooth_png("near.png", 0.3), source)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("the limit is 0.5 px against a raster source", proc.stdout)
 
     def test_the_0_3_px_shift_a_raster_source_allows_fails_against_an_svg_source(self):
         proc = run(

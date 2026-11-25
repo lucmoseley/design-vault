@@ -6,7 +6,8 @@
      it, and two more whose cues do not show: a white background on the page's own white, and a clear outline and
      shadow. In #767676 text, two black links at 4.62:1 pass on that alone, though one adds no cue on hover and one
      none on focus: G183 asks for neither (#190). And vault.focus, twice: the clear outline and the
-     outline taken off on focus leave those two links no focus indicator at all. -->
+     outline taken off on focus leave those two links no focus indicator at all. A link bold or italic only by the
+     <strong> or <em> around it passes on that cue, read against the paragraph's regular text (G183). -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #333333 }
   a { color: #2563eb; text-decoration: none }
@@ -19,3 +20,4 @@
 <p>Ask <a class="samebg" href="#desk" style="background: #fff">the desk</a> about late arrival.</p>
 <p>Ask <a class="clear" href="#bar" style="outline: 2px solid transparent; box-shadow: 0 2px 0 transparent">the bar</a> what is on tonight.</p>
 <p class="grey">See <a class="nohover" href="#map">the map</a> or <a class="nofocus" href="#bus">the bus times</a> to find us.</p>
+<p>Book <strong><a class="strong" href="#beds">a bed</a></strong> or <em><a class="em" href="#rooms">a room</a></em> online.</p>

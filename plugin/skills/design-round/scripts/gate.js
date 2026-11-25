@@ -311,6 +311,7 @@ function partsOf(data) {
     else if (!(p.dead == null || (typeof p.dead === "string" && p.dead.startsWith("#")))) faults.push(`part ${i + 1} has a \`dead\` that is neither null nor a link's target`);
     seen.add(p?.id);
   });
+  if (faults.length) return { parts: [], faults };
   return { parts: data.parts.map((p) => ({ id: p.id, actable: p.actable, href: p.href || null, dead: p.dead ?? null, text: p.text })), faults };
 }
 
@@ -952,6 +953,24 @@ function readText(file) {
   }
 }
 
+/** Why the --critic values are not three critics' own files, or null: one file named under two --critic flags is one critic counted twice. */
+function sharedCriticFile(critics) {
+  const owner = new Map();
+  for (const [index, files] of critics.entries()) {
+    for (const file of files.split(",")) {
+      let real;
+      try {
+        real = fs.realpathSync(file);
+      } catch {
+        real = path.resolve(file);
+      }
+      if (owner.has(real) && owner.get(real) !== index) return `${file} is named under two --critic flags, so one critic would count as two`;
+      owner.set(real, index);
+    }
+  }
+  return null;
+}
+
 /**
  * One answers file read against the form, { name, answers, clashes, faults }, each fault named by its file; or several,
  * comma-joined, as one critic's whose candidates were split across dispatches, which may not answer one candidate
@@ -1055,6 +1074,7 @@ function main(argv) {
     if (!why && values.pass !== undefined && !/^[1-9]\d*$/.test(values.pass)) why = `--pass is ${values.pass}, not a pass number`;
     if (!why && critiqued && !values.answered) why = `${command} needs the building session's answers, --answered <file>`;
     if (!why && critiqued && values.critic?.length !== CRITICS) why = `${command} takes ${CRITICS} ${command === "tally" ? "look" : "re-check"} critics' answers, --critic <file> each, not ${values.critic?.length ?? 0}`;
+    if (!why && critiqued) why = sharedCriticFile(values.critic);
     if (!why && isRecheck && !values.fault?.length) why = "recheck needs each fault fixed, --fault <candidate>:<id>";
     if (!why && isRecheck && !values.before) why = "recheck needs the building session's answers from before the fix, --before <file>";
     if (why) {

@@ -1,0 +1,6 @@
+<!doctype html>
+<!-- check-load.py's page whose headline shows 1 s after a load that a large async script holds past QUIET_MS; the test writes big.js beside it. -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body><p id="nav" style="font: 12px sans-serif">Menu</p><h1 id="title" style="font: 700 40px/1.2 sans-serif; visibility: hidden">The main headline shows after the load</h1>
+<script async src="big.js"></script>
+<script>addEventListener("load", () => setTimeout(() => { title.style.visibility = "visible"; }, 1000));</script></body></html>

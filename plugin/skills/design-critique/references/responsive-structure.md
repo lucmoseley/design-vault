@@ -2,7 +2,7 @@
 
 Why each structural part of a page (panes, grids, side panes, navigation, tables, rows of items) takes the form its records give as the window narrows, and in what order parts stack (#291). The source checks behind the records are on design-vault#291: https://github.com/lucmoseley/design-vault/issues/291#issuecomment-6843543498.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). Window size classes are written in CSS px, which Android's dp match one for one. Page structure follows the window's class; a component follows its own container, by `vault.breakpoints`.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. Window size classes are written in CSS px, which Android's dp match one for one. Page structure follows the window's class; a component follows its own container, by `vault.breakpoints`.
 
 ## Principles
 

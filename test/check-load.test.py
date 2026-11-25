@@ -6,7 +6,9 @@ a later paint and a headline held back passes on whatever drew first.
 
 import importlib.util
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 HERE = os.path.dirname(__file__)
@@ -57,6 +59,27 @@ class Pages(unittest.TestCase):
         self.assertGreaterEqual(ms, 3000)
         self.assertIn(" ms, h1#title", proc.stdout)
         self.assertIn("\nover by ", proc.stdout)
+
+    def test_a_headline_revealed_after_a_slow_load_fails(self):
+        # The load ends past QUIET_MS on the throttled network, so the quiet
+        # wait counts from the load, never from the early nav line.
+        scratch = tempfile.mkdtemp(prefix="check-load-")
+        self.addCleanup(shutil.rmtree, scratch)
+        shutil.copy(os.path.join(FIXTURES, "after-load.html"), scratch)
+        with open(os.path.join(scratch, "big.js"), "w") as f:
+            f.write("//" + "x" * 1_300_000 + "\n")
+        proc = child.run(
+            [
+                sys.executable,
+                SCRIPT,
+                os.path.join(scratch, "after-load.html"),
+                "--runs",
+                "1",
+            ],
+            timeout=180,
+        )
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn(" ms, h1#title", proc.stdout)
 
     def test_a_page_that_draws_nothing_is_unmeasurable(self):
         proc = run("blank.html", "--runs", "1")

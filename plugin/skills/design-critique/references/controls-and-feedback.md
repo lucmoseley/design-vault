@@ -2,7 +2,7 @@
 
 Why a control says whether it is open, acts on release and stays clear of a phone's edges, why a passing message is announced without taking focus, when a cookie banner is owed, why motion waits for a screen fast enough to show it, and how small labels, destructive actions and button sizes are chosen (#281, #287). The source checks behind this file's records are `docs/research/control-feedback-defaults.md` in the design vault, and for small labels, destructive actions and button sizes they are design-vault#287's source checks (https://github.com/lucmoseley/design-vault/issues/287#issuecomment-6842731457).
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when browsers or the law change what it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when browsers or the law change what it rests on.
 
 ## Principles
 

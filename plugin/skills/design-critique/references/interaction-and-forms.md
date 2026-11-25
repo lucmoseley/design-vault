@@ -2,7 +2,7 @@
 
 Why controls answer every kind of input, why forms keep and reuse what a visitor gives them, and why errors, deadlines and exits stay plain (#277). The source checks and the Chromium measurement behind this file's records are `docs/research/interaction-defaults.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)); a record its `yields-to` names wins where both apply, as each Clash line says. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides; a record its `yields-to` names wins where both apply, as each Clash line says. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
 
 ## Principles
 
