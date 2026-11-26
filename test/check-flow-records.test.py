@@ -790,8 +790,8 @@ class Pause(unittest.TestCase):
             (
                 [],
                 [
-                    f"section:nth-of-type(2) > div.carousel {tried}",
                     f"section:nth-of-type(1) {tried}",
+                    f"section:nth-of-type(2) > div.carousel {tried}",
                 ],
             ),
         )

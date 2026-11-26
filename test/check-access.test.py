@@ -1553,8 +1553,8 @@ class Questions(unittest.TestCase):
         self.assertEqual(
             [u["reason"] for u in answers["vault.pause"]["unmeasured"]],
             [
-                "span.drift is moved frame by frame by a script, which this check cannot time",
                 "div.stage > canvas changes as it is drawn, which this check cannot time",
+                "span.drift is moved frame by frame by a script, which this check cannot time",
             ],
         )
         self.assertIn(
