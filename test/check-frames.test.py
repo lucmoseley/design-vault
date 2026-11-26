@@ -1,15 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-frames.py (#67): python3 test/check-frames.test.py
-
-The pages are synthetic, in test/fixtures/frames/. Each build runs 20 s, so a
-last frame reached by waiting would time the tests out. Loosen one and a build
-that ends on its asset drawn twice, a page that draws one moment two ways, or
-an engine edit that moves a kept draft passes the craft gate (gate questions
-vault.drafts-kept and vault.end-frame). Loosen #259's and a build a finish
-event carries on is hashed only to its first link's end, and one started in
-stages fails as drawn two ways. Loosen #346's and a hash taken with threaded
-animation can render an animation waiting to start in its unanimated style.
-"""
-
 import json
 import os
 import shutil
@@ -31,15 +19,15 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 frames = siblings.load(SCRIPTS, "check-frames.py")
+NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS = 10
+RUN_TIMEOUT_S = 180  # guess, #501
 
 
 def run(*args):
-    # A guess for check-frames.py alone, not taken from the other tests' timeouts: one run takes seconds here.
-    return child.run([sys.executable, SCRIPT, *args], timeout=180)
+    return child.run([sys.executable, SCRIPT, *args], timeout=RUN_TIMEOUT_S)
 
 
 def last(page, *extra):
-    """Runs `last` on a fixture page; returns its process and the PNG names it wrote."""
     with tempfile.TemporaryDirectory() as out:
         proc = run(
             "last",
@@ -61,8 +49,7 @@ def hash_page(page, *extra):
 
 
 class Last(unittest.TestCase):
-    def test_the_mark_faded_in_over_its_pieces_fails_at_both_scales(self):
-        # lucmoseley/mmm-infra#9 round two's end state (mmm-infra#25 M1b).
+    def test_the_mark_faded_in_over_its_pieces_fails_at_both_scales_67(self):
         proc, written = last("twice.html")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertRegex(
@@ -89,10 +76,9 @@ class Last(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("\n  1x: identical\n  2x: identical", proc.stdout)
 
-    def test_a_build_whose_animations_still_hold_their_end_state_fails_and_names_them(
+    def test_a_build_whose_animations_still_hold_their_end_state_fails_and_names_them_67(
         self,
     ):
-        # #67: a held fade drew the mark with other edges than the bare mark.
         proc, _ = last("held.html")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn(
@@ -119,8 +105,7 @@ class Last(unittest.TestCase):
         self.assertIn("(ring.svg + arch.svg)", proc.stdout)
         self.assertIn("\n  1x: identical\n  2x: identical", proc.stdout)
 
-    def test_an_html_box_takes_the_assets_viewbox(self):
-        # #67: at a fractional origin, Chrome's snap failed a correct page.
+    def test_an_html_box_at_a_fractional_origin_takes_the_assets_viewbox_67(self):
         proc, _ = last("box.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("\n  1x: identical\n  2x: identical", proc.stdout)
@@ -130,8 +115,7 @@ class Last(unittest.TestCase):
         self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
         self.assertIn("--at #nothing matches 0 elements, not one", proc.stdout)
 
-    def test_an_asset_that_is_not_well_formed_is_a_usage_error(self):
-        # #67 review: a "--" in a comment made the browser draw nothing for the file.
+    def test_an_asset_that_is_not_well_formed_is_a_usage_error_67(self):
         with tempfile.TemporaryDirectory() as out:
             broken = os.path.join(out, "broken.svg")
             with open(broken, "w", encoding="utf8") as fh:
@@ -244,16 +228,14 @@ class Hash(unittest.TestCase):
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn("1 frame(s) changed\n  1200 ms: see ", proc.stdout)
 
-    def test_a_page_that_draws_one_moment_two_ways_fails(self):
-        # #67, cth9191/animate's two-pass check: unseeded randomness.
+    def test_a_page_that_draws_one_moment_two_ways_fails_67(self):
         proc = hash_page(os.path.join(FIXTURES, "unstable.html"))
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertRegex(
             proc.stdout, r"2 frame\(s\) differ\n  0 ms: [\d,]+ pixels differ"
         )
 
-    def test_a_frame_that_depends_on_the_frame_before_it_fails(self):
-        # #67 review: fresh loads alone cannot see order, which tile.mjs's reversal exists to catch.
+    def test_a_frame_that_depends_on_the_frame_before_it_fails_67(self):
         proc = hash_page(os.path.join(FIXTURES, "trail.html"))
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertRegex(
@@ -281,7 +263,7 @@ class Hash(unittest.TestCase):
 
 
 class LateStart(unittest.TestCase):
-    """#240: read at load, a page whose motion starts later passes as still."""
+    """#240"""
 
     def test_a_build_that_starts_after_load_is_read_to_its_end(self):
         proc = hash_page(os.path.join(FIXTURES, "late.html"))
@@ -308,8 +290,7 @@ class LateStart(unittest.TestCase):
 
 
 class Scripted(unittest.TestCase):
-    """#546: motion no Web Animations API animation holds is answered
-    cannot-measure, naming what draws it, in every mode."""
+    """#546"""
 
     TRAILER = "\nCheck its frames by eye.\n"
 
@@ -389,12 +370,11 @@ class Scripted(unittest.TestCase):
 
 
 def bottom_of(record):
-    """The staggered page's #bottom entry in a saved timeline."""
     return next(s for s in record["timeline"] if s["name"] == "div#bottom")
 
 
 class StagedBuilds(unittest.TestCase):
-    """#259: a build carried on by finish events, or started in stages."""
+    """#259"""
 
     @classmethod
     def setUpClass(cls):
@@ -459,9 +439,8 @@ class StagedBuilds(unittest.TestCase):
         nudged = {}
 
         def nudge(record):
-            # Within STAGE_JITTER_MS, so read as one load's clock; off the 16.7 ms frame grid, so no load times it.
             bottom = bottom_of(record)
-            bottom["ms"] += 10
+            bottom["ms"] += NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS
             nudged["ms"] = bottom["ms"]
 
         proc = self.check_against(nudge)
@@ -504,7 +483,6 @@ class StagedBuilds(unittest.TestCase):
         self.assertIn("as one load timed them", proc.stdout)
 
     def open_with(self, timeline):
-        """The prep of one load of the staggered page placed on `timeline`."""
         _, at = frames.parse(["hash", self.page, "--out", self.dir])
         with frames.flow.chromium() as browser:
             context, _, prep = frames.open_page(browser, at, 1, timeline=timeline)
@@ -556,13 +534,9 @@ class StagedBuilds(unittest.TestCase):
 
 
 class WaitingStart(unittest.TestCase):
-    def test_an_animation_made_in_a_held_frame_starts_in_it_so_no_frame_draws_it_waiting(
+    def test_an_animation_made_in_a_held_frame_starts_in_it_so_no_frame_draws_it_waiting_346(
         self,
     ):
-        # #346: hash mode's browser starts each animation in the first frame
-        # it waits in, so the frame before #word's start rightly shows it in
-        # its line, not yet made. Run in process: nothing check-frames prints
-        # says which frame an animation waited in, or how one frame drew #word.
         _, at = frames.parse(
             ["hash", os.path.join(FIXTURES, "waiting.html"), "--out", "unused"]
         )
@@ -574,11 +548,12 @@ class WaitingStart(unittest.TestCase):
                     ".map(([id, t]) => ['div#' + id, t - window.__frames.t0]))"
                 )
                 starts = {s["name"]: s["ms"] for s in prep["timeline"]}
-                # The frame's time and the start read the same frame a few
-                # µs apart; 1 ms is the exact-time window check-flow uses (#126).
                 for name in ("div#word", "div#bar", "div#note"):
                     self.assertAlmostEqual(
-                        starts[name], waited[name], delta=1, msg=name
+                        starts[name],
+                        waited[name],
+                        delta=1,
+                        msg=name,
                     )
                 start = starts["div#word"]
                 shown = []
