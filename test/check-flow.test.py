@@ -270,6 +270,12 @@ class Jolts(unittest.TestCase):
         times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
         self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
 
+    def test_a_drawn_frame_takes_the_place_of_frames_within_half_a_frame(self):
+        times = flow.sample_times(100, [12.7, 37.3], 60, drawn=[12.7, 37.3])
+        self.assertEqual(
+            [round(t, 1) for t in times], [0, 12.7, 37.3, 50, 66.7, 83.3, 100]
+        )
+
     def test_no_two_sample_times_fall_within_1_ms(self):
         times = flow.sample_times(100, [16.9, 50, 99.5], 60)
         self.assertTrue(all(b - a >= 1 for a, b in itertools.pairwise(times)))
@@ -922,6 +928,22 @@ class Steps(unittest.TestCase):
         )
         [st] = r["steps"]
         self.assertEqual((st["at"], st["channels"]), (round(9 * STEP), ["position"]))
+
+    def test_two_frames_reading_the_slower_speed_but_for_noise_are_not_between(
+        self,
+    ):
+        # As a rotation's 6-digit matrix reads, the first a hair above the
+        # slower side and the second below the first (#612).
+        speeds = [10] * 8 + [10.001, 10.0005] + [40] * 8
+        xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
+        r = flow.analyse(
+            {
+                "times": [k * STEP for k in range(len(xs))],
+                "elements": [{"label": "el", "channels": {"position": xs}}],
+            }
+        )
+        [st] = r["steps"]
+        self.assertEqual(st["at"], round(10 * STEP))
 
     def test_a_step_under_a_fifth_of_top_speed_is_not_a_step(self):
         # A 1.5x step at 1.5 of a top of 20, then a smooth climb to that top.
@@ -2239,6 +2261,17 @@ class MorphFlow(unittest.TestCase):
         [p] = morph_measured(w, 1200)["pauses"]
         self.assertAlmostEqual(p["start"], 400, delta=2 * STEP)
         self.assertAlmostEqual(p["end"], 800, delta=2 * STEP)
+
+    def test_a_morph_drawn_ms_off_the_sampled_frames_has_no_step(self):
+        # A loaded machine draws its first frames 4 ms early and late (#612).
+        drawn = [0, STEP - 4, 2 * STEP + 4] + [k * STEP for k in range(3, 61)]
+        s = {
+            "times": flow.sample_times(1000, drawn, 60, drawn=drawn),
+            "elements": [],
+            "morphs": [{"label": "path#arch", "writes": writes(eased(0, 1000), drawn)}],
+        }
+        flow.add_morphs(s)
+        self.assertEqual(flow.analyse(s)["steps"], [])
 
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {

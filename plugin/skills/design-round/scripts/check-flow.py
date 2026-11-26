@@ -568,13 +568,15 @@ PREPARE_JS = (
   let first = Infinity;
   const edges = [];
   const starts = [];
+  const drawn = [];
   for (const m of morphs) {
     const w0 = m.writes[0];
     first = Math.min(first, (w0.prevFrameAt === null ? w0.frameAt : w0.prevFrameAt) - t0);
     for (const w of m.writes) {
-      edges.push(w.frameAt - t0);
-      if (w.prevFrameAt !== null) edges.push(w.prevFrameAt - t0);
+      drawn.push(w.frameAt - t0);
+      if (w.prevFrameAt !== null) drawn.push(w.prevFrameAt - t0);
     }
+    edges.push(...drawn);
     end = Math.max(end, m.writes[m.writes.length - 1].frameAt - t0);
   }
   for (const x of anims) {
@@ -630,7 +632,7 @@ PREPARE_JS = (
   }
   f.sampling = { anims, elements };
   const rel = (t) => (t === null ? null : t - t0);
-  return { anims: anims.length, first, length, infinite, end, edges, starts, morphs: morphs.map((m) => ({
+  return { anims: anims.length, first, length, infinite, end, edges, starts, drawn, morphs: morphs.map((m) => ({
     label: label(m.el), writes: m.writes.map((w) => ({ ms: rel(w.frameAt), prev_ms: rel(w.prevFrameAt), old: w.old, value: w.value })),
   })) };
 }
@@ -706,7 +708,7 @@ SAMPLE_JS = (
 )
 
 
-def sample_times(end, edges, fps, starts=()):
+def sample_times(end, edges, fps, starts=(), *, drawn=()):
     """Every frame, plus each animation's exact start, end and keyframes: a move
     that began mid-frame would otherwise show a part-speed first frame and hide
     its jolt. An exact time within 1 ms of a frame takes that frame's place, as
@@ -722,17 +724,21 @@ def sample_times(end, edges, fps, starts=()):
     inside that frame still cuts it, another element's move from rest inside it
     gets a first frame in the wrong phase, and a move from rest at a later
     keyframe or pass keeps the sampled frames' phase.
+    Each of `drawn`, a frame the browser drew a morph in, takes the place of
+    every frame within half a frame of it: a loaded machine draws frames ms off
+    the sampled ones, and a sampled frame splitting one drawn frame in two
+    reads its one speed twice, which the step test takes as a step (#612).
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
     spans = []
     for start, moves_at in starts:
-        drawn = start + (math.floor((moves_at - start) / step) + 1) * step
-        if drawn - moves_at < MIN_GAP_MS:
-            drawn += step
-        if 0 <= moves_at and drawn < end:
-            spans.append((moves_at, drawn))
+        moving = start + (math.floor((moves_at - start) / step) + 1) * step
+        if moving - moves_at < MIN_GAP_MS:
+            moving += step
+        if 0 <= moves_at and moving < end:
+            spans.append((moves_at, moving))
     for e in sorted(edges) + [b for _, b in spans]:
         if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
@@ -744,6 +750,7 @@ def sample_times(end, edges, fps, starts=()):
             for t in frames
             if all(abs(t - x) >= MIN_GAP_MS for x in exact)
             and not any(a < t < b for a, b in spans)
+            and all(abs(t - d) >= step / 2 for d in drawn)
         ]
     )
 
@@ -980,10 +987,21 @@ def steps_in(r, changes, times, *, s, e):
     i = s + k
     while i < e:
         found = next(filter(None, (step_at(i, n) for n in range(STEP_SPREAD))), None)
-        # A frame between that reads the slower speed but for float noise, as
-        # one ending on the keyframe does, would put the step a frame early
-        # (#126). One between that reads the faster speed still does.
-        while found and found[1] and (later := step_at(found[0] + 1, found[1] - 1)):
+        # Frames between that read the slower speed but for float noise, as
+        # one ending on the keyframe does, would put the step a frame or two
+        # early (#126, #612). One between that reads the faster speed still does.
+        while found and (
+            later := next(
+                filter(
+                    None,
+                    (
+                        step_at(found[0] + j, found[1] - j)
+                        for j in range(1, found[1] + 1)
+                    ),
+                ),
+                None,
+            )
+        ):
             found = later
         out += [found] if found else []
         i = found[0] + found[1] + 1 if found else i + 1
@@ -1796,7 +1814,11 @@ def measure(at):
             page.close()
         if sample["anims"] or sample["morphs"]:
             sample["times"] = sample_times(
-                sample["end"], sample["edges"], at.fps, sample["starts"]
+                sample["end"],
+                sample["edges"],
+                at.fps,
+                sample["starts"],
+                drawn=sample["drawn"],
             )
             sample["elements"] = page.evaluate(SAMPLE_JS, sample["times"])
     if not sample["anims"] and not sample["morphs"]:
