@@ -20,7 +20,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 cross = siblings.load(SCRIPTS, "check-cross.py")
-flow = siblings.load(SCRIPTS, "check-flow.py")
+runner = siblings.load(SCRIPTS, "runner.py")
 FIXTURES = pathlib.Path(HERE, "fixtures", "cross").resolve()
 with open(cross.TABLE, encoding="utf8") as fh:
     TABLE_TEXT = fh.read()
@@ -79,7 +79,7 @@ def setUpModule():
         cross.device("Pixel 77")
     except cross.TableError as exc:
         DEVICES["unknown"] = exc
-    BROWSER = OPEN.enter_context(flow.chromium())
+    BROWSER = OPEN.enter_context(runner.chromium())
 
 
 def tearDownModule():

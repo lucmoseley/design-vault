@@ -25,7 +25,7 @@ const ran = (staged) => {
   return p.all ? SUITES : p.suites.filter((s) => !s.why).map((s) => s.suite);
 };
 
-const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/colour-space.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/video-sheet.test.py"];
+const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/colour-space.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py", "python3 test/video-sheet.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
   const readShard = (k, n) => {
@@ -89,6 +89,12 @@ test("check-flow.py runs every suite that loads it, as do check-frames.py and ch
   assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
+});
+
+test("runner.py runs every suite that opens Chromium through it, the check-flow loaders among them (#640)", () => {
+  const fast = [NODE, "bash test/design-round-pointer.test.sh"];
+  const viaRunner = ["python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py"];
+  assert.deepEqual(ran([`${SCRIPTS}/runner.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s) || viaRunner.includes(s))]);
 });
 
 test("a suite runs for its own test file, its fixtures, and a script its test runs", () => {

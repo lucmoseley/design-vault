@@ -60,7 +60,8 @@ probe = siblings.load(HERE, "probe.py")
 cross = siblings.load(HERE, "check-cross.py")
 conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
-flow, layout = probe.flow, probe.layout
+layout = probe.layout
+runner = siblings.load(HERE, "runner.py")
 
 TABLE = os.path.join(HERE, "check-style.table")
 ACROSS_WIDTH = layout.DESKTOP_WIDTH
@@ -441,7 +442,7 @@ def parse_args(argv):
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
     at.rules = [r for b in at.blocks for r in b.rules]
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -456,7 +457,7 @@ def main(argv):
     blocks = [without(b, at.parts) for b in at.blocks]
 
     def go():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return run(
                 browser,
                 at.url,
@@ -469,7 +470,7 @@ def main(argv):
             )
 
     try:
-        got, code = flow.run_browser(go, at.timeout, at.url)
+        got, code = runner.run_browser(go, at.timeout, at.url)
     except probe.ProbeError as exc:
         p.print_usage(sys.stderr)
         print(f"check-style.py: error: {exc}", file=sys.stderr)

@@ -47,12 +47,12 @@ import siblings  # noqa: E402
 
 
 renders = siblings.load(HERE, "look-renders.py")
-flow = renders.flow
+runner = siblings.load(HERE, "runner.py")
 try:
     import numpy as np
     from PIL import Image
 except ImportError as err:
-    sys.exit(flow.missing(err))
+    sys.exit(runner.missing(err))
 colour_space = siblings.load(
     HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
@@ -299,10 +299,10 @@ def main(argv):
         renders.clear(look.out)
 
         def run():
-            with flow.chromium(renders.frames.HASH_ARGS) as browser:
+            with runner.chromium(renders.frames.HASH_ARGS) as browser:
                 return renders.render_contacts(browser, look, also=shoot_mattes)
 
-        result, code = flow.run_browser(
+        result, code = runner.run_browser(
             run,
             look.timeout,
             look.url,
