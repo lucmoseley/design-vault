@@ -128,6 +128,8 @@ JOLT_BAND = (
 JUMP_DEG = 0.26  # measured: a 0.26 deg jump drew attention in Sunny and von Muhlenen 2014 (docs/research/jolt-onset.md F10), #297
 FPS = 60  # guess, #141
 MIN_GAP_MS = 1  # guess, #126
+MERGE_FRAMES = 1  # guess, #632
+FRAME_SLACK = 1e-9  # guess, #632
 QUIET_MS = 2000  # guess, #141
 POLL_MS = 100  # guess, #182
 PLAY_TIMEOUT_MS = 60000  # guess, #141
@@ -834,19 +836,24 @@ def merged_steps(label, found):
 
 
 # #632
-def merged_edges(found, frame_ms):
-    out, last = [], None
+def merged_edges(found, fps):
+    near = MERGE_FRAMES * 1000 / fps * (1 - FRAME_SLACK)
+    out, first, start = [], None, None
     for key, t, edge in sorted(found, key=lambda f: (f[0], f[1])):
-        if out and last[0] == key and t - last[1] <= frame_ms:
+        if (
+            first == key
+            and t - start < near
+            and not set(edge["channels"]) & set(out[-1]["channels"])
+        ):
             merged = out[-1]
             merged["channels"] += edge["channels"]
-            if "share" in edge:
-                merged["share"] = max(merged["share"], edge["share"])
+            if edge.get("share", 0) > merged.get("share", 0):
+                merged["share"], merged["line"] = edge["share"], edge["line"]
             if "would_be" in edge:
                 merged["would_be"] = sorted({*merged["would_be"], *edge["would_be"]})
         else:
-            out.append(edge)
-        last = (key, t)
+            out.append({**edge, "channels": list(edge["channels"])})
+            first, start = key, t
     return out
 
 
@@ -1071,9 +1078,9 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM, *, fps=
 
     return {
         "pauses": pauses,
-        "jolts": by_time(merged_edges(jolts, 1000 / fps)),
+        "jolts": by_time(merged_edges(jolts, fps)),
         "jumps": by_time(jumps.values()),
-        "unseen": by_time(merged_edges(unseen, 1000 / fps)),
+        "unseen": by_time(merged_edges(unseen, fps)),
         "steps": by_time(steps),
         "elements": elements,
     }
