@@ -7,9 +7,7 @@
      The photo is a light check of #f2f2f2 and #e0e0e0. With contrast-tier01-parts.json, .carousel is the carousel
      and #chart the chart. The thin paragraph passes vault.contrast at 5.74:1 but not the ladder's 7:1 aim: a note. vault.theme-contrast
      takes four plants, two per scheme: in dark, text drawn too faint and text that drops from 18.88:1 to 5.58:1,
-     off the 7:1 rung onto 4.5:1; under more contrast, text short of 7:1 and an icon left at 3.54:1, short of 4.5:1.
-     Each .deck shows a dark slide at load and a light one after; #deck-swap's next button swaps its one image's
-     source and then disables itself. Each deck's bare Save icon fails on the light slide alone. -->
+     off the 7:1 rung onto 4.5:1; under more contrast, text short of 7:1 and an icon left at 3.54:1, short of 4.5:1. -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
   .photo { position: relative; max-width: 320px; height: 160px; margin: 16px 0;
@@ -66,7 +64,7 @@
 <div class="photo carousel deck" id="deck-swap">
   <img class="shown" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23222'/%3E%3Crect width='20' height='20' fill='%23333'/%3E%3C/svg%3E" data-next="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E">
   <button class="save" id="swap-plant" data-record="vault.controls-on-photo" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
-  <button class="next" aria-label="Next">›</button>
+  <button class="next" aria-label="›">›</button>
 </div>
 <p><label>Name <input class="faint" id="edge-plant" data-record="vault.control-edges" type="text"></label></p>
 <p><button class="icon" id="icon-plant" data-record="vault.contrast-ladder" aria-label="Close">
