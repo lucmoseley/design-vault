@@ -44,7 +44,8 @@ def note():
         fh.write(f"{len(os.listdir(run))} {name}\\n")
 meet(started, "started")
 note()
-held = b"\\x01" * (int(sys.argv[5]) * 1024 * 1024) if len(sys.argv) > 5 else b""
+hold_mb = int(sys.argv[5]) if len(sys.argv) > 5 else 0
+held = b"\\x01" * (hold_mb * 1024 * 1024)
 open(os.path.join(noted, name), "w").close()
 meet(noted, "noted")
 if os.environ.get("LANE_KID"):
@@ -94,9 +95,9 @@ function run(args, env, { cwd } = {}) {
 }
 
 /**
- * Runs run-lanes.sh on `n` fake suites, the `red` ones exiting 1; resolves to its process and the most lanes seen at
- * once. With `own`, each suite runs a copy of the fake of its own, `<d>/s<i>.test.py`, so a red one's file is its own.
- * Given `peak`, the fake suites wait until that many have started, and the most seen at once must equal it.
+ * Runs run-lanes.sh on `n` fake suites, the `red` ones exiting 1; resolves to its process and its suites. Given `peak`, the
+ * most lanes seen at once must equal it. With `own`, each suite runs a copy of the fake of its own, `<d>/s<i>.test.py`,
+ * so a red one's file is its own.
  */
 async function lanes(n, { env = {}, red = [], psFor, own, peak } = {}) {
   const d = path.join(dir, `run-${runs++}`);
