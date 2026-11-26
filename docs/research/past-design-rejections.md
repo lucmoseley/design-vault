@@ -80,7 +80,7 @@ Part C result: 5 units. Class 1: 1 (C4). Class 2: 0. Class 3: 1 (C3). Class 4: 1
 
 ### Part D (adjacent): judgements the founder rejected outside a round
 
-These are not round candidates. They are the AI's judgements of a client's photos (mmm-infra#22, #30, #32, #38), its texts to the client about them, and its drafts of reference takes (design-vault#2).  They are counted apart from Parts A-C. Founder's words and line cites are as the photo notes give them ([mmm-infra-photos-to-reply.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/mmm-infra-photos-to-reply.md) S-items, `docs/research/mmm-infra-photo-review.md` P-items); I did not re-read the transcripts.
+These are not round candidates. They are the AI's judgements of a client's photos (mmm-infra#22, #30, #32, #38), its texts to the client about them, and its drafts of reference takes (design-vault#2).  They are counted apart from Parts A-C. Founder's words and line cites are as the photo notes give them ([mmm-infra-photos-to-reply.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/mmm-infra-photos-to-reply.md) S-items, [mmm-infra-photo-review.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/mmm-infra-photo-review.md) P-items); I did not re-read the transcripts.
 
 | # | Founder's words (short), source | Written rule then | Class |
 |---|---|---|---|

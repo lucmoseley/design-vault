@@ -134,8 +134,8 @@ function yieldsTo(a, b) {
  * The static clashes among questions that all apply to one asset (#158): two that write the same property where
  * neither gives way to the other, or each does, or whether one does turns on an unrecorded level. Each is { a, b,
  * yielding, reason, winner }: `yielding` is `neither`, `each` or `unread`. Precedence keeps `winner`: `reason` is
- * `stage` where the two give different stages, the earlier standing unless whether it yields is unread; else, where
- * the two stand at different levels, a null level ranking below 2, `reason` is `law` where the winner is law or WCAG,
+ * `stage` where two owners' records give different stages, the earlier standing where it does not give way, or each
+ * does; else, where the two stand at different levels, a null level ranking below 2, `reason` is `law` where the winner is law or WCAG,
  * `project` where it is the project's. Otherwise `winner` is null and the founder settles it,
  * `reason` saying why: `same-owner` within one project's gate (#154 story 34), `same-level`, `vault-levels` for two vault questions below
  * level 1, `unread`, or `evidence` where the project's, resting on no domain evidence of its own, would beat a level-3
@@ -153,9 +153,9 @@ function clashes(questions) {
       const [la, lb] = [ownLevel(a) ?? Infinity, ownLevel(b) ?? Infinity];
       const [early, earlyYields] = stageRank(a) < stageRank(b) ? [a, ab] : [b, ba];
       let reason;
-      if (stageRank(a) !== stageRank(b) && hasStage(a) && hasStage(b) && earlyYields !== null) reason = "stage";
+      if (owner !== "vault" && owner === b.fields.owner.value) reason = "same-owner";
+      else if (stageRank(a) !== stageRank(b) && hasStage(a) && hasStage(b) && (earlyYields === false || yielding === "each")) reason = "stage";
       else if (yielding === "unread") reason = "unread";
-      else if (owner !== "vault" && owner === b.fields.owner.value) reason = "same-owner";
       else if (owner === "vault" && b.fields.owner.value === "vault" && Math.min(la, lb) > LAW_LEVEL) reason = "vault-levels";
       else if (la === lb) reason = "same-level";
       else if (Math.min(la, lb) === PROJECT_LEVEL && Math.max(la, lb) === EVIDENCE_LEVEL && !evidenced(la < lb ? a : b)) reason = "evidence";
