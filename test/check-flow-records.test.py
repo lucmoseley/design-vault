@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -723,38 +724,129 @@ class Pages(unittest.TestCase):
 
 
 class Pause(unittest.TestCase):
-    def test_check_access_answers_the_pause_plant_545(self):
-        access = siblings.load(SCRIPTS, os.path.basename(ACCESS))
+    PAST_MS = 500  # guess, #628
+    TRIED = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
+
+    @classmethod
+    def setUpClass(cls):
         from playwright.sync_api import sync_playwright
 
-        with sync_playwright() as play:
-            browser = play.chromium.launch()
-            try:
-                got = {}
-                for name in ("fault", "clean"):
-                    ctx = browser.new_context()
-                    url = "file://" + os.path.abspath(
-                        os.path.join(FIXTURES, f"tier01-{name}.html")
-                    )
-                    got[name] = access.pause_answer(ctx, url, [], [])
-                    ctx.close()
-            finally:
-                browser.close()
-        faults, _unmeasured = got["fault"]
+        cls.access = siblings.load(SCRIPTS, os.path.basename(ACCESS))
+        cls.playwright = sync_playwright().start()
+        cls.browser = cls.playwright.chromium.launch()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.close()
+        cls.playwright.stop()
+
+    def pause_answer(self, name, init=None, logged=None):
+        ctx = self.browser.new_context()
+        if logged is not None:
+            ctx.on("console", lambda m: logged.append(m.text))
+        try:
+            if init:
+                ctx.add_init_script(init)
+            url = "file://" + os.path.abspath(
+                os.path.join(FIXTURES, f"tier01-{name}.html")
+            )
+            return self.access.pause_answer(ctx, url, [], [])
+        finally:
+            ctx.close()
+
+    def late(self, past_ms=PAST_MS):
+        return mock.patch.object(self.access, "WATCH_MS", self.access.LONG_MS + past_ms)
+
+    def clean_answer(self):
+        return (
+            [],
+            [
+                f"section:nth-of-type(1) {self.TRIED}",
+                f"section:nth-of-type(2) > div.carousel {self.TRIED}",
+            ],
+        )
+
+    def test_check_access_answers_the_pause_plant_545(self):
+        faults, _unmeasured = self.pause_answer("fault")
         self.assertEqual(
             [f["subject"] for f in faults],
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
         )
-        tried = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
+        self.assertEqual(self.pause_answer("clean"), self.clean_answer())
+
+    def test_a_read_reaching_5_s_late_still_sees_the_carousel_turn_628_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        with self.late():
+            got = self.pause_answer("clean")
+        self.assertEqual(got, self.clean_answer())
+
+    def unwatched_after_5_s(self, script, past_ms=PAST_MS, logged=None):
+        init = f"""
+          addEventListener('DOMContentLoaded', () => {{
+            document.querySelector('.pause').remove();
+            {script}
+          }});
+        """
+        with self.late(past_ms):
+            faults, unmeasured = self.pause_answer("clean", init, logged)
         self.assertEqual(
-            got["clean"],
-            (
-                [],
-                [
-                    f"section:nth-of-type(1) {tried}",
-                    f"section:nth-of-type(2) > div.carousel {tried}",
-                ],
-            ),
+            [f["subject"] for f in faults],
+            ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
+        )
+        self.assertEqual(
+            [u.split(" changes ")[0] for u in unmeasured],
+            [
+                "section:nth-of-type(1)",
+                "section:nth-of-type(2) > div.carousel",
+                (
+                    "the page still ran a timer that did not run in the 6 s watched past 5 s from its load, "
+                    "and no control on the page is named for pausing, stopping or hiding it, so a slower change cannot be ruled out"
+                ),
+            ],
+        )
+
+    def test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        self.unwatched_after_5_s(
+            "addEventListener('resize', () => document.querySelector('.lane').setAttribute('data-w', String(Math.random())));"
+        )
+
+    def test_a_transition_an_onresize_handler_starts_past_5_s_is_no_rotation_628_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        self.unwatched_after_5_s(
+            "onresize = () => { document.querySelector('.backdrop').style.transform = `translateY(${Math.random() * 10}px)`; };"
+        )
+
+    def test_a_change_past_rotate_ms_from_5_s_is_not_read_628_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        window_ms = self.access.LONG_MS + self.access.keys.ROTATE_MS
+        logged = []
+        self.unwatched_after_5_s(
+            f"setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-late', 'on'); console.log('late'); }}, {window_ms + self.PAST_MS});",
+            self.access.keys.ROTATE_MS + 4 * self.PAST_MS,
+            logged,
+        )
+        self.assertIn("late", logged)
+
+    def test_a_turn_the_page_signals_with_its_own_resize_is_read_628_paired_with_test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628(
+        self,
+    ):
+        ms = self.access.LONG_MS + 2 * self.PAST_MS
+        with self.late():
+            _, unmeasured = self.pause_answer(
+                "clean",
+                f"""addEventListener('DOMContentLoaded', () => {{
+                  document.querySelector('.pause').remove();
+                  addEventListener('resize', () => {{}});
+                  setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-turn', 'on'); dispatchEvent(new Event('resize')); }}, {ms});
+                }});""",
+            )
+        self.assertIn(
+            "section:nth-of-type(3)", [u.split(" changes ")[0] for u in unmeasured]
         )
 
 
