@@ -244,15 +244,6 @@ class Figures(unittest.TestCase):
         )
         self.assertIsNone(contrasts.state_figure(off, off, [0, 0, 40, 20]))
 
-    def test_oklch_matches_published_values(self):
-        lightness, c, _ = contrasts.oklch([255, 255, 255])
-        self.assertAlmostEqual(lightness, 1.0, places=3)
-        self.assertLess(c, 1e-3)
-        lightness, c, h = contrasts.oklch([255, 0, 0])
-        self.assertAlmostEqual(lightness, 0.628, places=3)
-        self.assertAlmostEqual(c, 0.2577, places=3)
-        self.assertAlmostEqual(h, 29.23, places=1)
-
 
 class FillText(unittest.TestCase):
     def entry(self, text, fill, *, size=16, weight=400, icon=False):

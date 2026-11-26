@@ -8,22 +8,69 @@ SRGB_TO_XYZ = (
 )
 
 
+# WCAG's relative luminance weights: https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
+WCAG_Y = (0.2126, 0.7152, 0.0722)
+# WCAG's contrast ratio adds 0.05 to each luminance for viewing flare: https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio
+FLARE = 0.05
+
+
+def _pick(test, yes, no):
+    if getattr(test, "ndim", 0) == 0:
+        return yes if test else no
+    import numpy as np
+
+    return np.where(test, yes, no)
+
+
+def _one(c):
+    return isinstance(c, (tuple, list))
+
+
+def hex_rgb(h):
+    return tuple(int(h[i : i + 2], 16) for i in (1, 3, 5))
+
+
+def _rgb(c):
+    return hex_rgb(c) if isinstance(c, str) else c
+
+
 def lin(c):
-    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    return _pick(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
 
 def linear_rgb(h):
-    return [lin(int(h[i : i + 2], 16) / 255) for i in (1, 3, 5)]
+    return [lin(v / 255) for v in hex_rgb(h)]
 
 
-def luminance(h):
-    r, g, b = linear_rgb(h)
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+def linear_luminance(linear):
+    if _one(linear):
+        return sum(w * c for w, c in zip(WCAG_Y, linear, strict=True))
+    import numpy as np
+
+    return np.asarray(linear) @ np.array(WCAG_Y)
 
 
-def contrast(h1, h2):
-    hi, lo = sorted((luminance(h1), luminance(h2)), reverse=True)
-    return (hi + 0.05) / (lo + 0.05)
+def luminance(c):
+    c = _rgb(c)
+    if _one(c):
+        return linear_luminance([lin(v / 255) for v in c])
+    import numpy as np
+
+    return linear_luminance(lin(np.asarray(c, dtype=float) / 255))
+
+
+def contrast(a, b):
+    la, lb = luminance(a), luminance(b)
+    lighter = la >= lb
+    return (_pick(lighter, la, lb) + FLARE) / (_pick(lighter, lb, la) + FLARE)
+
+
+def lighter_by(y, ratio):
+    return ratio * (y + FLARE) - FLARE
+
+
+def darker_by(y, ratio):
+    return (y + FLARE) / ratio - FLARE
 
 
 def f_lab(t):
@@ -44,8 +91,8 @@ def l_star_of_luminance(y):
 
 
 # OKLab's two matrices, as Ottosson publishes them: https://bottosson.github.io/posts/oklab/
-def oklch(h):
-    r, g, b = linear_rgb(h)
+def oklch(c):
+    r, g, b = (lin(float(v) / 255) for v in _rgb(c))
     long_ = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
     medium = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
     short = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)

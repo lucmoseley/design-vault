@@ -33,9 +33,11 @@ from collections import namedtuple
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from colour_space import (
     contrast,
+    darker_by,
     de2000,
     l_star_of_luminance,
     lab,
+    lighter_by,
     luminance,
     oklch,
 )
@@ -115,8 +117,8 @@ def pairs(colours, surfaces):
 
 def ground_limits(logo_hexes):
     ys = [luminance(h) for h in logo_hexes]
-    light = LOGO_CONTRAST * (max(ys) + 0.05) - 0.05
-    dark = (min(ys) + 0.05) / LOGO_CONTRAST - 0.05
+    light = lighter_by(max(ys), LOGO_CONTRAST)
+    dark = darker_by(min(ys), LOGO_CONTRAST)
     return (
         l_star_of_luminance(dark) if dark >= 0 else None,
         l_star_of_luminance(light) if light <= 1 else None,

@@ -191,13 +191,6 @@ def pixels(png):
     return np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=float)
 
 
-def luminance(rgb):
-    return sum(
-        w * colour_space.lin(v / 255)
-        for w, v in zip(colour_space.SRGB_TO_XYZ[1], rgb, strict=True)
-    )
-
-
 def measure(drawn, mattes, tangent, scale):
     black, white = mattes["black"], mattes["white"]
     norm = math.hypot(*tangent)
@@ -241,8 +234,8 @@ def measure(drawn, mattes, tangent, scale):
             if t not in sides or not sides[t][0][1] < d < sides[t][1][1]:
                 continue
             clean = black[i, j] / (1 - g) if g < ALL_GROUND else sides[t][d >= 0][0]
-            yc = luminance(np.clip(clean, 0, 255))
-            weber += abs(luminance(drawn[i, j]) - yc) / max(yc, DARK)
+            yc = colour_space.luminance(np.clip(clean, 0, 255))
+            weber += abs(colour_space.luminance(drawn[i, j]) - yc) / max(yc, DARK)
     return weber / len(sides) * ARCSEC[scale]
 
 
