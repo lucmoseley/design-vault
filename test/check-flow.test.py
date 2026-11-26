@@ -859,29 +859,52 @@ class Steps(unittest.TestCase):
         [st] = r["steps"]
         self.assertEqual(st["at"], round(10 * STEP))
 
-    def test_one_step_channels_place_a_frame_apart_each_is_one_step(self):  # #623
-        # Each channel's step is a frame on from the last, so the first and
-        # third overlap only through the second.
-        def xs(slow):
-            speeds = [10] * slow + [40] * 8
-            moved = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
-            return moved + moved[-1:] * (10 - slow)
-
-        r = flow.analyse(
+    def steps_of(self, channels):
+        built = {}
+        for name, shape in channels.items():
+            slow, between = shape if isinstance(shape, tuple) else (shape, [])
+            speeds = [10] * slow + between + [40] * 8
+            built[name] = [
+                [sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)
+            ]
+        longest = max(map(len, built.values()))
+        return flow.analyse(
             {
-                "times": [k * STEP for k in range(len(xs(8)))],
+                "times": [k * STEP for k in range(longest)],
                 "elements": [
                     {
                         "label": "el",
-                        "channels": {"position": xs(8), "size": xs(9), "scale": xs(10)},
+                        "channels": {
+                            name: xs + xs[-1:] * (longest - len(xs))
+                            for name, xs in built.items()
+                        },
                     }
                 ],
             }
-        )
-        [st] = r["steps"]
+        )["steps"]
+
+    def test_a_step_channels_chain_a_frame_apart_in_any_order_is_listed_once(
+        self,
+    ):  # #623
+        [st] = self.steps_of({"position": 8, "scale": 10, "size": 9})
         self.assertEqual(
             (st["way"], st["at"], st["channels"]),
             ("up", round(8 * STEP), ["position", "size", "scale"]),
+        )
+
+    def test_a_step_channels_place_with_different_spreads_is_listed_once(
+        self,
+    ):  # #623
+        [st] = self.steps_of({"position": (8, [25]), "size": 8})
+        self.assertEqual(
+            (st["at"], st["channels"]), (round(8 * STEP), ["size", "position"])
+        )
+
+    def test_steps_channels_place_two_frames_apart_are_listed_apart(self):  # #623
+        found = self.steps_of({"position": 8, "size": 10})
+        self.assertEqual(
+            [(st["at"], st["channels"]) for st in found],
+            [(round(8 * STEP), ["position"]), (round(10 * STEP), ["size"])],
         )
 
     def test_a_step_under_a_fifth_of_top_speed_is_not_a_step(self):
