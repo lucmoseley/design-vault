@@ -839,6 +839,13 @@ def jolt_line(ms):
     return (JOLT_BAND[-1][1] + JOLT_BAND[-1][2]) / 2
 
 
+def nearest(ts, t):
+    i = bisect.bisect_left(ts, t)
+    return min(
+        (j for j in (i - 1, i) if 0 <= j < len(ts)), key=lambda j: abs(ts[j] - t)
+    )
+
+
 def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
     shared = sample["times"]
     moved = []
@@ -852,9 +859,7 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
             seen = (
                 seen_at
                 if times is shared
-                else [
-                    seen_at[max(0, bisect.bisect_right(shared, t) - 1)] for t in times
-                ]
+                else [seen_at[nearest(shared, t)] for t in times]
             )
             changes = deltas([numbers(name, v) for v in values])
             r = rates(changes, times, PX_NOISE if name in PX_CHANNELS else 0.0)
