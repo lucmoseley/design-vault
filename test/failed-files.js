@@ -1,21 +1,17 @@
 "use strict";
 const fs = require("node:fs");
 const path = require("node:path");
-const { performance } = require("node:perf_hooks");
 const { Readable } = require("node:stream");
 const { spec } = require("node:test/reporters");
 
 const fromRoot = (file) => path.relative(process.cwd(), file).split(path.sep).join("/");
 
+const isFileTest = (event) => event.type === "test:complete" && event.data.nesting === 0
+  && path.resolve(event.data.name) === event.data.file;
+
 async function* recorded(events) {
   const named = new Set();
-  const began = new Map();
-  const last = new Map();
-  const recordSeconds = (file, at) => {
-    const seconds = ((at - began.get(file)) / 1000).toFixed(3);
-    fs.appendFileSync(process.env.VAULT_FILE_SECONDS, `${fromRoot(file)}\t${seconds}\n`);
-    began.delete(file);
-  };
+  const fileMs = new Map();
   for await (const event of events) {
     const { file, todo } = event.data ?? {};
     if (event.type === "test:fail" && file && !todo && process.env.VAULT_FAILED_FILES) {
@@ -25,14 +21,11 @@ async function* recorded(events) {
         fs.appendFileSync(process.env.VAULT_FAILED_FILES, `${rel}\n`);
       }
     }
-    if (file && process.env.VAULT_FILE_SECONDS) {
-      if (event.type === "test:dequeue" && !began.has(file)) began.set(file, performance.now());
-      last.set(file, performance.now());
-      if (event.type === "test:summary" && began.has(file)) recordSeconds(file, last.get(file));
-    }
+    if (file && isFileTest(event)) fileMs.set(file, event.data.details.duration_ms);
     yield event;
   }
-  for (const file of began.keys()) recordSeconds(file, last.get(file));
+  if (!process.env.VAULT_FILE_SECONDS) return;
+  for (const [file, ms] of fileMs) fs.appendFileSync(process.env.VAULT_FILE_SECONDS, `${fromRoot(file)}\t${(ms / 1000).toFixed(3)}\n`);
 }
 
 module.exports = async function* failedFiles(events) {
