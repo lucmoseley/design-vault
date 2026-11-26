@@ -26,7 +26,7 @@ function parsePin(marketplace) {
   return entry?.source?.sha || null;
 }
 
-// guess, #58
+// guess, #501
 function readPin() {
   const content = execFileSync(process.env.WFC_GH || "gh", ["api", MARKETPLACE_API, "--jq", ".content"], { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] });
   return parsePin(JSON.parse(Buffer.from(content, "base64").toString("utf8")));

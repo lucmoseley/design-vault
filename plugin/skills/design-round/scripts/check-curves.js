@@ -82,10 +82,10 @@ const MIN_TURN = 0.5;
 const MAX_TURN = 30;
 // guess, #219
 const NEAR_TANGENT = 0.1;
-// guess, #195
+// guess, #501
 const FLOAT_NOISE = 1e-9;
 
-// https://www.w3.org/TR/SVG2/paths.html#PathDataBNF
+// Each path command's argument count: https://www.w3.org/TR/SVG2/paths.html#PathDataBNF
 const ARGS = { m: 2, l: 2, h: 1, v: 1, c: 6, s: 4, q: 4, t: 2, a: 7, z: 0 };
 const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/;
 
@@ -449,7 +449,7 @@ const FAULTS = new Set(CLASSES.slice(0, 2));
 const IDENTITY = [1, 0, 0, 1, 0, 0];
 // https://www.w3.org/TR/SVG2/struct.html#DefsElement: shapes in these are not drawn where they stand
 const UNDRAWN = new Set(["defs", "clippath", "mask", "symbol", "marker", "pattern"]);
-// https://html.spec.whatwg.org/multipage/syntax.html#void-elements
+// HTML's void elements take no closing tag: https://html.spec.whatwg.org/multipage/syntax.html#void-elements
 const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 const RAW = new Set(["script", "style"]);
 const NUMBER_ONLY = new RegExp(`${NUMBER.source}$`);

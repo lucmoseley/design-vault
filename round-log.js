@@ -31,11 +31,11 @@ const { parseGate, isGateQuestion } = require("./plugin/skills/design-round/scri
 const LOG = "data/round-log.jsonl";
 const CALIBRATION_LOG = "data/calibration-log.jsonl";
 const VAULT_STORE = "plugin/skills/design-critique/rules";
-// guess, #100
+// #100
 const CALIBRATION_EVERY = 10;
 const FIELDS = ["date", "project", "ticket", "round", "first_pick", "reason", "confidence", "critic_pick", "agree", "final_pick", "rejections", "on_weakest", "splits", "settled"];
 const ADDED_LATER = ["final_pick", "rejections", "on_weakest"];
-// measured 2026-10-15, #170
+// #170
 const SETTLES_FROM = "2026-10-16";
 const TICKET = /^[\w.-]+\/[\w.-]+#[1-9]\d*$/;
 
@@ -116,7 +116,7 @@ function repoOf(file) {
   return git;
 }
 
-// git 2.45 prints %cI's zero offset as Z, not +00:00: https://github.com/git/git/blob/master/Documentation/RelNotes/2.45.0.txt
+// git 2.45 prints %cI's zero offset as Z, not +00:00: https://github.com/git/git/blob/v2.45.0/Documentation/RelNotes/2.45.0.txt
 const commitTime = (seconds) => new Date(Number(seconds) * 1000).toISOString().replace(".000Z", "Z");
 
 function lastCommitted(file) {
@@ -145,7 +145,7 @@ function lastGateChange(file, since) {
             .split("\0")
             .filter(Boolean)
             .map((entry) => {
-              // https://git-scm.com/docs/git-ls-tree#_output_format
+              // ls-tree prints each entry as <mode> SP <type> SP <object> TAB <path>: https://git-scm.com/docs/git-ls-tree#_output_format
               const blob = entry.split("\t")[0].split(" ")[2];
               if (!blobs.has(blob)) blobs.set(blob, git("cat-file", "blob", blob));
               return blobs.get(blob);

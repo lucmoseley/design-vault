@@ -61,7 +61,7 @@ def make_server(root, port):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    # guess, #501
+    # #501
     parser.add_argument("--port", type=int, default=4610)
     args = parser.parse_args()
     server = make_server(Path(__file__).resolve().parent, args.port)

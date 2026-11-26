@@ -28,7 +28,7 @@ rest print on stderr.
 """
 
 import argparse
-import importlib.util
+import importlib
 import json
 import pathlib
 import re
@@ -206,14 +206,15 @@ def main(argv):
         help="the brief asked for a transparent background: check for a painted checkerboard",
     )
     args = parser.parse_args(argv)
-    needed = ["PIL", "numpy"] if args.transparent else ["PIL"]
-    missing = next((m for m in needed if importlib.util.find_spec(m) is None), None)
-    if missing:
+    try:
+        for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
+            importlib.import_module(package)
+    except ImportError as err:
         print(
-            f"check-render: {missing} is missing — python3 -m pip install -r {REQUIREMENTS}",
+            f"check-render: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
             file=sys.stderr,
         )
-        return 3
+        sys.exit(3)
     from PIL import Image
 
     if args.aspect is not None:

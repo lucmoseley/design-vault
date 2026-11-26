@@ -9,7 +9,7 @@ const [LAW_LEVEL, PROJECT_LEVEL, EVIDENCE_LEVEL] = [1, 2, 3];
 const CANNOT_MEASURE = "cannot measure";
 const MEASURED = ["pass", "fail", CANNOT_MEASURE];
 const LOOKED = ["yes", "no", "unsure"];
-// guess, #154
+// #154
 const CRITICS = 3;
 const PARTS_QUESTION = "vault.affordance";
 const MINOR = /^minor:/i;

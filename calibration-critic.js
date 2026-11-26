@@ -134,15 +134,21 @@ Reply with one JSON object and nothing else:
 {"answers": {<candidate>: {<question id>: {"answer": "yes" | "no" | "unsure", "evidence": <one line>}}}, "principles": {<candidate>: {<entry>: {"answer": "yes" | "no" | "unsure", "evidence": <one line>}}}, "leader": {"candidate": <name or null>, "turned_on": <the lens or question>}}`;
 }
 
+function eventOf(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+
 function runChild(cwd, model, prompt, timeout, more = []) {
   const child = spawnSync(claudeBin(), [...CONFINED, ...more, "--model", model], { cwd, input: prompt, encoding: "utf8", timeout, maxBuffer: TRANSCRIPT_BYTES });
   if (child.error) throw new Error(`claude could not run: ${child.error.message}`);
   let result = null;
   for (const line of child.stdout.split("\n")) {
-    try {
-      const event = JSON.parse(line);
-      if (event.type === "result") result = typeof event.result === "string" ? event.result : null;
-    } catch {}
+    const event = eventOf(line);
+    if (event?.type === "result") result = typeof event.result === "string" ? event.result : null;
   }
   return { status: child.status, stdout: child.stdout, stderr: child.stderr, result };
 }

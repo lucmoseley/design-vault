@@ -403,7 +403,7 @@ def _linear(rgb):
     return np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
 
 
-# https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
+# WCAG weighs linear sRGB as 0.2126 R + 0.7152 G + 0.0722 B: https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
 def relative_luminance(rgb):
     import numpy as np
 
@@ -426,7 +426,7 @@ def chromaticity(rgb):
     return uv, share
 
 
-# https://www.w3.org/TR/WCAG22/#dfn-general-flash-and-red-flash-thresholds
+# A general flash is a pair of opposing 10% luminance changes with the darker below 0.80: https://www.w3.org/TR/WCAG22/#dfn-general-flash-and-red-flash-thresholds
 def luminance_transitions(lum, v):
     import numpy as np
 

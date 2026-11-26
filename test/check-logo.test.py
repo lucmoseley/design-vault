@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -67,6 +68,26 @@ class Fixtures(unittest.TestCase):
 
 
 class OnAnArtboard(Fixtures):
+    def test_an_unimportable_pillow_exits_3_naming_it_501_paired_with_an_exact_placement_passes_both(
+        self,
+    ):
+        shadow = self.path("shadow")
+        os.makedirs(os.path.join(shadow, "PIL"))
+        with open(os.path.join(shadow, "PIL", "__init__.py"), "w") as fh:
+            fh.write("raise ImportError('shadowed', name='PIL')\n")
+        out = subprocess.run(
+            [sys.executable, SCRIPT, "--logo", self.save("logo.png", logo())]
+            + [self.artboard(logo()), "--box", "300,140,200,120"],
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_S,
+            env={**os.environ, "PYTHONPATH": shadow},
+        )
+        self.assertEqual(out.returncode, 3, out.stderr)
+        self.assertIn(
+            "check-logo: PIL is missing — python3 -m pip install -r", out.stderr
+        )
+
     def test_an_exact_placement_passes_both(self):
         code, out, err = run(
             "--logo",

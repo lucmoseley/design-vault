@@ -25,7 +25,7 @@ const { writeBundle } = require("./bundle");
 const { isWebAddress } = require("./validate");
 
 const ROOT = __dirname;
-// guess, #4
+// lucmoseley/mantahostels#3631
 const MAX_IMAGE = 20 * 1024 * 1024;
 const DEFAULTS = {
   origin: "third-party",
@@ -81,7 +81,7 @@ Rules: keywords must come from the list given, nothing else. vocabulary must be 
 function claudeExtract(prompt, model = "sonnet", log = console.log) {
   let out;
   try {
-    // guess, #4
+    // guess, #501
     out = execFileSync(
       process.env.WFC_CLAUDE_BIN || "claude",
       ["-p", prompt, "--model", model, "--output-format", "json", "--json-schema", SCHEMA, "--tools", "Read", "--max-turns", "4"],
@@ -92,11 +92,11 @@ function claudeExtract(prompt, model = "sonnet", log = console.log) {
     throw new Error(`claude -p failed (${error.signal ?? `exit ${error.status}`}): ${said || "no output"}`);
   }
   const result = JSON.parse(out);
-  // guess, #4
+  // guess, #501
   if (result.is_error || !result.structured_output)
     throw new Error(`claude -p returned no structured output (${result.subtype ?? "no subtype"}): ${String(result.result ?? "").slice(0, 300)}`);
   const answered = Object.keys(result.modelUsage ?? {}).join(", ") || model;
-  // guess, #4
+  // guess, #501
   if (typeof result.total_cost_usd === "number") log(`  cost $${result.total_cost_usd.toFixed(3)} on ${answered}`);
   return result.structured_output;
 }

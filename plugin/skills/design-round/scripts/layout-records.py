@@ -161,7 +161,6 @@ READ_JS = (
     }
     return null;
   };
-  // The boxes of an element's set text, each line's.
   const range = document.createRange();
   const textBoxes = (el, free) => {
     const out = [];
@@ -178,7 +177,6 @@ READ_JS = (
     top: Math.min(...rects.map((r) => r.top)), bottom: Math.max(...rects.map((r) => r.bottom)) } : null;
   const vOverlap = (a, b) => Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > EDGE;
   const beside = (a, b) => vOverlap(a, b) && (a.right <= b.left + EDGE || b.right <= a.left + EDGE);
-  // Elements grouped into rows by their top edge, top to bottom.
   const rowsOf = (els) => {
     const rows = [];
     for (const el of els.slice().sort((a, b) => box(a).top - box(b).top)) {
@@ -205,7 +203,6 @@ READ_JS = (
     const navs = [...document.querySelectorAll('nav, [role="navigation"]')].filter((n) => !crumbs(n));
     return navs.find((n) => banner && banner.contains(n)) || navs[0] || null;
   };
-  // A nav's top-level links: its first list's items' own links, else every link.
   const topLinks = (nav) => {
     const list = nav.querySelector('ul, ol');
     const links = list ? [...list.children].map((li) => li.querySelector(':scope > a[href], :scope > * > a[href]')).filter(Boolean)
@@ -217,7 +214,6 @@ READ_JS = (
     return [...document.querySelectorAll('[aria-controls]')].find((t) => t.getAttribute('aria-controls').split(/\s+/).some((id) => ids.includes(id)))
       || (banner && el !== banner && banner.contains(el) ? banner.querySelector('button[aria-expanded]') : null);
   };
-  // The outermost elements capped by a max-width, where it holds their width: a page's capped containers.
   const capped = (within) => {
     const out = [];
     const walk = (el) => {
@@ -232,7 +228,6 @@ READ_JS = (
     return out;
   };
 
-  // vault.false-floor: a full-width band ends at the first screen's foot and nothing runs past it.
   if (on('fold') && document.documentElement.scrollHeight > vh + EDGE) {
     seen.add('fold');
     const content = [];
@@ -248,7 +243,6 @@ READ_JS = (
     if (!crosses && band) fault('fold', label(band), `ends at the first screen's foot, ${vh} px down, and no text or image runs past it`);
   }
 
-  // vault.safe-centre: centred content past its scrolling or clipping box's start edge.
   if (on('safe-centre')) {
     for (const el of all) {
       const cs = css(el);
@@ -266,7 +260,6 @@ READ_JS = (
     }
   }
 
-  // vault.joined-fills: adjacent boxes of one opaque fill that meet off a whole device pixel.
   if (on('seams')) {
     const opaque = (c) => { const m = /rgba\([^)]*,\s*([\d.]+)\)/.exec(c); return c !== 'transparent' && (!m || parseFloat(m[1]) === 1); };
     const probe = document.documentElement.appendChild(document.createElement('div'));
@@ -294,7 +287,6 @@ READ_JS = (
     }
   }
 
-  // vault.capped-centre: a capped container off centre in its wider parent.
   if (on('capped-centre')) {
     for (const c of capped(document.body)) {
       const p = c.parentElement, pr = box(p), ps = css(p);
@@ -307,8 +299,6 @@ READ_JS = (
     }
   }
 
-  // vault.content-width: the main content's text and images wider than its role's cap, a reading page's main
-  // text outside a two-thirds column of it, or a default page's content capped under its floor.
   if (on('content-width') && brief.page !== 'canvas') {
     const v = lines['content-width'], reading = brief.page === 'reading';
     const cap = reading ? v.reading : v.default;
@@ -337,7 +327,6 @@ READ_JS = (
     }
   }
 
-  // vault.content-width, empty states: an empty state's text wider than its cap, the narrow cap in a narrow container.
   if (on('empty-width') && parts['empty-state']) {
     const v = lines['empty-width'];
     for (const el of [...document.querySelectorAll(parts['empty-state'])].filter(drawn)) {
@@ -349,12 +338,10 @@ READ_JS = (
     }
   }
 
-  // vault.content-width, footer bands: each band's content edges against the first's.
   if (on('footer-bands')) {
     const bands = footer ? [...footer.children].filter((b) => drawn(b) && box(b).width >= box(footer).width - EDGE) : [];
     if (bands.length >= 2) {
       seen.add('footer-bands');
-      // A band's content box: down through each lone block child to the box that holds its content.
       const inner = (b) => {
         let c = b;
         for (let k = [...c.children].filter(drawn); k.length === 1 && !/^inline/.test(css(k[0]).display); k = [...c.children].filter(drawn)) c = k[0];
@@ -408,7 +395,6 @@ READ_JS = (
     }
   }
 
-  // vault.alignment-lines, column lines: each top-level container in a CSS grid of the main content off its column lines.
   if (on('grid-lines')) {
     const SMALL = `${BUTTON}, a, span, label, input, select, textarea, svg, small`;
     for (const g of [main, ...main.querySelectorAll('*')]) {
@@ -432,7 +418,6 @@ READ_JS = (
     }
   }
 
-  // vault.optical-alignment: an unpainted padded box aligned with its neighbour by its box, not its text.
   if (on('optical')) {
     const paints = (el) => { const s = css(el); return s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none' || s.boxShadow !== 'none' ||
       ['Top', 'Right', 'Bottom', 'Left'].some((k) => parseFloat(s[`border${k}Width`]) > 0); };
@@ -451,7 +436,6 @@ READ_JS = (
     }
   }
 
-  // The width a table's columns need, read by setting it to max-content.
   const needs = (t) => {
     const was = [t.style.width, t.style.maxWidth];
     t.style.setProperty('width', 'max-content', 'important');
@@ -462,7 +446,6 @@ READ_JS = (
   };
   const scroller = (el) => { for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) if (/auto|scroll/.test(css(e).overflowX)) return e; return null; };
 
-  // vault.table-width: a table held under the width its columns need, or widening the page.
   if (on('table-width')) {
     for (const t of document.querySelectorAll('table')) {
       if (!drawn(t)) continue;
@@ -474,7 +457,6 @@ READ_JS = (
     }
   }
 
-  // vault.table-narrow: at phone width, a table too wide for the screen neither scrolls in a focusable box nor stacks.
   if (on('table-narrow') && phone) {
     for (const t of document.querySelectorAll('table')) {
       if (!drawn(t)) continue;
@@ -489,7 +471,6 @@ READ_JS = (
     }
   }
 
-  // vault.button-group-stack: at phone width, a group of buttons that wraps ragged, overflows, or stacks short of full width.
   const buttonLike = (c) => c.matches(BUTTON) || (c.querySelectorAll(BUTTON).length === 1 && !c.querySelector('p, h1, h2, h3, h4, h5, h6'));
   const groups = () => all.filter((g) => { const k = [...g.children].filter(drawn); return k.length >= 2 && k.every(buttonLike); });
   if (on('button-stack') && phone) {
@@ -503,7 +484,6 @@ READ_JS = (
     }
   }
 
-  // vault.row-wrap: a one-line row of like inline items that overflows or squeezes them.
   if (on('row-wrap')) {
     for (const r of all) {
       const cs = css(r);
@@ -521,7 +501,6 @@ READ_JS = (
     }
   }
 
-  // vault.nav-strip: at phone width, a row of nav links on many rows, past the page, or scrolling with no link cut by its edge.
   if (on('nav-strip') && phone) {
     for (const nav of document.querySelectorAll('nav, [role="navigation"]')) {
       if (crumbs(nav)) continue;
@@ -538,7 +517,6 @@ READ_JS = (
     }
   }
 
-  // vault.breadcrumb-narrow: at phone width, a trail hidden, wrapping, overflowing, or collapsed other than to its first and last.
   if (on('breadcrumb') && phone) {
     for (const nav of [...document.querySelectorAll('nav, [role="navigation"], ol, ul')].filter((e) => crumbs(e) && !e.parentElement.closest('nav, [role="navigation"], ol, ul'))) {
       seen.add('breadcrumb');
@@ -556,7 +534,6 @@ READ_JS = (
     }
   }
 
-  // vault.footer-narrow: the footer's link groups, toggled on a phone and in columns wider.
   if (on('footer-narrow')) {
     const v = lines['footer-narrow'];
     const allHeads = footer ? [...footer.querySelectorAll('h2, h3, h4, h5, h6, [role="heading"], summary')] : [];
@@ -580,7 +557,6 @@ READ_JS = (
   }
 
   const nav = mainNav();
-  // vault.nav-wide: at desktop width, a main nav link hidden behind a menu.
   if (on('nav-wide') && nav && vw >= lines['nav-wide'].from) {
     const links = topLinks(nav);
     if (links.length) {
@@ -590,7 +566,6 @@ READ_JS = (
     }
   }
 
-  // vault.visible-nav: at phone width, a main nav of few links that hides them.
   if (on('visible-nav') && nav && phone) {
     const links = topLinks(nav);
     if (links.length) {
@@ -600,7 +575,6 @@ READ_JS = (
     }
   }
 
-  // vault.nav-by-width: where the main nav sits, by the brief's kind and the width.
   if (on('nav-place') && nav && brief.kind) {
     const shown = drawn(nav) && topLinks(nav).some(inView) ? nav : toggleFor(nav);
     if (shown && drawn(shown)) {
@@ -615,7 +589,6 @@ READ_JS = (
     }
   }
 
-  // The page's panes: its main content, and each supporting pane outside it or a child of it.
   const asides = [...document.querySelectorAll('aside, [role="complementary"]')]
     .filter((a) => !a.parentElement.closest('article, aside, [role="complementary"]') && (!mainEl || !mainEl.contains(a) || a.parentElement === mainEl));
   const mainBox = () => {
@@ -624,7 +597,6 @@ READ_JS = (
     return asides.some((a) => a.parentElement === mainEl) ? union(own.map(box)) : box(mainEl);
   };
   const oneUnder = (v) => vw < v.wide || vh < v.tall;
-  // vault.panes-by-width: panes side by side past what the window allows, or the header and footer not around them.
   if (on('panes') && mainEl) {
     const m = mainBox();
     if (m) {
@@ -638,7 +610,6 @@ READ_JS = (
     }
   }
 
-  // vault.side-pane: where one pane fits, a side pane squeezed beside the main content, above it, or dropped with nothing to open it.
   if (on('side-pane') && mainEl && oneUnder(lines['side-pane'])) {
     const m = mainBox();
     for (const a of asides) {
@@ -655,7 +626,6 @@ READ_JS = (
     }
   }
 
-  // vault.bar-fit: a bar's actions, a toolbar's, a menubar's or the header's, past the screen or past the bar's own edge.
   if (on('bar-fit')) {
     const BARS = '[role="toolbar"], [role="menubar"]';
     for (const bar of [...document.querySelectorAll(BARS), ...(banner ? [banner] : [])]) {
@@ -669,7 +639,8 @@ READ_JS = (
     }
   }
 
-  // vault.bottom-safe-area: a control pinned to the bottom that a large viewport unit places, lvh or the default vh, which CSS Values 4 sizes alike (https://www.w3.org/TR/css-values-4/#viewport-variants).
+  // CSS Values 4 says the default vh should size as the large viewport, as lvh does:
+  // https://www.w3.org/TR/css-values-4/#viewport-variants
   if (on('safe-bottom') && phone) {
     const LARGE = /\d(lv[hb]|v[hb])\b/;
     const PLACING = ['top', 'bottom', 'height', 'min-height', 'max-height', 'inset', 'inset-block', 'inset-block-start', 'inset-block-end', 'translate', 'transform', 'block-size', 'min-block-size', 'max-block-size'];
@@ -687,7 +658,6 @@ READ_JS = (
     }
   }
 
-  // vault.rtl-image-order: a row of images in right-to-left text that runs left to right.
   if (on('rtl-order')) {
     for (const p of all) {
       if (css(p).direction !== 'rtl') continue;
@@ -698,7 +668,6 @@ READ_JS = (
     }
   }
 
-  // vault.label-value-stack: a label beside its value, one cut off or the two overlapping.
   if (on('label-value')) {
     const pairs = [];
     for (const dt of document.querySelectorAll('dt')) { const dd = dt.nextElementSibling; if (dd && dd.localName === 'dd') pairs.push([dt, dd]); }
@@ -717,7 +686,6 @@ READ_JS = (
     }
   }
 
-  // vault.card-alignment: matching inner parts of a row of sibling cards whose content starts at different heights.
   if (on('card-rows') && parts.card) {
     const start = (el) => { const s = css(el); return box(el).top + parseFloat(s.borderTopWidth) + parseFloat(s.paddingTop); };
     const cards = [...document.querySelectorAll(parts.card)].filter(drawn);
@@ -741,7 +709,6 @@ READ_JS = (
     }
   }
 
-  // vault.content-columns: a grid of cards in more than one column on a phone, or squeezing its cards under their minimum.
   if (on('card-columns') && parts.card) {
     const v = lines['card-columns'];
     for (const [p, sibs] of byParentOf([...document.querySelectorAll(parts.card)].filter(drawn))) {
@@ -756,7 +723,6 @@ READ_JS = (
     }
   }
 
-  // vault.content-columns, category tiles: at phone width, the tile columns the table gives, or a single column where a tile's label outgrows its share.
   if (on('tile-columns') && parts['category-tile']) {
     const v = lines['tile-columns'];
     for (const [p, sibs] of byParentOf([...document.querySelectorAll(parts['category-tile'])].filter(drawn))) {
@@ -770,7 +736,6 @@ READ_JS = (
     }
   }
 
-  // vault.card-media-stack and vault.logo-version read across widths: each card's media placement, and the logo shown.
   if (on('card-media') && parts.card) {
     notes.cards = [];
     for (const c of [...document.querySelectorAll(parts.card)].filter(drawn)) {

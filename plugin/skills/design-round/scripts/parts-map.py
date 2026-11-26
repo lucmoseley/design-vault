@@ -75,7 +75,7 @@ FILES = (
     "key.txt",
     *(f"key-{name}.png" for name, _, _ in access.VIEWPORTS),
 )
-# guess, #162
+# guess, #501
 KEY_TEXT = 40
 
 LISTEN_JS = r"""
@@ -119,15 +119,15 @@ MAP_JS = (
   const actable = new Set(marked.filter((el) => el.matches(ACTION) || marked.some((o) => o !== el && !el.contains(o))));
   const actableOf = (el) => { for (let e = el; e; e = e.parentElement) if (actable.has(e)) return e; return null; };
 
-  // https://html.spec.whatwg.org/multipage/browsing-the-web.html#the-indicated-part-of-the-document
+  // A fragment indicates the element with that id, else an <a> with that name, else the top for `top`: https://html.spec.whatwg.org/multipage/browsing-the-web.html#the-indicated-part-of-the-document
   const here = location.href.split('#')[0];
   const deadOf = (el) => {
     if (el.localName !== 'a' || !el.hasAttribute('href') || listened(el) || !el.href.includes('#') || el.href.split('#')[0] !== here) return null;
-    // https://wicg.github.io/scroll-to-text-fragment/#fragment-directive
+    // What follows `:~:` is the fragment directive, not part of the fragment: https://wicg.github.io/scroll-to-text-fragment/#fragment-directive
     const [fragment, directive] = el.href.slice(el.href.indexOf('#') + 1).split(':~:');
     if (!fragment) return directive === undefined ? '#' : null;
     let decoded = fragment;
-    try { decoded = decodeURIComponent(fragment); } catch (e) {}
+    try { decoded = decodeURIComponent(fragment); } catch (e) { decoded = fragment; }
     const carried = (name) => document.getElementById(name) || [...document.getElementsByName(name)].some((n) => n.localName === 'a');
     return carried(fragment) || carried(decoded) || decoded.toLowerCase() === 'top' ? null : '#' + fragment;
   };
@@ -164,7 +164,7 @@ MAP_JS = (
             .replace(/:(hover|focus-visible|focus-within|focus|active)(?![\w-])/g, '').replace(/::?(before|after)\b/g, '').trim();
           try {
             for (const el of document.querySelectorAll(subject)) note(el, m[1], s.trim());
-          } catch (e) {}
+          } catch (e) { continue; }
         }
       }
       if (r.cssRules) read(r.cssRules);
@@ -221,7 +221,7 @@ MAP_JS = (
     const a = actableOf(hit);
     return a ? { part: index.get(a) } : { other: label(hit) };
   };
-  // guess, #162
+  // guess, #501
   const GRID = 5;
   for (const [i, p] of parts.entries()) {
     const outer = actableOf(p.el.parentElement);
@@ -245,7 +245,7 @@ MAP_JS = (
     }
     p.hit = seen ? Math.round((100 * mine) / seen) : null;
     p.takenBy = [...others].sort((a, b) => b[1] - a[1]).map(([who]) => who);
-    // guess, #162
+    // guess, #501
     const around = new Map();
     for (const [x, y] of [[r.left - 4, r.top + r.height / 2], [r.right + 4, r.top + r.height / 2], [r.left + r.width / 2, r.top - 4], [r.left + r.width / 2, r.bottom + 4]]) {
       const by = landing(x, y)?.part;

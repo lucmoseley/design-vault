@@ -445,7 +445,7 @@ TAP_JS = r"""
     track(el) {
       if (el.localName === "input") return el;
       const r = el.getBoundingClientRect();
-      // guess, #312
+      // guess, #501
       return r.width < 3 * r.height ? el.parentElement : el;
     },
     liveOf: (el) => el.closest(LIVE),

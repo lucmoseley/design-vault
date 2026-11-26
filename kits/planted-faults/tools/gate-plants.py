@@ -25,7 +25,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 VAULT = ROOT.parents[1]
 STORE = VAULT / "plugin/skills/design-critique/rules"
-# guess, #415
+# guess, #501
 RENDER_TIMEOUT = 300
 CONDENSED = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400&display=swap">'
 ICON = '<svg class="deco" viewBox="0 0 24 24" aria-hidden="true"><path d="{d}" fill="currentColor"/></svg>'

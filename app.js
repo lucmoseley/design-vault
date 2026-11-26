@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA, STYLES, showStyles=false, fit='any', queryTests=[], sort='newest', currentId=null, toastTimer;
-// guess, #501
+// #501
 const MAX_SELECTED=5, DEFAULT_PROJECT='manta';
 const stored = key => {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}};
 const storedSelection=stored('taste-vault-selection');
@@ -148,7 +148,7 @@ function openReference(id){
  renderTray();if(!$('inspector').open)openDialog('inspector');$('imageStage').scrollTop=0;$('imageStage').scrollLeft=0;document.querySelector('.detail-panel').scrollTop=0;
 }
 function navigateReference(delta){const list=visibleEntries(), index=list.findIndex(e=>e.id===currentId);if(index>=0&&list[index+delta])openReference(list[index+delta].id);}
-// guess, #3
+// guess, #501
 function openComparison(){
  const entries=[...selected].map(entryFor);if(entries.length<2)return;
  $('comparisonGrid').style.setProperty('--compare-columns',entries.length);

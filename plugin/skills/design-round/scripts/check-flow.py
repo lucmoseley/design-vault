@@ -116,7 +116,7 @@ import traceback
 import typing
 
 PAUSE_MS = 250  # guess, #60
-# measured (docs/research/jolt-onset.md), #297
+# measured: the model's thresholds in docs/research/jolt-onset.md, 0.80 of top speed at 200 ms to 0.17-0.35 at 2000 ms, #297
 JOLT_BAND = (
     (200, 0.80, 0.80),
     (250, 0.54, 0.67),
@@ -125,7 +125,7 @@ JOLT_BAND = (
     (1000, 0.19, 0.39),
     (2000, 0.17, 0.35),
 )
-JUMP_DEG = 0.26  # measured (docs/research/jolt-onset.md F10), #297
+JUMP_DEG = 0.26  # measured: a 0.26 deg jump drew attention in Sunny and von Muhlenen 2014 (docs/research/jolt-onset.md F10), #297
 FPS = 60  # guess, #141
 MIN_GAP_MS = 1  # guess, #126
 QUIET_MS = 2000  # guess, #141
@@ -299,7 +299,7 @@ const label = (el, pseudo) => {
     return s;
   };
   const parts = [one(el)];
-  // guess, #182
+  // guess, #501
   for (let p = el.parentElement; p && parts.length < 3 && !el.id; p = p.parentElement) {
     if (p.localName === 'body' || p.localName === 'html') break;
     parts.unshift(one(p));
@@ -470,7 +470,7 @@ PREPARE_JS = (
     edges.push(off + t.delay / x.rate);
     if (t.easing === 'linear' && t.duration > 0) {
       const offsets = x.a.effect.getKeyframes().map((k) => k.computedOffset);
-      // guess, #182
+      // guess, #501
       const passes = Math.min(x.loops ? 1 : t.iterations, 100);
       for (let i = 0; i < passes; i++) {
         const back = t.direction === 'reverse' || (t.direction === 'alternate' && i % 2 === 1) ||
@@ -1014,7 +1014,7 @@ PALETTE = ["#2563eb", "#d97706", "#059669", "#db2777", "#7c3aed", "#0891b2", "#6
 def chart(sample, result, pause_ms):
     times = sample["times"]
     span = max(times[-1], 1)
-    # guess, #182
+    # guess, #501
     w, left, right, panel, gap, top = 960, 230, 20, 90, 18, 40
     plot_w = w - left - right
     els = result["elements"]
@@ -1085,7 +1085,7 @@ def chart(sample, result, pause_ms):
 
 
 def nice_step(span):
-    # guess, #182
+    # guess, #501
     for s in (100, 250, 500, 1000, 2000, 5000, 10000, 30000, 60000):
         if span / s <= 12:
             return s
@@ -1458,7 +1458,7 @@ def sweep(page):
     height = page.evaluate("() => document.documentElement.scrollHeight - innerHeight")
     if height <= 0:
         return
-    # guess, #182
+    # guess, #501
     step = max(100, height / 40)
     stops = [min(height, step * k) for k in range(1, math.ceil(height / step) + 1)]
     page.evaluate(SWEEP_JS, stops + stops[-2::-1] + [0])

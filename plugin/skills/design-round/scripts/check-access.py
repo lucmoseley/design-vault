@@ -300,18 +300,21 @@ VIEWPORTS = tuple(
         ("phone", layout.PHONE_WIDTH),
     )
 )
+# G183 asks 3:1 contrast between a link and the text around it:
 # https://www.w3.org/WAI/WCAG22/Techniques/general/G183
 LINK_RATIO = 3.0
+# WCAG 2.5.8 sets a pointer target's minimum at 24 by 24 CSS px:
 # https://www.w3.org/TR/WCAG22/#target-size-minimum
 MIN_TARGET = 24
 BOLD_CUE = 600  # guess, #501
-WRAP, WRAPPERS = 12, 3  # guess, #163
+WRAP, WRAPPERS = 12, 3  # guess, #501
 FOCUS_REACH = 8  # guess, #501
-OPAQUE = 0.9  # guess, #164
+OPAQUE = 0.9  # guess, #501
+# WCAG 2.2.2 covers moving content that starts automatically and lasts more than five seconds:
 # https://www.w3.org/TR/WCAG22/#pause-stop-hide
 LONG_MS = 5000
 WATCH_MS = 1000  # guess, #164
-PAUSE_TRIES = 6  # guess, #164
+PAUSE_TRIES = 6  # guess, #501
 # Frames a pause control has to hold still in before it counts as moving (#536): a guess.
 PAUSE_FRAMES = 10
 # Frames since the page last asked for one in which its frame loop counts as running (#545): a guess.
@@ -337,7 +340,7 @@ REACT_PROPS = (
     "onTouchEnd",
 )
 WALK_SLACK = 20  # guess, #501
-DATE_PARTS = 6  # measured 6 parts in a datetime-local, #188
+DATE_PARTS = 6  # measured 6 Tab stops in a datetime-local, #501
 
 MEASURE_JS = (
     flow.LABEL_JS
@@ -345,23 +348,18 @@ MEASURE_JS = (
 (LOGOTYPES) => {
   const bad = badSelectors(LOGOTYPES);
   if (bad.length) return { bad };
-  // The --logotype selector text sits under.
   const logotype = (el) => LOGOTYPES.find((s) => el.closest(s)) || null;
   const ancestors = (el) => { const out = []; for (let e = el; e; e = e.parentElement) out.push(e); return out; };
-  // The colour a text's glyphs are filled with, its alpha times `opacity`.
   const fillOf = (cs, opacity) => {
     const color = rgba(cs.webkitTextFillColor && rgba(cs.webkitTextFillColor)[3] > 0 ? cs.webkitTextFillColor : cs.color);
     return [...color.slice(0, 3), color[3] * opacity];
   };
-  // Whether any of these computed styles fills text with its background.
   const clipped = (styles) => styles.some((s) => /text/.test(s.backgroundClip || s.webkitBackgroundClip));
   const FIELD = /^(text|email|search|tel|url|password|number|date|datetime-local|month|week|time)$/;
 
-  // FOCUSED_JS reads the text of the Tab stops hidden at rest.
   const resting = (window.__resting = restingStops());
   const restingIn = (el) => resting.some((r) => r.contains(el));
 
-  // Text under `top`, one entry per element holding it, past those `skip` takes.
   const textsIn = (top, skip) => {
     const replaced = [...document.querySelectorAll('video, canvas')].filter(shown).map((e) => box(e.getBoundingClientRect()));
     const texts = new Map();
@@ -387,8 +385,6 @@ MEASURE_JS = (
       if (!t.why && rects.some((r) => replaced.some((v) => !empty(meet(r, v))))) t.why = 'lies over a video or canvas';
     }
 
-    // A form control's own text: its value, a button's label, a select's
-    // choice, or else its placeholder, read across its content box.
     const OWN = 'input:not([type=hidden]), textarea, select';
     for (const el of [top, ...top.querySelectorAll(OWN)].filter((e) => e.matches(OWN))) {
       if (!shown(el) || disabled(el) || skip(el)) continue;
@@ -410,10 +406,6 @@ MEASURE_JS = (
   window.__restingTexts = (i) => [...textsIn(resting[i], () => false).values()];
   window.__texts = [...texts].map(([el, t]) => ({ el, rects: t.rects }));
 
-  // Generated text: a ::before or ::after whose content, up to any alt text
-  // after a slash, holds a string that is not blank, a counter, an attribute
-  // or a quote mark. Its boxes come from access-boxes.py, so it waits in
-  // window.__generated for GENERATED_JS.
   const TOKEN = /"(?:[^"\\]|\\.)*"|[\w-]+\((?:[^()"]|"(?:[^"\\]|\\.)*")*\)|\/|[\w-]+/g;
   const holdsText = (content) => {
     for (const [t] of content.matchAll(TOKEN)) {
@@ -423,7 +415,6 @@ MEASURE_JS = (
     return false;
   };
   window.__generated = [];
-  // Generated text in a Tab stop hidden at rest, which FOCUSED_JS does not read.
   const unread = [];
   for (const el of [document.body, ...document.body.querySelectorAll('*')]) {
     if (el.closest('svg') || !shown(el) || disabled(el)) continue;
@@ -440,13 +431,9 @@ MEASURE_JS = (
     }
   }
 
-  // Controls whose edge identifies them, each with the boxes drawn around it
-  // that could be its edge: its own, then up to WRAPPERS wrappers holding no other
-  // control and no taller than it by more than WRAP px a side.
   const ROLES = '[role=checkbox], [role=radio], [role=switch]';
   const CONTROL = `input:not([type=hidden]), select, textarea, button, a[href], ${ROLES}`;
   const controls = [];
-  // Each control's element and wrappers, box by box, for HIDE_JS.
   window.__boxEls = [];
   for (const el of document.querySelectorAll(`input, textarea, select, ${ROLES}`)) {
     if (!shown(el) || disabled(el)) continue;
@@ -466,11 +453,7 @@ MEASURE_JS = (
     window.__boxEls.push(els);
   }
 
-  // WCAG 2.5.8's user-agent exception (#188): a form control at "the user
-  // agent default size" (its Understanding page), the size a copy of it takes
-  // in a blank frame, where no author style reaches it or what it holds, and
-  // without the attributes that size it. Its computed `appearance` cannot
-  // tell: a select given a border keeps `auto`.
+  // #188
   const blank = document.createElement('iframe');
   blank.style.cssText = 'position: absolute !important; display: block !important; visibility: hidden !important; left: 0 !important; ' +
     `top: 0 !important; width: ${document.documentElement.clientWidth}px !important; height: 0 !important; border: 0 !important`;
@@ -490,7 +473,6 @@ MEASURE_JS = (
     return Math.abs(c.width - r.width) < PX_SLACK && Math.abs(c.height - r.height) < PX_SLACK;
   };
 
-  // Targets and WCAG 2.5.8's spacing exception.
   const targets = [];
   for (const el of pointerTargets(restingIn)) {
     const r = el.getBoundingClientRect();
@@ -506,7 +488,6 @@ MEASURE_JS = (
     if (near) targetFaults.push({ subject: label(t.el), detail: `is ${Math.round(t.r.width)}x${Math.round(t.r.height)} px, and a ${MIN_TARGET} px circle on it reaches ${label(near.el)}` });
   }
 
-  // Links in a block of text, told from it by colour alone below 3:1.
   const linkFaults = [];
   document.querySelectorAll('a[href]').forEach((a) => {
     if (!shown(a) || !/\S/.test(a.textContent) || !inText(a) || cued(a)) return;
@@ -553,7 +534,6 @@ UNDER_JS = (
   const sticksAt = (bar) => {
     const s = css(bar), r = bar.getBoundingClientRect();
     if (s.position === 'fixed') return r.top;
-    // Stuck at the foot at load: PX_SLACK's float rounding covers a box's edge too.
     if (s.bottom !== 'auto' && Math.abs(r.bottom - (innerHeight - parseFloat(s.bottom))) < PX_SLACK) return r.top;
     return s.top === 'auto' ? -Infinity : parseFloat(s.top);
   };
@@ -561,7 +541,6 @@ UNDER_JS = (
   const stuck = [...document.querySelectorAll('*')].filter((e) => BAR.test(css(e).position) && shown(e))
     .map((e) => { const b = box(e.getBoundingClientRect()); return { e, b, foot: sticksAt(e) + b[3] - b[1] }; })
     .filter(({ b }) => b[3] - b[1] < innerHeight);
-  // The lowest foot of any other bar stuck above `top` across r: the head of the window r can rise to.
   const headOf = (bar, r, top) =>
     Math.max(0, ...stuck.filter(({ e, b, foot }) => e !== bar && b[0] < r[2] && r[0] < b[2] && foot <= top + PX_SLACK).map(({ foot }) => foot));
   const clears = (bar, rects) => {
@@ -599,9 +578,7 @@ UNDER_JS = (
 
 CUE_JS = r"""
 const css = (el) => getComputedStyle(el);
-// The selectors of a list that are not CSS selectors.
 const badSelectors = (list) => list.filter((s) => { try { document.querySelector(s); return false; } catch (e) { return true; } });
-// Any CSS colour as sRGB [r, g, b, a], whatever space the page wrote it in.
 const ink = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
 const rgbaCache = new Map();
 const rgba = (c) => {
@@ -616,12 +593,10 @@ const rgba = (c) => {
   return rgbaCache.get(c);
 };
 const painted = (c) => rgba(c)[3] > 0;
-// The colour drawn behind an element: its nearest painted background, or the canvas's white.
 const backdrop = (el) => {
   for (let e = el; e; e = e.parentElement) if (painted(css(e).backgroundColor)) return rgba(css(e).backgroundColor);
   return [255, 255, 255, 1];
 };
-// A shadow shows where one of its layers has a painted colour and a length that is not zero.
 const shadowed = (s) => s !== 'none' && s.split(/,(?![^(]*\))/).some((layer) => {
   const c = (layer.match(/rgba?\([^)]*\)/) || ['transparent'])[0];
   return painted(c) && /[1-9]/.test(layer.replace(c, ''));
@@ -645,13 +620,11 @@ const cued = (a) => {
       bold(cs) !== bold(parent) || italic(cs) !== italic(parent);
   });
 };
-// WCAG 2.2's relative luminance and contrast ratio, as access-pixels.py's `luminance` and `contrast`.
 const lum = ([r, g, b]) => {
   const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 };
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-// The inputs whose parts each take a Tab stop while focus stays on the input.
 const DATED = /^(date|datetime-local|month|week|time)$/;
 const TARGET = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [onclick], ' +
   '[role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=menuitem], ' +
@@ -668,35 +641,25 @@ const ancestorsOf = (el) => { const out = []; for (let e = el.parentElement; e &
 const disabled = (el) => !!el.closest(':disabled, [aria-disabled="true"]');
 const box = (r) => [r.left, r.top, r.right, r.bottom];
 const meet = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
-// Under DRAWN px either way is a screen reader's clipped text, or nothing.
+// guess, #501
 const DRAWN = 2;
 const empty = (r) => r[2] - r[0] < DRAWN || r[3] - r[1] < DRAWN;
-// What an element's own box and its ancestors let it paint in; a fixed box
-// escapes every ancestor's clip and an absolute one those below its
-// positioned ancestor.
 const clips = (cs) => cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || cs.clipPath !== 'none' || cs.clip !== 'auto';
-// The box inside an element's border and padding, in the window.
 const contentBox = (el) => {
   const r = el.getBoundingClientRect(), cs = css(el), px = (k) => parseFloat(cs[k]);
   return [r.left + px('borderLeftWidth') + px('paddingLeft'), r.top + px('borderTopWidth') + px('paddingTop'),
     r.right - px('borderRightWidth') - px('paddingRight'), r.bottom - px('borderBottomWidth') - px('paddingBottom')];
 };
-// The focused element, inside any shadow roots.
 const focused = () => {
   let el = document.activeElement;
   while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
   return el;
 };
-// Runs each finite animation to its end. finish() throws on one with no
-// effect or played at rate 0 (Web Animations' InvalidStateError), which is
-// left as drawn.
 const finished = (animations) => {
   for (const a of animations) {
     try { if (a.effect.getComputedTiming().endTime !== Infinity) a.finish(); } catch (e) {}
   }
 };
-// A focus style that slides or fades in, as a skip link's does, is read
-// where it ends.
 const settled = async () => {
   finished(document.getAnimations());
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -705,8 +668,6 @@ const blockOf = (el) => {
   for (let e = el; e; e = e.parentElement) { const d = css(e).display; if (d !== 'inline' && d !== 'contents') return e; }
   return document.body;
 };
-// Whether an inline element sits in a line of text: its own block, not one
-// nested in it, holds text in no target.
 const inText = (el) => {
   if (css(el).display !== 'inline') return false;
   const block = blockOf(el);
@@ -716,19 +677,14 @@ const inText = (el) => {
   }
   return false;
 };
-// Under FINDABLE px either way draws nothing a pointer can find: a guess.
+// guess, #501
 const FINDABLE = 0.5;
-// The targets 2.5.8 measures, shown, enabled and drawn on the page, past those `skip` takes.
 const pointerTargets = (skip) => [...document.querySelectorAll(TARGET)].filter((el) => {
   if (!shown(el) || disabled(el) || skip(el)) return false;
   const r = el.getBoundingClientRect();
   return r.width >= FINDABLE && r.height >= FINDABLE && r.right > 0 && r.bottom > 0;
 });
-// Tab stops hidden at rest, a skip link's two ways, which no visitor sees
-// or taps there: a box under DRAWN px each way, clipped to nothing, or one
-// laid off the page that focus, without scrolling, brings onto it (#421).
-// One off the page that only a scroll reaches, in a scrolling strip or an
-// app shell's scrolling main, is a target like any other.
+// #421
 const restingStops = () => {
   const root = document.documentElement;
   const onPage = [-scrollX, -scrollY, root.scrollWidth - scrollX, root.scrollHeight - scrollY];
@@ -937,12 +893,7 @@ MOTION_JS = (
   const out = { long: [], ended: [], scripted: [], painted: [] };
   const motions = [];
   const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
-  // Motion running more than LONG_MS from load: a CSS or Web
-  // Animations animation on the document's clock, and a video playing that
-  // loops or runs that long and has no controls of its own. The animations
-  // are every one the collector kept from the first frame, so one that ended
-  // before this late read is still found, as ended, even where the page then
-  // cancelled it or hid its element (#368).
+  // #368
   for (const [a, rec] of f.seen) {
     const el = a.effect && a.effect.target;
     const running = a.playState === 'running';
@@ -953,8 +904,6 @@ MOTION_JS = (
     const motion = { subject: label(el, a.effect.pseudoElement || ''),
       what: `${name ? `"${name}" ` : ''}${span === Infinity ? 'loops forever' : `runs ${(span / 1000).toFixed(1)} s`}` };
     if (!running) { out.ended.push(motion); continue; }
-    // One that reaches its end while the controls are tried was stopped by
-    // none of them: `ended` tells it apart from one a control paused.
     motions.push({ stopped: () => !rec.ended && (a.playState !== 'running' || !document.getAnimations().includes(a) || !on(el)),
       ended: () => rec.ended });
     out.long.push(motion);
@@ -965,8 +914,6 @@ MOTION_JS = (
     out.long.push({ subject: label(v), what: v.loop ? 'plays on a loop' : 'plays a video longer than 5 s' });
   }
   window.__motions = motions;
-  // Motion the script cannot time: an element a script rewrites frame by
-  // frame, and a canvas, image or SVG, compared across two screenshots.
   const animated = document.getAnimations().map((a) => a.effect && a.effect.target).filter(Boolean);
   for (const [el, log] of f.rewrites) if (el.isConnected && on(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
   for (const el of document.querySelectorAll('canvas, img, svg')) {
@@ -974,8 +921,6 @@ MOTION_JS = (
     const r = el.getBoundingClientRect();
     out.painted.push({ subject: label(el), rect: [r.left + scrollX, r.top + scrollY, r.right + scrollX, r.bottom + scrollY].map(Math.round) });
   }
-  // The controls that might pause it: a button, switch or checkbox whose
-  // name says pause, stop, hide or play, or names the motion.
   const name = (el) => [el.getAttribute('aria-label'), el.textContent, el.title, el.value].filter(Boolean).join(' ');
   const PAUSE = /\b(pause|stop|hide|play|resume|freeze|motion|animations?)\b/i;
   window.__pauses = [...document.querySelectorAll('button, input[type=button], input[type=checkbox], [role=button], [role=switch], [role=checkbox], [aria-pressed]')]
@@ -1038,7 +983,8 @@ TIMERS_JS = r"""
     times.push(performance.now());
     changed.set(el, times);
   };
-  // A screenshot hides the caret by a style it writes and takes off again.
+  // Playwright's screenshot hides the caret with a caret-color style it adds, then removes:
+  // https://playwright.dev/python/docs/api/class-page#page-screenshot-option-caret
   const caret = (v) => (v || '').replace(/caret-color: transparent !important;\s*/g, '');
   new MutationObserver((records) => {
     for (const m of records) {

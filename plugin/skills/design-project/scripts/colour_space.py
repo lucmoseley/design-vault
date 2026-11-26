@@ -43,7 +43,7 @@ def l_star_of_luminance(y):
     return 116 * f_lab(y) - 16
 
 
-# https://bottosson.github.io/posts/oklab/
+# OKLab's two matrices, as Ottosson publishes them: https://bottosson.github.io/posts/oklab/
 def oklch(h):
     r, g, b = linear_rgb(h)
     long_ = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
@@ -59,7 +59,7 @@ def oklch(h):
     )
 
 
-# https://hajim.rochester.edu/ece/sites/gsharma/ciede2000/
+# The CIEDE2000 difference, as Sharma, Wu and Dalal give it: https://hajim.rochester.edu/ece/sites/gsharma/ciede2000/
 def de2000(lab1, lab2):
     l1, a1, b1 = lab1
     l2, a2, b2 = lab2

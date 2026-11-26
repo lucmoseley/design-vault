@@ -454,6 +454,28 @@ class Checkerboard(unittest.TestCase):
             self.assertEqual(out.returncode, code, out.stderr)
         self.assertIn("numpy is missing — python3 -m pip install -r", out.stderr)
 
+    def test_a_package_present_but_unimportable_exits_3_naming_it_501_paired_with_missing_numpy(
+        self,
+    ):
+        render = self.flat()
+        for package in ("PIL", "numpy"):
+            with self.subTest(package=package), tempfile.TemporaryDirectory() as shadow:
+                os.mkdir(os.path.join(shadow, package))
+                with open(os.path.join(shadow, package, "__init__.py"), "w") as fh:
+                    fh.write(f"raise ImportError('shadowed', name={package!r})\n")
+                done = subprocess.run(
+                    [sys.executable, SCRIPT, render, "--model", GROK]
+                    + ["--aspect", "16:9", "--transparent"],
+                    capture_output=True,
+                    text=True,
+                    env={**os.environ, "PYTHONPATH": shadow},
+                )
+                self.assertEqual(done.returncode, 3, done.stderr)
+                self.assertIn(
+                    f"check-render: {package} is missing — python3 -m pip install -r",
+                    done.stderr,
+                )
+
 
 class Data(unittest.TestCase):
     def test_every_image_model_on_the_roster_has_a_row_and_every_size_a_source(self):

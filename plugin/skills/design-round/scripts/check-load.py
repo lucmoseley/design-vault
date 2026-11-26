@@ -113,7 +113,7 @@ rule_table = siblings.load(HERE, "rule-table.py")
 
 # web.dev's "good" LCP, at the 75th percentile of page loads: https://web.dev/articles/lcp
 LIMIT_MS = 2500
-# guess, #170
+# guess, #501
 RUNS = 3
 # Lighthouse's mobileSlow4G, devtools-scaled, in the bytes per second CDP takes:
 # https://github.com/GoogleChrome/lighthouse/blob/main/core/config/constants.js
@@ -121,18 +121,18 @@ LATENCY_MS = 150 * 3.75
 DOWN_BYTES = 1.6 * 1024 * 0.9 * 1024 / 8
 UP_BYTES = 750 * 0.9 * 1024 / 8
 CPU_SLOWDOWN = 4
-# https://github.com/GoogleChrome/lighthouse/blob/main/core/config/constants.js
+# Lighthouse's mobile screen and user agent: https://github.com/GoogleChrome/lighthouse/blob/main/core/config/constants.js
 SCREEN = {"width": 412, "height": 823}
 SCALE = 1.75
 USER_AGENT = (
     "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36"
 )
-# guess, #170
+# guess, #501
 QUIET_MS = 5000
-# guess, #170
+# guess, #501
 TIMEOUT_MS = 60000
-# guess, #170
+# guess, #501
 POLL_MS = 250
 
 OBSERVE_JS = r"""
@@ -371,7 +371,7 @@ READ_JS = r"""
     }
   };
   for (const sheet of document.styleSheets) {
-    try { walk(sheet.cssRules, sheet.href || location.href); } catch (e) { }
+    try { walk(sheet.cssRules, sheet.href || location.href); } catch (e) { continue; }
   }
   const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "TITLE"]);
   const NUMBERS = 'td, th, output, [aria-live]:not([aria-live="off"]), [role="status"], [role="timer"], [role="log"], [role="marquee"]';

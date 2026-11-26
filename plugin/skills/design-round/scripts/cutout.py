@@ -16,7 +16,7 @@ package is missing.
 """
 
 import argparse
-import importlib.util
+import importlib
 import os
 import pathlib
 import sys
@@ -109,16 +109,15 @@ def main(argv):
         "--out", help="the cut's path, a .png; default <render stem>-cut.png"
     )
     args = parser.parse_args(argv)
-    missing = next(
-        (m for m in ("numpy", "PIL", "scipy") if importlib.util.find_spec(m) is None),
-        None,
-    )
-    if missing:
+    try:
+        for package in ("numpy", "PIL", "scipy"):
+            importlib.import_module(package)
+    except ImportError as err:
         print(
-            f"cutout: {missing} is missing — python3 -m pip install -r {REQUIREMENTS}",
+            f"cutout: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
             file=sys.stderr,
         )
-        return 3
+        sys.exit(3)
     import numpy as np
     from PIL import Image
 

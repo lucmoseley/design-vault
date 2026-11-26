@@ -223,12 +223,13 @@ LISTEN_JS = r"""
     heard.get(this).add(String(type));
     return add.call(this, type, ...rest);
   };
+  const read = (target, key) => {
+    try { return target[key]; } catch (e) { return null; }
+  };
   window.__vaultHeard = (target) => {
     const types = new Set(heard.get(target) || []);
     for (const key in target) {
-      if (key.startsWith('on')) {
-        try { if (typeof target[key] === 'function') types.add(key.slice(2)); } catch (e) { }
-      }
+      if (key.startsWith('on') && typeof read(target, key) === 'function') types.add(key.slice(2));
     }
     return [...types].sort().join(' ');
   };

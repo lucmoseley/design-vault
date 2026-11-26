@@ -28,7 +28,7 @@ STILL_MARGIN = 2
 
 
 def luminance(rgb):
-    # https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
+    # WCAG weighs linear sRGB as 0.2126 R + 0.7152 G + 0.0722 B: https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
     c = np.asarray(rgb, dtype=float) / 255
     lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
     return lin @ np.array([0.2126, 0.7152, 0.0722])

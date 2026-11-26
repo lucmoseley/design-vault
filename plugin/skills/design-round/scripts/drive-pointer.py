@@ -36,9 +36,7 @@ POINT_JS = (
     return { r, x: r.left + fx * (r.width - 1), y: r.top + fy * (r.height - 1) };
   };
   const seen = ({ x, y }) => x >= 0 && y >= 0 && x < innerWidth && y < innerHeight;
-  // The same box over `frames` animation frames (#458), the first read in a frame too, with no timed animation
-  // of the target or an ancestor waiting to start: one holds its first keyframe until it does (#532). A
-  // scroll-driven one on a timeline that cannot scroll waits for ever, and is left out.
+  // #458, #532
   const frame = () => new Promise((done) => requestAnimationFrame(() => done()));
   const box = () => { const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].join(); };
   const starting = () => document.getAnimations().some((a) =>
@@ -60,7 +58,8 @@ POINT_JS = (
     at = place();
   }
   if (!seen(at)) return { error: `${describe(el)} is off the screen at (${Math.round(at.x)}, ${Math.round(at.y)})` };
-  // Asked of the target's own root, so a target in a shadow tree is not taken to be covered by its host.
+  // Document.elementFromPoint retargets a hit inside a shadow tree to its host:
+  // https://drafts.csswg.org/cssom-view/#dom-document-elementfrompoint
   const hit = el.getRootNode().elementFromPoint(at.x, at.y);
   return { x: at.x, y: at.y, still: still(), cover: hit && hit !== el && !el.contains(hit) ? describe(hit) : null };
 }"""
@@ -84,7 +83,6 @@ WATCH_JS = r"""(() => {
   const [st, si, clear] = [setTimeout, setInterval, clearTimeout];
   const [raf, caf] = [requestAnimationFrame, cancelAnimationFrame];
   const at = (ms) => performance.now() + (Number(ms) || 0);
-  // A string is run as the browser runs one, in the global scope.
   const callable = (fn) => (typeof fn === "function" ? fn : () => (0, eval)(String(fn)));
   window.setTimeout = function (fn, ms, ...rest) {
     const run = callable(fn);
@@ -98,7 +96,8 @@ WATCH_JS = r"""(() => {
     due.set(id, at(ms));
     return id;
   };
-  // The two clears are one in browsers, each clearing either kind.
+  // clearTimeout and clearInterval clear the same map of timers, either kind:
+  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-cleartimeout
   window.clearTimeout = window.clearInterval = (id) => { due.delete(id); clear.call(window, id); };
   window.requestAnimationFrame = (fn) => {
     const id = raf.call(window, (t) => { frames.delete(id); fn(t); });
@@ -115,7 +114,6 @@ WATCH_JS = r"""(() => {
     };
     window.cancelIdleCallback = (id) => { idles.delete(id); cic.call(window, id); };
   }
-  // Held from the call until the promise settles; a scheduler task's delay is part of its wait.
   const held = (p) => {
     loads++;
     const done = () => { loads--; };
@@ -126,7 +124,6 @@ WATCH_JS = r"""(() => {
     const post = scheduler.postTask.bind(scheduler);
     scheduler.postTask = (...args) => held(post(...args));
   }
-  // A response is held until its body is read, as what the page draws from it comes after.
   const bodied = new WeakSet();
   for (const read of ["arrayBuffer", "blob", "bytes", "formData", "json", "text"]) {
     const own = Response.prototype[read];
@@ -172,7 +169,8 @@ SETTLE_JS = r"""async ([quiet, cap, least]) => {
   const watch = new MutationObserver(touch);
   watch.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
   addEventListener("scroll", touch, true);
-  // A scroll-driven animation's end time is a percentage, not a number, so the finite test leaves it out.
+  // A scroll-driven animation's times are percentages, not numbers:
+  // https://drafts.csswg.org/scroll-animations-1/
   const moving = () => document.getAnimations().some((a) => a.playState === "running" &&
     Number.isFinite(a.effect?.getComputedTiming().endTime));
   try {

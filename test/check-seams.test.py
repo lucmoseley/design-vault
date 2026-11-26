@@ -226,7 +226,7 @@ class Edges(unittest.TestCase):
         self.assertIn("Node is not on PATH", proc.stderr)
         self.assertIn("Install Node.", proc.stderr)
 
-    def test_256_a_missing_package_exits_3_naming_the_pinned_requirements_on_the_closed_fixture(
+    def test_a_missing_package_exits_3_naming_the_pinned_requirements_256_paired_with_a_closed_contact_passes_at_every_scale(
         self,
     ):
         for package in ("numpy", "PIL"):

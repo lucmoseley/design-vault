@@ -167,6 +167,26 @@ class Cli(unittest.TestCase):
         self.assertEqual(done.returncode, 2)
         self.assertIn("cannot write the cut", done.stderr)
 
+    def test_a_package_present_but_unimportable_exits_3_naming_it_501_paired_with_it_writes_the_cut(
+        self,
+    ):
+        for package in ("numpy", "PIL", "scipy"):
+            with self.subTest(package=package), tempfile.TemporaryDirectory() as shadow:
+                os.mkdir(os.path.join(shadow, package))
+                with open(os.path.join(shadow, package, "__init__.py"), "w") as fh:
+                    fh.write(f"raise ImportError('shadowed', name={package!r})\n")
+                done = subprocess.run(
+                    [sys.executable, SCRIPT, os.path.join(shadow, "render.png")],
+                    capture_output=True,
+                    text=True,
+                    env={**os.environ, "PYTHONPATH": shadow},
+                )
+                self.assertEqual(done.returncode, 3, done.stderr)
+                self.assertIn(
+                    f"cutout: {package} is missing — python3 -m pip install -r",
+                    done.stderr,
+                )
+
     def test_a_cut_not_saved_as_png_is_refused(self):
         done = self.run_script("any.png", "--out", "cut.webp")
         self.assertEqual(done.returncode, 2)

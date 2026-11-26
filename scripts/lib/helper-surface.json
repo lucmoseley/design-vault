@@ -60,7 +60,6 @@
 		"test/all.sh": {},
 		"test/fixtures/face/make-fonts.py": {},
 		"test/fixtures/load/make-net-fonts.py": {},
-		"test/late-input.py": {},
 		"test/load/check-overlay-shot.py": {},
 		"test/load/renderer-kill.py": {},
 		"test/load/sibling-shots.py": {},

@@ -633,16 +633,22 @@ class Pages(unittest.TestCase):
             with self.subTest(record=rid):
                 self.assertEqual(got[rid]["answer"], "pass", out)
 
-    def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own_478(self):
+    def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own_478_paired_with_the_clean_page_names_nothing(
+        self,
+    ):
         _, got, out = self.fault
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
-    def test_late_input_is_not_read_into_the_clean_pages_fling_478_510(self):
+    def test_late_input_is_not_read_into_the_clean_pages_fling_478_510_paired_with_the_fault_page_names_every_plant(
+        self,
+    ):
         code, got, out = self.runs["late"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
 
-    def test_a_settle_from_rest_on_the_projected_snap_passes_the_script_428(self):
+    def test_a_settle_from_rest_on_the_projected_snap_passes_the_script_428_paired_with_the_fault_page_names_every_plant(
+        self,
+    ):
         code, got, out = self.runs["rest"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)

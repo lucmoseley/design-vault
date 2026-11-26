@@ -1,16 +1,10 @@
-"""check-flow.py, with each pointer event reaching the page late: a press
-LATE_PRESS_MS, any other LATE_MOVE_MS; and with the page's main thread held
-BUSY_RELEASE_MS at each release, before the page's own handler runs:
-python3 test/late-input.py <check-flow args>
-"""
-
 import os
 import sys
 import time
 
 from playwright.sync_api import CDPSession, Mouse
 
-# measured: reproduced the fault line, #478
+# measured 400 ms reproduced the fault line, #478
 LATE_PRESS_MS = 400
 # guess, #478
 LATE_MOVE_MS = 60

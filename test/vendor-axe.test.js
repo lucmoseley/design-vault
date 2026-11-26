@@ -9,7 +9,7 @@ const SOURCE = path.join(__dirname, "..", "plugin/skills/design-round/vendor/axe
 const AXE = path.join(__dirname, "..", "plugin/skills/design-round/vendor/axe-core/axe.min.js");
 const LICENSE = path.join(__dirname, "..", "plugin/skills/design-round/vendor/axe-core/LICENSE");
 const read = fs.readFileSync;
-// guess, #307
+// guess, #501
 const HEADER_BYTES = 200;
 
 test("#307: the vendored axe.min.js hashes to Deque's published sha256 for its version", () => {

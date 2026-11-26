@@ -40,7 +40,7 @@ stdout; the rest print on stderr.
 
 import argparse
 import base64
-import importlib.util
+import importlib
 import math
 import os
 import pathlib
@@ -61,8 +61,7 @@ colour_space = siblings.load(
 
 CHANNEL_STEP = 1  # measured 1.22 ΔE00 per step at worst, #330
 SAME_COLOUR_DE00 = 2  # guess, #330
-# WCAG 2.2 SC 1.4.11's level for graphical objects: https://www.w3.org/TR/WCAG22/#non-text-contrast
-GROUND_RATIO = 3
+GROUND_RATIO = 3  # guess, #501
 # Pillow's LANCZOS has a support of 3 source pixels:
 # https://github.com/python-pillow/Pillow/blob/main/src/libImaging/Resample.c
 LANCZOS_SUPPORT = 3
@@ -548,12 +547,14 @@ def parse(argv):
 
 def main(argv):
     args = parse(argv)
-    if importlib.util.find_spec("PIL") is None:
+    try:
+        importlib.import_module("PIL")
+    except ImportError as err:
         print(
-            f"check-logo: PIL is missing — python3 -m pip install -r {REQUIREMENTS}",
+            f"check-logo: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
             file=sys.stderr,
         )
-        return 3
+        sys.exit(3)
     try:
         kind, logo = read_logo(args.logo)
         if kind == "raster":

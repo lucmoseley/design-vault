@@ -6,7 +6,7 @@ import time
 QUIET_MS = 500
 # guess, #501
 POLL_MS = 50
-# guess, #501
+# Playwright actions default to a 30000 ms timeout: https://playwright.dev/python/docs/api/class-page
 TIMEOUT_MS = 30000
 # guess, #501
 FOCUS_TEXT_CHARS = 200

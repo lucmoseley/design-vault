@@ -13,7 +13,7 @@ const STILL_ARCMIN_S = 1; // guess, #501
 const VIEW_CM = 60; // guess, #501
 const CSS_PX_CM = 2.54 / 96;
 const SPAN_SPEED_RATIO = 1.15; // measured: no step at 1.15 on a grid of 1,020 falls and settles, steps at 1.5, #196
-// measured in docs/research/jolt-onset.md, #297
+// measured: the model's thresholds in docs/research/jolt-onset.md, 0.80 of top speed at 200 ms to 0.17-0.35 at 2000 ms, #297
 const JOLT_BAND = [
   [200, 0.8, 0.8],
   [250, 0.54, 0.67],
@@ -22,7 +22,7 @@ const JOLT_BAND = [
   [1000, 0.19, 0.39],
   [2000, 0.17, 0.35],
 ];
-const JUMP_DEG = 0.26; // measured in docs/research/jolt-onset.md, #297
+const JUMP_DEG = 0.26; // measured: a 0.26 deg jump drew attention in Sunny and von Muhlenen 2014 (docs/research/jolt-onset.md F10), #297
 
 function stillPx(viewCm) {
   return STILL_ARCMIN_S / ((60 * 180 * Math.atan(CSS_PX_CM / viewCm)) / Math.PI);

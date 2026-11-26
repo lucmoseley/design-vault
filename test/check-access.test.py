@@ -601,7 +601,9 @@ def fixture_url(fixture):
 
 
 class LateMotionRead(Browsed):
-    def test_a_long_animation_that_ended_before_the_read_cannot_be_measured_368(self):
+    def test_a_long_animation_that_ended_before_the_read_cannot_be_measured_368_paired_with_a_looping_and_a_long_animation_whose_pause_button_does_not_stop_them_fail(
+        self,
+    ):
         faults, unmeasured = self.pause_answer("ended.html", 10_000)
         self.assertEqual(faults, [])
         ended = "runs 6.0 s from the page's load and ended before a control could be tried on it"
