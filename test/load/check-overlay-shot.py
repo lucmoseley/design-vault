@@ -36,6 +36,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 overlay = siblings.load(SCRIPTS, "check-overlay.py")
+# #606
 spec = importlib.util.spec_from_file_location(
     "overlay_test", os.path.join(HERE, "..", "check-overlay.test.py")
 )

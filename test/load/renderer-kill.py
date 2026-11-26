@@ -21,6 +21,7 @@ from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+# #606
 def load(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)

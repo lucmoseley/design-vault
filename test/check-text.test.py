@@ -18,7 +18,6 @@ under the chromium tag (test/all.sh).
 """
 
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -35,9 +34,11 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-text.py"
 )
-spec = importlib.util.spec_from_file_location("check_text", SCRIPT)
-text = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(text)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+text = siblings.load(SCRIPTS, "check-text.py")
 checks = text.checks
 TABLE_FILE = text.TABLE
 

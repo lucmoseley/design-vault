@@ -21,6 +21,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 
+# #606
 def load(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)

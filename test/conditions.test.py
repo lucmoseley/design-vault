@@ -8,7 +8,6 @@ without it, so a condition that does nothing fails here.
 """
 
 import contextlib
-import importlib.util
 import os
 import pathlib
 import sys
@@ -24,25 +23,18 @@ URL = pathlib.Path(FIXTURES, "conditions.html").resolve().as_uri()
 VIEWPORT = {"width": 400, "height": 300}
 
 
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-conditions = load(
-    "conditions",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "conditions.py"
-    ),
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
 )
-flow = load(
-    "check_flow",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-    ),
+CONDITIONS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "conditions.py"
 )
+SCRIPTS = os.path.dirname(FLOW)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+conditions = siblings.load(SCRIPTS, os.path.basename(CONDITIONS))
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 STACK = contextlib.ExitStack()
 BROWSER = None
 
