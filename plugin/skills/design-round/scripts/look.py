@@ -40,29 +40,22 @@ never return.
 """
 
 import argparse
-import importlib.util
 import json
 import os
 import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def sibling(name):
-    spec = importlib.util.spec_from_file_location(
-        name.replace("-", "_")[:-3], os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-layout = sibling("check-layout.py")
-frames = sibling("check-frames.py")
+layout = siblings.load(HERE, "check-layout.py")
+frames = siblings.load(HERE, "check-frames.py")
 flow = frames.flow
 try:
-    maths = sibling("access-pixels.py")
+    maths = siblings.load(HERE, "access-pixels.py")
 except ImportError as err:
     sys.exit(flow.missing(err))
 
@@ -97,12 +90,13 @@ MEASURE_JS = r"""
 
 
 def numbers(p, flag, value, count):
+    wants = f"{flag} wants {count} numbers joined by commas — got {value!r}"
     try:
         out = [float(n) for n in value.split(",")]
     except ValueError:
-        out = []
+        p.error(wants)
     if len(out) != count:
-        p.error(f"{flag} wants {count} numbers joined by commas — got {value!r}")
+        p.error(wants)
     return out
 
 
@@ -224,7 +218,7 @@ def pixels(args):
     try:
         from PIL import Image
     except ImportError as err:
-        return flow.missing(err)
+        sys.exit(flow.missing(err))
     import numpy as np  # loaded, guarded, with access-pixels.py
 
     try:

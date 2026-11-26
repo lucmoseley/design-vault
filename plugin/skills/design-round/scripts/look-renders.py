@@ -53,7 +53,6 @@ stderr.
 
 import argparse
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -62,19 +61,14 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
-def sibling(name):
-    spec = importlib.util.spec_from_file_location(
-        name.replace("-", "_")[:-3], os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-frames = sibling("check-frames.py")
-look = sibling("look.py")
+frames = siblings.load(HERE, "check-frames.py")
+look = siblings.load(HERE, "look.py")
 layout = look.layout
 flow = frames.flow
 try:
@@ -511,11 +505,17 @@ MODES = {
 def clear(out):
     """Deletes the renders an earlier run's renders.json in `out` names, so a
     sheet that run made and this one does not is never handed on."""
+    path = os.path.join(out, "renders.json")
     try:
-        with open(os.path.join(out, "renders.json"), encoding="utf8") as fh:
+        with open(path, encoding="utf8") as fh:
             old = json.load(fh)
-    except (OSError, ValueError):
+    except FileNotFoundError as exc:
+        expected(exc, "no earlier run to clear")
         return
+    except ValueError as exc:
+        sys.exit(
+            f"look-renders.py: {path} does not parse ({exc}); delete it and the renders beside it"
+        )
     named = old.get("sheets", []) + [
         r["file"] for r in old.get("shots", []) + old.get("bends", []) if "file" in r
     ]

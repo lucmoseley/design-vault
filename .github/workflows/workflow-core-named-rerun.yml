@@ -1,9 +1,9 @@
 # CORE-OWNED. Written by workflow-core's upgrade, where the queue lander may test
 # on Actions by run length ("landingTester" absent or "auto" in
 # .claude/workflow-core.json), and REWRITTEN on every bump. Its runner and ceiling
-# follow the "ci" key.
+# follow the "ci" key, its setup "ciSetup".
 # Change the config, not this file. What it runs: the plugin's
-# scripts/lib/lander-workflows.js. Why: lucmoseley/workflow-core-tracker#5511.
+# scripts/lib/lander-workflows.js.
 name: workflow-core named rerun
 
 run-name: named-rerun ${{ inputs.sha }} ${{ inputs.nonce }}
@@ -97,6 +97,11 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; fi
           if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Repo setup
+        run: |
+          python3 -m pip install -r plugin/requirements.txt
+          python3 -m playwright install --with-deps chromium
 
       # Through the environment, never `${{ }}` in `run:`:
       # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable

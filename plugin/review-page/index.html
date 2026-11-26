@@ -27,8 +27,6 @@ p { margin: 0; max-width: 68ch; }
 .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--paper); border-bottom: 1px solid var(--rule);
   padding-block: 8px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--dim); }
 .bar b { color: var(--ink); font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 500; }
-.figure { margin: 0; justify-self: start; max-width: 100%; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
-.figure img { max-width: 100%; height: auto; display: block; }
 .problems { border: 2px solid var(--pencil); padding: 12px 16px; display: grid; gap: 6px; }
 .problems ul { margin: 0; padding-left: 20px; }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
@@ -44,7 +42,7 @@ p { margin: 0; max-width: 68ch; }
 .head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .id { font-family: var(--mono); font-size: 12px; color: var(--dim); }
 .name { font-weight: 600; font-size: 16px; }
-.line { font-size: 14px; color: var(--dim); }
+.line { font-size: 14px; color: var(--dim); white-space: pre-line; }
 .tag { justify-self: start; font: 500 12px var(--mono); color: var(--pencil); border: 1px solid currentColor; border-radius: 3px; padding: 1px 6px; }
 .marks { display: flex; flex-wrap: wrap; gap: 6px; }
 button { font: 500 13px var(--body); padding: 6px 12px; border-radius: 3px; border: 1px solid var(--rule); background: var(--frame); color: var(--ink); cursor: pointer; }
@@ -68,7 +66,6 @@ textarea { width: 100%; box-sizing: border-box; min-height: 56px; resize: vertic
   <header style="display:grid;gap:10px">
     <h1 id="title">Loading the review…</h1>
     <p class="intro" id="intro"></p>
-    <figure class="figure" id="figure" hidden></figure>
   </header>
   <div class="bar" role="status"><span id="marked"><b id="done">0</b> of <b id="total">0</b> marked</span><span id="leader-tally" hidden></span><span id="conn">Connecting…</span></div>
   <div class="problems" id="problems" hidden><h2>This review page cannot show its items</h2><ul id="problem-list"></ul></div>

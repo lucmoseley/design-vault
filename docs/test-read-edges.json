@@ -129,10 +129,11 @@
 		"plugin/.claude-plugin/plugin.json": [
 			"test/plugin-manifest.test.js"
 		],
+		"plugin/review-page/index.html": [
+			"test/review-page.test.js"
+		],
 		"plugin/review-page/review.js": [
-			"test/ledger-check.test.js",
-			"test/no-git-env.test.js",
-			"test/select-suites.test.js"
+			"test/review-page.test.js"
 		],
 		"plugin/skills/design-critique/SKILL.md": [
 			"test/gate-wording.test.js"
@@ -245,6 +246,9 @@
 			"test/client-originals.test.js",
 			"test/select-suites.test.js"
 		],
+		"plugin/skills/design-project/scripts/colour_space.py": [
+			"test/select-suites.test.js"
+		],
 		"plugin/skills/design-round/SKILL.md": [
 			"test/gate-wording.test.js"
 		],
@@ -287,6 +291,9 @@
 			"test/gate-select.test.js",
 			"test/gate-tally.test.js",
 			"test/gate.test.js"
+		],
+		"plugin/skills/design-round/scripts/higgsfield-api.js": [
+			"test/higgsfield.test.js"
 		],
 		"plugin/skills/design-round/scripts/higgsfield-client.js": [
 			"test/higgsfield.test.js"
@@ -991,6 +998,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/drivers/overlay-at-load.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/drivers/overlay-touch.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -2467,6 +2478,10 @@
 		"test/server.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/siblings.test.py": [
+			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/validate.test.js": [

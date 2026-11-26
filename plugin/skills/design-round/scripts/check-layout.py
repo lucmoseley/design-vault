@@ -130,7 +130,6 @@ would never return. Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 import argparse
 import collections
 import datetime
-import importlib.util
 import json
 import os
 import pathlib
@@ -138,23 +137,15 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_flow", os.path.join(HERE, "check-flow.py")
-)
-flow = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(flow)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+flow = siblings.load(HERE, "check-flow.py")
 
 
-def _load(name, file):
-    """A sibling script loaded by path."""
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _load("layout_records", "layout-records.py")
-rule_table = _load("rule_table", "rule-table.py")
+records = siblings.load(HERE, "layout-records.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 
 # 320 is WCAG 1.4.10's reflow width, a 1280 px desktop at 400% zoom. 2560 is
@@ -995,7 +986,7 @@ class Records:
         self.inset = records.with_label(records.INSET_JS, flow.LABEL_JS)
         self.sheet = records.with_label(records.SHEET_JS, flow.LABEL_JS)
         self.measure = (
-            _load("check_measure", "check-measure.py")
+            siblings.load(HERE, "check-measure.py")
             if "line-length" in self.checks
             else None
         )
@@ -1153,7 +1144,7 @@ def records_after(browser, at, rec, page_as):
             rec.add(w, faults)
         off.close()
     if "popover-sheet" in checks:
-        overlay = _load("drive_overlay", "drive-overlay.py")
+        overlay = siblings.load(HERE, "drive-overlay.py")
         under = checks["popover-sheet"].value["under"]
         for w in narrow(under, "popover-sheet"):
             page = page_as(device(w))
@@ -1554,7 +1545,7 @@ def parse(argv):
         at.brief[key] = value
     at.parts = {}
     if at.parts_file:
-        probe = _load("probe", "probe.py")
+        probe = siblings.load(HERE, "probe.py")
         try:
             with open(at.parts_file, encoding="utf8") as fh:
                 at.parts = probe.declared_parts(fh.read())[0]
@@ -1577,14 +1568,13 @@ def parse(argv):
             p.error(f"{at.table} has no phone-width line, which --records needs")
     if at.step < 1:
         p.error("--step wants 1 or more")
+    wants = f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
     try:
         at.heights = tuple(int(n) for n in at.heights.split(","))
     except ValueError:
-        at.heights = ()
+        p.error(wants)
     if len(at.heights) != 3 or min(at.heights) < 1:
-        p.error(
-            f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
-        )
+        p.error(wants)
     m = re.fullmatch(r"(\d+)-(\d+)", at.widths)
     at.span = (int(m[1]), int(m[2])) if m else ()
     if not at.span or not LOW <= at.span[0] <= at.span[1] <= HIGH:

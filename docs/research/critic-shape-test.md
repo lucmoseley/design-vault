@@ -83,8 +83,8 @@ The type critic's additions are concrete type faults: a page that breaks its own
 ## Sources
 
 - #212 Q1 (A) and Q8 (A): the test and its decision rule.
-- `docs/research/critic-shape.md`: why the published evidence could not decide.
-- `docs/research/look-list-length.md` (#225): the sibling test on the gate critics.
+- [critic-shape.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/critic-shape.md) (#212): why the published evidence could not decide.
+- [look-list-length.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/look-list-length.md) (#225): the sibling test on the gate critics.
 - `docs/research/past-design-rejections.md` Part B: the founder's verdicts B1 to B10.
 - The kit (fixtures, plant key, prompts, runner, scorers, every critic's reply and every score) is in the gitignored `.claude/tmp/224/`, which the scratch sweep clears.
 

@@ -42,9 +42,12 @@ CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
-spec = importlib.util.spec_from_file_location("check_flow", SCRIPT)
-flow = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(flow)
+REQUIREMENTS = os.path.join(HERE, "..", "plugin", "requirements.txt")
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+flow = siblings.load(SCRIPTS, "check-flow.py")
 
 STEP = 1000 / flow.FPS
 
@@ -95,6 +98,46 @@ def jolts_at(speeds, dropped=()):
 
 # Speeds px per frame of a move easing in and out to 3% of its top speed.
 EASED = [1, 3, 6, 10, 10, 6, 3, 1, 0.3]
+
+
+def run_records_layout(subject):
+    """The check-layout module `subject.run_records` loads, stopped before any browser starts."""
+    loaded = []
+    real = siblings.load
+
+    def spy(here, file):
+        module = real(here, file)
+        if file == "check-layout.py":
+            loaded.append(module)
+        return module
+
+    class StopError(Exception):
+        pass
+
+    with (
+        mock.patch.object(siblings, "load", spy),
+        mock.patch.object(subject, "chromium", side_effect=StopError),
+        contextlib.suppress(StopError),
+    ):
+        subject.run_records(types.SimpleNamespace(lines=[]))
+    (layout,) = loaded
+    return layout
+
+
+class OneCopy(unittest.TestCase):
+    def test_run_records_check_layout_shares_this_copy_paired_with_a_private_load(
+        self,
+    ):  # #562
+        self.assertIs(run_records_layout(flow).flow, flow)
+
+    def test_a_private_load_s_run_records_reaches_a_second_copy(self):  # #562
+        spec = importlib.util.spec_from_file_location("private_check_flow", SCRIPT)
+        private = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(private)
+        self.assertIsNot(run_records_layout(private).flow, private)
+
+    def test_the_probe_parse_loads_shares_this_copy(self):  # #562
+        self.assertIs(siblings.load(SCRIPTS, "probe.py").flow, flow)
 
 
 class Pauses(unittest.TestCase):
@@ -194,11 +237,38 @@ class Jolts(unittest.TestCase):
     def test_a_move_starting_mid_frame_has_a_whole_first_frame(self):
         # A loaded machine starts one 1.5 ms before a frame, where a part
         # frame would carry its box 3 px and hide its jump (#326).
-        times = flow.sample_times(800, [48.5, 448.5], 60, [48.5])
+        times = flow.sample_times(800, [48.5, 448.5], 60, [(48.5, 48.5)])
         self.assertEqual(times[times.index(48.5) + 1], 48.5 + STEP)
         move = (48.5, 448.5, lambda p: 1 - (1 - p) ** 3)
         r = flow.analyse(sample(move, until=800, times=times))
         self.assertEqual([round(j["px"]) for j in r["jumps"]], [36])
+
+    def test_a_delay_ending_mid_frame_is_drawn_in_its_starts_phase(self):
+        # #411
+        delay = 25
+        for start in (k / 2 for k in range(34)):
+            with self.subTest(start=start):
+                moves_at = start + delay
+                times = flow.sample_times(
+                    800, [start, moves_at, moves_at + 450], 60, [(start, moves_at)]
+                )
+                drawn = times[times.index(moves_at) + 1]
+                self.assertAlmostEqual(drawn, start + 2 * STEP)
+                r = flow.analyse(
+                    sample((moves_at, moves_at + 450, linear), until=800, times=times)
+                )
+                self.assertEqual(r["jumps"], [])
+
+    def test_a_delayed_move_off_the_sampled_frames_still_jumps(self):
+        start, moves_at = 8.4, 33.4
+        times = flow.sample_times(800, [start, moves_at], 60, [(start, moves_at)])
+        move = (moves_at, moves_at + 400, lambda p: 1 - (1 - p) ** 3)
+        r = flow.analyse(sample(move, until=800, times=times))
+        self.assertEqual([round(j["px"]) for j in r["jumps"]], [18])
+
+    def test_a_delay_ending_within_1_ms_of_its_frame_has_a_whole_first_frame(self):
+        times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
+        self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
 
     def test_no_two_sample_times_fall_within_1_ms(self):
         times = flow.sample_times(100, [16.9, 50, 99.5], 60)
@@ -1456,6 +1526,18 @@ class Refused(unittest.TestCase):
         self.refuses("still.html", "no Web Animations API animation")
 
 
+class GoneProcess(unittest.TestCase):
+    """A process that exits between being listed and being read has no
+    command line, children or driver (#432, #464)."""
+
+    def test_an_exited_process_reads_as_empty(self):
+        gone = subprocess.Popen(["true"])
+        gone.wait()
+        self.assertEqual(flow.process_args(gone.pid), [])
+        self.assertEqual(flow.descendants(gone.pid), [])
+        self.assertIsNone(flow.driver_pid(gone.pid))
+
+
 class Arguments(unittest.TestCase):
     def test_a_viewport_that_is_not_w_by_h_is_a_usage_error(self):
         proc, data, _ = run("still.html", "--viewport", "1280")
@@ -1484,8 +1566,11 @@ class RunBrowser(unittest.TestCase):
         self.assertEqual(self.exits(lambda: 7, "file:///p.html"), ((7, None), "", ""))
 
     def test_the_hint_names_the_plugins_pinned_requirements(self):
+        self.assertEqual(
+            os.path.realpath(flow.REQUIREMENTS), os.path.realpath(REQUIREMENTS)
+        )
         self.assertIn(f"-r {flow.REQUIREMENTS}\n", flow.INSTALL_HINT)
-        with open(flow.REQUIREMENTS, encoding="utf-8") as f:
+        with open(REQUIREMENTS, encoding="utf-8") as f:
             pins = [
                 line.split("==")
                 for line in f

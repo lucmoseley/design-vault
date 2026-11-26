@@ -9,16 +9,16 @@ returns a Found.
 """
 
 import collections
-import importlib.util
 import os
+import sys
 import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "rule_table", os.path.join(HERE, "rule-table.py")
-)
-rule_table = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(rule_table)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+rule_table = siblings.load(HERE, "rule-table.py")
 
 PAGE = "page"
 RTL = "rtl"

@@ -92,7 +92,6 @@ import contextlib
 import datetime
 import functools
 import http.server
-import importlib.util
 import json
 import os
 import re
@@ -102,19 +101,16 @@ import threading
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-fontfile = _load("font_file", os.path.join(HERE, "font-file.py"))
-probe = _load("probe", os.path.join(HERE, "probe.py"))
-rule_table = _load("rule_table", os.path.join(HERE, "rule-table.py"))
+flow = siblings.load(HERE, "check-flow.py")
+fontfile = siblings.load(HERE, "font-file.py")
+probe = siblings.load(HERE, "probe.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 # web.dev's "good" LCP, at the 75th percentile of page loads.
 LIMIT_MS = 2500
@@ -576,6 +572,7 @@ def read_files(browser, url, *, declared, timeout):
                 except PlaywrightError as exc:
                     # A body the browser no longer holds leaves the lines that
                     # read it not judged, never passed (#313).
+                    expected(exc, "said as not judged")
                     unread.append(
                         (r.url, r.request.resource_type, flow.first_line(exc))
                     )
@@ -595,6 +592,7 @@ def read_files(browser, url, *, declared, timeout):
                 except fontfile.FontError as exc:
                     # A file no reader here opens is reported by name, and the
                     # lines on it are not judged (#313).
+                    expected(exc, "said as not judged")
                     fonts[src] = str(exc)
         faces = sorted(
             {

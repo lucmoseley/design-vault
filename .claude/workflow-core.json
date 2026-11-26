@@ -4,14 +4,20 @@
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
 	"modules": [],
-	"walkedTo": "v3.2.1",
+	"walkedTo": "v3.2.2",
 	"refillPanel": true,
+	"admissionGate": true,
 	"commands": {
 		"test": "bash test/all.sh",
 		"testCanary": "test/verdict-canary.test.js"
 	},
 	"fullTestShards": 4,
-	"landingTester": "local",
+	"ciSetup": [
+		"python3 -m pip install -r plugin/requirements.txt",
+		"python3 -m playwright install --with-deps chromium"
+	],
+	"sessionMeanMb": 698,
+	"sessionSigmaMb": 683,
 	"corpus": [
 		"lucmoseley/design-vault-tracker",
 		"lucmoseley/workflow-core-tracker",
@@ -27,9 +33,10 @@
 			"description": "The design round's Higgsfield client, which spends real money on the founder's pay-per-request account and holds its API key.",
 			"globs": [
 				"plugin/skills/design-round/scripts/higgsfield.js",
-				"plugin/skills/design-round/scripts/higgsfield-client.js"
+				"plugin/skills/design-round/scripts/higgsfield-client.js",
+				"plugin/skills/design-round/scripts/higgsfield-api.js"
 			],
-			"focus": "the round ceiling and max_usd bind before any job is submitted; a charged job is never lost; the API key is never printed, logged or written to the ledger",
+			"focus": "the round ceiling and max_usd bind before any job is submitted; a charged job is never lost; the API key is never printed, logged or written to the ledger, and is sent only to api.higgsfield.ai",
 			"examples": [
 				"#62: a finished video was charged, then lost, because the script never read video.url"
 			],
@@ -40,32 +47,7 @@
 		{
 			"tag": "v1.3.16",
 			"type": "act",
-			"text": "Where module-level state has more than one writer and one is named for something else, move that write into a function named for it, or return the value instead (base §G9, workflow-core#1821). List the candidates — a module-scope `let`, `var`, Map or Set, and a `process.env` write — then read each one's writers: `git grep -nE '^(export )?(let|var) |^(export )?const \\w+(: [^=]+)? = new (Map|Set)\\b|process\\.env(\\.\\w+|\\[[^]]+\\]) *=[^=]|delete process\\.env' -- '*.js' '*.cjs' '*.mjs' '*.ts' ':!*.test.*'`. A module-scope object or array is missed. What §G9's \"Outside the rule\" names, test support among it, is no breach."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Give each component, layout and static data table a §N2 header that also states it performs no I/O, or, on a production adapter or a composition root, says which it is and names the suppliers it touches (base §N2, §T7, workflow-core#1824, workflow-core#1903). List the files whose first lines do not name them: `git ls-files -z 'app/**' | while IFS= read -r -d '' f; do case \"$f\" in *.test.*|*.test-support.*) ;; *.ts|*.tsx|*.js|*.jsx) head -5 \"$f\" | grep -qF \"$(basename \"$f\")\" || echo \"$f\" ;; esac; done`, and those whose text never says so: `git grep -L -i -e 'no I/O' -e 'production adapter' -e 'composition root' -- 'app/*.ts' 'app/*.tsx' ':!*.test.*' ':!*.test-support.*'`, adding any other path that holds them. A component that reads the clock or does I/O as it renders takes the value as a prop or from context instead."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Delete each changes-table row of your code-standards local file whose reason is that the code is presentational, or file a ticket that will (workflow-core#1824)."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
 			"text": "Clear the uncited swallows already in your tree (workflow-core#1830). Paste this into a session in your repo: \"Run `node <plugin root>/scripts/check-swallowed-errors.js --all`. For each `except` it lists, decide whether swallowing is the design. Where it is, write a comment at the site saying why and citing the ticket that chose it, filing one if none exists; where the drop reaches a person reading the output, also print it (base §N5). Where it is not, let the error raise or exit non-zero. Re-run until it prints OK, then commit.\""
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Without `docs/test-read-edges.json`, read base §X10 against your own test selector: each tracked file a test reads is one a change to it selects that test for, or the test's header carries a `full-sweep-only: <why>` line (workflow-core#1886). List the candidates: `git grep -nE -e '(readFileSync|readdirSync|existsSync|statSync)\\(' -e '(open|read_text|read_bytes)\\(' -- '*.test.*' '*test_*.py' '*_test.py'` and read each: a read of a fixture the test writes itself is no breach."
-		},
-		{
-			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Where your repo runs gates of its own — a `.husky/pre-commit.local`, or a CI job beyond the plugin's — record them in your code-standards local file's §W (base §0, workflow-core#1826). Paste this into a session in your repo: \"Read the floor table in base §0 of the core's `docs/code-standards-base.md`. Then read `.husky/pre-commit.local`, if it exists, and each workflow under `.github/workflows/`. In `docs/code-standards.md`, write or update a `## §W — what tooling already enforces` section holding one row per gate the floor does not name: what it refuses, which staged paths arm it, and whether it refuses or only warns. Add the rule sets your own `biome.json`, ESLint config, `tsconfig.json` or `ruff.toml` carry, and which declared command runs each, and what your CI runs, floor gates included. Delete each statement of what a floor gate does at commit, keeping what your CI does with the same tool. Commit by pathspec.\""
 		},
 		{
 			"tag": "v1.3.16",
@@ -357,6 +339,21 @@
 			"tag": "v3.0.0",
 			"type": "choice",
 			"text": "To run CI on GitHub, add `\"ci\": {\"runner\": \"ubuntu-slim\"}` to `.claude/workflow-core.json` (`\"ubuntu-24.04-arm\"` where the job needs more than one core, with `\"timeoutMinutes\"` raised where it runs past 15 minutes), re-run the upgrade, and commit the workflow it writes. A check of your own that the job should run goes in `commands.check`. Where `test` runs only the tests touched since `main`, as the plugin's `run-vitest.js` does, declare the whole suite as `full_test` first: on a clean checkout a narrowing `test` selects nothing."
+		},
+		{
+			"tag": "v3.2.2",
+			"type": "notice",
+			"text": "The stricter `check-precommit-exit.js` found no breach on any adopter's `main` at this cut. A commit staging `.husky/pre-commit` or `.husky/pre-commit.local` meets it; to list a breach first, run `node \"$WFC_PLUGIN_ROOT\"/scripts/check-precommit-exit.js`."
+		},
+		{
+			"tag": "v3.2.2",
+			"type": "notice",
+			"text": "The stricter `Stryker restore` reading found no breach on any adopter's `main` at this cut: mantahostels's four are each the directive itself. A commit touching a file that holds one meets it; to list a breach first, run `node \"$WFC_PLUGIN_ROOT\"/scripts/check-comment-policy.js --all`."
+		},
+		{
+			"tag": "v3.2.2",
+			"type": "notice",
+			"text": "`commentMarkers` and `ciSetup` are optional. In fantasy-books, lucmoseley/workflow-core-tracker#5709 adds `\"commentMarkers\": [\"@encodes\"]`; in design-vault, lucmoseley/design-vault-tracker#532 declares its `ciSetup`."
 		}
 	],
 	"pythonRoutes": {
@@ -367,6 +364,7 @@
 		"plugin/skills/design-round/scripts/access-boxes.py": "library",
 		"plugin/skills/design-round/scripts/rule-table.py": "library",
 		"plugin/skills/design-round/scripts/probe.py": "library",
+		"plugin/skills/design-round/scripts/fail_open.py": "library",
 		"plugin/skills/design-round/scripts/conditions.py": "library",
 		"plugin/skills/design-round/scripts/drive-overlay.py": "library",
 		"plugin/skills/design-round/scripts/drive-form.py": "library",

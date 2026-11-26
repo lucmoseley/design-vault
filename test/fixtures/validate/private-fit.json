@@ -94,7 +94,7 @@
     },
     "acme": {
       "name": "Acme",
-      "rules": "docs/brand/brand-sheet.md in acme",
+      "rules": "docs/brand/brand-sheet.md in acme/acme",
       "verdicts": [
         "on-brand",
         "adapt",

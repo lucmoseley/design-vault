@@ -29,7 +29,7 @@ const ran = (staged) => {
 };
 
 // The Python suites that never load check-flow.py.
-const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/child.test.py"];
+const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
   const shardOf = (k, n) => {
@@ -76,12 +76,25 @@ test("a commit staging only docs/, data/ or images/ files runs the fast checks a
   assert.ok(p.suites.filter((s) => s.why).every((s) => /none of the 3 staged file\(s\) is one it reads/.test(s.why)));
 });
 
-test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py; contact-sheet.py runs its own alone", () => {
+test("a script a named directory holds is followed, so colour_space.py, which probe.py there loads, runs the suites naming design-round's scripts (#382)", () => {
+  const staged = ["plugin/skills/design-project/scripts/colour_space.py"];
+  assert.ok(!plan(SUITES, staged).all);
+  const got = ran(staged);
+  for (const suite of ["python3 test/check-dom.test.py", "python3 test/check-load-files.test.py"]) assert.ok(got.includes(suite), suite);
+});
+
+test("a directory named by a lone bare word is not followed: check-flow.test.py's \"load\" is a mock target, not test/load/ (#382)", () => {
+  assert.ok(SUITES.includes("python3 test/check-flow.test.py"));
+  assert.ok(!plan(SUITES, [`${SCRIPTS}/cutout.py`]).all);
+  assert.ok(!ran([`${SCRIPTS}/cutout.py`]).includes("python3 test/check-flow.test.py"));
+});
+
+test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py loads back; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
-  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
-  assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), [...fast, "python3 test/check-flow-records.test.py", "python3 test/check-measure.test.py", "python3 test/face-profile.test.py", "python3 test/contact-sheet.test.py", "python3 test/check-layout.test.py", "python3 test/check-access.test.py", "python3 test/check-access-contrast.test.py", "python3 test/check-access-pointer.test.py", "python3 test/probe.test.py", "python3 test/parts-map.test.py", "python3 test/look.test.py", "python3 test/check-load.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py", "python3 test/check-markup.test.py", "python3 test/check-style.test.py", "python3 test/check-state.test.py", "python3 test/check-text.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
 
 test("a suite runs for its own test file, its fixtures, and a script its test runs", () => {
@@ -123,7 +136,7 @@ const relist = (from, to) => {
 
 const FAST = [NODE, "bash test/design-round-pointer.test.sh"];
 // What a commit staging contact-sheet.py alone runs.
-const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
+const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
 const relisting = (after) => plan(SUITES, ["test/all.sh"], { before: ALL_SH, after });
 const runs = (p) => p.suites.filter((s) => !s.why).map((s) => s.suite);
 
@@ -180,6 +193,17 @@ git(["-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "base"]);
 git(["config", "core.hooksPath", hooks]);
 const touch = (rel) => fs.appendFileSync(path.join(repo, rel), "\n# touched\n");
 const planRuns = () => fs.readFileSync(planOut, "utf8").split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+
+test("a script a followed directory holds, named by no suite, still runs every suite (#382)", () => {
+  const unnamed = `${SCRIPTS}/unnamed-by-any-suite.py`;
+  fs.writeFileSync(path.join(repo, unnamed), "");
+  try {
+    const scratchPlan = require(path.join(repo, "test", "select-suites.js")).plan;
+    assert.match(scratchPlan(SUITES, [unnamed]).all ?? "", /no suite is known to read it/);
+  } finally {
+    fs.rmSync(path.join(repo, unnamed));
+  }
+});
 
 test("a commit through its own index file, as commit-paths.js makes, is judged on that index, not the shared one", () => {
   // The shared index stages check-flow.py; the private one stages contact-sheet.py alone.

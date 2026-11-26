@@ -108,7 +108,6 @@ import argparse
 import base64
 import bisect
 import contextlib
-import importlib.util
 import io
 import itertools
 import json
@@ -149,6 +148,9 @@ JOLT_BAND = (
 JUMP_DEG = 0.26
 # A common display's refresh rate, so the sample holds the frames a viewer sees.
 FPS = 60
+# The least gap between two sample times, in ms: an exact time nearer a frame
+# takes its place (guess, #126).
+MIN_GAP_MS = 1
 # How long, in ms, nothing new may start before the page counts as done starting
 # things. A guess, unmeasured.
 QUIET_MS = 2000
@@ -570,8 +572,9 @@ PREPARE_JS = (
     const t = x.a.effect.getComputedTiming();
     const off = x.start - t0;
     // Played on a frame; a delay can end mid-frame.
-    starts.push(off);
-    first = Math.min(first, off + Math.max(0, t.delay) / x.rate);
+    const movesAt = off + Math.max(0, t.delay) / x.rate;
+    starts.push([off, movesAt]);
+    first = Math.min(first, movesAt);
     x.loops = t.endTime === Infinity;
     if (x.loops) {
       infinite = true;
@@ -702,19 +705,26 @@ def sample_times(end, edges, fps, starts=()):
     it, and at 0 reads as not yet started, its first keyframe unshown (#297).
     An animation starts at its timeline's time when it is ready, which a
     document timeline advances once a frame (Web Animations Level 1, "Playing
-    an animation", its pending play task), so each of `starts` is
-    followed by a whole frame, with no frame sampled inside it: a loaded
-    machine starts one off the sampled frames, and a part frame carries a jump
-    too short (#326). Residual: an edge inside that frame still cuts it, and a
-    move from rest after a delay, at a later keyframe or pass, keeps the
-    sampled frames' phase.
+    an animation", its pending play task), and its frames follow it a frame
+    apart. So each of `starts`, (start, moves_at), is followed by its first
+    moving frame in the start's phase, with no frame sampled between: a loaded
+    machine starts one off the sampled frames (#326, #411). Residual: an edge
+    inside that frame still cuts it, another element's move from rest inside it
+    gets a first frame in the wrong phase, and a move from rest at a later
+    keyframe or pass keeps the sampled frames' phase.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
-    first = max((e for e in edges if 0 <= e < min(1, end)), default=0)
+    first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
-    spans = [(s, s + step) for s in starts if 0 <= s and s + step < end]
+    spans = []
+    for start, moves_at in starts:
+        drawn = start + (math.floor((moves_at - start) / step) + 1) * step
+        if drawn - moves_at < MIN_GAP_MS:
+            drawn += step
+        if 0 <= moves_at and drawn < end:
+            spans.append((moves_at, drawn))
     for e in sorted(edges) + [b for _, b in spans]:
-        if 0 < e < end and all(abs(e - t) >= 1 for t in exact):
+        if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
     frames = [k * step for k in range(1, int(end // step) + 1)]
     return sorted(
@@ -722,7 +732,7 @@ def sample_times(end, edges, fps, starts=()):
         + [
             t
             for t in frames
-            if all(abs(t - x) >= 1 for x in exact)
+            if all(abs(t - x) >= MIN_GAP_MS for x in exact)
             and not any(a < t < b for a, b in spans)
         ]
     )
@@ -784,7 +794,8 @@ def dropped_frames(writes):
     gaps = [w["ms"] - w["prev_ms"] for w in writes if w["prev_ms"] is not None]
     try:
         points = morph_points(writes)
-    except ValueError:
+    except ValueError as exc:
+        expected(exc, "no dropped frames")
         return []
     if not gaps:
         return []
@@ -1343,13 +1354,15 @@ def descendants(pid):
         parent = todo.pop()
         try:
             tasks = os.listdir(f"/proc/{parent}/task")
-        except OSError:  # no /proc, or the process has exited: no children (#432)
+        except FileNotFoundError as exc:  # #432
+            expected(exc, "no children")
             continue
         for task in tasks:
             try:
                 with open(f"/proc/{parent}/task/{task}/children") as f:
                     kids = [int(k) for k in f.read().split()]
-            except OSError:  # the thread has exited, or no children file: none (#432)
+            except (FileNotFoundError, ProcessLookupError) as exc:  # #432
+                expected(exc, "no children")
                 continue
             found += kids
             todo += kids
@@ -1362,7 +1375,8 @@ def process_args(pid):
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return f.read().decode(errors="replace").replace("\0", " ").split()
-    except OSError:  # the process has exited, as its docstring says (#432)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #432
+        expected(exc, "no command line")
         return []
 
 
@@ -1385,7 +1399,8 @@ def driver_pid(browser):
         with open(f"/proc/{browser}/stat") as f:
             # The name in brackets may hold spaces; the parent follows the state.
             parent = int(f.read().rsplit(")", 1)[1].split()[1])
-    except OSError:  # the browser has exited, as the docstring says (#464)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #464
+        expected(exc, "no driver")
         return None
     return parent if "run-driver" in process_args(parent) else None
 
@@ -1865,18 +1880,16 @@ def report(at, sample, result, *, svg_path, json_path, morph_path):
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
+
 TABLE = os.path.join(HERE, "check-flow.table")
 
 
-def _sibling(name, file):
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _sibling("motion_records", "motion-records.py")
-pointer = _sibling("drive_pointer", "drive-pointer.py")
+records = siblings.load(HERE, "motion-records.py")
+pointer = siblings.load(HERE, "drive-pointer.py")
 
 # --records' working figures, none a record's value. No run has measured
 # where any of the caps or waits below starts to miss a fault, so each is a
@@ -2373,7 +2386,7 @@ RUNS = {
 
 def run_records(at):
     """Each table line's check's Answer."""
-    layout = _sibling("check_layout", "check-layout.py")
+    layout = siblings.load(HERE, "check-layout.py")
     phone = (layout.PHONE_WIDTH, layout.HEIGHTS[0], layout.PHONE)
     values = {line.mode: line.value for line in at.lines}
     out = {}
@@ -2403,7 +2416,7 @@ def records_main(at):
         import PIL  # noqa: F401 - imported only to learn it is installed
     except ImportError as err:
         # Exit 3, naming the package and its pinned install (#256, #477).
-        return missing(err)
+        sys.exit(missing(err))
     got, code = run_browser(lambda: run_records(at), at.timeout, at.url)
     if code:
         return code
@@ -2513,7 +2526,7 @@ def parse(argv):
             p.error(f"{at.table}: {exc}")
         at.parts = {}
         if at.parts_file:
-            probe = _sibling("probe", "probe.py")
+            probe = siblings.load(HERE, "probe.py")
             try:
                 with open(at.parts_file, encoding="utf8") as fh:
                     at.parts = probe.declared_parts(fh.read())[0]

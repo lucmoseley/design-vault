@@ -25,6 +25,9 @@ SCRIPT = os.path.join(
 SPEND_LOG = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "spend-log.py"
 )
+SIBLINGS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "siblings.py"
+)
 SIZES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "references", "render-sizes.json"
 )
@@ -147,6 +150,36 @@ class Size(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn(GROK, out)
 
+    def test_a_requests_submitted_line_and_its_outcome_read_as_its_one_request(self):
+        # #571
+        line = {
+            "candidate": "r1/v1-a",
+            "idempotency_key": "k-1",
+            "request_id": "req-1",
+            "usd": 0.2,
+            "input": {"prompt": "x", "aspect_ratio": "16:9"},
+        }
+        with open(self.log, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps({**line, "model": QWEN, "status": "submitted", "files": []})
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        **line,
+                        "model": GROK,
+                        "status": "completed",
+                        "urls": ["https://cdn.example.com/a.png"],
+                    }
+                )
+                + "\n"
+            )
+        code, out, _ = run(self.render("v1-a", largest(QWEN)))
+        self.assertEqual(code, 1, out)
+        self.assertIn(GROK, out)
+        self.assertIn("line for r1/v1-a", out)
+
     def test_log_names_the_spend_log_for_a_render_elsewhere(self):
         self.logged(("r1/v1-grok", GROK, "16:9"))
         elsewhere = os.path.join(self.tmp.name, "out", "r1")
@@ -232,6 +265,7 @@ class Size(unittest.TestCase):
         os.makedirs(references)
         copy = shutil.copy(SCRIPT, scripts)
         shutil.copy(SPEND_LOG, scripts)
+        shutil.copy(SIBLINGS, scripts)
         render = self.render("v1-a", (10, 10))
         for broken in (
             None,

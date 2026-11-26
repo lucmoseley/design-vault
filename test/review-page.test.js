@@ -207,8 +207,19 @@ test("the data check names every fault in items.json", () => {
   assert.deepEqual(R.checkItems({}).problems, ['items.json has no "items"']);
 });
 
-test("a figure for the whole set lets its cards go without a picture of their own (#221)", () => {
-  const shared = { figure: "img/lanes.svg", items: [{ id: "a", name: "A" }, { id: "b", name: "B", image: "img/b.svg" }] };
-  assert.deepEqual(R.checkItems(shared).problems, []);
-  assert.match(R.checkItems({ ...shared, figure: "javascript:alert(1)" }).problems.join("\n"), /"figure" must be a file beside/);
+test("an address on another host with no scheme is not a file beside the page (#554)", () => {
+  for (const src of ["//evil.example/x.png", "\\\\evil.example/x.png", "/\\evil.example/x.png", "\\/evil.example/x.png",
+    " //evil.example/x.png", "\t//evil.example/x.png", "/\t/evil.example/x.png", "/\n/evil.example/x.png", " javascript:alert(1)", "java\tscript:alert(1)"]) {
+    assert.match(R.checkItems({ items: [{ id: "a", name: "A", image: src }] }).problems.join("\n"), /\(a\): "image" must be a file beside/, src);
+  }
+  for (const src of ["/img/x.png", "img/x.png", "https://cdn.example/x.png"])
+    assert.deepEqual(R.checkItems({ items: [{ id: "a", name: "A", image: src }] }).problems, [], src);
+});
+
+// A card's `line` may carry several lines, one per part of a candidate (design-round §3 step 3, #406).
+test("a card's line keeps its line breaks", () => {
+  const html = require("node:fs").readFileSync(require("node:path").join(__dirname, "../plugin/review-page/index.html"), "utf8");
+  const rule = html.match(/^\.line\s*\{([^}]*)\}/m);
+  assert.ok(rule, "index.html has a .line rule");
+  assert.match(rule[1], /white-space:\s*pre-line/);
 });

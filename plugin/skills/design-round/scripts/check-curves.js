@@ -50,7 +50,7 @@
  * between the edges) and shared edge, no underlap (each fill takes one side of
  * one exact edge, the conflation seam) fail. A separate gap that one shape
  * painted after both fills, at both edges and halfway between them, is covered
- * and passes, naming that shape: no ground shows there (design-vault#356), where
+ * and passes, naming that shape: no ground shows there, where
  * its paint is proved opaque. A shape painted before either
  * does not cover it, since the gap shows that shape and not the art; nor does
  * one in another outermost <svg>, one hidden by visibility, or one whose paint
@@ -61,8 +61,7 @@
  * read, an <animate> or <set> of its paint, or a stylesheet rule setting paint,
  * which it matches to no shape), the
  * covered line is not measured. An underlap whose upper fill is not proved
- * opaque is not measured either, as the lower shows through it where they
- * overlap. Each line ends with the contact as look-renders.py
+ * opaque is not measured either. Each line ends with the contact as look-renders.py
  * contacts' --contact, a shell word to pass on unchanged. --contacts does not
  * read: stroke widths (a stroke is its centre line), a stylesheet's or an
  * animation's geometry,
@@ -598,12 +597,31 @@ function viewport(attrs) {
 function parseAttrs(text) {
   const attrs = {};
   for (const [, name, dq, sq] of text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) attrs[name] = dq ?? sq;
+  const important = new Set();
   for (const decl of (attrs.style ?? "").split(";")) {
     const [name, ...value] = decl.split(":");
-    if (value.length) attrs[name.trim()] = value.join(":").trim();
+    if (!value.length) continue;
+    const prop = cssName(name);
+    const raw = value.join(":");
+    const isImportant = /!\s*important\s*$/i.test(raw);
+    if (important.has(prop) && !isImportant) continue;
+    if (isImportant) important.add(prop);
+    attrs[prop] = cssValue(raw);
   }
   return attrs;
 }
+
+const WEBKIT_ALIASES = { "-webkit-filter": "filter", "-webkit-mask": "mask", "-webkit-mask-image": "mask-image", "-webkit-clip-path": "clip-path" };
+
+// https://www.w3.org/TR/CSS21/syndata.html#characters: CSS keywords and property names are ASCII case-insensitive
+const keyword = (v) => v.trim().toLowerCase();
+
+function cssName(name) {
+  const prop = keyword(name);
+  return WEBKIT_ALIASES[prop] ?? prop;
+}
+
+const cssValue = (v) => v.replace(/!\s*important\s*$/i, "").trim();
 
 /**
  * A circle's, ellipse's, rect's or line's outline as path data (SVG 2, §10), and the written precision of its
@@ -640,16 +658,24 @@ function basicShape(tag, attrs) {
 
 const DRAWN = new Set(["path", "polygon", "polyline", "circle", "ellipse", "rect", "line"]);
 
-const isNone = (v) => v === undefined || v.trim() === "none";
+const isNone = (v) => v === undefined || ["none", "initial", "unset"].includes(keyword(v));
+
+const isMaskImage = (prop) => /^(?:-webkit-)?mask-(?:image|border|box-image)/.test(prop);
 
 function parseAlpha(v) {
   const m = v.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(%?)$/i);
   return m ? Number(m[1]) / (m[2] ? 100 : 1) : null;
 }
 
-// https://www.w3.org/TR/css-color-4/#color-syntax
+// https://www.w3.org/TR/css-cascade-5/#defaulting-keywords: these resolve from the cascade, never as a colour
+const CSS_WIDE = new Set(["inherit", "initial", "unset", "revert", "revert-layer"]);
+
+// https://www.w3.org/TR/css-cascade-5/#inherit-initial: on an inherited property unset acts as inherit
+const isInheritedValue = (v) => v === undefined || ["inherit", "unset"].includes(keyword(v));
+
 function colourAlpha(v) {
   const s = v.trim().toLowerCase();
+  if (CSS_WIDE.has(s)) return null;
   if (s === "transparent") return 0;
   const hex = s.match(/^#([0-9a-f]+)$/);
   if (hex) {
@@ -669,18 +695,17 @@ function colourAlpha(v) {
   return /^[a-z]+$/.test(s) ? 1 : null;
 }
 
-// https://www.w3.org/TR/SVG2/render.html, https://www.w3.org/TR/compositing-1/#mix-blend-mode
 const PAINT_PROPS = {
   opacity: (v) => parseAlpha(v) >= 1,
   "fill-opacity": (v) => parseAlpha(v) >= 1,
   fill: (v) => colourAlpha(v) >= 1 && !/^(?:none|currentcolor)$/i.test(v.trim()),
   color: (v) => colourAlpha(v) >= 1,
-  visibility: (v) => v.trim() === "visible",
-  display: (v) => v.trim() !== "none",
-  "mix-blend-mode": (v) => v.trim() === "normal",
-  filter: (v) => v.trim() === "none",
-  "clip-path": (v) => v.trim() === "none",
-  mask: (v) => v.trim() === "none",
+  visibility: (v) => keyword(v) === "visible",
+  display: (v) => keyword(v) !== "none",
+  "mix-blend-mode": (v) => keyword(v) === "normal",
+  filter: isNone,
+  "clip-path": isNone,
+  mask: isNone,
   "stop-color": (v) => colourAlpha(v) >= 1,
   "stop-opacity": (v) => parseAlpha(v) >= 1,
 };
@@ -694,8 +719,8 @@ function sheetEffect(sheets, linked) {
     for (const [, block] of css.matchAll(/\{([^{}]*)\}/g)) {
       for (const decl of block.split(";")) {
         const [name, ...value] = decl.split(":");
-        const prop = name.trim().toLowerCase();
-        const val = value.join(":").replace(/!important\s*$/i, "");
+        const prop = cssName(name);
+        const val = cssValue(value.join(":"));
         if (prop === "all" || (/^(?:-webkit-)?mask/.test(prop) && prop !== "mask")) return { thins: `a stylesheet rule setting ${prop}` };
         if (!(prop in PAINT_PROPS) || (prop === "display" && PAINT_PROPS.display(val))) continue;
         if (!PAINT_PROPS[prop](val)) return { thins: `a stylesheet rule setting ${prop}: ${val.trim()}, which it does not match to shapes` };
@@ -724,7 +749,7 @@ function drawnShapes(text) {
   let linked = false;
   const servers = new Map();
   const animatedIds = new Map();
-  const stack = [{ name: null, seen: {}, selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, paint: "black", fillOpacity: "1", color: "black", evenodd: false, undrawn: false, thin: undefined, unread: undefined, visible: true, transformError: undefined }];
+  const stack = [{ name: null, seen: {}, selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, paint: "black", fillOpacity: "1", color: "black", stopColour: "black", stopOpacity: "1", evenodd: false, undrawn: false, thin: undefined, unread: undefined, visible: true, transformError: undefined }];
   const markup = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[!?][^>]*>|<\/([\w:.-]+)\s*>|<([\w:.-]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
   let m;
   while ((m = markup.exec(text))) {
@@ -745,7 +770,13 @@ function drawnShapes(text) {
     const href = attrs.href ?? attrs["xlink:href"];
     if (href?.startsWith("#")) refs.add(href.slice(1));
     const step = parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
-    const inherit = (prop, from) => (attrs[prop] === undefined || attrs[prop].trim() === "inherit" ? from : attrs[prop].replace(/!important\s*$/i, "").trim());
+    const inherit = (prop, from) => (isInheritedValue(attrs[prop]) ? from : attrs[prop].trim());
+    const unInherited = (prop, initial, from) => {
+      const v = attrs[prop];
+      if (v === undefined || ["initial", "unset"].includes(keyword(v))) return initial;
+      return keyword(v) === "inherit" ? from : v.trim();
+    };
+    const opacity = attrs.opacity === undefined ? 1 : parseAlpha(attrs.opacity);
     const own = (prop) => `${prop} ${attrs[prop].trim()} on line ${line}`;
     if (name === "link" && /\bstylesheet\b/i.test(attrs.rel ?? "")) linked = true;
     const el = {
@@ -758,22 +789,24 @@ function drawnShapes(text) {
       root: parent.root ?? (name === "svg" ? m.index : null),
       ids: id ? [...parent.ids, id] : parent.ids,
       matrix: parent.matrix,
-      fill: attrs.fill === undefined || attrs.fill === "inherit" ? parent.fill : attrs.fill !== "none",
+      fill: isInheritedValue(attrs.fill) ? parent.fill : keyword(attrs.fill) !== "none",
       paint: inherit("fill", parent.paint),
       fillOpacity: inherit("fill-opacity", parent.fillOpacity),
       color: inherit("color", parent.color),
-      evenodd: attrs["fill-rule"] === undefined || attrs["fill-rule"] === "inherit" ? parent.evenodd : attrs["fill-rule"] === "evenodd",
-      undrawn: parent.undrawn || UNDRAWN.has(name) || attrs.display === "none",
-      // What on it or an ancestor lets the ground through its content (thin), or may, unread: each the first found.
+      stopColour: unInherited("stop-color", "black", parent.stopColour),
+      stopOpacity: unInherited("stop-opacity", "1", parent.stopOpacity),
+      evenodd: isInheritedValue(attrs["fill-rule"]) ? parent.evenodd : keyword(attrs["fill-rule"]) === "evenodd",
+      undrawn: parent.undrawn || UNDRAWN.has(name) || (attrs.display !== undefined && keyword(attrs.display) === "none"),
       thin:
         parent.thin ??
-        (attrs.opacity !== undefined && parseAlpha(attrs.opacity) !== null && parseAlpha(attrs.opacity) < 1 ? own("opacity") : undefined) ??
+        (opacity !== null && opacity < 1 ? own("opacity") : undefined) ??
         (isNone(attrs["clip-path"]) ? undefined : own("clip-path")) ??
         (isNone(attrs.mask) ? undefined : own("mask")) ??
-        (attrs["mix-blend-mode"] === undefined || attrs["mix-blend-mode"].trim() === "normal" ? undefined : own("mix-blend-mode")),
-      unread: parent.unread ?? (attrs.opacity !== undefined && parseAlpha(attrs.opacity) === null ? own("opacity") : undefined) ?? (isNone(attrs.filter) ? undefined : own("filter")),
+        Object.keys(attrs).filter((k) => isMaskImage(k) && !isNone(attrs[k])).map(own)[0] ??
+        (attrs["mix-blend-mode"] === undefined || keyword(attrs["mix-blend-mode"]) === "normal" ? undefined : own("mix-blend-mode")),
+      unread: parent.unread ?? (opacity === null ? own("opacity") : undefined) ?? (isNone(attrs.filter) ? undefined : own("filter")),
       // visibility is inherited, and a descendant may set it back to visible (SVG 2, §3.2.3).
-      visible: attrs.visibility === undefined || attrs.visibility === "inherit" ? parent.visible : attrs.visibility === "visible",
+      visible: isInheritedValue(attrs.visibility) ? parent.visible : keyword(attrs.visibility) === "visible",
       transformError: parent.transformError,
     };
     try {
@@ -811,13 +844,13 @@ function drawnShapes(text) {
         list.push({ ...base, error: err.message });
       }
     }
-    if (name === "lineargradient" || name === "radialgradient") el.server = { kind: "gradient", href: href?.startsWith("#") ? href.slice(1) : null, stops: [] };
+    if (name === "lineargradient" || name === "radialgradient") el.server = { kind: "gradient", href: href?.startsWith("#") ? href.slice(1) : null, stops: [], nodes: [el] };
     else if (name === "pattern") el.server = { kind: "pattern" };
     if (el.server && id) servers.set(id, el.server);
     if (name === "stop" && parent.server?.kind === "gradient") {
-      const stopColour = inherit("stop-color", "black");
-      const alpha = [colourAlpha(/^currentcolor$/i.test(stopColour) ? el.color : stopColour), parseAlpha(inherit("stop-opacity", "1"))];
+      const alpha = [colourAlpha(/^currentcolor$/i.test(el.stopColour) ? el.color : el.stopColour), parseAlpha(el.stopOpacity)];
       parent.server.stops.push(alpha.includes(null) ? null : alpha[0] * alpha[1]);
+      parent.server.nodes.push(el);
     }
     if ((name === "animate" || name === "set") && (attrs.attributeName ?? "").toLowerCase() in PAINT_PROPS) {
       const what = `a <${tag}> of ${attrs.attributeName} on line ${line}, which it does not play`;
@@ -832,33 +865,42 @@ function drawnShapes(text) {
     }
   }
   const sheet = sheetEffect(sheets, linked);
+  const animatedOn = (n) => n.animated ?? (n.id === undefined ? undefined : animatedIds.get(n.id));
   for (const s of out) {
     if (!s.paint) continue;
     let animated;
-    for (let n = s.paint.node; n && !animated; n = n.up) animated = n.animated ?? (n.id === undefined ? undefined : animatedIds.get(n.id));
-    s.paint = resolvePaint(s.paint, servers, sheet);
+    for (let n = s.paint.node; n && !animated; n = n.up) animated = animatedOn(n);
+    s.paint = resolvePaint(s.paint, servers, sheet, animatedOn);
     if (animated) s.paint = { unread: animated };
   }
   return { shapes: out, referable, refs, notes };
 }
 
-function stopsOf(server, servers) {
+function gradientStops(server, servers) {
   const seen = new Set();
-  while (server?.kind === "gradient" && !server.stops.length && server.href && !seen.has(server)) {
+  const nodes = [];
+  for (;;) {
+    if (server.kind !== "gradient") return { pattern: true, nodes };
+    nodes.push(...server.nodes);
+    if (server.stops.length || !server.href || seen.has(server)) return { stops: server.stops, nodes };
     seen.add(server);
-    server = servers.get(server.href);
+    const next = servers.get(server.href);
+    if (next?.kind !== "gradient") return { missing: server.href, nodes };
+    server = next;
   }
-  return server?.kind === "gradient" ? server.stops : null;
 }
 
-function resolvePaint({ thin, unread, fill, color }, servers, sheet) {
+function resolvePaint({ thin, unread, fill, color }, servers, sheet, animatedOn) {
   if (!thin && !unread) {
     const ref = fill.match(/^url\(\s*["']?#([^)"'\s]+)["']?\s*\)\s*(.*)$/i);
     if (ref) {
       const server = servers.get(ref[1]);
-      const stops = server && (server.kind === "gradient" ? stopsOf(server, servers) : null);
+      const { stops, pattern, missing, nodes } = server ? gradientStops(server, servers) : {};
+      const animated = nodes?.map(animatedOn).find(Boolean);
       if (!server) unread = ref[2] ? `fill ${fill}, a paint server it does not find` : `fill ${fill}, which names no paint server in the file`;
-      else if (!stops) unread = `fill ${fill}, a pattern, which it does not read`;
+      else if (animated) unread = `fill ${fill}, a gradient with ${animated}`;
+      else if (pattern) unread = `fill ${fill}, a pattern, which it does not read`;
+      else if (missing) unread = `fill ${fill}, a gradient whose href #${missing} names no gradient in the file`;
       else if (!stops.length) thin = `fill ${fill}, a gradient with no stops, which paints nothing`;
       else if (stops.includes(null)) unread = `fill ${fill}, a gradient stop whose colour or opacity it cannot read`;
       else if (stops.some((a) => a < 1)) thin = `fill ${fill}, a gradient with a stop of alpha ${roundPx(Math.min(...stops))}`;
@@ -1024,7 +1066,6 @@ function findContacts(shapes) {
   for (let j = 1; j < drawn.length; j++) {
     const upper = drawn[j];
     const toUser = affine(invert(upper.matrix));
-    // Only a shape painted after both can hide their gap, and only one whose paint is proved opaque does.
     const above = drawn.slice(j + 1).filter((s) => s.root === upper.root);
     const coverOf = (gap) => {
       const over = above.filter((s) => gap.every((pt) => isFilledAt(s, pt)));
@@ -1050,8 +1091,6 @@ function findContacts(shapes) {
           const ds = [...onA, ...onB].map((f) => f.d);
           const shapesOf = (key) => [...new Set([...onA, ...onB].map((f) => f[key]).filter(Boolean))];
           const [covers, thinCovers] = [shapesOf("cover"), shapesOf("thinCover")];
-          // A pass that rests on paint it could not prove opaque: a cover's, or an underlap's upper fill, through
-          // which the lower shows where they overlap.
           const unproved = cls === "covered" ? covers.filter((s) => s.paint.unread) : cls === "underlap" && (upper.paint.thin || upper.paint.unread) ? [upper] : [];
           const mid = run[Math.floor(run.length / 2)];
           const ahead = [mid.at[0] + mid.dir[0], mid.at[1] + mid.dir[1]];

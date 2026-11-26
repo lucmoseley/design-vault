@@ -23,6 +23,9 @@ SCRIPT = os.path.join(
 SPEND_LOG = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "spend-log.py"
 )
+SIBLINGS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "siblings.py"
+)
 FIELDS = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "references", "loop-fields.json"
 )
@@ -330,6 +333,7 @@ class Loop(Round):
         os.makedirs(scripts)
         copy = shutil.copy(SCRIPT, scripts)
         shutil.copy(SPEND_LOG, scripts)
+        shutil.copy(SIBLINGS, scripts)
         clip = self.clip("v1-a")
         for broken in (None, "{not json", '{"models": {"m": {"start": "image_url"}}}'):
             if broken is not None:

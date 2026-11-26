@@ -727,7 +727,6 @@ test("--contacts names each shape in a group whose transform it cannot read as u
   assert.match(r.lines[0], /:3 <path id="b">: could not read the shape, so its contacts are not measured: unreadable transform 'wobble\(2\)'/);
 });
 
-/** Asserts the A–B gap is covered but not measured, exit 6, its line naming why the cover's paint is unproved. */
 function assertUnproved(body, why, prefix = "") {
   const r = contactsIn(`${prefix}${A(49)}\n${B(51)}\n${body}`);
   assert.equal(gapClass(r), "covered", body);
@@ -761,7 +760,7 @@ test("#541: a gradient cover passes only where every stop it paints with is opaq
   for (const id of ["fade", "lent", "empty"]) assertUncovered(`${defs}${strip(id)}`);
   assertUnproved(`<defs><pattern id="dots"><rect width="1" height="1"/></pattern></defs>${strip("dots")}`, "a pattern, which it does not read");
   assertUnproved(strip("nowhere"), "which names no paint server in the file");
-  assertUnproved(`<defs><pattern id="p"><rect width="1" height="1"/></pattern><linearGradient id="viaPattern" href="#p"/></defs>${strip("viaPattern")}`, "a pattern, which it does not read");
+  assertUnproved(`<defs><pattern id="p"><rect width="1" height="1"/></pattern><linearGradient id="viaPattern" href="#p"/></defs>${strip("viaPattern")}`, "a gradient whose href #p names no gradient in the file");
 });
 
 test("#541: a cover that sets a blend mode, on it or an ancestor, lets the ground through; mix-blend-mode normal does not", () => {
@@ -781,7 +780,6 @@ test("#541: a cover in a document whose stylesheet may thin paint is not measure
     assert.equal(gapClass(r), "covered", css);
     assert.equal(r.status, 0, `${css}\n${r.lines.join("\n")}`);
   }
-  // A stylesheet setting opaque paint can override a translucent attribute, so the attribute no longer proves a fail.
   assertUnproved(STRIP(' opacity="0.5"'), "may override", "<style>.t{fill:#0c0}</style>\n");
   const file = path.join(scratch, "linked.html");
   fs.writeFileSync(file, `<!doctype html><html><head><link rel="stylesheet" href="art.css"></head><body><svg width="100" height="100">${A(49)}${B(51)}${STRIP()}</svg></body></html>`);
@@ -797,9 +795,47 @@ test("#541: a cover through a filter, or with an opacity or colour it cannot rea
   assertUnproved(STRIP(' fill="var(--brand)"'), "fill var(--brand), a colour it cannot read");
 });
 
+test("#324: a cover's style declarations are read in any case, an !important one over a later plain one, and only the -webkit- forms browsers apply", () => {
+  const styled = (style) => `<path id="strip" style="${style}" d="M48 10 H52 V50 H48 Z"/>`;
+  for (const style of ["fill:#0c0; Opacity:.5", "fill:#0c0; opacity: .5 !important", "fill:#0c0; FILL-OPACITY: 50%", "fill:#0c0; opacity:.3 !important; opacity:1", "fill: rgba(0,204,0,.3); -webkit-fill: #0c0", "fill:#0c0; opacity:.3; -webkit-opacity:1", "fill:#0c0; fill-opacity:.3; -webkit-fill-opacity:1", "fill: NONE", "fill:#0c0; display: None", "fill:#0c0; -webkit-mask-image: linear-gradient(#000, transparent)", "fill:#0c0; -webkit-mask-box-image: url(m.png)", "fill:#0c0; mask-border: url(m.png) 30", "fill:#0c0; -webkit-mask-box-image-source: url(m.png)"]) {
+    assertUncovered(styled(style));
+  }
+  assertUnproved(STRIP(' style="-webkit-filter: opacity(.2)"'), "filter opacity(.2) on line 4");
+  assertUnproved(STRIP(' class="t"'), "a stylesheet rule setting filter: blur(1px)", "<style>.t{-webkit-filter:blur(1px)}</style>\n");
+  const ok = contactsIn(`${A(49)}\n${B(51)}\n${styled("FILL:#0c0; Opacity: 1 !important; opacity: .5; -webkit-filter: none; Visibility: Visible")}`);
+  assert.equal(gapClass(ok), "covered", ok.lines.join("\n"));
+  assert.equal(ok.status, 0, ok.lines.join("\n"));
+});
+
+test("#324: unset takes an inherited paint from the parent, a keyword it does not resolve leaves the cover unread, and a mask-image lets the ground through", () => {
+  const strip = (style) => `<path id="strip" style="${style}" d="M48 10 H52 V50 H48 Z"/>`;
+  for (const kw of ["unset", "inherit", "UNSET"]) {
+    assertUncovered(`<g style="fill: rgba(0,204,0,.3)">${strip(`fill: ${kw}`)}</g>`);
+    assertUncovered(`<g color="rgba(0,0,0,.3)"><path id="strip" fill="currentColor" style="color: ${kw}" d="M48 10 H52 V50 H48 Z"/></g>`);
+  }
+  for (const kw of ["initial", "revert", "revert-layer"]) assertUnproved(strip(`fill: ${kw}`), `fill ${kw}, a colour it cannot read`);
+  assertUncovered(STRIP(' style="mask-image: linear-gradient(#000, transparent)"'));
+  const ok = contactsIn(`${A(49)}\n${B(51)}\n<g style="fill: #0c0">${strip("fill: unset; clip-path: unset; mask: initial; mask-image: none")}</g>`);
+  assert.equal(gapClass(ok), "covered", ok.lines.join("\n"));
+  assert.equal(ok.status, 0, ok.lines.join("\n"));
+});
+
+test("#324: a gradient cover whose stop an <animate> or <set> changes is not measured, a stop inherits the gradient's stop-color only when told to, and an href naming no gradient says so", () => {
+  const strip = '<path id="strip" fill="url(#g)" d="M48 10 H52 V50 H48 Z"/>';
+  assertUnproved(`<defs><linearGradient id="g"><stop stop-color="#0c0"><animate attributeName="stop-opacity" values="1;0.1"/></stop></linearGradient></defs>${strip}`, "a gradient with a <animate> of stop-opacity");
+  assertUnproved(`<defs><linearGradient id="g"><stop id="s0" stop-color="#0c0"/></linearGradient></defs>${strip}<set href="#s0" attributeName="stop-opacity" to="0.1"/>`, "a gradient with a <set> of stop-opacity");
+  assertUnproved(`<defs><linearGradient id="h"><stop id="s1" stop-color="#0c0"/></linearGradient><linearGradient id="g" href="#h"/></defs>${strip}<set href="#s1" attributeName="stop-color" to="transparent"/>`, "a gradient with a <set> of stop-color");
+  assertUnproved(`<defs><linearGradient id="g" href="#gone"/></defs>${strip}`, "a gradient whose href #gone names no gradient in the file");
+  assertUnproved(`<defs><linearGradient id="g" href="#a"/></defs>${strip}`, "a gradient whose href #a names no gradient in the file");
+  assertUncovered(`<defs><linearGradient id="g" stop-color="transparent"><stop stop-color="inherit"/></linearGradient></defs>${strip}`);
+  for (const defs of [`<linearGradient id="g" stop-color="transparent"><stop/></linearGradient>`, `<linearGradient id="g" stop-color="#0c0"><stop style="stop-color: inherit"/></linearGradient>`, `<linearGradient id="g"><stop stop-color="#0c0"><animate attributeName="offset" values="0;1"/></stop></linearGradient>`]) {
+    const ok = contactsIn(`${A(49)}\n${B(51)}\n<defs>${defs}</defs>${strip}`);
+    assert.equal(ok.status, 0, `${defs}\n${ok.lines.join("\n")}`);
+  }
+});
+
 test("#541: of several shapes over a gap, an opaque one covers it wherever it lies; one whose paint is unread outranks a translucent one", () => {
   const thin = STRIP(' fill-opacity="0.5"');
-  // The translucent strip's own underlaps with A and B are not measured, so the gap's line is read, not the exit.
   for (const body of [`${thin}\n${STRIP()}`, `${STRIP()}\n${thin}`]) {
     const r = contactsIn(`${A(49)}\n${B(51)}\n${body}`);
     assert.match(r.lines.find((l) => l.includes("a.2-b.4=")), /: covered: the edges run 2 px apart, but \S+ <path id="strip">, painted over both, fills the gap\./, body);
@@ -826,15 +862,17 @@ test("#541: --contacts --json marks a pass resting on paint it could not prove o
   assert.deepEqual([gap.cls, gap.unproved], ["covered", true]);
 });
 
-test("#489: an underlap whose upper fill is translucent or sets a blend mode is not measured; opaque, it passes", () => {
+test("#489: an underlap whose upper fill is translucent, sets a blend mode or sits under a stylesheet that may thin paint is not measured; opaque, it passes", () => {
   for (const attrs of [' fill-opacity="0.5"', ' fill="#00c8"', ' mix-blend-mode="multiply"']) {
     const r = contactsIn(`${A(51)}\n<path id="b" fill="#00c"${attrs} d="M50 10 H90 V50 H50 Z"/>`.replace('fill="#00c" fill=', "fill="));
     assert.ok(classes(r).includes("underlap"), attrs);
     assert.equal(r.status, 6, `${attrs}\n${r.lines.join("\n")}`);
     assert.match(r.lines.find((l) => l.includes(": underlap: ")), /but the upper fill does not hide the lower \(.+\) where they overlap, so the band is not measured; judge it under vault\.contacts-look\. --contact /);
   }
-  // The lower's alpha is hidden under an opaque upper fill.
   assert.equal(contactsIn(`<path id="a" fill="#c00" fill-opacity="0.5" d="M10 10 H51 V50 H10 Z"/>\n${B()}`).status, 0);
+  const sheet = contactsIn(`<style>p{color:var(--ink)}</style>\n${A(51)}\n${B()}`);
+  assert.equal(sheet.status, 6, sheet.lines.join("\n"));
+  assert.match(sheet.lines.find((l) => l.includes(": underlap: ")), /the upper fill is not proved opaque \(a stylesheet rule setting color: var\(--ink\), which it does not match to shapes\)/);
   const fixture = path.join(__dirname, "fixtures", "check-seams", "translucent.html");
   const r = runInProcess(SCRIPT, ["--contacts", fixture]);
   assert.equal(r.status, 6, r.stdout);

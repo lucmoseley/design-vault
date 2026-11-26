@@ -80,6 +80,11 @@ def white_columns(img):
     return [x for x in range(img.shape[1]) if (img[:, x] == WHITE).all()]
 
 
+class Siblings(unittest.TestCase):  # #558
+    def test_look_renders_and_look_share_one_check_frames(self):
+        self.assertIs(look_renders.frames, look_renders.look.frames)
+
+
 class Contacts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -297,6 +302,24 @@ class Bends(unittest.TestCase):
                 sorted(os.listdir(out)),
                 ["bend-1.png", "notes.txt", "renders.json", "sheet-1.png"],
             )
+
+
+class Clear(unittest.TestCase):
+    def test_an_out_folder_with_no_earlier_run_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as out:
+            open(os.path.join(out, "notes.txt"), "w").close()
+            look_renders.clear(out)
+            self.assertEqual(os.listdir(out), ["notes.txt"])
+
+    def test_an_unreadable_renders_json_stops_the_run_naming_it(self):
+        with tempfile.TemporaryDirectory() as out:
+            path = os.path.join(out, "renders.json")
+            with open(path, "w", encoding="utf8") as fh:
+                fh.write('{"sheets": [')
+            with self.assertRaises(SystemExit) as stop:
+                look_renders.clear(out)
+            self.assertIn(f"{path} does not parse", str(stop.exception.code))
+            self.assertTrue(os.path.exists(path))
 
 
 class Times(unittest.TestCase):

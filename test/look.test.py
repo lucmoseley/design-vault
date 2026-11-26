@@ -24,6 +24,15 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look.py"
 )
+CHECK_FRAMES = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-frames.py"
+)
+CONTACT_SHEET = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "contact-sheet.py"
+)
+LOOK_RENDERS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "look-renders.py"
+)
 PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
 STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
@@ -59,6 +68,11 @@ def without(package, *args):
     )
 
 
+class Siblings(unittest.TestCase):  # #558
+    def test_check_layout_and_check_frames_share_one_check_flow(self):
+        self.assertIs(look.layout.flow, look.frames.flow)
+
+
 class Height(unittest.TestCase):
     def test_a_zoom_or_measure_frames_check_layouts_first_screen_at_that_width(self):
         for cmd in (
@@ -84,11 +98,13 @@ class Height(unittest.TestCase):
         self,
     ):  # #548
         with tempfile.TemporaryDirectory() as out:
-            _, frames = look.sibling("check-frames.py").parse(
+            _, frames = look.siblings.load(look.HERE, CHECK_FRAMES).parse(
                 ["hash", PAGE, "--out", out]
             )
-            sheet = look.sibling("contact-sheet.py").parse([PAGE, "--out", out])
-            renders = look.sibling("look-renders.py")
+            sheet = look.siblings.load(look.HERE, CONTACT_SHEET).parse(
+                [PAGE, "--out", out]
+            )
+            renders = look.siblings.load(look.HERE, LOOK_RENDERS)
             shots = {
                 mode: renders.parse([mode, PAGE, "--out", out, *extra]).viewport_size
                 for mode, extra in (("contacts", ["--contact", "a=1,1"]), ("bends", []))
@@ -102,7 +118,9 @@ class Height(unittest.TestCase):
 
     def test_a_phone_scrub_frames_the_contact_sheets_phone(self):  # #548
         with tempfile.TemporaryDirectory() as out:
-            sheet = look.sibling("contact-sheet.py").parse([PAGE, "--out", out])
+            sheet = look.siblings.load(look.HERE, CONTACT_SHEET).parse(
+                [PAGE, "--out", out]
+            )
         phone = look.parse(["scrub", PAGE, "--out", "x", "--width", "390"])
         self.assertEqual({"width": 390, "height": phone.height}, sheet.phone)
 
