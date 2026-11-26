@@ -162,9 +162,11 @@ check-layout.py does, and measures each question at both:
   ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
   still through that watch while the page still runs an interval or holds
   a pending timeout cannot be measured, as it may turn more slowly. Where
-  none does, nor can a page that still runs an interval which did not fire
-  in that ROTATE_MS watch, or holds a pending timeout set for longer than
-  ROTATE_MS, unless such a control, clicked, clears it (#611). Outside
+  no declared carousel holds still so, nor can a page that still runs an
+  interval which did not fire in that ROTATE_MS watch, or holds a pending
+  timeout set for longer than ROTATE_MS, unless such a control, clicked,
+  clears it and sets no other timer of either kind; a timeout that fires
+  while the controls are tried was not watched, so is not cleared. Outside
   a declared carousel, where in that window a script changes an attribute,
   past the caret style a screenshot writes, adds or removes nodes, changes
   text or scrolls a box, or an animation or transition starts, the changed
@@ -1105,7 +1107,6 @@ TIMERS_JS = r"""
     return id;
   };
   window.clearInterval = function (id) { live.delete(id); return clear.call(this, id); };
-  // Each timeout's wait, and those cleared, so one too slow to have run in the watch is known (#611).
   const waits = new Map(), cleared = new Set(), setT = window.setTimeout, clearT = window.clearTimeout;
   window.setTimeout = function (fn, ms, ...a) { const id = setT.call(this, fn, ms, ...a); waits.set(id, Number(ms) || 0); return id; };
   window.clearTimeout = function (id) { cleared.add(id); return clearT.call(this, id); };
@@ -1138,21 +1139,26 @@ TIMED_JS = r"""
 
 LIVE_JS = "() => window.__timers.live.size > 0 || window.__flow.pending.size > 0"
 
-# The timers the watch from `since` never saw run (#611): each interval that has
-# not fired since, and each pending timeout whose wait is longer than `watch`.
 UNSEEN_JS = r"""
 ([since, watch]) => {
-  const t = window.__timers;
+  const t = window.__timers, pending = [...window.__flow.pending.keys()];
   return {
     intervals: [...t.live].filter((id) => !(t.ran.get(id) >= since)),
-    timeouts: [...window.__flow.pending.keys()].filter((id) => !(t.waits.get(id) <= watch)),
+    timeouts: pending.filter((id) => !(t.waits.get(id) <= watch)),
+    known: [...t.live, ...pending],
+    watch,
   };
 }
 """
 
-# Whether any of `unseen` still runs: an interval not cleared, or a timeout not.
-UNSEEN_LIVE_JS = r"""
-({ intervals, timeouts }) => intervals.some((id) => window.__timers.live.has(id)) || timeouts.some((id) => !window.__timers.cleared.has(id))
+# A control that clears the timer and sets another, as a restart does, has not stopped it.
+UNSEEN_RUNNING_JS = r"""
+({ intervals, timeouts, known, watch }) => {
+  const t = window.__timers, fresh = (id) => !known.includes(id);
+  return intervals.some((id) => t.live.has(id)) || timeouts.some((id) => !t.cleared.has(id))
+    || [...t.live].some(fresh)
+    || [...window.__flow.pending.keys()].some((id) => fresh(id) && !(t.waits.get(id) <= watch));
+}
 """
 
 CHANGED_JS = r"""
@@ -1638,7 +1644,7 @@ def pause_answer(context, url, carousels, spans):
             page.wait_for_timeout(hold_ms(None))
             moved = page.evaluate(page_js(ROTATED_JS), since)
             held_others.update(set(range(len(others))) - set(moved))
-        if unseen is not None and not page.evaluate(UNSEEN_LIVE_JS, unseen):
+        if unseen is not None and not page.evaluate(UNSEEN_RUNNING_JS, unseen):
             unseen = None
     ended = set(page.evaluate(ENDED_JS)) - stopped
     page.close()

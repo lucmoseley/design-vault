@@ -40,6 +40,7 @@ maths = siblings.load(SCRIPTS, "access-pixels.py")
 answering = siblings.load(SCRIPTS, "access-answers.py")
 boxes = siblings.load(SCRIPTS, "access-boxes.py")
 contrasts = siblings.load(SCRIPTS, "access-contrast.py")
+keys = siblings.load(SCRIPTS, "access-keys.py")
 with open(contrasts.TABLE) as table:
     FLOORS = contrasts.parse_table(table.read()).floors
 
@@ -726,39 +727,45 @@ class TimedChange(Browsed):
         "the page still ran a timer that did not run in the 6 s watched past 5 s from its load, and {}, "
         "so a slower change cannot be ruled out"
     )
+    NO_CONTROL = "no control on the page is named for pausing, stopping or hiding it"
+    # Twice the watch's end, LONG_MS and ROTATE_MS from load, so the timer cannot fire inside it.
+    SLOW_MS = 2 * (5000 + keys.ROTATE_MS)
 
-    def test_an_undeclared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_timer(
+    def test_an_undeclared_carousel_slower_than_the_watch_cannot_be_measured_for_its_unseen_timer(  # #611
         self,
     ):
         self.assertEqual(
-            self.pause_answer("carousel.html?every=12000"),
+            self.pause_answer(f"carousel.html?every={self.SLOW_MS}"),
+            ([], [self.UNSEEN.format(self.NO_CONTROL)]),
+        )
+
+    def test_a_timeout_set_for_longer_than_the_watch_cannot_be_measured(self):  # #611
+        self.assertEqual(
+            self.pause_answer(f"entrance.html?later={self.SLOW_MS}"),
+            ([], [self.UNSEEN.format(self.NO_CONTROL)]),
+        )
+
+    def test_an_undeclared_carousel_slower_than_the_watch_passes_where_a_pause_button_clears_its_timer(  # #611
+        self,
+    ):
+        self.assertEqual(
+            self.pause_answer(f"carousel.html?every={self.SLOW_MS}&pause"), ([], [])
+        )
+
+    def test_a_pause_button_that_restarts_the_slow_timer_does_not_count_as_clearing_it(  # #611
+        self,
+    ):
+        self.assertEqual(
+            self.pause_answer(f"carousel.html?every={self.SLOW_MS}&pause=restart"),
             (
                 [],
                 [
                     self.UNSEEN.format(
-                        "no control on the page is named for pausing, stopping or hiding it"
+                        "none of the 1 control(s) named for pausing it stops it, clicked"
                     )
                 ],
             ),
         )
-
-    def test_a_timeout_set_for_longer_than_the_watch_cannot_be_measured(self):
-        self.assertEqual(
-            self.pause_answer("entrance.html?later=30000"),
-            (
-                [],
-                [
-                    self.UNSEEN.format(
-                        "no control on the page is named for pausing, stopping or hiding it"
-                    )
-                ],
-            ),
-        )
-
-    def test_an_undeclared_carousel_slower_than_the_watch_passes_where_a_pause_button_clears_its_timer(
-        self,
-    ):
-        self.assertEqual(self.pause_answer("carousel.html?every=12000&pause"), ([], []))
 
     def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self):
         for carousels in ([".slides"], []):
