@@ -1,66 +1,21 @@
-"""drive-pointer.py — hovers, presses, clicks, drags and wheel-scrolls a page with the mouse, for the check
-scripts that read a page in a state only a pointer reaches (design-vault#301): a hover-only tooltip, a held
-button, where a dragged element comes to rest, a layer that moves with the scroll. A library the check
-scripts load; it judges nothing itself.
-
-Its only I/O is the Playwright page it is handed, which the caller opens and closes. A check loads it
-through siblings.py, as the others load check-flow.py:
-
-    pointer = siblings.load(HERE, "drive-pointer.py")
-
-and drives a Playwright page it has loaded:
-
-    pointer.hover(page, "#info")            # the tooltip is up here: read the page
-    pointer.leave(page, "#info")
-    pointer.press(page, "#buy")             # held down: read its pressed style, whether it acted yet
-    pointer.release(page)
-    pointer.drag(page, "#knob", (130, 0))   # let go and settled: read where it came to rest
-    pointer.wheel(page, "#gallery", dx=200)
-
-A `target` is a CSS selector or an ElementHandle. The pointer goes to the point `at` within its box, as
-fractions of its width and height (the centre by default), taken once its box has held still for STILL_FRAMES
-frames with no animation of it waiting to start, and scrolled into view first where that point is off the screen. A
-target still moving at SETTLE_CAP_MS, as one animated forever, is pointed at where it stands then, and its Pointer reads `settled` False. A target the page lacks, one with no box, or one
-another element covers at that point is refused with PointerError, its `cover` naming what lies over the
-target: the move would drive the cover, so there is no state of the target's to read.
-
-Each call returns a Pointer once the page has settled: no change to the markup, no scroll anywhere, and no
-finite animation running, for QUIET_MS; a page still changing at SETTLE_CAP_MS is read as it stands, with
-`settled` False. A page given WATCH_JS before its own scripts ends that wait once it has queued nothing that
-could change it inside QUIET_MS. An animation driven by the scroll, or one that repeats forever, never holds
-that wait. Its siblings settle on other signals: drive-form.py on markup and requests in flight, drive-overlay.py on one
-overlay's box; a pointer moves things none of those see, a scroll and a transition on any element.
-"""
-
 import collections
 import time
 
-# The quiet a settle waits for, in ms. Radix UI's Tooltip shows 700 ms after the pointer arrives by default
-# (its delayDuration, radix-ui.com, read 16 Oct 2026), the longest default found, so a shorter window reads
-# such a tooltip as never shown; the 100 ms past it is a working margin.
+# guess, #301
 QUIET_MS = 800
-# A page still changing after this long is read as it stands: a working figure, several quiet windows. It
-# also bounds the wait for a target to hold still (#458), so one call may wait up to twice this.
+# guess, #301
 SETTLE_CAP_MS = 5000
-# The frames a target's box must hold to read still: Playwright's "stable" takes two
-# (playwright.dev/docs/actionability); Chromium can pass a frame without advancing an animation that has just
-# started, which read a moving target still in 2 of 300 runs at two and 0 of 250 at three (#532).
+# measured 0 of 250 runs read a moving target still at three frames, #532
 STILL_FRAMES = 3
-# One frame at 60 Hz, the pace drag() moves at.
-FRAME_MS = 16
-# How long a drag takes by default: a working figure for a deliberate drag, not a flick.
+FRAME_MS = 1000 // 60
+# guess, #301
 DRAG_MS = 300
 CENTRE = (0.5, 0.5)
 
-# Where the pointer rests, in px from the viewport's top left, and whether each target held still and the page
-# settled after the move.
 Pointer = collections.namedtuple("Pointer", "x y settled")
 
 
 class PointerError(Exception):
-    """The pointer cannot reach the target. `target` is the selector or handle at fault; `cover` describes
-    the element over it, None where it is not covered."""
-
     def __init__(self, message, target=None, cover=None):
         super().__init__(message)
         self.target = target
@@ -72,8 +27,6 @@ const describe = (el) => el.localName + (el.id ? `#${el.id}` : "") +
   (el.classList.length ? `.${[...el.classList].join(".")}` : "");
 """
 
-# The viewport point at fractions [fx, fy] of the element's box, scrolled into view where it is off the
-# screen, and the element drawn there where that is not the target or inside it.
 POINT_JS = (
     "async ([el, fx, fy, scroll, cap, frames]) => {"
     + DESCRIBE_JS
@@ -113,7 +66,6 @@ POINT_JS = (
 }"""
 )
 
-# The viewport's corner pixel farthest from the element's centre.
 AWAY_JS = r"""(el) => {
   const r = el.getBoundingClientRect();
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -122,18 +74,9 @@ AWAY_JS = r"""(el) => {
   return corners.sort(([ax, ay], [bx, by]) => Math.hypot(bx - cx, by - cy) - Math.hypot(ax - cx, ay - cy))[0];
 }"""
 
-# The least quiet a settle waits where WATCH_JS shows nothing queued: a working figure, six frames at 60 Hz, for
-# the work the watch cannot see to show itself (its Residual below) before the wait ends on it.
+# guess, #462
 QUIET_LEAST_MS = 100
 
-# Run before a page's own scripts (an init script), it lets settle() end once the page has queued nothing that
-# could change it before the quiet window closes: a timer or a scheduler task due inside the window, an
-# animation-frame or idle callback, a fetch whose body is unread, a request, an image or a font still loading. A
-# page change comes only from a task, so the rest of the window would see none; it is Angular's "stable", no
-# macrotask pending (angular.dev/api/core/Testability) (#462). A timer due after the window closes, as a half-hour
-# session limit, holds nothing, as the full window would not have seen it either. Unwatched, a settle waits the
-# whole window. Residual: a WebSocket, worker or posted message, a dynamic import(), an inserted script or style
-# sheet and a CSS background image are not seen, and are waited for by QUIET_LEAST_MS alone.
 WATCH_JS = r"""(() => {
   if (window.__dpQueued) return;
   const due = new Map(), frames = new Set(), idles = new Set();
@@ -221,8 +164,6 @@ WATCH_JS = r"""(() => {
     [...due.values()].some((t) => t <= until);
 })();"""
 
-# True once nothing has changed for `quiet` ms, or for `least` ms with WATCH_JS showing nothing queued that could
-# fire before `quiet` ms; false at `cap` ms with the page still changing.
 SETTLE_JS = r"""async ([quiet, cap, least]) => {
   const frame = () => new Promise((done) => requestAnimationFrame(() => done()));
   const start = performance.now();
@@ -252,9 +193,6 @@ SETTLE_JS = r"""async ([quiet, cap, least]) => {
 
 
 def settle(page):
-    """Whether the page went QUIET_MS without a change before SETTLE_CAP_MS, or QUIET_LEAST_MS with WATCH_JS
-    showing nothing queued that could change it inside QUIET_MS. A navigation mid-wait is
-    followed: the new document is waited for once it has loaded, inside the same cap."""
     from playwright.sync_api import Error as PlaywrightError
 
     deadline = time.monotonic() + SETTLE_CAP_MS / 1000
@@ -278,7 +216,6 @@ def _element(page, target):
 
 
 def _point(page, target, at, *, scroll=True, cover_ok=False):
-    """The viewport point `at` within `target`, as (x, y)."""
     fx, fy = at
     if not (0 <= fx <= 1 and 0 <= fy <= 1):
         raise ValueError(f"at is two fractions of the box from 0 to 1, not {at!r}")
@@ -302,44 +239,38 @@ def _point(page, target, at, *, scroll=True, cover_ok=False):
 
 def _move(page, x, y):
     page.mouse.move(x, y)
-    # Playwright does not say where its mouse is, so the page carries it; release() needs it.
+    # Playwright does not say where its mouse is: https://playwright.dev/python/docs/api/class-mouse
     page._drive_pointer_at = (x, y)
 
 
 def _resting(page):
-    """The Pointer where the mouse is, once the page has settled."""
     x, y = getattr(page, "_drive_pointer_at", (0, 0))
     still = page.__dict__.pop("_drive_pointer_still", True)
     return Pointer(x, y, settle(page) and still)
 
 
 def hover(page, target, at=CENTRE):
-    """Rest the pointer on `target`."""
     _move(page, *_point(page, target, at))
     return _resting(page)
 
 
 def leave(page, target):
-    """Move the pointer to the corner of the screen farthest from `target`."""
     _move(page, *page.evaluate(AWAY_JS, _element(page, target)))
     return _resting(page)
 
 
 def press(page, target, at=CENTRE, button="left"):
-    """Press `button` down on `target` and hold it there; release() lets go."""
     _move(page, *_point(page, target, at))
     page.mouse.down(button=button)
     return _resting(page)
 
 
 def release(page, button="left"):
-    """Let go of `button` wherever the pointer is."""
     page.mouse.up(button=button)
     return _resting(page)
 
 
 def click(page, target, at=CENTRE, button="left"):
-    """Press and let go on `target`, settling only after both."""
     _move(page, *_point(page, target, at))
     page.mouse.down(button=button)
     page.mouse.up(button=button)
@@ -347,14 +278,10 @@ def click(page, target, at=CENTRE, button="left"):
 
 
 def drag(page, source, to, at=CENTRE, *, duration_ms=DRAG_MS, hold=False):
-    """Press on `source`, move to `to` over `duration_ms`, one move a frame, and let go unless `hold`. `to`
-    is an element, whose centre is reached, or an (x, y) offset in px."""
     x0, y0 = _point(page, source, at)
     if isinstance(to, tuple):
         x1, y1 = x0 + to[0], y0 + to[1]
     else:
-        # A drop zone is often covered by its own label or what was dropped before, and scrolling to it
-        # now would move `source` from under the point just found.
         x1, y1 = _point(page, to, CENTRE, scroll=False, cover_ok=True)
     _move(page, x0, y0)
     page.mouse.down()
@@ -368,8 +295,6 @@ def drag(page, source, to, at=CENTRE, *, duration_ms=DRAG_MS, hold=False):
 
 
 def wheel(page, target=None, *, dx=0, dy=0, at=CENTRE):
-    """Turn the wheel by `dx` and `dy` px with the pointer over `target`, or with None over the middle of the
-    screen, so the page scrolls from where it stands rather than from wherever `target` was scrolled to."""
     if not dx and not dy:
         raise ValueError("wheel needs a dx or a dy")
     if target is None:

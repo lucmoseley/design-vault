@@ -1,7 +1,4 @@
 "use strict";
-// gate.js check, which refuses a gate file that breaks the form (#157) and a vault rule record that breaks the record
-// form (#265): driven through its CLI on one fixture per refusal, each a clean question with one thing broken.
-// Loosen one and a question no join can read, or one no critic knows the answerer of, reaches a round's list.
 const assert = require("node:assert/strict");
 const { runInProcess } = require("./core-run-in-process.js");
 const path = require("node:path");
@@ -24,16 +21,10 @@ test("the vault's store of rule records passes", () => {
   assert.match(out, /pass/);
 });
 
-// The records #272 split from the references keep the answerer the house gave them, the builder or the whole-page
-// critic, so none joins a gate list and no critic's load moves until #258 re-sorts them. A staged record reaches no
-// agent until its tier's load test, so only live ones are held to this.
-// A tier made live (#292, #293) adds its gate questions to the map below and its type records to `typed`.
 test("a live record outside the pinned gate map and the pinned type-critic list that is not the builder's or the whole-page critic's fails, and so does a pinned record gone missing or moved to another answerer", () => {
   const records = storeRecords().filter((q) => q.fields.status.value === "live").map((q) => [q.id, q.fields["answered-by"].value]);
   const others = records.filter(([, a]) => !["script", "code", "look"].includes(a));
   assert.deepEqual(others.filter(([, a]) => !["builder", "whole-page", "type"].includes(a)), []);
-  // The type critic's records (#268): the ones #224's type critic judged, out of the whole-page critic's load.
-  // Tier 0's (#292) join them.
   const typed = [
     "vault.heading-step", "vault.paragraph-break", "vault.no-justify", "vault.dna-caps-label", "vault.dark-text-weight", "vault.measure", "vault.body-size", "vault.leading",
     "vault.dashes", "vault.prose-emphasis", "vault.emphasis-cues", "vault.zero-distinct", "vault.face-roles",
@@ -108,7 +99,6 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.small-caps": "script",
     "vault.type-axes": "script",
     "vault.ring-outline": "script",
-    // The computed-style records check-style.py answers, and the look halves split from them (#309).
     "vault.forced-colour-edges": "script",
     "vault.action-colour": "script",
     "vault.axis-properties": "script",
@@ -151,7 +141,6 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.justify-space": "script",
     "vault.measure-unit": "script",
     "vault.name-case": "script",
-    // #311's live records check-layout.py --records answers.
     "vault.joined-fills": "script",
     "vault.safe-centre": "script",
     "vault.visible-nav": "script",
@@ -161,7 +150,6 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.rtl-digit-order": "script",
     "vault.sentence-space": "script",
     "vault.week-hour": "script",
-    // The driven-state records check-state.py answers (#312).
     "vault.space-plays": "script",
     "vault.pinch-anchor": "script",
     "vault.drag-tracking": "script",
@@ -218,7 +206,7 @@ const refusals = [
   ["project-unread-target.md", /:10: demo\.unread gives a target no reader prints \(no stage, answered by look\): only a record at function, role, treatment, or answered by builder, gives one$/m],
 ];
 for (const [fixture, why] of refusals) {
-  test(`check refuses ${fixture} with exit 1, naming the line and the fault, and nothing else`, () => {
+  test(`check refuses ${fixture} with exit 1, naming the line and the fault, and nothing else (#157, #265)`, () => {
     const { status, out } = check(fixture);
     assert.equal(status, 1, out);
     assert.match(out, why);

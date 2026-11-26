@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""check-style.py — the computed-style family script (#309): answers the
-rule records whose answer is a computed style, an authored declaration or a
-font face's descriptor, one table line or more per record, through probe.py
-(#300, #250).
+"""Answers the rule records whose answer is a computed style, an authored
+declaration or a font face's descriptor, one table line or more per record,
+through probe.py.
 
 USAGE
   python3 check-style.py <page> --out DIR [--table FILE] [--parts FILE]
@@ -10,7 +9,7 @@ USAGE
         [--widths LOW-HIGH] [--timeout MS]
 
 THE TABLE, by default check-style.table beside this script, holds probe.py's
-lines (its docstring gives their form) in blocks. A block runs from its
+lines in blocks. A block runs from its
 header to the next header or `end`; lines before any header run on the
 page as it loads:
 
@@ -64,8 +63,6 @@ rule_table = siblings.load(HERE, "rule-table.py")
 flow, layout = probe.flow, probe.layout
 
 TABLE = os.path.join(HERE, "check-style.table")
-# The one width a cross-page block reads each page at: check-layout.py's
-# desktop screen, at its desktop screen height.
 ACROSS_WIDTH = layout.DESKTOP_WIDTH
 SAME = "same"
 DEFAULT = "page as it loads"
@@ -77,8 +74,6 @@ TableError = rule_table.TableError
 
 
 def parse(text):
-    """The table's blocks, in order, each with its probe.py rules. Raises
-    TableError naming the line."""
     names, blocks = {}, []
     current = _block("plain", DEFAULT)
     pending = []
@@ -114,7 +109,6 @@ def _block(kind, header, **fields):
 
 
 def _header(line):
-    """The Block a header line opens, or None where `line` is a rule."""
     if line == "end":
         return _block("plain", DEFAULT)
     if line == "across pages":
@@ -143,7 +137,6 @@ def _header(line):
 
 
 def _conditions(text):
-    """conditions.open_page()'s arguments for `under`'s words."""
     given = {}
     for word in text.split():
         key, eq, value = word.partition("=")
@@ -198,8 +191,6 @@ def _rules(pending, block):
 
 
 def run(browser, url, blocks, *, widths, heights, parts, brief, timeout):
-    """Each block's findings, in table order: [(block, [finding…])], each
-    finding probe.findings()'s, and how many animations looped."""
     out, looping = [], 0
     for block in blocks:
         if block.brief:
@@ -286,8 +277,6 @@ def _held(rule, subject, value, why, *, at):
 
 
 def _across(browser, url, block, *, parts, timeout):
-    """The block's findings over every page the crawl reaches: a read that
-    is not distinct is judged on each page, its subject naming the page."""
 
     def read(page):
         page.set_default_timeout(timeout)
@@ -383,7 +372,6 @@ def _answered(out):
 
 
 def merged(ran):
-    """One finding per record id over every block, in table order."""
     out = {}
     for block, found in ran:
         for f in found:
@@ -461,7 +449,6 @@ def main(argv):
     p, at = parse_args(argv)
     os.makedirs(at.out, exist_ok=True)
     json_path = os.path.join(at.out, "style.json")
-    # An earlier run's findings would reach a critic as this run's.
     with contextlib.suppress(FileNotFoundError):
         os.unlink(json_path)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
@@ -517,12 +504,8 @@ def main(argv):
     return 1 if any(f["misses"] for f in found) else 0
 
 
+# #274
 def without(block, parts):
-    """`block` less its lines that read a part with no selector: one the
-    round declared null or never declared, which the page does not have, so
-    its record answers no match. probe.py refuses such a line instead (#274),
-    since its table's author named the part; this table names every part a
-    page may have."""
 
     def reads(rule):
         named = {rule.select.value} if rule.select.source == "part" else set()

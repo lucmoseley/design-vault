@@ -1,24 +1,14 @@
 #!/usr/bin/env python3
-"""Cuts a render's plain background out to transparency: the colour key
-(design-vault#54, design-vault#56).
-
-Usage:
+"""Usage:
   python3 cutout.py <render> [--out <path.png>]
 
 Writes the cut as a PNG, by default `<render stem>-cut.png` beside the render,
 and beside it the same cut laid on a dark and on a bright backdrop
 (`-cut-on-dark.png`, `-cut-on-bright.png`) for the by-eye check.
 
-The render asks for one loud plain background colour the subject doesn't use.
-The method:
-  1. The key colour is the median of an 8 px border.
-  2. The background is the pixels within Euclidean RGB distance 14 of the key
-     that connect to the image's edge. A key-coloured part enclosed by the
-     subject stays opaque; one that reaches the frame's edge is cut.
-  3. In a 4 px ring around the background, each pixel C is un-mixed against the
-     key B and the nearest solid subject colour F:
-     alpha = (C-B).(F-B) / |F-B|^2, and its colour becomes F. Detail thinner
-     than the ring takes the colour of the nearest solid pixel.
+The render needs one loud plain background colour the subject doesn't use.
+A key-coloured part enclosed by the subject stays opaque; one that reaches the
+frame's edge is cut.
 
 Needs numpy, Pillow and scipy. Exits 0 cut / 1 no background or no subject
 found / 2 the arguments are wrong, or a file cannot be read or written / 3 a
@@ -26,25 +16,21 @@ package is missing.
 """
 
 import argparse
+import importlib.util
 import os
 import pathlib
 import sys
 
 REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
 
-# KEY_DISTANCE, BORDER and RING are the #54 prototype's, which cut three of its
-# four r3 renders clean; guesses, not tuned further. MIN_REGION, the px under
-# which a kept key-coloured hole is only counted, and the dark backdrop's grey
-# are new here, picked by eye.
-KEY_DISTANCE = 14.0
-BORDER = 8
-RING = 4
-MIN_REGION = 16
-BACKDROPS = {"dark": (24, 24, 24), "bright": (255, 255, 255)}
+KEY_DISTANCE = 14.0  # guess, #54
+BORDER = 8  # guess, #54
+RING = 4  # guess, #54
+MIN_REGION = 16  # guess, #501
+BACKDROPS = {"dark": (24, 24, 24), "bright": (255, 255, 255)}  # guess, #501
 
 
 def cut(rgb):
-    """Takes an HxWx3 array; returns the HxWx4 uint8 cut and the report's figures."""
     import numpy as np
     from scipy import ndimage
 
@@ -123,16 +109,18 @@ def main(argv):
         "--out", help="the cut's path, a .png; default <render stem>-cut.png"
     )
     args = parser.parse_args(argv)
-    try:
-        import numpy as np
-        from PIL import Image
-        import scipy  # noqa: F401
-    except ImportError as err:
+    missing = next(
+        (m for m in ("numpy", "PIL", "scipy") if importlib.util.find_spec(m) is None),
+        None,
+    )
+    if missing:
         print(
-            f"cutout: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
+            f"cutout: {missing} is missing — python3 -m pip install -r {REQUIREMENTS}",
             file=sys.stderr,
         )
         return 3
+    import numpy as np
+    from PIL import Image
 
     out = args.out or os.path.splitext(args.render)[0] + "-cut.png"
     if not out.lower().endswith(".png"):

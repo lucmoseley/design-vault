@@ -1,11 +1,3 @@
-"""Pins check-cross.py (#306): python3 test/check-cross.test.py
-
-Loosen the cross-page probe and a site that sends phones to a separate
-mobile page, reorders its navigation from page to page, leaves a page with
-one way to reach it, or loses a flow's answers on Back or asks for them again
-passes the gate unseen, as no single-page check compares pages.
-"""
-
 import contextlib
 import json
 import os
@@ -16,7 +8,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-cross.py"
@@ -38,13 +30,10 @@ OPEN = contextlib.ExitStack()
 SITES = {}
 BROWSER = None
 DEVICES = {}
-# How long one command run may take, in s: a guess, about six times the
-# fault site's run on this machine.
-CLI_TIMEOUT_S = 300
+CLI_TIMEOUT_S = 300  # guess, #501
 
 
 def radius(page):
-    """The read #309's SUR-22 hands crawl(): the main region's corner radius."""
     return page.eval_on_selector(
         "main", "(el) => getComputedStyle(el).borderTopLeftRadius"
     )
@@ -63,8 +52,6 @@ def run(site, browser):
 
 
 def swept(site):
-    """run()'s sweep of `site`, made once on the module's browser by the first test that asks. A sweep whose page
-    crashed is raised, and not kept, so child.main() can run the test once more."""
     if site not in SITES:
         pages, unread, walks, phones = run(site, BROWSER)
         for _, reason in unread:
@@ -85,7 +72,6 @@ def found(site, table=TABLE):
 
 def setUpModule():
     global BROWSER
-    # device() starts Playwright of its own, so it runs before chromium() opens.
     DEVICES["phone"] = cross.device(
         next(line.value for line in TABLE if line.check == "phone")
     )
@@ -101,7 +87,6 @@ def tearDownModule():
 
 
 def faults(site):
-    """Each record id the site's pages mark as planted: `fault: <id>:`."""
     marked = set()
     for page in (FIXTURES / site).rglob("*.html"):
         for line in page.read_text().splitlines():
@@ -111,7 +96,7 @@ def faults(site):
 
 
 class TheFixtures(unittest.TestCase):
-    def test_the_fault_site_plants_one_fault_for_each_record_the_table_checks(self):
+    def test_the_fault_site_plants_one_fault_for_each_record_the_table_checks_306(self):
         self.assertEqual(faults("site-fault"), set(RECORDS))
         self.assertEqual(faults("site-clean"), set())
 
@@ -208,8 +193,6 @@ class TheTableGivesTheValues(unittest.TestCase):
         self.assertEqual(got["vault.multiple-ways"]["answer"], "pass")
 
     def test_the_home_hub_size_lets_a_small_site_pass_and_no_larger(self):
-        # The fault site's crawl reads six pages; its home page links every
-        # other, and faq.html links back.
         six = found("site-fault", self.table("pages <= 4", "pages <= 6"))
         self.assertEqual(six["vault.multiple-ways"]["answer"], "pass")
         five = found("site-fault", self.table("pages <= 4", "pages <= 5"))
@@ -308,8 +291,6 @@ class TheOrderCheck(unittest.TestCase):
         self.assertEqual(answer(ORDER, pages)["answer"], "no match")
 
     def test_each_navigation_meets_the_one_it_shares_most_with(self):
-        # b's breadcrumb shares one target with a's main navigation, its own
-        # main navigation the rest, in a's order.
         pages = {
             "a": page("a", [["1", "2", "3"]]),
             "b": page("b", [["1", "9"], ["1", "2", "3"]]),
@@ -391,7 +372,7 @@ class TheWaysCheck(unittest.TestCase):
         self.assertEqual([m["page"] for m in got["misses"]], ["h"])
 
     def test_the_home_hub_needs_the_page_to_link_back(self):
-        # WCAG Understanding 2.4.5's Intent: "links from and to the home page".
+        # "links from and to the home page": https://www.w3.org/WAI/WCAG22/Understanding/multiple-ways.html
         pages = {"h": page("h", links=[link("a", nav=True)]), "a": page("a")}
         self.assertIn("a", {m["page"] for m in answer(WAYS, pages)["misses"]})
 
@@ -533,8 +514,6 @@ class ThePhoneAndSiteChecks(unittest.TestCase):
 
 
 class TheCommandLine(unittest.TestCase):
-    # A process of its own: the command starts Playwright, which cannot start
-    # inside the module's open browser.
     def main(self, *argv):
         done = child.run(
             [sys.executable, SCRIPT, *map(str, argv)],

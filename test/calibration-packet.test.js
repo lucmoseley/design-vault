@@ -1,7 +1,4 @@
 "use strict";
-// calibration-packet.js, which writes the folder a calibration run's critics read and refuses one that would carry
-// the founder's verdicts to them (#167). Loosen a check and a critic reads his pick, his reason or his words before it
-// judges, and the agreement figure measures nothing.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -44,7 +41,7 @@ function build(rounds, { roundLog = fixture("round-log.jsonl"), correctionsLog =
 const rules = (stderr) => [...stderr.matchAll(/^ {2}([\w-]+):/gm)].map((m) => m[1]);
 const listing = (dir) => fs.readdirSync(dir, { recursive: true }).map((p) => p.split(path.sep).join("/")).sort();
 
-test("a clean round packs its brief, gate list, copy bans, candidates and the entries naming one, and nothing else", () => {
+test("a clean round packs its brief, gate list, copy bans, candidates and the entries naming one, and nothing else (#167)", () => {
   const { status, stderr, stdout, out } = build([round()]);
   assert.equal(status, 0, stderr);
   assert.match(stdout, /1 round\(s\), 1 corrections entry/);
@@ -59,8 +56,6 @@ test("a clean round packs its brief, gate list, copy bans, candidates and the en
     "mmm-infra.hero-r1/entries.json",
     "mmm-infra.hero-r1/gate-list.md",
   ]);
-  // The entry keeps its pointer and its principle; the candidate he faulted, his words, his ruling and where he said
-  // it stay out.
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, "mmm-infra.hero-r1", "entries.json"), "utf8")), [
     { entry: 1, principle: "the accent gold stays muted against the navy" },
   ]);
@@ -83,8 +78,7 @@ test("a verdict field written as a bare key refuses the packet, and a bare Engli
   assert.match(fs.readFileSync(fixture("hero-r1", "brief.md"), "utf8"), /^reason: /m, "the clean brief, which the first test packs, holds a bare reason:");
 });
 
-// A brief names its asset class, which is no verdict; whether he kept or rejected a trait is one (#193).
-test("a brief naming its asset class packs, and one holding a correction's stance is refused", () => {
+test("a brief naming its asset class packs, and one holding a correction's stance is refused (#193)", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-packet-brief-"));
   scratch.push(dir);
   const brief = (name, line) => {
@@ -105,7 +99,6 @@ test("a log line pasted into a brief refuses the packet", () => {
   assert.ok(rules(stderr).includes("log-line"), stderr);
   assert.match(stderr, /log-line: mmm-infra\.hero-r1\/brief\.md holds the round log line 1/);
 
-  // A log saved with a byte-order mark: its first row is still found pasted without one.
   const { dir } = build([round()]);
   const marked = path.join(dir, "round-log.jsonl");
   fs.writeFileSync(marked, `\uFEFF${fs.readFileSync(fixture("round-log.jsonl"), "utf8")}`);
@@ -125,9 +118,7 @@ test("his words or his reason quoted in a brief refuse the packet", () => {
   assert.match(reason.stderr, /quotes lucmoseley\/mmm-infra#9 r1's reason/);
 });
 
-// A critic reads only its own round's folder (calibration-critic.js), so a later round's Client values may quote an
-// earlier round's words and reason, as the round's own critic was given them (#168).
-test("a later round's brief quoting an earlier round's words and reason is packed beside that round", () => {
+test("a later round's brief quoting an earlier round's words and reason is packed beside that round (#168)", () => {
   const r2 = round({
     round: 2,
     tag: "rounds/hero-r2",

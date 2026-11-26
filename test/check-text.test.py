@@ -1,22 +1,3 @@
-"""Pins check-text.py and text-checks.py (#314): python3 test/check-text.test.py
-
-Loosen the text script and a page with straight quotes, curled code, a
-hyphen for a minus or a range, a bare decimal, numbers in another locale's
-format, a Sunday-first calendar for a Monday-first locale, typed or overlong
-capitals, title case, heavy emphasis, broken number-unit pairs, scattered
-soft hyphens, wide sentence spaces, a plain typed fraction, reversed digits
-or a deadline with no date passes the gate unseen; tighten it and a correct
-page fails on a date, a phone number, a rating, a possessive, a currency
-code, a name or a bold link read as a fault.
-
-How it is built: FaultPage and CleanPage run check-text.py's main()
-in-process on tier01-fault.html, which plants one fault per record on the
-element whose id is the record's name, and on tier01-clean.html, which
-holds those records met and the correct text a looser check misreads. Checks calls text-checks.py's
-checks on hand-built loads, with no browser. It runs in the commit gate
-under the chromium tag (test/all.sh).
-"""
-
 import contextlib
 import io
 import json
@@ -29,7 +10,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-text.py"
@@ -54,8 +35,6 @@ RUNS = {}
 
 
 def run(page, *argv, table=None, words=None, parts=None):
-    """main()'s exit code, its stdout and stderr, and text.json's contents
-    (None where it wrote none), run in-process; each distinct run once."""
     key = (str(page), argv, table, words, parts)
     if key in RUNS:
         return RUNS[key]
@@ -151,7 +130,7 @@ def misses(check, *blocks, **given):
 
 
 class FaultPage(unittest.TestCase):
-    def test_fails_each_record_at_its_planted_element_alone(self):
+    def test_314_fails_each_record_at_its_planted_element_alone(self):
         code, out, _, data = run(FAULT, *OFFER)
         self.assertEqual(code, 1, out)
         got = by_id(data)
@@ -328,17 +307,14 @@ class Checks(unittest.TestCase):
             ]
             return misses(checks.emphasis_share, b)
 
-        # 11 bold words in 48: a run past ten, under a quarter of the words.
         self.assertEqual(
             paragraph(11, 37), ["a run of 11 words in bold or italic, past 10"]
         )
-        # Three runs of four bold words, 12 of 40: past a quarter, no run past ten.
         self.assertEqual(
             paragraph(4, 10, 4, 10, 4, 8),
             ["12 of 40 words in bold or italic, past 25%"],
         )
         self.assertEqual(paragraph(11, 37, link=True), [])
-        # Four no-break spaces in a row, the most allowed.
         self.assertEqual(
             misses(checks.nonbreaking, block("a\u00a0b\u00a0c\u00a0d\u00a0e")), []
         )
@@ -397,8 +373,6 @@ class Checks(unittest.TestCase):
             checks.week_hour, block("opens 13:00"), browser=LOCALES["de-DE"]
         )
         self.assertEqual(visitor.misses, [])
-        # A Sunday-first calendar on an en-GB page: wrong for a German
-        # visitor, the visitor's own week for an American one.
         calendar = [{"place": "#c", "lang": "en-GB", "first": 7}]
         de, us = LOCALES["de-DE"], LOCALES["en-US"]
         self.assertEqual(

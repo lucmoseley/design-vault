@@ -1,14 +1,9 @@
-// The state fixtures' shared behaviour. A part marked data-fault on the
-// fault page behaves the faulty way that record names; unmarked, it behaves
-// as the record asks. The check script never reads data-fault to judge.
 (() => {
-  // node --test loads every .js under test/, where there is no document.
   if (!globalThis.document) return;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const faulty = (el, id) => el?.closest("[data-fault]")?.getAttribute("data-fault") === id;
 
-  // Tooltips: Escape dismisses the one showing until the pointer leaves.
   addEventListener("keydown", (e) => {
     if (e.key === "Escape") $$(".tip-host").forEach((h) => h.classList.add("dismissed"));
   });
@@ -16,7 +11,6 @@
     h.addEventListener("mouseleave", () => h.classList.remove("dismissed"));
     h.addEventListener("blur", () => h.classList.remove("dismissed"));
   });
-  // vault.hover-content: a tooltip that goes a second after it shows.
   $$(".timed-host").forEach((h) => {
     const tip = $(".timed-tip", h);
     h.addEventListener("mouseenter", () => {
@@ -26,7 +20,6 @@
     h.addEventListener("mouseleave", () => (tip.hidden = true));
   });
 
-  // Disclosures and menu buttons: aria-expanded flips, aria-controls shows.
   const menus = [];
   const shut = (b) => {
     b.setAttribute("aria-expanded", "false");
@@ -52,7 +45,6 @@
       b.focus();
     });
   });
-  // vault.expanded-state: a button that shows a panel and says nothing.
   $$("button[data-panel]").forEach((b) =>
     b.addEventListener("click", () => {
       const p = $("#" + b.dataset.panel);
@@ -60,17 +52,14 @@
     }),
   );
 
-  // Menu items: one ending in "…" asks for more in a dialog; others act.
   $$("[role=menuitem][data-opens]").forEach((m) =>
     m.addEventListener("click", () => $("#" + m.dataset.opens).showModal()),
   );
 
-  // Dialog openers and closers.
   $$("button[data-opens]").forEach((b) => b.addEventListener("click", () => $("#" + b.dataset.opens).showModal()));
   $$("dialog button[data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
   $$(".banner button").forEach((b) => b.addEventListener("click", () => b.closest(".banner").remove()));
 
-  // Toggle buttons.
   $$("[aria-pressed]").forEach((b) =>
     b.addEventListener("click", () => {
       const on = b.getAttribute("aria-pressed") !== "true";
@@ -79,8 +68,6 @@
     }),
   );
 
-  // vault.act-on-release: a button that acts as it is pressed down, and one
-  // that deletes as it is pressed down and offers an Undo that restores nothing.
   $$("[data-fault='vault.act-on-release']:not([data-removes])").forEach((b) =>
     b.addEventListener("pointerdown", () => (b.textContent = "Sent")),
   );
@@ -95,7 +82,6 @@
       b.after(undo);
     }),
   );
-  // vault.key-shortcuts: "s" alone jumps to the search field.
   if ($("[data-fault='vault.key-shortcuts']")) {
     addEventListener("keydown", (e) => {
       if (e.key === "s" && document.activeElement === document.body) {
@@ -104,19 +90,15 @@
       }
     });
   }
-  // vault.on-focus: focusing a field sends focus on to the next.
   $$("[data-fault='vault.on-focus']").forEach((f) =>
     f.addEventListener("focus", () => $("#" + f.dataset.next).focus()),
   );
 
-  // Players: the play control toggles its audio.
   $$(".player").forEach((p) => {
     const media = $("audio", p);
     $("[data-play]", p).addEventListener("click", () => (media.paused ? media.play() : media.pause()));
   });
 
-  // Sliders: keys, a click on the track and a captured drag, in the
-  // reading direction.
   $$(".thumb").forEach((t) => {
     const track = t.parentElement;
     const low = +t.getAttribute("aria-valuemin");
@@ -167,7 +149,6 @@
     t.addEventListener("pointermove", (e) => t.hasPointerCapture(e.pointerId) && at(e.clientX));
   });
 
-  // Carousels: previous and next scroll by a slide.
   $$(".carousel").forEach((c) => {
     const reel = $(".reel", c);
     $$("[data-step]", c).forEach((b) =>
@@ -175,8 +156,6 @@
     );
   });
 
-  // Zoomable images: a two-finger spread scales about the point between
-  // the fingers; the faulty one about its corner.
   $$(".zoomable").forEach((z) => {
     const img = $("img", z);
     let start = null;
@@ -200,9 +179,6 @@
     z.addEventListener("touchend", () => (start = null));
   });
 
-  // Forms: checked on leaving a field, an error cleared on the key that
-  // fixes it, and on a failed submit an error summary above the h1 that
-  // takes focus and links to each field.
   const message = (f) => {
     if (f.validity.valueMissing) return "Enter your " + f.labels[0].textContent.toLowerCase();
     if (!f.validity.valid) return "Enter a valid " + f.labels[0].textContent.toLowerCase();
@@ -250,7 +226,6 @@
   $$("[data-fault='vault.field-paste'], [data-fault='vault.auth-paste']").forEach((f) =>
     f.addEventListener("paste", (e) => e.preventDefault()),
   );
-  // Split code boxes: one paste fills them all.
   $$(".code").forEach((group) => {
     const boxes = $$("input", group);
     boxes.forEach((b) =>
@@ -263,8 +238,6 @@
     );
   });
 
-  // The search field: an APG combobox, its count in a status region; the
-  // faulty one draws a bare list.
   $$("[data-suggest]").forEach((input) => {
     const list = $("#" + input.dataset.suggest);
     const status = $("#" + input.dataset.status);
@@ -302,7 +275,6 @@
     });
   });
 
-  // Select-all: mixed when some are checked.
   $$(".select-all").forEach((all) => {
     const members = all.getAttribute("aria-controls").split(" ").map((id) => $("#" + id));
     const sync = () => {
@@ -317,7 +289,6 @@
     });
   });
 
-  // Toasts: a message written into a status region the first markup holds.
   $$("button[data-toast]").forEach((b) =>
     b.addEventListener("click", () => {
       const region = $("#" + b.dataset.toast);
@@ -325,7 +296,6 @@
       if (faulty(b, "vault.status-no-focus")) setTimeout(() => (region.innerHTML = ""), 2000);
     }),
   );
-  // vault.live-region-ready: a status region added with its message.
   $$("[data-fault='vault.live-region-ready']").forEach((b) =>
     b.addEventListener("click", () => {
       const region = document.createElement("div");
@@ -335,15 +305,12 @@
       b.after(region);
     }),
   );
-  // vault.exit-warning: a link off the site that asks first.
   $$("[data-fault='vault.exit-warning']").forEach((a) =>
     a.addEventListener("click", (e) => {
       if (!confirm("You are leaving this site.")) e.preventDefault();
     }),
   );
 
-  // The session limit: half an hour, warned a minute before with a button
-  // that restarts it, unless the page is the faulty one.
   const LIMIT = 30 * 60 * 1000;
   const warned = !$("[data-fault='vault.time-limit']");
   let timers = [];

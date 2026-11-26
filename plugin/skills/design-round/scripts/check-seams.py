@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""check-seams.py — measures the ground showing along every contact
-check-curves.js --contacts lists, on look-renders.py contacts' crops at each
-of its SCALES (design-vault#341).
+"""Measures the ground showing along every contact check-curves.js --contacts
+lists, on look-renders.py contacts' crops at each of its SCALES.
 
 USAGE
   python3 check-seams.py <svg file or saved page> --out DIR [--times MS,MS,…]
@@ -12,15 +11,12 @@ after its scripts ran. At each scale and frame look-renders.py contacts shoots,
 each contact is shot three times: as drawn, then with every element but its
 two shapes hidden over a black ground, then over a white one. Their difference
 is each device pixel's share of ground, and the pixel the two fills would make
-with no ground showing (docs/research/contact-seams.md §3). Each pixel's
+with no ground showing. Each pixel's
 luminance Weber contrast against that pixel, summed across the contact per
 unit of its length, times one device pixel's visual angle, is the seam's width
 x contrast in arcsec: a contact fails at a scale where it reaches
-THRESHOLD_ARCSEC. An overlap of two opaque
-fills leaves the same pixels as an underlap, so it stays with
-vault.contacts-look (§5). Residual: the window follows the edge's tangent at
-the contact's point, so on an edge curving tighter than REACH across WINDOW a
-seam bends out of it and is under-measured.
+THRESHOLD_ARCSEC. An overlap of two opaque fills is not judged here:
+vault.contacts-look judges it.
 
 It writes look-renders.py's crops into DIR, and beside each the two mattes,
 <name>-<ms>ms-<n>x-black.png and -white.png, at device size.
@@ -61,24 +57,22 @@ colour_space = siblings.load(
     HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
 
-# A seam shows once its width x luminance contrast reaches 0.5 arcsec: Hecht & Mintz 1939's thin-line floor, its
-# partial-contrast form derived (docs/research/contact-seams.md §1.1, §6). A lab floor: everyday viewing's is untraced.
+# measured 0.5 arcsec (Hecht & Mintz 1939), #341
 THRESHOLD_ARCSEC = 0.5
-# One device pixel's visual angle in arcsec at the nearest typical viewing distance: derived (§1.2).
+# guess, #341
 ARCSEC = {1: 109.0, 2: 47.0, 3: 35.0}
-# Untraced, the #340 instrument's settings (§6): a ground share at or under half a code value is rounding; past
-# ALL_GROUND, black / (1 - share) is too noisy and the fill on the pixel's side stands in; a luminance floor so a
-# black fill cannot divide by zero.
+# guess, #341
 NOISE = 0.5 / 255
+# guess, #341
 ALL_GROUND = 0.95
+# guess, #341
 DARK = 1e-4
-# Untraced guesses, in CSS px: how far each side of the contact's point along its edge is measured, inside the
-# CONTACT_SIZE crop; and how far across the edge each fill is looked for, past check-curves.js's 2 px contact
-# distance with a pixel to spare.
+# guess, #341
 WINDOW = 5
+# guess, #341
 REACH = 3
 
-# The underlap the remedy asks for: one device pixel at DPR 1 (§2).
+# guess, #341
 UNDERLAP_CSS_PX = 1
 
 CURVES = os.path.join(HERE, "check-curves.js")
@@ -93,7 +87,6 @@ MATTE_CSS = """
 * {{ visibility: hidden !important; }}
 {pair} {{ visibility: visible !important; }}
 """
-# A <style> in the document's own namespace, so a bare SVG file takes it as an HTML page does.
 MATTE_JS = r"""
 (css) => {
   const root = document.documentElement;
@@ -159,7 +152,6 @@ def list_contacts(file):
 
 
 def look_args(args, measured):
-    """look-renders.py contacts' arguments for the measured contacts, each carrying its pair and edge."""
     argv = ["contacts", args.file, "--out", args.out]
     for flag in ("times", "width", "height", "wait", "timeout"):
         if getattr(args, flag) is not None:
@@ -173,7 +165,6 @@ def look_args(args, measured):
 
 
 def shoot_mattes(page, args, *, contact, point, png):
-    """Transitions are off while matted, or a hidden element would fade out across the shot."""
     ahead = page.evaluate(
         renders.POINT_JS,
         {"sel": contact["sel"], "x": contact["along"][0], "y": contact["along"][1]},
@@ -201,7 +192,6 @@ def pixels(png):
 
 
 def luminance(rgb):
-    """Relative luminance of an sRGB pixel of 0-255 floats, colour_space's weights."""
     return sum(
         w * colour_space.lin(v / 255)
         for w, v in zip(colour_space.SRGB_TO_XYZ[1], rgb, strict=True)
@@ -209,7 +199,6 @@ def luminance(rgb):
 
 
 def measure(drawn, mattes, tangent, scale):
-    """The seam's width x contrast in arcsec, or None where no stretch of the window has an opaque fill on each side."""
     black, white = mattes["black"], mattes["white"]
     norm = math.hypot(*tangent)
     if norm == 0:
@@ -226,7 +215,6 @@ def measure(drawn, mattes, tangent, scale):
         return (i, j) if 0 <= i < size and 0 <= j < size else None
 
     def fill(x, y, sign):
-        """The nearest opaque fill across the edge on one side, its colour and its distance, or None within reach."""
         for k in range(reach):
             step = sign * (k + 0.5)
             p = at(x + step * nx, y + step * ny)
@@ -234,8 +222,6 @@ def measure(drawn, mattes, tangent, scale):
                 return black[p], step
         return None
 
-    # Each device pixel's step along the edge where both fills are found is part of the contact's length; only the
-    # pixels between those two fills are across the edge, never ground past a thin fill's far side.
     sides = {}
     for t in range(-WINDOW * scale, WINDOW * scale):
         x, y = mid + t * tx, mid + t * ty
@@ -320,7 +306,6 @@ def main(argv):
         renders.clear(look.out)
 
         def run():
-            # Animations on the main thread, so a matte and its crop draw one moment.
             with flow.chromium(renders.frames.HASH_ARGS) as browser:
                 return renders.render_contacts(browser, look, also=shoot_mattes)
 
@@ -342,7 +327,6 @@ def main(argv):
             lines += said
             faults += failed
             unmeasured += lost
-        # look-renders.py's record, its mattes named, so the next run's clear() deletes them too.
         shots = [
             {
                 **{k: v for k, v in s.items() if k not in (*GROUNDS, "drawn")},

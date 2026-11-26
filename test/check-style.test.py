@@ -1,15 +1,3 @@
-"""Pins check-style.py (#309): python3 test/check-style.test.py
-
-It is a suite of the commit gate (test/all.sh): loosening it lets a page pass
-a computed-style record it misses, or fail one it meets.
-test/fixtures/probe/style-fault.html plants one fault per record, on an
-element whose id is f- and the record's name, and every record must fail on
-its plant, or on the whole selection where WHOLE names it. A record's
-extra plants take f-<record>-<variant>.
-test/fixtures/probe/style-clean.html meets every record but those UNMET names,
-and nothing may fail or go unjudged there.
-"""
-
 import collections
 import concurrent.futures
 import json
@@ -22,7 +10,7 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-style.py"
@@ -35,13 +23,10 @@ FIXTURES = os.path.join(HERE, "fixtures", "probe")
 FAULT = os.path.join(FIXTURES, "style-fault.html")
 CLEAN = os.path.join(FIXTURES, "style-clean.html")
 PARTS = os.path.join(FIXTURES, "style-parts.json")
-# One phone width, which the `at 320-640` block reads, and two wider ones,
-# where prose runs past 50 characters a line and headings reach 48 px.
+# guess, #309
 SWEEP = ["--widths", "320-1920", "--step", "800"]
-# A page's sweep runs a few minutes; ten is a hung browser.
+# guess, #309
 RUN_TIMEOUT_S = 600
-# Records whose plant misses on the whole selection, never one element. Each
-# is the miss's subject, or how it starts.
 WHOLE = {
     "vault.button-size": "role:button",
     "vault.action-colour": "role:button where ",
@@ -49,10 +34,7 @@ WHOLE = {
     "vault.text-steps": "ground rgb(250, 250, 250)",
     "vault.fallback-metrics": "@font-face f-fallback-metrics",
 }
-# Records the clean page cannot meet as anything but no match.
 UNMET = {
-    # Justified text is allowed only where a project's rules file names it,
-    # and vault.text-align refuses it on a page with none.
     "vault.justify-space",
 }
 
@@ -85,7 +67,6 @@ def check(page, out):
 
 
 def setUpModule():
-    """Both pages run once, side by side."""
     work = tempfile.mkdtemp(prefix="check-style-")
     WORK.append(work)
     pages = {"fault": FAULT, "clean": CLEAN}
@@ -129,7 +110,7 @@ def table_ids():
 
 
 class Pages(unittest.TestCase):
-    def test_the_fault_page_fails_every_record_on_its_plant(self):
+    def test_309_the_fault_page_fails_every_record_on_its_plant(self):
         proc, found = RAN["fault"]
         self.assertEqual(proc.returncode, 1, proc.stderr)
         by_id = {f["id"]: f for f in found}
@@ -153,8 +134,7 @@ class Pages(unittest.TestCase):
                 self.assertIn(f"{rid}: fail", proc.stdout)
         self.assertIn("every finding: ", proc.stdout)
 
-    def test_type_size_fails_each_plant_on_the_one_floor_it_breaks(self):
-        """#479, #514. Pass pair: test_the_clean_page_reports_nothing."""
+    def test_479_514_type_size_fails_each_plant_on_the_one_floor_it_breaks(self):
         _, found = RAN["fault"]
         (f,) = [f for f in found if f["id"] == "vault.type-size"]
         for plant, read in (

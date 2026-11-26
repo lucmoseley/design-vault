@@ -1,15 +1,3 @@
-"""Pins check-access.py's access questions (#163, #164, #189, #315, #316, #545): python3 test/check-access.test.py
-
-Each question is run end to end on a fixture that fails it, and on a clean
-page that passes every question check-access.py asks; the keyboard-tier01 fixtures plant one fault for each
-of #315's questions, and each branch of them besides. access-pixels.py, access-answers.py and
-access-boxes.py are libraries, so the pixel maths, the answer merging and the
-reading of generated text's boxes check-access.py imports from them are called
-in-process. It is a suite of the
-commit gate (test/all.sh): loosening a figure here lets a page a visitor
-cannot read or use reach the critic as a pass.
-"""
-
 import concurrent.futures
 import json
 import os
@@ -79,7 +67,6 @@ RUNS = (
     "keyboard-tier01-spin",
 )
 PARTS = os.path.join(FIXTURES, "keyboard-tier01-parts.json")
-# Arguments a run takes beyond its fixture and --out.
 ARGS = {
     "logotype": ["--logotype", "header .brand", "--logotype", "svg.mark"],
     **{
@@ -87,8 +74,6 @@ ARGS = {
         for n in ("fault", "clean", "more", "skip", "spin")
     },
 }
-# #315's questions, each with the id its plant on keyboard-tier01-fault.html carries. The fixtures built before
-# #315 are judged on every question but these, as the keyboard-tier01 pages judge them.
 KEYS = {
     "vault.skip-link": "#skip-link",
     "vault.visual-order": "#visual-order",
@@ -100,9 +85,7 @@ KEYS = {
     "vault.focus-colour-kept": "#focus-colour-kept",
     "vault.focus-visible": "#focus-visible",
 }
-# Each run is a browser; four at once keeps the commit gate quick on a shared
-# machine. A guess, unmeasured.
-PARALLEL = 4
+PARALLEL = 4  # guess, #501
 SCRATCH = tempfile.TemporaryDirectory()
 DONE = {}
 
@@ -112,9 +95,7 @@ def setUpModule():
         DONE.update(zip(RUNS, pool.map(check, RUNS), strict=True))
 
 
-# How long one run of the script may take, in s: a fixture's whole check, or
-# one that stops on its arguments or a refused load. Guesses, unmeasured.
-RUN_S, ARGUMENT_RUN_S = 600, 120
+RUN_S, ARGUMENT_RUN_S = 600, 120  # guess, #189
 
 
 def script(*args, timeout):
@@ -137,7 +118,6 @@ def check(name):
     return r.returncode, r.stdout, r.stderr, found
 
 
-# Runs argv[2:] as a script once argv[1] is made unimportable.
 BLOCKED = (
     "import runpy, sys; sys.modules[sys.argv[1]] = None; sys.argv = sys.argv[2:]; "
     "runpy.run_path(sys.argv[0], run_name='__main__')"
@@ -145,7 +125,6 @@ BLOCKED = (
 
 
 def without(package, *args):
-    """The script run with `package` unimportable, as on a machine that lacks it (#256)."""
     return child.run(
         [sys.executable, "-c", BLOCKED, package, SCRIPT, *args], timeout=ARGUMENT_RUN_S
     )
@@ -191,7 +170,6 @@ class Arithmetic(unittest.TestCase):
         }
 
     def read(self, shot, text):
-        """text_contrast with a glyph on every pixel."""
         return maths.text_contrast(
             shot, np.ones(shot.shape[:2], dtype=bool), text, FLOORS
         )
@@ -205,7 +183,7 @@ class Arithmetic(unittest.TestCase):
         self.assertFalse(maths.large(18.5, 700, FLOORS))
 
     def test_large_text_needs_3_to_1_and_body_text_4_5(self):
-        grey = [0x94] * 3  # 3.03:1 on white
+        grey = [0x94] * 3
         fault, _ = self.read(solid(255), self.text(grey))
         self.assertIn("3.03:1 against #ffffff behind it; 4.5:1 needed", fault)
         self.assertEqual(self.read(solid(255), self.text(grey, size=24)), (None, None))
@@ -231,15 +209,15 @@ class Arithmetic(unittest.TestCase):
         self,
     ):
         shot = solid(255)
-        shot[5, 10] = 30  # black text on near-black, 1 of a stroke's 48 pixels
+        shot[5, 10] = 30
         ink = np.zeros((20, 40), dtype=bool)
         ink[4:16, 8:12] = True
         black = self.text([0, 0, 0])
         self.assertIsNotNone(maths.text_contrast(shot, ink, black, FLOORS)[0])
         ink[:] = False
-        ink[4:16, 20:24] = True  # the stroke moved off it
+        ink[4:16, 20:24] = True
         self.assertEqual(maths.text_contrast(shot, ink, black, FLOORS), (None, None))
-        ink[:] = False  # no glyph shows: covered or clipped
+        ink[:] = False
         self.assertEqual(maths.text_contrast(shot, ink, black, FLOORS), (None, None))
 
     def test_a_line_in_the_texts_own_colour_across_its_glyphs_is_not_read_but_a_band_is(
@@ -247,8 +225,8 @@ class Arithmetic(unittest.TestCase):
     ):  # #257
         black = self.text([0, 0, 0])
         shot = solid(255)
-        shot[9] = shot[12] = 0x60  # its edge, blended into the ground: 3.3:1
-        shot[10:12] = 0  # a 2 px underline in the text's own black
+        shot[9] = shot[12] = 0x60
+        shot[10:12] = 0
         self.assertEqual(self.read(shot, black), (None, None))
         shot[6:14] = 0
         fault, _ = self.read(shot, black)
@@ -272,22 +250,22 @@ class Arithmetic(unittest.TestCase):
     ):  # #257
         black = self.text([0, 0, 0])
         shot = solid(0x30)
-        shot[::3] = 0  # a close ruling: no ground left beside its lines
+        shot[::3] = 0
         fault, _ = self.read(shot, black)
         self.assertIn("1.00:1 against #000000 behind it", fault)
         shot = solid(0x30)
-        shot[::4] = 0  # one row between each two lines' blended edges
+        shot[::4] = 0
         fault, _ = self.read(shot, black)
         self.assertIn("1.59:1 against #303030 behind it", fault)
 
     def test_a_control_edge_is_its_best_side_line_or_its_fill(self):
         page = solid(255, 100, 60)
         shot = page.copy()
-        shot[20, 20:80] = 0x76  # a top border only, 4.54:1
+        shot[20, 20:80] = 0x76
         best = maths.edge_contrast(shot, page, [20, 20, 80, 50]).ratio
         self.assertAlmostEqual(best, 4.54, places=2)
         shot = page.copy()
-        shot[24:46, 24:76] = 0x76  # a fill inside a 4 px border the colour of the page
+        shot[24:46, 24:76] = 0x76
         self.assertAlmostEqual(
             maths.edge_contrast(shot, page, [20, 20, 80, 50])[0], 4.54, places=2
         )
@@ -306,9 +284,9 @@ class Arithmetic(unittest.TestCase):
 
     def test_a_neighbours_edge_flush_against_a_control_is_not_its_own(self):  # #220
         page = solid(255, 140, 100)
-        page[60:62, 20:120] = 0x22  # a dark rule flush under the field
+        page[60:62, 20:120] = 0x22
         shot = page.copy()
-        shot[30, 30:110] = shot[59, 30:110] = 0xE7  # the field's own edge, 1.24:1
+        shot[30, 30:110] = shot[59, 30:110] = 0xE7
         shot[30:60, 30] = shot[30:60, 109] = 0xE7
         field = {"subject": "input", "rect": [30, 30, 110, 60]}
         box, ratio, behind = maths.control_edge(shot, [page], [field])
@@ -335,14 +313,14 @@ class Arithmetic(unittest.TestCase):
     def test_the_innermost_box_that_draws_an_edge_is_the_controls_edge(self):
         page = solid(255, 140, 100)
         shot = page.copy()
-        shot[20, 10:130] = 0xE7  # the wrapper's top edge, 1.24:1
+        shot[20, 10:130] = 0xE7
         field = {"subject": "input", "rect": [30, 30, 110, 60]}
         wrapper = {"subject": "label", "rect": [10, 20, 130, 70]}
         box, ratio, _ = maths.control_edge(shot, [shot, page], [field, wrapper])
         self.assertIs(box, wrapper)
         self.assertAlmostEqual(ratio, 1.24, places=2)
         without = shot.copy()
-        shot[30, 30:110] = 0x76  # the field's own edge, 4.54:1, now drawn
+        shot[30, 30:110] = 0x76
         self.assertIs(
             maths.control_edge(shot, [without, page], [field, wrapper])[0], field
         )
@@ -350,12 +328,12 @@ class Arithmetic(unittest.TestCase):
     def test_a_focus_indicator_is_the_pixels_focus_changes_by_3_to_1_or_more(self):
         off = solid(255, 100, 60)
         on = off.copy()
-        on[20, 20:80] = 0x76  # a 60 px line, 4.54:1 against white
-        on[30, 20:80] = 0xE7  # and one at 1.24:1, which does not count
+        on[20, 20:80] = 0x76
+        on[30, 20:80] = 0xE7
         still = np.ones((60, 100), dtype=bool)
         self.assertEqual(maths.focus_changed(on, off, [0, 0, 100, 60], still), 60)
         self.assertEqual(maths.focus_changed(on, off, [0, 25, 100, 60], still), 0)
-        still[20, 20:50] = False  # a video's or canvas's pixels, moving by themselves
+        still[20, 20:50] = False
         self.assertEqual(maths.focus_changed(on, off, [0, 0, 100, 60], still), 30)
 
     def test_a_pixel_within_2_px_of_one_that_moves_by_itself_is_not_still(self):
@@ -367,14 +345,12 @@ class Arithmetic(unittest.TestCase):
         self.assertTrue((maths.still_pixels(shot, shot, moved, shot) == kept).all())
 
     def test_a_canvas_pixel_whose_near_neighbours_match_by_chance_is_not_still(self):
-        # The canvas fills columns 4-11; each pair of shots differs on it except
-        # in the 3x3 around its edge pixel at row 5, column 4, as noise did in #222.
         on = solid(255, 12, 12)
         on[:, 4:] = 0
         off = solid(255, 12, 12)
         on_again, off_again = off.copy(), on.copy()
         on_again[4:7, 3:6], off_again[4:7, 3:6] = on[4:7, 3:6], off[4:7, 3:6]
-        on[5, 1] = on_again[5, 1] = 0  # a ring's pixel, 3 px from the canvas
+        on[5, 1] = on_again[5, 1] = 0
         still = maths.still_pixels(on, off, on_again, off_again)
         self.assertEqual(maths.focus_changed(on, off, [0, 0, 12, 12], still), 1)
 
@@ -409,8 +385,6 @@ class Arithmetic(unittest.TestCase):
         self.assertAlmostEqual(ratio, 1.045, places=3)
 
     def test_a_field_that_draws_nothing_on_a_gradient_draws_no_edge(self):
-        # White to #e5e5e5 down the page: its fill reads 1.05:1 against the page
-        # above it, but nothing against the page behind it.
         column = np.linspace(255, 0xE5, 100).round().astype(np.uint8)
         shot = np.repeat(column[:, None, None], 140 * 3).reshape(100, 140, 3)
         field = {"subject": "input", "rect": [30, 30, 110, 70]}
@@ -504,8 +478,6 @@ class Answers(unittest.TestCase):
 
 
 class GeneratedBoxes(unittest.TestCase):
-    """access-boxes.py against a stand-in for Chromium's DevTools."""
-
     def devtools(self, pseudos, quads=(), fails=None):
         def send(method, params):
             if method == fails:
@@ -561,11 +533,7 @@ class GeneratedBoxes(unittest.TestCase):
 
 
 class CarouselWatch(unittest.TestCase):
-    """access-keys.py's carousel timing where a loaded machine's screenshots mislead: every shot showing the
-    same slide, as a two-slide carousel shot once a cycle, or every shot unlike the last (#315). It runs on
-    the real clock, as the fixture's own setInterval turns its slides."""
-
-    def test_a_carousel_is_timed_in_the_page_whatever_its_shots_show(self):
+    def test_a_carousel_is_timed_in_the_page_whatever_its_shots_show_315(self):
         from playwright.sync_api import sync_playwright
 
         keys = siblings.load(SCRIPTS, "access-keys.py")
@@ -589,7 +557,6 @@ class CarouselWatch(unittest.TestCase):
                     held.query_selector("button.pause").focus()
                     page.wait_for_timeout(100)
                     self.assertIsNone(keys.change(page, held, 1500))
-                    # Every shot unlike the last, as when one shot outlasts the gap between turns.
                     count = iter(range(10**6))
                     keys._shot = lambda handle: np.full((4, 4, 3), next(count) % 2 * 99)
                     self.assertIsInstance(keys._span(page, on), float)
@@ -627,7 +594,6 @@ class Browsed(unittest.TestCase):
 
 
 def fixture_url(fixture):
-    """A fixture's file URL, keeping a query string after its name."""
     name, _, query = fixture.partition("?")
     return pathlib.Path(FIXTURES, name).resolve().as_uri() + (
         f"?{query}" if query else ""
@@ -635,13 +601,7 @@ def fixture_url(fixture):
 
 
 class LateMotionRead(Browsed):
-    """check-access.py's vault.pause read where a long animation ends before a control can be tried on it, as on a
-    busy machine (#368). Their pair, a long animation still running at the read, is
-    Questions.test_a_looping_and_a_long_animation_whose_pause_button_does_not_stop_them_fail."""
-
-    def test_a_long_animation_that_ended_before_the_read_cannot_be_measured(self):
-        # A real late read, as only one reproduces the busy machine's: past ended.html's 6 s slides, by #364's
-        # 10 s stand-in delay.
+    def test_a_long_animation_that_ended_before_the_read_cannot_be_measured_368(self):
         faults, unmeasured = self.pause_answer("ended.html", 10_000)
         self.assertEqual(faults, [])
         ended = "runs 6.0 s from the page's load and ended before a control could be tried on it"
@@ -663,10 +623,7 @@ class LateMotionRead(Browsed):
 
 
 class Hold(unittest.TestCase):
-    """How long vault.pause waits for a change a control may have stopped (#545): a slide span
-    vault.carousel-focus timed, else access-keys.py's ROTATE_MS, and STILL_SLACK_MS more."""
-
-    def test_a_timed_span_sets_the_hold_and_anything_else_takes_rotate_ms(self):
+    def test_a_timed_span_sets_the_hold_and_anything_else_takes_rotate_ms_545(self):
         access = siblings.load(SCRIPTS, "check-access.py")
         slack, rotate = access.keys.STILL_SLACK_MS, access.keys.ROTATE_MS
         for span, want in (
@@ -679,9 +636,6 @@ class Hold(unittest.TestCase):
 
 
 class TimedChange(Browsed):
-    """vault.pause on a page that changes what it shows on a timer past 5 s, as a carousel's slides do, told
-    apart from an entrance that ends sooner (#545)."""
-
     CHANGING = "changes what it shows more than 5 s after the page's load, and no control on the page is named for pausing, stopping or hiding it"
     UNDECLARED = f"main > div.slides {CHANGING}; no carousel was declared, so whether the change shows cannot be told"
 
@@ -711,7 +665,6 @@ class TimedChange(Browsed):
         # #154
         access = siblings.load(SCRIPTS, "check-access.py")
         long_s, rotate_s = access.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
-        # Slower than both watches back to back, so neither sees a turn.
         every = access.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
             f"carousel.html?every={every}", carousels=[".slides", "main > div"]
@@ -726,7 +679,7 @@ class TimedChange(Browsed):
         windows = [tuple(map(float, m.groups())) for m in matches]
         self.assertEqual(len(windows), 2, unmeasured)
         (start1, end1), (start2, end2) = sorted(windows)
-        rounding = 0.1  # the message's .1f
+        rounding = 0.1
         self.assertGreaterEqual(start1, long_s - rounding)
         self.assertGreaterEqual(start2, end1 - rounding)
         for start, end in windows:
@@ -737,7 +690,6 @@ class TimedChange(Browsed):
         "so a slower change cannot be ruled out"
     )
     NO_CONTROL = "no control on the page is named for pausing, stopping or hiding it"
-    # Twice the watch's end, LONG_MS and ROTATE_MS from load, so the timer cannot fire inside it.
     SLOW_MS = 2 * (5000 + keys.ROTATE_MS)
 
     def test_an_undeclared_carousel_slower_than_the_watch_cannot_be_measured_for_its_unseen_timer(  # #611
@@ -814,9 +766,9 @@ class TimedChange(Browsed):
 
 
 class PauseClick(Browsed):
-    """Whether vault.pause's click on a control named for pausing lands, read the same on a busy machine (#536)."""
-
-    def test_a_clean_page_passes_when_every_actionability_wait_outruns_its_budget(self):
+    def test_a_clean_page_passes_when_every_actionability_wait_outruns_its_budget_536(
+        self,
+    ):
         from playwright.sync_api import ElementHandle, TimeoutError
 
         click = ElementHandle.click
@@ -865,7 +817,6 @@ class PauseClick(Browsed):
 
 class Questions(unittest.TestCase):
     def only_fault(self, name, qid, also=()):
-        """The run's findings under qid, once it exited 1 with every question but qid and `also` passing."""
         code, stdout, stderr, found = DONE[name]
         self.assertEqual(code, 1, stdout + stderr)
         answers = found["answers"]
@@ -882,7 +833,7 @@ class Questions(unittest.TestCase):
             self.assertIn(f"desktop, phone: {f['subject']} {f['detail']}", stdout)
         return [(f["subject"], f["detail"]) for f in answers[qid]["faults"]]
 
-    def test_grey_body_text_and_a_grey_generated_label_fail_and_large_or_bold_text_at_3_to_1_passes(
+    def test_grey_body_text_and_a_grey_generated_label_fail_and_large_or_bold_text_at_3_to_1_passes_163(
         self,
     ):
         found = self.only_fault("contrast", "vault.contrast")
@@ -1012,7 +963,7 @@ class Questions(unittest.TestCase):
             ],
         )
 
-    def test_a_div_button_a_span_and_a_react_div_acting_on_a_click_and_a_link_out_of_the_tab_order_fail(
+    def test_a_div_button_a_span_and_a_react_div_acting_on_a_click_and_a_link_out_of_the_tab_order_fail_164(
         self,
     ):
         found = self.only_fault("keyboard", "vault.keyboard")
@@ -1155,7 +1106,7 @@ class Questions(unittest.TestCase):
                 "vault.focus": "fail",
                 "vault.pause": "cannot measure",
                 "vault.control-edges": "cannot measure",
-                "vault.chart-contrast": "cannot measure",  # an undeclared canvas (#429)
+                "vault.chart-contrast": "cannot measure",
             },
         )
         self.assertEqual(
@@ -1226,7 +1177,6 @@ class Questions(unittest.TestCase):
         )
 
     def faults(self, name, qid):
-        """{subject: detail} of the run's faults under qid."""
         return {
             f["subject"]: f["detail"] for f in DONE[name][3]["answers"][qid]["faults"]
         }
@@ -1436,7 +1386,7 @@ class Questions(unittest.TestCase):
             ["p#dusk"],
         )
 
-    def test_a_patch_behind_a_few_letters_fails_and_so_do_fields_filled_in_faint_greys(
+    def test_a_patch_behind_a_few_letters_fails_and_so_do_fields_filled_in_faint_greys_316(
         self,
     ):
         found = self.only_fault("faint", "vault.contrast", ("vault.control-edges",))
@@ -1497,7 +1447,6 @@ class Questions(unittest.TestCase):
         for n in notes:
             self.assertIn("each text's whole box was read", n["note"])
             self.assertIn(f"  note, {n['at'][0]}: {n['note']}", stdout)
-        # strokes.html grows on its first shot only, so its retake matches.
         self.assertEqual(DONE["strokes"][3]["answers"]["vault.contrast"]["notes"], [])
 
     def test_text_under_a_fixed_or_sticky_bar_at_load_is_read_clear_of_it_where_pale_text_still_fails(
@@ -1548,7 +1497,7 @@ class Questions(unittest.TestCase):
             ("pass", [], []),
         )
 
-    def test_a_logotype_named_by_its_selector_is_exempt_and_reported_and_other_grey_text_still_fails(
+    def test_a_logotype_named_by_its_selector_is_exempt_and_reported_and_other_grey_text_still_fails_189(
         self,
     ):
         found = self.only_fault("logotype", "vault.contrast")
@@ -1680,7 +1629,6 @@ class Arguments(unittest.TestCase):
     def test_a_refused_page_exits_5_and_leaves_no_earlier_report(self):
         with tempfile.TemporaryDirectory() as out:
             pathlib.Path(out, "access.json").write_text("{}")
-            # Port 9, discard, has no listener here, so the browser is refused at once.
             r = script("http://127.0.0.1:9/", "--out", out, timeout=ARGUMENT_RUN_S)
             left = os.listdir(out)
         self.assertEqual(r.returncode, 5, r.stdout + r.stderr)

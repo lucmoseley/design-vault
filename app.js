@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA, STYLES, showStyles=false, fit='any', queryTests=[], sort='newest', currentId=null, toastTimer;
-// Five picks, as many as a design round's round one has directions (design-round §2).
+// guess, #501
 const MAX_SELECTED=5, DEFAULT_PROJECT='manta';
 const stored = key => {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}};
 const storedSelection=stored('taste-vault-selection');
@@ -14,7 +14,6 @@ function setSelection(ids){selected=new Set(ids);saveLocal('taste-vault-selectio
 const pruneSelection = keep => setSelection([...selected].filter(keep));
 const collectionFor = id => DATA.collections.find(c=>c.id===id);
 const entryFor = id => DATA.entries.find(e=>e.id===id);
-// What the page shows and copies is decided in view.js, from the view these lines hold.
 const view = () => ({data:DATA,styles:STYLES,project,pick,fit,sort,showStyles,queryTests,prefs});
 const projectGroups = () => VaultView.projectGroups(view());
 const groupFor = id => projectGroups().find(g=>g.id===id);
@@ -34,7 +33,6 @@ const styleFor = id => STYLES.styles.find(s=>s.id===id);
 const styleNames = c => VaultView.styleNames(view(),c);
 const looksFor = s => DATA.collections.filter(c=>(c.styles||[]).includes(s.id));
 const dotColour = c => /^#[0-9a-f]{6}$/i.test(c?.accent||'')?c.accent:'#8b91a0';
-// How each way in (view.js's WAYS) looks and where it renders: a sidebar nav, or with chips set, a chip row above the grid (#26).
 const WAY_LOOKS={
  look:{label:()=>'Look',nav:'collectionNav',item:id=>{const c=collectionFor(id);return {id,name:c.name,icon:`<span class="collection-dot" style="--dot:${dotColour(c)}" aria-hidden="true"></span>`};},title:id=>collectionFor(id).name,about:()=>'A different point of view. Saved for the right project.'},
  part:{label:()=>'Page part',nav:'partChips',chips:true,item:id=>({id,name:partFor(id).name,gloss:partFor(id).gloss}),title:id=>partFor(id).name,about:id=>partFor(id).gloss+'.'},
@@ -49,14 +47,12 @@ const picked = () => VaultView.picked(view()).map(w=>WAYS.find(way=>way.key===w.
 const pickName = w => w.items().find(i=>i.id===pick[w.key])?.name||pick[w.key];
 const imagePath = e => 'images/'+encodeURIComponent(e.file||e.still);
 function saveLocal(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
-// A toast shows for 2.6 s, carried from the seed (cth9191/taste-vault), which gives no reason.
+// guess, #501
 function notify(message){clearTimeout(toastTimer); const host=[...document.querySelectorAll('dialog[open]')].at(-1)||document.body;host.append($('toast'));$('toast').textContent=message;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2600);}
 function openDialog(id){$(id).showModal();}
 function closeDialog(id){$(id).close();}
 function tags(words){return (words||[]).map(v=>`<span>${esc(v)}</span>`).join('');}
-// A keyword is a search word (#25): clicking one searches the whole library for it.
 function keywordTags(words){return (words||[]).map(v=>`<button type="button" data-keyword="${esc(v)}" title="Search the library for ${esc(v)}">${esc(v)}</button>`).join('');}
-// Focus goes to the box only where it opens no on-screen keyboard over the results.
 function searchLibrary(text){document.querySelectorAll('dialog[open]').forEach(d=>d.close());setQuery(text);setFit('any');$('fitSelect').value='any';showAll();if(matchMedia('(pointer:fine)').matches)$('searchInput').focus();}
 function readHash(){
  const read=VaultView.readHash(view(),location.hash.slice(1));
@@ -65,15 +61,12 @@ function readHash(){
 }
 function showView(){history.replaceState(null,'','#'+VaultView.viewHash(view()));render();}
 function showPick(key,id){setPick(key,id);setShowStyles(false);showView();}
-// A sidebar click (a look or a group) clears the search, so a search never strands the new view on an empty page;
-// a chip keeps it, since its counts already reflect the search (#27 Q5).
+// #27
 function pickWay(key,id){if(!WAYS.find(w=>w.key===key).chips)setQuery('');showPick(key,id);}
 const choose = (key,id) => pickWay(key,pick[key]===id?null:id);
 function showAll(){clearPicks();setShowStyles(false);showView();}
 function showStyleGuide(){clearPicks();setShowStyles(true);showView();}
-// A style card's look link is a sidebar click too, and its search was of styles, not references.
 const openLook = id => pickWay('look',id);
-// The box's words are compiled once per change, not once per reference (search.js).
 function setQuery(text){$('searchInput').value=text;queryTests=VaultSearch.compile(text,DATA.design_words);}
 const countFor = (w,id) => VaultView.countFor(view(),w.key,id);
 const visibleEntries = () => VaultView.visibleEntries(view());
@@ -83,16 +76,13 @@ function renderNav(){
  const nav=(attrs,classes,label,count,icon)=>`<button class="nav-item${classes}" ${attrs}>${icon}<span>${esc(label)}</span><span class="nav-count">${count}</span></button>`;
  const chip=(attrs,classes,label,count,gloss)=>`<button class="way-chip${classes}" ${attrs} title="${esc(gloss)}">${esc(label)}<span class="nav-count">${count}</span></button>`;
  $('libraryNav').innerHTML=nav('data-all'+(all?' aria-current="page"':''),all?' active':'','All references',library.length,'<span class="nav-icon" aria-hidden="true">▦</span>')+nav('data-styles'+(showStyles?' aria-current="page"':''),showStyles?' active':'','Style guide',STYLES.styles.length,'<span class="nav-icon" aria-hidden="true">◈</span>');
- // A value that would leave nothing is dimmed, never hidden, so the list keeps its shape as picks change.
  WAYS.forEach(w=>$(w.nav).innerHTML=w.items().map(i=>{const chosen=pick[w.key]===i.id, n=countFor(w,i.id);return (w.chips?chip:nav)(`data-facet="${w.key}" data-id="${esc(i.id)}" aria-pressed="${chosen}"`,(chosen?' active':'')+(n||chosen?'':' empty'),i.name,n,w.chips?i.gloss:i.icon);}).join(''));
  $('groupCount').textContent=projectGroups().length;
  $('groupHeading').textContent=projectName()+' groups';
- // A project starts with no groups (#28 Q6).
  $('groupHeading').parentElement.hidden=$('groupNav').hidden=!projectGroups().length;
  $('detailFitHeading').textContent=projectName()+' fit';
  $('collectionCount').textContent=DATA.collections.length;
  $('libraryCount').textContent=library.length+' references · '+DATA.collections.length+' looks';
- // No sidebar on a narrow screen: one select per way in with anything to pick, the Style guide last in the first.
  $('mobileNavigation').innerHTML=WAYS.filter(w=>w.items().length).map((w,index)=>`<label>${esc(w.label())} <select data-way="${w.key}"><option value="">Any</option>${w.items().map(i=>{const chosen=pick[w.key]===i.id, n=countFor(w,i.id);return `<option value="${esc(i.id)}"${chosen?' selected':''}${n||chosen?'':' disabled'}>${esc(i.name)} (${n})</option>`;}).join('')}${index?'':`<option value=":styles"${showStyles?' selected':''}>Style guide</option>`}</select></label>`).join('');
  document.querySelectorAll('[data-way]').forEach(select=>select.onchange=()=>select.value===':styles'?showStyleGuide():pickWay(select.dataset.way,select.value||null));
  document.querySelectorAll('[data-all]').forEach(button=>button.onclick=()=>showAll());
@@ -107,7 +97,6 @@ function renderPicks(){
  document.querySelectorAll('[data-clear-picks]').forEach(button=>button.onclick=()=>showAll());
 }
 function render(){
- // The nav is rebuilt below, so the control a keyboard user just used is found again and refocused.
  const focused=document.activeElement?.dataset||{}, refocus=focused.way?`[data-way="${focused.way}"]`:focused.facet?`[data-facet="${focused.facet}"][data-id="${CSS.escape(focused.id)}"]`:null;
  renderNav();renderPicks();
  if(refocus)document.querySelector(refocus)?.focus();
@@ -159,14 +148,13 @@ function openReference(id){
  renderTray();if(!$('inspector').open)openDialog('inspector');$('imageStage').scrollTop=0;$('imageStage').scrollLeft=0;document.querySelector('.detail-panel').scrollTop=0;
 }
 function navigateReference(delta){const list=visibleEntries(), index=list.findIndex(e=>e.id===currentId);if(index>=0&&list[index+delta])openReference(list[index+delta].id);}
-// A compared reference shows four of its keywords and terms: a guess at what fits its card.
+// guess, #3
 function openComparison(){
  const entries=[...selected].map(entryFor);if(entries.length<2)return;
  $('comparisonGrid').style.setProperty('--compare-columns',entries.length);
  $('comparisonGrid').innerHTML=entries.map(e=>`<article class="compare-item"><div class="compare-image"><img src="${imagePath(e)}" alt="${esc(e.title)}"></div><h3>${esc(e.title)}</h3><p class="detail-family">${esc(collectionFor(e.collection).name)} · ${fitBadge(e)}</p>${siteLink(e)}<div class="tags">${tags([...(e.keywords||[]),...(e.vocabulary||[])].slice(0,4))}</div><p>${esc(e.note)}${fitOf(e)?' <em>'+esc(projectName())+' take: '+esc(fitOf(e).take)+'</em>':''}</p><button class="button" data-inspect="${esc(e.id)}">Inspect reference ↗</button></article>`).join('');
  document.querySelectorAll('[data-inspect]').forEach(b=>b.onclick=()=>openReference(b.dataset.inspect));openDialog('comparison');
 }
-// Counts what openLook will show: the Style guide holds no picks, and openLook clears the search.
 function styleLooks(s){const looks=looksFor(s);return looks.length?`<div class="style-looks"><h3>Your looks that share it</h3><div class="tags">${looks.map(c=>`<button type="button" data-look="${esc(c.id)}" title="Open ${esc(c.name)}">${esc(c.name)} <span class="nav-count">${libraryEntries().filter(e=>e.collection===c.id&&VaultView.fitPasses(view(),e)).length}</span></button>`).join('')}</div></div>`:'';}
 async function copyText(text,message='Brief copied'){
  try{await navigator.clipboard.writeText(text);notify(message);}catch{$('copyFallback').value=text;if(!$('copyDialog').open)openDialog('copyDialog');$('copyFallback').focus();$('copyFallback').select();}
@@ -182,13 +170,11 @@ function renderProjectOptions(){
 function switchProject(key){
  setProject(key);saveLocal('taste-vault-project',project);setFit('any');renderProjectOptions();
  pruneSelection(id=>inProject(entryFor(id)));
- // A pick the new project does not offer (its groups, the page parts its references hold) is dropped.
  WAYS.forEach(w=>{if(!w.items().some(i=>i.id===pick[w.key]))setPick(w.key,null);});
 }
 function chooseProject(key){switchProject(key);showView();}
 async function boot(){
  try{
-  // Opened from its folder, the page loads data/vault-data.js, since a browser refuses fetch() on file:// (#32).
   if(location.protocol==='file:'){await new Promise((loaded,failed)=>{const s=document.createElement('script');s.src='data/vault-data.js';s.onload=loaded;s.onerror=()=>failed(new Error('The copy of your library this page reads is missing — ask Claude to run node bundle.js.'));document.head.append(s);});({gallery:DATA,styles:STYLES}=window.VAULT_DATA);}
   else [DATA,STYLES]=await Promise.all(['data/gallery.json','data/styles.json'].map(async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('Unable to load your library.');return r.json();}));
   if(!Object.hasOwn(DATA.projects||{},project))setProject(Object.keys(DATA.projects||{})[0]||DEFAULT_PROJECT);

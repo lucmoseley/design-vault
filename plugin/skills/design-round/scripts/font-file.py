@@ -1,26 +1,8 @@
-"""font-file.py — reads the tables of a font file a page loads, for
-check-load.py's --files mode (#313), with no font library: TrueType and
-OpenType (sfnt), WOFF and WOFF2.
-
-    font = fontfile.read(data, unbrotli)   # Font, or FontError
-    font.features      # {'smcp', 'kern', …}: GSUB's and GPOS's feature tags
-    font.chars         # {0x41, …}: every code point the cmap maps
-    font.axes          # {'wght': (100, 400, 900), …}: fvar's axes
-    font.postscript    # the name table's PostScript name (ID 6)
-    font.family        # its typographic family (ID 16), else family (ID 1)
-    font.italic        # OS/2 fsSelection's italic bit, else head macStyle's
-
-WOFF2 compresses every table in one Brotli stream, which the standard library
-cannot open: `unbrotli(bytes) -> bytes` decodes it. The tables read here are
-never transformed (WOFF2 §5.1, only glyf, loca and hmtx are), and lie back to
-back in the stream in directory order. A font collection (ttcf) is refused.
-"""
-
 import collections
 import struct
 import zlib
 
-# WOFF2 §5.2's known table tags, by the index a directory entry's flags give.
+# WOFF2's known table tags, by flag index: https://www.w3.org/TR/WOFF2/#table_dir_format
 WOFF2_TAGS = (
     "cmap head hhea hmtx maxp name OS/2 post cvt  fpgm glyf loca prep CFF  VORG "
     "EBDT EBLC gasp hdmx kern LTSH PCLT VDMX vhea vmtx BASE GDEF GPOS GSUB EBSC "
@@ -40,7 +22,6 @@ class FontError(Exception):
 
 
 def read(data, unbrotli=None):
-    """The Font in `data`, a whole font file's bytes."""
     try:
         tables = _tables(bytes(data), unbrotli)
         return Font(
@@ -56,7 +37,6 @@ def read(data, unbrotli=None):
 
 
 def kind(data):
-    """The file format `data` begins with: sfnt, woff, woff2, ttc, or None."""
     head = bytes(data[:4])
     if head in SFNT:
         return "sfnt"
@@ -108,6 +88,7 @@ def _woff2(data, unbrotli):
             tag = WOFF2_TAGS[flags & 0x3F]
         orig, at = _base128(data, at)
         version = flags >> 6
+        # Only glyf, loca and hmtx take a transform: https://www.w3.org/TR/WOFF2/#table_format
         transformed = (tag in ("glyf", "loca") and version != 3) or (
             tag == "hmtx" and version != 0
         )
@@ -139,7 +120,6 @@ def _base128(data, at):
 
 
 def _features(table):
-    """The feature tags of a GSUB or GPOS table's FeatureList."""
     if not table:
         return set()
     (offset,) = struct.unpack_from(">H", table, 6)
@@ -208,8 +188,6 @@ def _axes(table):
 
 
 def _name(table, ids):
-    """The first of `ids` the name table holds, Windows Unicode English or
-    Mac Roman, decoded."""
     if not table:
         return None
     count, strings = struct.unpack_from(">HH", table, 2)

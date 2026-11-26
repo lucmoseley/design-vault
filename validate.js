@@ -1,9 +1,5 @@
 #!/usr/bin/env node
 /**
- * The vault's gate: refuses a data/gallery.json that is not a well-formed
- * schema v3 library, so a typo in a keyword, a group or a verdict never
- * reaches a brief (lucmoseley/mantahostels#3631 step 2, lucmoseley/design-vault-tracker#1).
- *
  * Usage:
  *   node validate.js                      the working tree's data/gallery.json, data/styles.json and images/
  *   node validate.js --staged             the index's copies
@@ -19,9 +15,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SCHEMA_VERSION = 3;
-// Manta's four provenance claims (#3040, #3086, #3170).
 const ORIGINS = ["manta-original", "ai-generated", "third-party", "unattributed"];
-// The `animate` skill's §2 set (#3108).
 const PURPOSES = [
   "feedback",
   "spatial-consistency",
@@ -31,22 +25,17 @@ const PURPOSES = [
   "delight",
 ];
 const SHEET_SECTION = /^§\d+[a-z]?$/;
-// A picture with no page around it, so no other page part can stand beside it (#29 Q9).
 const ART_ONLY = "art-only";
 
 const list = (value) => (Array.isArray(value) ? value : []);
 const isText = (value) => typeof value === "string" && value.trim() !== "";
-// A bare name under images/, never a path that could climb out of it.
 const isBare = (name) => isText(name) && !name.includes("/") && !name.includes("\\") && name !== ".." && name !== ".";
-// `<path> in <owner>/<repo>`, the path a Markdown file that never climbs out of the repo.
 const isRepoMarkdown = (value) => {
   const match = typeof value === "string" && value.match(/^([^\s\\:]+\.md) in ([\w.-]+)\/([\w.-]+)$/);
   if (!match) return false;
   const [, file, owner, repo] = match;
   return !file.startsWith("/") && !file.split("/").includes("..") && ![owner, repo].some((name) => /^\.+$/.test(name));
 };
-// The page puts url and site_url in a link, so only a web address may reach it;
-// the prefix test is the page's own, so an address that passes here is linked there.
 const isWebAddress = (value) => {
   try {
     return typeof value === "string" && /^https?:\/\//i.test(value) && Boolean(new URL(value));
@@ -55,12 +44,6 @@ const isWebAddress = (value) => {
   }
 };
 
-/**
- * Returns every fault in `gallery`, one string each, led by its rule name.
- * `imageExists(file)` answers whether images/<file> is present. `staged` adds
- * the rules that bind a commit but not the uncommitted draft. `styleIds` holds
- * the Style guide's style ids, which a collection's `styles` may name.
- */
 function validate(gallery, imageExists, { staged = false, styleIds = new Set() } = {}) {
   const faults = [];
   const fault = (rule, message) => faults.push(`${rule}: ${message}`);
@@ -103,14 +86,11 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
       linked.add(style);
     }
   }
-  // Faults a malformed tag list and returns its ids.
   const checkTagList = (key, rule) => {
     const ids = new Set();
     const names = new Set();
-    // The page reads both lists whole, so it cannot load without either.
     if (!Array.isArray(gallery[key])) fault(rule, `${key} is missing or not a list`);
     for (const [index, item] of list(gallery[key]).entries()) {
-      // The page shows the name and the gloss; the ingest prompt shows a page part's id and gloss.
       if (!["id", "name", "gloss"].every((field) => isText(item?.[field])))
         fault(rule, `${key}[${index}] lacks an id, a name or a gloss`);
       else if (ids.has(item.id) || names.has(item.name))
@@ -122,8 +102,6 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
   };
   const pageParts = checkTagList("page_parts", "page-part-list");
   const motionKinds = checkTagList("motion_kinds", "motion-kind-list");
-  // The design-word list pairs a word the founder types with the words the data uses (#25 Q4); search splits
-  // what is typed at spaces and lower-cases it, so a word with a space or a capital could never be looked up.
   if (!Array.isArray(gallery.design_words)) fault("design-word-list", "design_words is missing or not a list");
   const designWords = new Set();
   for (const [index, item] of list(gallery.design_words).entries()) {
@@ -135,15 +113,12 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
     designWords.add(item?.word);
   }
   const projects = gallery.projects ?? {};
-  // A project may have no group yet (#28 Q6), but the page and the ingest read the list whole.
   for (const [key, project] of Object.entries(projects)) {
     if (!Array.isArray(project?.groups))
       fault("group-list", `projects.${key}.groups is missing or not a list — a project with no group carries []`);
-    // The rules and gate files, where ledger-upkeep.js and gate.js read them (#154, #159, #554).
     for (const [field, required] of [["rules", true], ["gate", false]])
       if ((required || project?.[field] !== undefined) && !isRepoMarkdown(project?.[field]))
         fault(`project-${field}`, `projects.${key}.${field} ${JSON.stringify(project?.[field])} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
-    // The desktop size its own visitors use, optional, which design-round's scripts take as --viewport (#196).
     if (project?.desktop !== undefined && !(typeof project.desktop === "string" && /^[1-9]\d*x[1-9]\d*$/.test(project.desktop)))
       fault("project-desktop", `projects.${key}.desktop ${JSON.stringify(project.desktop)} is not a width and height in px, as \`1536x864\``);
   }
@@ -186,7 +161,6 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
       }
       if (!list(project.verdicts).includes(fit.verdict))
         fault("fit-verdict", `${label}: fit.${key}.verdict ${JSON.stringify(fit.verdict)} is not in projects.${key}.verdicts`);
-      // A judged reference may answer none of the project's own questions (#28 Q5).
       if (!Array.isArray(fit.groups))
         fault("group-list", `${label}: fit.${key}.groups is missing or not a list — an entry with no group carries []`);
       const groupIds = new Set(list(project.groups).map((g) => g?.id));
@@ -197,7 +171,6 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
         fault("sheet-section", `${label}: fit.${key}.sheet_section ${JSON.stringify(fit.sheet_section)} is not a "§<n>" citation, e.g. "§8"`);
     }
 
-    // A reference kept for one project alone: a client's own site or its rivals.
     if ("project" in e) {
       if (!(isText(e.project) && Object.hasOwn(projects, e.project)))
         fault("unknown-project", `${label}: project ${JSON.stringify(e.project)} names no project in projects`);
@@ -225,22 +198,18 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
 
     if ("motion" in e && !PURPOSES.includes(e.motion?.purpose))
       fault("motion-purpose", `${label}: motion.purpose ${JSON.stringify(e.motion?.purpose)} is not one of ${PURPOSES.join(", ")}`);
-    // Present but possibly empty: a site kept for something other than its motion takes no kind (#29 Q9).
     if ("motion" in e && !Array.isArray(e.motion?.kinds))
       fault("motion-kind-missing", `${label}: motion.kinds is missing or not a list`);
     for (const kind of list(e.motion?.kinds))
       if (!motionKinds.has(kind)) fault("unknown-motion-kind", `${label}: motion kind "${kind}" is not in motion_kinds`);
 
-    // A site entry's still is its picture in the grid, so it lives in images/ like an image entry's file.
     if (hasImage && !onDisk(e.file))
       fault("missing-image", `${label}: file ${JSON.stringify(e.file)} is not on disk under images/`);
     if (hasSite && !onDisk(e.still))
       fault("missing-still", `${label}: still ${JSON.stringify(e.still)} is not on disk under images/`);
-    // Every motion block carries its recording, the evidence behind its fields.
     if ("motion" in e && !onDisk(e.motion?.capture))
       fault("missing-capture", `${label}: motion.capture ${JSON.stringify(e.motion?.capture)} is not on disk under images/`);
 
-    // The ingest's group proposal is no verdict, so it never commits (lucmoseley/mantahostels#3538 Q1).
     if (staged && "proposed_manta_groups" in e)
       fault("draft-proposal", `${label}: carries proposed_manta_groups — delete it, or promote it into fit.manta with a verdict, before committing`);
   });
@@ -260,8 +229,6 @@ function parseArgs(argv) {
   return options;
 }
 
-// Reads from the index, never the working tree, so the hook judges this
-// commit's bytes and not a parallel session's half-written copy.
 function loadStaged(root) {
   const git = gitIn(root);
   const text = git("show", ":data/gallery.json");
@@ -309,7 +276,6 @@ function main(argv) {
     console.error(`validate.js: ${source.label} refused\n  json: ${error.message}`);
     return 1;
   }
-  // Read after the gallery parses, so a gallery that is not JSON is refused as one.
   let stylesText;
   try {
     stylesText = source.readStyles();

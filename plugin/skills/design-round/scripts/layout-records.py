@@ -1,21 +1,3 @@
-"""layout-records.py — the record checks check-layout.py --records runs over
-its width sweep (#311): what each table line reads on the page at one width,
-and how the sweep's widths give each record one answer.
-
-It does no I/O. check-layout.py loads it by path, runs READ_JS on
-the loaded page at each width of its sweep and the other scripts here on loads
-of its own, and passes what they find to the functions below. The checks and
-the value each takes are in CHECKS; each table line names its record, its
-check and the value from that record:
-
-    vault.line-length | line-length | body 50-75, columns 40-50, large 75, short 80 to 3 lines
-
-Each record's answer is fail where any of its checks found a fault at any
-width, else not judged where a check needs a part or a brief fact the round
-did not give, else pass where a check found something the record applies to,
-else no match.
-"""
-
 import collections
 import os
 import sys
@@ -40,9 +22,6 @@ def _numbers(*keys):
     return lambda m: dict(zip(keys, (float(g) for g in m.groups()), strict=True))
 
 
-# Each check: the shape of its table value, what it reads from the match, and
-# what the round must give before it can judge: a part (part:<name>) or a
-# brief fact (brief:<key>).
 CHECKS = {
     "fold": Check(r"none", _none, ()),
     "nav-place": Check(rf"under {NUMBER}", _numbers("under"), ("brief:kind",)),
@@ -120,25 +99,20 @@ CHECKS = {
     "card-media": Check(rf"{NUMBER}em", _numbers("threshold"), ("part:card",)),
     "label-value": Check(rf"size {NUMBER}", _numbers("size"), ()),
     "row-wrap": Check(r"none", _none, ()),
-    # No check of its own: the width under which the phone-only checks judge.
     "phone-width": Check(rf"under {NUMBER}", _numbers("under"), ()),
     "logo-version": Check(r"none", _none, ("part:logo",)),
 }
 BRIEF = {"kind": ("app", "site"), "page": ("reading", "default", "canvas")}
-# A box edge within this many px of another counts as on it: rounding, as
-# check-layout.py's own EDGE.
+# guess, #311
 EDGE = 1
-# Blink lays boxes out in 64ths of a px, so an edge this close to a whole
-# device pixel lands on it.
+# Blink lays boxes out in 64ths of a px (LayoutUnit):
+# https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/platform/geometry/layout_unit.h
 SNAP = 1 / 64
-# How far the line-length read widens the page: any width well past EDGE
-# serves.
+# guess, #311
 FILL_PROBE = 16
 
 
 def parse_value(mode, value):
-    """A table value for `mode`, as its check reads it. Raises ValueError
-    where it does not fit the check's shape."""
     m = re.fullmatch(CHECKS[mode].pattern, value)
     if m is None:
         raise ValueError(
@@ -148,8 +122,6 @@ def parse_value(mode, value):
 
 
 def missing(mode, parts, brief):
-    """What the round must still give before `mode` can judge, in words, or
-    None. `parts` maps a declared part to its selector or None."""
     for need in CHECKS[mode].needs:
         kind, _, name = need.partition(":")
         if kind == "part" and not parts.get(name):
@@ -159,8 +131,6 @@ def missing(mode, parts, brief):
     return None
 
 
-# Each fault is {kind: <check>, subject, detail}; `seen` names the
-# checks that found something their record applies to.
 READ_JS = (
     r"""
 (args) => {
@@ -824,10 +794,6 @@ READ_JS = (
 """
 )
 
-# The facts the line-length check needs about each block check-measure.py's
-# LINES_JS counted, by its place among body's elements: whether it sits in
-# several columns, and whether its width tracks the page's as the page widens
-# by FILL_PROBE, as a column filling the viewport less its gutters does.
 LINE_FACTS_JS = r"""
 ([at, grow, EDGE]) => {
   const all = [...document.body.querySelectorAll('*')];
@@ -844,15 +810,11 @@ LINE_FACTS_JS = r"""
 
 
 def with_label(js, label_js):
-    """`js` with check-flow.py's label() in it, LABEL_JS."""
     body = label_js.strip().removeprefix("const label = ").rstrip(";")
     return js.replace("%LABEL%", body)
 
 
 def line_faults(blocks, facts, v):
-    """vault.line-length's faults at one width: each block, by its role, with
-    a full line under its floor or any line over its ceiling. `blocks` are
-    check-measure.py LINES_JS's, `facts` LINE_FACTS_JS's for them."""
     if not blocks:
         return []
     weight = collections.Counter()
@@ -890,10 +852,6 @@ def line_faults(blocks, facts, v):
 
 
 def card_media_faults(found, threshold):
-    """vault.card-media-stack's faults at each width, from each width's card
-    notes: [(width, [card…])]. A card whose media is beside its text at any
-    width is a media object; it must stack under `threshold` em and sit beside
-    from it."""
     objects = {c["at"] for _, cards in found for c in cards if c["beside"]}
     out = []
     for width, cards in found:
@@ -928,9 +886,6 @@ def card_media_faults(found, threshold):
 
 
 def logo_faults(found):
-    """vault.logo-version's faults at each width, from [(width, logo note or
-    None)]: the variant with the widest shape is the full logo, and any other
-    shown at a width wider than one the full logo is shown at is a fault."""
     shown = [(w, n) for w, n in found if n]
     if not shown:
         return [(w, []) for w, _ in found]
@@ -957,11 +912,6 @@ def logo_faults(found):
 
 
 def fluid_faults(base, zoomed, sized, v, *, slack):
-    """vault.fluid-zoom's faults at one width: each viewport-scaled text, as
-    {place: [label, px]} at 100%, that zoom by v["zoom"] (`zoomed`, sizes
-    already multiplied by the zoom) does not bring to v["grow"] times, or that
-    a default text size raised by v["grow"] (`sized`) does not move. `slack` is
-    the share short of a factor that px rounding allows."""
     out = []
     for at, (subject, px) in base.items():
         z, s = zoomed.get(at), sized.get(at)
@@ -984,10 +934,6 @@ def fluid_faults(base, zoomed, sized, v, *, slack):
     return out
 
 
-# Each text element set in a viewport unit, or inheriting one, by its place
-# among body's elements: [label, font size in px]. A rule's font-size, or a
-# font shorthand, in a viewport unit, in a sheet the page can read, under
-# media that holds now.
 FLUID_JS = (
     r"""
 () => {
@@ -1014,15 +960,11 @@ FLUID_JS = (
 )
 
 
-# The sizes now of the elements at these places among body's elements.
 SIZES_JS = r"""
 (at) => { const all = [...document.body.querySelectorAll('*')];
   return Object.fromEntries(at.map((i) => [i, [null, all[i] ? parseFloat(getComputedStyle(all[i]).fontSize) : null]]).filter(([, v]) => v[1] !== null)); }
 """
 
-# With a bottom inset set: each control in a box pinned to the screen's
-# bottom that the inset still covers. Read only where the page sets
-# viewport-fit=cover, as a phone keeps the page clear of the inset otherwise.
 INSET_JS = (
     r"""
 ([inset, EDGE]) => {
@@ -1051,8 +993,6 @@ INSET_JS = (
 )
 
 
-# Each tab panel, by its id where it has one, and whether it is drawn with a
-# drawn link to it. Script off, it reads the ids it is given.
 TABS_JS = r"""
 (ids) => {
   const drawn = (el) => el && el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) && el.getBoundingClientRect().height > 0;
@@ -1064,8 +1004,6 @@ TABS_JS = r"""
 
 
 def tab_faults(panels, script):
-    """vault.tabs-narrow's faults from TABS_JS's panels, read with script on
-    or off."""
     out = []
     for p in panels:
         name = f"tab panel #{p['id']}" if p["id"] else "a tab panel"
@@ -1089,8 +1027,6 @@ def tab_faults(panels, script):
     return out
 
 
-# An open overlay's box against the screen: a sheet spans the screen's width
-# along its bottom, or fills it.
 SHEET_JS = (
     r"""
 ([el, EDGE]) => {
@@ -1106,10 +1042,6 @@ SHEET_JS = (
 
 
 def answers(lines, faults_by_mode, seen, unmet):
-    """Each record's answer: fail, not judged, pass or no match, by the
-    module docstring. `lines` maps a mode to its Mode, `faults_by_mode` a mode
-    to its ranges, `seen` holds the modes that found something, `unmet` maps a
-    mode to what the round has not given."""
     by_record = collections.defaultdict(list)
     for mode in lines.values():
         by_record[mode.id].append(mode.name)

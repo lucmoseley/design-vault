@@ -1,10 +1,3 @@
-"""Pins parts-map.py (#162): python3 test/parts-map.test.py
-
-It is a suite of the commit gate (test/all.sh): loosening it lets a part a
-visitor cannot act on reach the tally as actable, or a card with two actions
-pass vault.one-target, or a link that goes nowhere reach the tally as one that works.
-"""
-
 import concurrent.futures
 import json
 import os
@@ -14,7 +7,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "parts-map.py"
@@ -139,7 +132,7 @@ class NestedCard(unittest.TestCase):
     def setUp(self):
         self.code, self.out, self.err, self.found, _ = DONE["card"]
 
-    def test_two_actions_on_one_tap_target_fail(self):
+    def test_162_two_actions_on_one_tap_target_fail(self):
         self.assertEqual(self.code, 1, self.out + self.err)
         answer = self.found["answers"]["vault.one-target"]
         self.assertEqual(answer["answer"], "fail")
@@ -220,8 +213,6 @@ class Clean(unittest.TestCase):
         self.assertEqual(
             self.parts["Breakfast is included."]["listed"], ["draws its own box"]
         )
-        # Not a band as wide as the page, a heading ruled on one side, a fill matching what is behind it, a badge
-        # inside a link, a field's own label, a link in the text's colour, or a reset's `*:hover` rule.
         self.assertEqual(len(self.found["parts"]), 12)
 
 

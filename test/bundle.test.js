@@ -1,8 +1,4 @@
 "use strict";
-// bundle.js and its --staged commit check (#32): the bundle is written by writeBundle, ingest.js's route, into a
-// throwaway data folder and run as the page runs it, and the check against a throwaway repo with its own identity and
-// no hooks, so this repo's git config and gates are never touched.
-// Loosen one and the page opened from its folder shows a library that lags gallery.json, and the commit passes.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
@@ -21,8 +17,6 @@ after(() => {
   for (const dir of scratch) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-// A throwaway repo holding a matching bundle, committed. Its own identity and a
-// null hooks path keep it off the machine's git config and this repo's hooks.
 function makeRepo(files) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bundle-"));
   scratch.push(dir);
@@ -45,7 +39,6 @@ function makeRepo(files) {
   return { dir, git, stage };
 }
 
-// The bundle writeBundle writes for these two files, from a throwaway data folder.
 function bundle(galleryText, stylesText) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bundle-data-"));
   scratch.push(dir);
@@ -54,8 +47,6 @@ function bundle(galleryText, stylesText) {
   return fs.readFileSync(writeBundle(dir), "utf8");
 }
 
-// What the page gets: the bundle run as a script, read off window. Run in this
-// realm, since deepEqual refuses objects built from another realm's prototypes.
 const load = (text) => {
   const window = {};
   new Function("window", text)(window);
@@ -78,7 +69,7 @@ test("the working tree's data/vault-data.js matches its gallery.json and styles.
   assert.equal(read("data/vault-data.js"), bundle(read("data/gallery.json"), read("data/styles.json")), "run node bundle.js");
 });
 
-test("--staged refuses a commit whose bundle lags its JSON, and passes one that carries both", () => {
+test("--staged refuses a commit whose bundle lags its JSON, and passes one that carries both (#32)", () => {
   const repo = makeRepo(["bundle.js", "git-read.js"]);
   const staged = () => runInProcess(path.join(repo.dir, "bundle.js"), ["--staged"], { cwd: repo.dir });
   assert.equal(staged().status, 0);
@@ -101,9 +92,6 @@ test("an unknown argument is refused by name", () => {
   }
 });
 
-// Git runs .husky/pre-commit here as plain sh, without -e, and more of the hook
-// follows the sourced local file — so a gate there must exit itself, or its
-// refusal prints and the commit lands anyway.
 test("pre-commit.local ends the hook on a refusing gate, under plain sh with more of the hook after it", () => {
   const repo = makeRepo(["bundle.js", "validate.js", "git-read.js", ".husky/pre-commit.local"]);
   const hook = () => spawnSync("sh", ["-c", ". ./.husky/pre-commit.local; echo HOOK-WENT-ON"], { cwd: repo.dir, encoding: "utf8" });

@@ -1,9 +1,4 @@
 "use strict";
-// calibration-critic.js, which runs a calibration critic as a child session confined to one round's folder and
-// proves the confinement with a canary (#168). A stand-in `claude` (fixtures/calibration/stub-claude) acts out the
-// child, so these tests hold the flags, the working folder, the answers' form and the canary's verdicts; whether the
-// real `claude` honours the flags is the live canary's to show. Loosen one and a critic answers with his verdicts in
-// reach, or a canary passes that could not have seen a read.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -26,7 +21,6 @@ function tmp(prefix) {
   return dir;
 }
 
-/** One round's packet folder, written by calibration-packet.js from the fixtures, with entry 1. */
 function packedRound() {
   const dir = tmp("calibration-critic-");
   const manifest = path.join(dir, "manifest.json");
@@ -65,7 +59,7 @@ function replyFile(dir, data, fence = false) {
   return file;
 }
 
-test("a critic runs confined, in its round's folder, and its answers are written with the run beside them", () => {
+test("a critic runs confined, in its round's folder, and its answers are written with the run beside them (#168)", () => {
   const { dir, round } = packedRound();
   const out = path.join(dir, "answers", "mmm-infra.hero-r1", "critic-a.json");
   const result = run(["--round", round, "--model", "claude-opus-5-5", "--out", out], { STUB_REPLY: replyFile(dir, reply, true) });
@@ -192,8 +186,7 @@ test("--packet runs a refused critic once more, and stops where it is refused tw
   assert.equal(fs.existsSync(path.join(answers, "mmm-infra.hero-r1", "critic-b.json")), false);
 });
 
-// calibration-score.js counts his first pick a Yes only on a question these texts call unchanged since its round (#232).
-test("a question's wording is its numbered line and the indented lines under it, less its number", () => {
+test("a question's wording is its numbered line and the indented lines under it, less its number (#232)", () => {
   const { questionTexts } = require(SCRIPT);
   const list = (n, part) => `Look questions, for the critics:\n\n${n}. vault.colour-look: Is every meaning colour carries also carried by text?\n   Applies to: ${part}\n${n + 1}. vault.borrowing: Does each part show its function only by its own look?\n`;
   const then = questionTexts(list(1, "every state"));

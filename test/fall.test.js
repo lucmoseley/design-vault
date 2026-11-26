@@ -1,11 +1,3 @@
-/**
- * Tests plugin/skills/design-round/scripts/fall.js (#68, and its settle #105,
- * #142): its maths through fall-motion.js, the library it prints from, and its
- * command line run in-process (#187). Break one and a round ships a fall whose
- * played path, speed or still end is not what fall.js's header promises. That
- * the easings pass check-flow.py's jolt, pause and step rules is tested in
- * test/check-flow.test.py.
- */
 "use strict";
 const assert = require("node:assert/strict");
 const path = require("node:path");
@@ -17,14 +9,10 @@ const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "s
 const { fall, settle, css } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "fall-motion.js"));
 const CHECK_FLOW = path.join(path.dirname(SCRIPT), "check-flow.py");
 const FLOW = fs.readFileSync(CHECK_FLOW, "utf8");
-/** A constant check-flow.py sets, as its source spells it. */
 const flowValue = (name) => FLOW.match(new RegExp(`^${name} = (.+)$`, "m"))[1];
-// check-flow.py's still floor in CSS px a second, from its own constants (#196).
 const VIEW_CM = Number(flowValue("VIEW_CM"));
 const stillPx = (cm) => Number(flowValue("STILL_ARCMIN_S")) / ((60 * 180 * Math.atan(2.54 / 96 / cm)) / Math.PI);
 const STILL_FRACTION = Number(flowValue("STILL_FRACTION"));
-// fall.js's header's promises: standard gravity in m/s², the true speed within 1.15-fold in any span
-// of 1 ms or more (#196), and each stop's progress rounded to 6 decimals and its time to 4 of a percent.
 const G = 9.80665;
 const SPAN_SPEED_RATIO = 1.15;
 const SPEED_SPAN_MS = 1;
@@ -35,7 +23,6 @@ const DROP = { drop: 240, scale: 800, sink: 4 };
 
 const cli = (...args) => runInProcess(SCRIPT, args);
 
-/** Where a CSS `linear()` easing puts the element at time t of ms, in px. */
 function played(easing, ms, drop, t) {
   const parts = easing.slice("linear(".length, -1).split(", ").map((p) => p.split(" "));
   const pts = parts.map(([v, pct], i) => [pct ? (parseFloat(pct) / 100) * ms : i === 0 ? 0 : ms, Number(v)]);
@@ -47,21 +34,19 @@ function played(easing, ms, drop, t) {
   return drop * pts[pts.length - 1][1];
 }
 
-/** Where the unrounded stops put the element at time t, in px. */
 function chordAt(r, distance, t) {
   const i = Math.max(1, r.stops.findIndex((s) => s.ms >= t));
   const [a, b] = [r.stops[i - 1], r.stops[i]];
   return distance * (a.progress + ((b.progress - a.progress) * (t - a.ms)) / (b.ms - a.ms));
 }
 
-/** The most that rounding each stop's progress and time can move the played path, in px. */
 function rounding(r, distance) {
   let top = 0;
   for (let k = 0; k < 4000; k++) top = Math.max(top, Math.abs(r.position((r.ms * (k + 1)) / 4000) - r.position((r.ms * k) / 4000)) / (r.ms / 4000));
   return 0.5 * (10 ** -PROGRESS_DECIMALS * distance + 10 ** -(TIME_DECIMALS + 2) * r.ms * top);
 }
 
-test("the fall is y = ½gt² at the stated scale, from rest", () => {
+test("the fall is y = ½gt² at the stated scale, from rest (#68)", () => {
   const r = fall(DROP);
   const g = G * DROP.scale;
   assert.ok(Math.abs(r.fallMs - 1000 * Math.sqrt((2 * DROP.drop) / g)) < 1e-9);
@@ -132,7 +117,7 @@ test("it refuses a missing drop, a zero sink and an underdamped landing, naming 
   }
 });
 
-test("--json prints the timings and the easing", () => {
+test("--json prints the timings and the easing (#187)", () => {
   const p = cli("--drop", "240", "--scale", "800", "--sink", "4", "--json");
   assert.equal(p.status, 0);
   const r = JSON.parse(p.stdout);
@@ -147,7 +132,6 @@ test("a landing shorter than a frame is called out as a stop", () => {
 
 const SETTLE = { distance: 300, ms: 900 };
 
-/** A spring released from rest `aim` px from its rest point, integrated step by step: its position in px at t ms. */
 function integrated({ aim, damping = 1 }, omega, t) {
   const h = 1e-5;
   let x = 0;
@@ -164,7 +148,6 @@ function integrated({ aim, damping = 1 }, omega, t) {
   return x;
 }
 
-/** The speed in px per ms at t. */
 function speedAt(r, t) {
   const h = 1e-4;
   return (r.position(t + h) - r.position(t - h)) / (2 * h);
@@ -197,18 +180,15 @@ for (const damping of [1, 1.5, 3]) {
 
 test("the still floor these cases hold fall.js to is check-flow.py's own, 0.66 px/s from 60 cm (#142, #196)", () => {
   assert.equal(flowValue("CSS_PX_CM"), "2.54 / 96");
-  // check-flow.py's own suite holds its floor at 0.66 px/s from 60 cm the same way.
   assert.ok(Math.abs(stillPx(VIEW_CM) - 0.66) < 0.01, `${stillPx(VIEW_CM)}`);
 });
 
 test("a slow fall or settle ends at its still share, and a viewer farther off sees a fast one still sooner (#196)", () => {
-  // 10 px over 3 s tops out near 9 px/s, so 1 % of it is under the 0.66 px/s floor.
   const slow = settle({ distance: 10, ms: 3000 });
   let top = 0;
   for (let t = 1; t < slow.ms; t += 1) top = Math.max(top, speedAt(slow, t));
   assert.ok(slow.still < stillPx(VIEW_CM));
   assert.ok(Math.abs(slow.still / (STILL_FRACTION * top * 1000) - 1) < 1e-3, `it ends at ${slow.still} px/s`);
-  // 24 px at 3 px/m lands near 38 px/s, so 1 % of it is under the floor too.
   const gentle = fall({ drop: 24, scale: 3, sink: 1 });
   assert.ok(gentle.still < stillPx(VIEW_CM));
   assert.ok(Math.abs(gentle.still / (STILL_FRACTION * gentle.impact) - 1) < 1e-9, `${gentle.still}`);
@@ -229,16 +209,15 @@ test(`a fall's and a settle's true speed changes at most ${SPAN_SPEED_RATIO}-fol
     const speed = (t) => Math.abs(speedAt(r, Math.min(t, r.ms - 1e-3)));
     for (let i = 1; i < r.stops.length; i++) {
       const [a, b] = [r.stops[i - 1].ms, r.stops[i].ms];
-      // A shorter span sits inside one of check-flow.py's frames.
       if (b - a < SPEED_SPAN_MS) continue;
       const v = Array.from({ length: 33 }, (_, k) => speed(a + ((b - a) * k) / 32));
-      // fall.js takes the speed in closed form at these points; this differentiates numerically, so 1 % to spare.
+      // guess, #151
       if (Math.max(...v) >= (r.still / 1000) * 1.01) assert.ok(Math.max(...v) <= SPAN_SPEED_RATIO * Math.min(...v) * 1.01, `${name}: ${a}–${b} ms`);
     }
   }
 });
 
-test("a settle's linear() easing stays within the tolerance of its closed form, and runs 0 to 1", () => {
+test("a settle's linear() easing stays within the tolerance of its closed form, and runs 0 to 1 (#105)", () => {
   for (const opts of [SETTLE, { ...SETTLE, damping: 2 }, { distance: 40, ms: 500, tolerance: 0.1 }, { distance: 1200, ms: 1600 }]) {
     const r = settle(opts);
     const easing = css(r);
@@ -255,13 +234,12 @@ test("a settle's linear() easing stays within the tolerance of its closed form, 
   }
 });
 
-test("a settle whose first frame would jolt or jump is called out; a heavy one is not", () => {
+test("a settle whose first frame would jolt or jump is called out; a heavy one is not (#297)", () => {
   assert.doesNotMatch(cli("--settle", "300", "--ms", "900").stdout, /warning/);
   const p = cli("--settle", "300", "--ms", "200");
   assert.equal(p.status, 0);
   assert.match(p.stdout, /warning: its first 60 fps frame runs at \d+ % of its top speed, over check-flow.py's jolt line of 80 % at 200 ms; raise --ms/);
   assert.match(p.stdout, /warning: its first 60 fps frame carries it \d+\.\d px, which check-flow.py flags as a jump; raise --ms or shorten --settle/);
-  // Over 10 px in its first frame, its share under the line (#297).
   const far = cli("--settle", "1200", "--ms", "1200");
   assert.doesNotMatch(far.stdout, /jolt line/);
   assert.match(far.stdout, /flags as a jump/);

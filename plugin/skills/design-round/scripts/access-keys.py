@@ -1,24 +1,3 @@
-"""access-keys.py — check-access.py's keyboard and focus questions past reach and the ring's pixels (#315),
-read from its Tab walk and, for what needs keys pressed or a pointer, from a page of their own. A library
-check-access.py loads; check-access.py's docstring says what each question asks of a page.
-
-check-access.py calls, at each width:
-
-    keys.mark(page, js, carousels)            # before the walk: what each declared carousel shows at rest
-    keys.ring(frame, js, i)                   # at each forward stop, focused and then blurred
-    keys.walked(page, js, readings, unseen)   # after the walk: the answers it settles
-    keys.driven(context, url, js, carousels, mouse=...)  # a fresh load: the answers that press keys or the mouse,
-                                                         # and each carousel's slide span, which vault.pause reads
-
-`js` wraps a page-side body with check-access.py's helpers (label, shown, TARGET, visiblePart and the rest);
-`carousels` are the CSS selectors the parts declaration gives the carousel part. Each answer is a
-{question id: access-answers.py's Judged}.
-
-Its I/O is the Playwright page or context it is handed: driven() opens a page of its own in that context and
-loads the URL there. Carousels are timed by the wall clock, time.monotonic, as the page's own timers rotate its
-slides: Playwright's page.clock would stand in for those timers, and time the stand-in.
-"""
-
 import os
 import sys
 import time
@@ -50,31 +29,16 @@ DRIVEN = (
     "vault.focus-visible",
 )
 
-# How long a carousel is watched for a change of slide, and how long, past one slide's span, a paused one must
-# hold still. Guesses, unmeasured: the APG's example rotates every 5 s.
-ROTATE_MS = 6000
-STILL_SLACK_MS = 500
-# How often a watched carousel is shot. A guess, unmeasured: a slide's transition is longer.
-ROTATE_POLL_MS = 250
-# A pixel whose channels move more than this between two shots of a carousel has changed: check-access.py's
-# PAINT_NOISE, a codec's or a resampler's jitter.
-ROTATE_NOISE = 8
-# How many buttons and text fields, one of each class list, are clicked with the mouse: each click and move
-# off waits on the pointer driver's settle, about 1.6 s a part. A guess, unmeasured.
-PRESS_TRIES = 4
-FIELD_TRIES = 2
-# A ring colour is the focus colour, not a neutral paired with it, where its channels spread by more than
-# this. A guess, unmeasured: the grey of a hairline spreads by a few, a muted brand hue by dozens.
-CHROMA = 24
-# A box joins a row of boxes it overlaps by at least this share of its height or the row's: half, so two
-# boxes of one line join and two stacked lines do not. A guess, unmeasured.
-ROW_SHARE = 0.5
-# How many of a widget's stops, or a slide's hidden parts, a finding names before it says "…". A guess: enough
-# to find them, short enough to read.
-EXAMPLES = 3
+ROTATE_MS = 6000  # guess, #501
+STILL_SLACK_MS = 500  # guess, #501
+ROTATE_POLL_MS = 250  # guess, #501
+ROTATE_NOISE = 8  # guess, #501
+PRESS_TRIES = 4  # guess, #501
+FIELD_TRIES = 2  # guess, #501
+CHROMA = 24  # guess, #501
+ROW_SHARE = 0.5  # guess, #501
+EXAMPLES = 3  # guess, #501
 
-# The composite widgets the APG keeps to one Tab stop, each with the items arrows move between, and the arrow
-# that moves to the next item where aria-orientation does not say.
 COMPOSITES_JS = r"""
 const COMPOSITE = {
   tablist: ['[role=tab]', 'ArrowRight'],
@@ -94,7 +58,6 @@ const arrowOf = (g) => {
   const o = g.getAttribute('aria-orientation');
   return o === 'vertical' ? 'ArrowDown' : o === 'horizontal' ? 'ArrowRight' : COMPOSITE[g.getAttribute('role')][1];
 };
-// Where focus stands inside a widget: the item aria-activedescendant names, else the focused element.
 const current = () => {
   const f = focused();
   const id = f && f.getAttribute('aria-activedescendant');
@@ -105,8 +68,6 @@ const rotation = /\b(pause|stop|play|start|resume)\b/i;
 const nameOf = (e) => [e.getAttribute('aria-label'), e.textContent, e.title].filter(Boolean).join(' ');
 """
 
-# Before the walk: each declared carousel's tab stops, and the elements holding text a screen reader reads,
-# that lie outside its box at rest, as on a slide out of view.
 MARK_JS = (
     COMPOSITES_JS
     + r"""
@@ -124,8 +85,6 @@ MARK_JS = (
 """
 )
 
-# At a forward stop, focused or blurred: whether the stop shows whole in the window, and how it and what stands
-# for it are drawn (its labels, and up to WRAPPERS wrappers holding no other tab stop, as STOP_JS reads).
 RING_JS = r"""
 (i) => {
   const el = window.__walk.els[i];
@@ -159,9 +118,6 @@ RING_JS = r"""
 }
 """
 
-# After the walk, with nothing focused: every answer the walk settles but the rings', and the colours links,
-# buttons and selected items are drawn in, for the focus colour's. `full` maps a main-frame stop's index to
-# whether it showed whole when focused.
 WALKED_JS = (
     COMPOSITES_JS
     + f"const ROW_SHARE = {ROW_SHARE}, EXAMPLES = {EXAMPLES};\n"
@@ -174,7 +130,6 @@ WALKED_JS = (
   const W = document.documentElement.scrollWidth, H = document.documentElement.scrollHeight;
   const onPage = (r) => !empty(box(r)) && r.right + scrollX > 0 && r.bottom + scrollY > 0 && r.left + scrollX < W && r.top + scrollY < H;
 
-  // vault.skip-link: the first stop, past a cookie banner's, links to the main content and shows whole when focused.
   const main = document.querySelector('main, [role=main]');
   const banner = (e) => !!e.closest('[role=dialog], [role=alertdialog], [aria-modal=true]') ||
     ancestorsOf(e).concat([e]).some((a) => ['fixed', 'sticky'].includes(css(a).position) && /cookie|consent/i.test(a.textContent));
@@ -184,14 +139,12 @@ WALKED_JS = (
   } else if (first && main && !inside(main, first)) {
     const hash = first.localName === 'a' && first.getAttribute('href') && first.getAttribute('href').startsWith('#') ? first.getAttribute('href').slice(1) : null;
     let to = null;
-    // A hash that is not valid percent-encoding names no element.
     try { to = hash && document.getElementById(decodeURIComponent(hash)); } catch (e) {}
     if (!hash) out.skip.faults.push({ subject: label(first), detail: `is the page's first Tab stop, and is no link to its main content` });
     else if (!to || !(inside(main, to) || to.contains(main))) out.skip.faults.push({ subject: label(first), detail: `is the page's first Tab stop, and links to #${hash}, which is not the main content` });
     else if (!full[w.els.indexOf(first)]) out.skip.faults.push({ subject: label(first), detail: 'links to the main content first, and is not shown whole in the window when it takes focus' });
   }
 
-  // vault.visual-order: a positive tabindex, and boxes shown out of their source order.
   for (const e of document.querySelectorAll('[tabindex]')) {
     if (e.tabIndex > 0 && order.includes(e)) out.visual.push({ subject: label(e), detail: `has tabindex="${e.getAttribute('tabindex')}", which takes it out of the page's order` });
   }
@@ -232,7 +185,6 @@ WALKED_JS = (
     out.visual.push({ subject: label(seen[at].el), detail: `shows before ${label(items[at].el)} but follows it in the source, moved by ${why.join(' and ')} on ${label(p)}` });
   }
 
-  // vault.scroller-focus: a box that scrolls with nothing in it the Tab key reaches takes a stop, a region role and a name.
   for (const e of document.body.querySelectorAll('*')) {
     const cs = css(e);
     const scrolls = (/auto|scroll/.test(cs.overflowX) && e.scrollWidth > e.clientWidth + 1) || (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 1);
@@ -247,7 +199,6 @@ WALKED_JS = (
     if (lacks.length) out.scroller.push({ subject: label(e), detail: `scrolls, holds nothing the Tab key reaches, and has no ${lacks.join(', no ')}` });
   }
 
-  // vault.roving-focus: a composite widget is one stop, entered on its selected item, else its first.
   groups().forEach((g, n) => {
     const stops = order.filter((e) => inside(g, e));
     if (!stops.length) return;
@@ -264,7 +215,6 @@ WALKED_JS = (
     }
   });
 
-  // vault.carousel-focus: no stop on a slide out of view, and its rotation control its first stop.
   for (const { el, unseen, heard } of (k && k.carousels) || []) {
     if (heard.length) out.carousel.push({ subject: label(el), detail: `keeps ${heard.slice(0, EXAMPLES).join(', ')}, on a slide out of view, in the accessibility tree, with no inert or aria-hidden` });
     const landed = order.filter((e) => unseen.has(e));
@@ -274,7 +224,6 @@ WALKED_JS = (
     if (control && firstIn && firstIn !== control) out.carousel.push({ subject: label(el), detail: `puts ${label(firstIn)} before its rotation control ${label(control)} in the Tab order` });
   }
 
-  // The colours links, buttons and selected items are drawn in, for vault.focus-colour-kept.
   const use = (e, what, c) => { const v = rgba(c); if (v[3] > 0) out.colours.push({ subject: label(e), what, rgb: v.slice(0, 3) }); };
   for (const a of document.querySelectorAll('a[href]')) if (shown(a)) use(a, 'its text', css(a).color);
   for (const b of document.querySelectorAll('button, [role=button], input[type=button], input[type=submit], input[type=reset], ' +
@@ -289,14 +238,12 @@ WALKED_JS = (
 """
 )
 
-# The driven page's widgets, menus and carousels, kept in window.__drive by index.
 DRIVE_JS = (
     COMPOSITES_JS
     + r"""
 (selectors) => {
   const d = window.__drive = { groups: groups(), carousels: selectors.flatMap((s) => [...document.querySelectorAll(s)]) };
   document.addEventListener('submit', (e) => e.preventDefault(), true);
-  // Each carousel's previous and next buttons, by their names or an arrow alone.
   const step = /\b(prev|previous|next|back|forward)\b|^\s*[‹›←→<>]\s*$/i;
   d.steps = d.carousels.map((c) => [...c.querySelectorAll(TARGET)].filter((e) => tabbable(e) && !rotation.test(nameOf(e)) && step.test(nameOf(e))));
   return {
@@ -307,12 +254,10 @@ DRIVE_JS = (
 """
 )
 
-# Puts focus on carousel n's first tab stop, else on the carousel.
 FOCUS_IN_JS = (
     COMPOSITES_JS
     + "(n) => { const c = window.__drive.carousels[n]; ([...c.querySelectorAll(TARGET)].find(tabbable) || c).focus({ preventScroll: true }); }"
 )
-# Focuses carousel n's step button k, by its label; then what focus moved to once it is pressed, or null.
 STEP_JS = (
     "([n, k]) => { const e = window.__drive.steps[n][k]; e.focus(); return label(e); }"
 )
@@ -321,7 +266,6 @@ MOVED_JS = (
     "return e === f ? null : f && f !== document.body ? label(f) : 'the page'; }"
 )
 
-# Focuses widget n's tab stop and reads where focus stands, by its label.
 ENTER_JS = (
     COMPOSITES_JS
     + r"""
@@ -344,7 +288,6 @@ FRAMES_JS = (
     "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
 )
 
-# A menu's items, and which the focus stands on: its index, or -1.
 MENU_JS = (
     COMPOSITES_JS
     + r"""
@@ -366,9 +309,6 @@ LOOK_JS = r"""
 }
 """
 
-# The buttons and text fields to click with the mouse. A button is clicked only where a rule styles it on
-# :focus, and one for each set of such rules, as no other rule draws a ring on a mouse focus; where a style
-# sheet cannot be read, another site's, one for each class list too. A text field, one of each class list.
 PRESSABLE_JS = (
     COMPOSITES_JS
     + r"""
@@ -413,12 +353,10 @@ BLUR_JS = "() => document.activeElement && document.activeElement.blur()"
 
 
 def mark(page, js, carousels):
-    """Stamps what each declared carousel shows at rest."""
     page.evaluate(js(MARK_JS), list(carousels))
 
 
 def ring(frame, js, i):
-    """A forward stop's reading: RING_JS focused, then blurred, then focus put back."""
     on = frame.evaluate(js(RING_JS), i)
     frame.evaluate(BLUR_JS)
     off = frame.evaluate(js(RING_JS), i)
@@ -440,8 +378,6 @@ def _hex(rgb):
 
 
 def rings(readings, unseen):
-    """vault.ring-outline's, vault.focus-visible's and the ring colours' findings from each stop's reading,
-    `unseen` the stops vault.focus found showing no indicator: ({qid: faults}, [(ring colour, subject)])."""
     outline, removed, colours = [], [], []
     for r in readings:
         changed = [
@@ -509,9 +445,6 @@ def rings(readings, unseen):
 
 
 def kept(colours, uses):
-    """vault.focus-colour-kept's faults: each focus ring drawn in a second chromatic colour, and each link's
-    text, and each button's or selected item's fill or edge, drawn in a chromatic colour a focus ring is drawn
-    in."""
     faults, said = [], set()
     ring_colours = {}
     for rgb, subject in colours:
@@ -540,8 +473,6 @@ def kept(colours, uses):
 
 
 def walked(page, js, readings, unseen):
-    """The answers the walk settles, from `readings`, each forward stop's ring() with its index `i` and
-    whether it is in the `main` frame, and `unseen`, the subjects vault.focus found showing no indicator."""
     out = {qid: answering.unjudged() for qid in WALKED}
     full = {str(r["i"]): r["full"] for r in readings if r["main"]}
     page.evaluate(BLUR_JS)
@@ -572,8 +503,6 @@ def _frames(page):
 
 
 def _arrows(page, js, groups):
-    """vault.roving-focus's faults on the driven page: each widget of two items or more whose arrow key does
-    not move focus to another of its items."""
     faults = []
     for n, g in enumerate(groups):
         if g["items"] < 2:
@@ -602,7 +531,6 @@ def _arrows(page, js, groups):
 
 
 def _closed(page, ov):
-    """Whether the menu `ov` shuts within the overlay driver's settle cap."""
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
     try:
@@ -617,8 +545,6 @@ def _closed(page, ov):
 
 
 def _menus(page, js):
-    """vault.menu-focus's faults: each menu a button opens, opened by Enter and by Up Arrow, moved in by Down
-    Arrow, and shut by Escape and by Tab."""
     faults = []
     for ov in overlay.find(page):
         if ov.kind != "menu" or ov.trigger is None:
@@ -671,9 +597,6 @@ def _menus(page, js):
     return faults
 
 
-# The box, opacity and visibility of carousel e's first `limit` descendants, as one string: what a slide
-# moving or fading changes, and a focus ring, a hover colour or the page scrolling does not. Boxes are read
-# from the carousel's own corner.
 SIG_JS = r"""
   const sig = () => {
     const o = e.getBoundingClientRect();
@@ -683,8 +606,6 @@ SIG_JS = r"""
     }).join(';');
   };
 """
-# Watches a carousel on every frame until told to stop, setting e.__watch.moved once SIG_JS differs from the
-# first frame's.
 WATCH_JS = (
     "(e, limit) => {"
     + SIG_JS
@@ -700,7 +621,6 @@ WATCH_JS = (
 }
 """
 )
-# True once SIG_JS has held for `ms` of frames, false at `within` ms.
 STILL_JS = (
     "(e, [limit, ms, within]) => new Promise((done) => {"
     + SIG_JS
@@ -737,9 +657,6 @@ def _differs(a, b):
 
 
 def change(page, handle, within_ms):
-    """How long, in ms, until the carousel changes, or None where it holds for `within_ms`. A change is its
-    pixels differing from the first shot, or WATCH_JS seeing a box inside it move or fade on any frame: a
-    two-slide carousel shot once a cycle, as on a loaded machine, shows the first slide every time."""
     handle.evaluate(WATCH_JS, WATCH_LIMIT)
     start, began = _shot(handle), time.monotonic()
     try:
@@ -755,22 +672,15 @@ def change(page, handle, within_ms):
 
 
 def still(handle):
-    """Waits until no box inside the carousel has moved or faded for ROTATE_POLL_MS of frames, as after a
-    slide's transition; False at ROTATE_MS. Read in the page, as two shots that far apart never match on a
-    loaded machine, where one shot outlasts the gap between a fast carousel's turns."""
     return handle.evaluate(STILL_JS, [WATCH_LIMIT, ROTATE_POLL_MS, ROTATE_MS])
 
 
 def _carousels(page, js, carousels):
-    """vault.carousel-focus's driven faults and cannot-measure reasons: a rotating carousel holds still while
-    focus or the pointer is in it, and its previous and next buttons keep focus when pressed; and each
-    carousel's _span."""
     faults, unmeasured, spans = [], [], []
     for n, c in enumerate(carousels):
         handle = page.evaluate_handle(
             "(n) => window.__drive.carousels[n]", n
         ).as_element()
-        # The pointer has not moved on a fresh load, so it is over nothing yet.
         span = _span(page, handle)
         spans.append(span)
         if isinstance(span, str):
@@ -814,8 +724,6 @@ def _carousels(page, js, carousels):
 
 
 def _span(page, handle):
-    """A carousel's time from one slide to the next in ms, None where it does not change within ROTATE_MS, or
-    why it cannot be timed."""
     if change(page, handle, ROTATE_MS) is None:
         return None
     if not still(handle):
@@ -827,8 +735,6 @@ def _span(page, handle):
     return span
 
 
-# Swallows every click before the page's own handlers see it, so a press reads focus without acting; None
-# takes the swallower off.
 BLOCK_JS = r"""
 (on) => {
   if (on) {
@@ -840,8 +746,6 @@ BLOCK_JS = r"""
 
 
 def _presses(page, js):
-    """vault.focus-visible's driven faults: a button clicked with the mouse draws no ring, and a text field
-    clicked into shows focus, and the cannot-measure reasons."""
     faults, unmeasured = [], []
     pressed = page.evaluate(js(PRESSABLE_JS), [PRESS_TRIES, FIELD_TRIES])
     page.evaluate(BLOCK_JS, True)
@@ -855,7 +759,6 @@ def _presses(page, js):
                 away = True
             rest = el.evaluate(LOOK_JS)
             pointer.click(page, el)
-            # Off it again, so a hover style is not taken for a ring.
             pointer.leave(page, el)
         except pointer.PointerError as exc:
             unmeasured.append(f"{p['subject']} cannot be clicked: {exc}")
@@ -880,9 +783,6 @@ def _presses(page, js):
 
 
 def driven(context, url, js, carousels, *, mouse):
-    """The answers that press keys or the mouse, from a fresh load of the page, and each declared carousel's
-    time from one slide to the next, as _span gives it; the mouse presses only where `mouse`, as a press at one
-    width settles the :focus rule every width shares."""
     out = {qid: answering.unjudged() for qid in DRIVEN}
     page = context.new_page()
     page.add_init_script(pointer.WATCH_JS)
@@ -897,7 +797,6 @@ def driven(context, url, js, carousels, *, mouse):
         faults, unmeasured = _presses(page, js)
         out["vault.focus-visible"].faults.extend(faults)
         out["vault.focus-visible"].unmeasured.extend(unmeasured)
-    # Menus last: a menu item may act when its menu is shut by Tab.
     out["vault.menu-focus"].faults.extend(_menus(page, js))
     page.close()
     return out, spans

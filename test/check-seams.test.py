@@ -1,12 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-seams.py (#341): python3 test/check-seams.test.py
-
-vault.contacts-seam rests on this script: the critic answering
-vault.contacts-look yields to it. Loosen the threshold, drop a device pixel
-ratio, or let the art's own ground into the mattes, and a seam the eye sees
-at one ratio passes; read a translucent fill's matte as a seam, or a missing
-tool as a clean contact, and a contact no script measured reads as a pass.
-"""
-
 import csv
 import re
 
@@ -21,23 +12,21 @@ from PIL import Image
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-seams.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "check-seams")
-# The #340 instrument's figures for gap.html's contact.
 RESEARCH = os.path.join(HERE, "..", "docs", "data", "contact-seams-2026-10-16.csv")
 GAP_ROW = "blue-orange-on-white.gap-v.1"
-# How far a figure may stray from the instrument's: a guess, past the one length step check-seams.py may differ by.
+# guess, #341
 GAP_TOLERANCE = 0.05
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
-# A guess: a run loads the fixture once a scale, after look-renders.py's two loads to fit and time it.
+# guess, #341
 RUN_S = 180
-# A run missing a dependency stops before any browser starts; its timeout, in s, is a guess, unmeasured.
+# guess, #341
 BLOCKED_RUN_S = 60
-# Runs argv[2:] as a script once argv[1] is made unimportable.
 BLOCKED = (
     "import runpy, sys; sys.modules[sys.argv[1]] = None; sys.argv = sys.argv[2:]; "
     "runpy.run_path(sys.argv[0], run_name='__main__')"
@@ -49,7 +38,6 @@ def run(page, out):
 
 
 def blocked(argv, env=None):
-    # Never through child.run: it takes no env, and such a run starts no browser for earlyoom to break.
     return subprocess.run(
         [sys.executable, *argv],
         capture_output=True,
@@ -65,7 +53,6 @@ def fixture(name):
 
 
 def figures(out, name):
-    """The width x contrast figures a run printed for a contact, by scale."""
     line = next(said for said in out.splitlines() if f" {name} (" in said)
     return {int(s): float(v) for s, v in re.findall(r"0 ms (\d)x ([\d.e+]+)″", line)}
 
@@ -106,7 +93,7 @@ class Seams(unittest.TestCase):
             self.runs["closed"].stdout,
         )
 
-    def test_a_gap_fails_at_every_scale(self):
+    def test_341_a_gap_fails_at_every_scale(self):
         proc = self.runs["gap"]
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn("FAIL left.2-right.4 (separate)", proc.stdout)
@@ -137,8 +124,6 @@ class Seams(unittest.TestCase):
         )
 
     def test_a_page_that_eases_every_change_shows_each_seam_as_drawn(self):
-        # Two like seams on the page's own dark ground measure alike: a matte shot before the second's crop would
-        # leave that crop easing back from white.
         proc = self.runs["transition"]
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertEqual(
@@ -153,7 +138,6 @@ class Seams(unittest.TestCase):
     def test_a_ground_coloured_seam_fails_at_the_scales_where_it_shows_and_only_those(
         self,
     ):
-        # docs/research/contact-seams.md §2: an edge at x + 0.5 is seamed at DPR 1 and 3, clean at 2.
         proc = self.runs["seam"]
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn("FAIL left.2-right.4 (shared edge, no underlap)", proc.stdout)
@@ -168,11 +152,9 @@ class Seams(unittest.TestCase):
                 os.path.join(out, f"left.2-right.4-0ms-1x-{ground}.png")
             ) as im:
                 mattes[ground] = np.asarray(im.convert("RGB")).astype(int)
-            # At device size, the fills unchanged either side of the seam.
             self.assertEqual(mattes[ground].shape, (16, 16, 3))
             self.assertEqual(tuple(mattes[ground][8, 0]), (0x1A, 0x4D, 0x8F))
             self.assertEqual(tuple(mattes[ground][8, 15]), (0xE0, 0xA0, 0x30))
-        # The seam's pixels let a quarter of the ground through (§1.4): a(1 - a) at a = 0.5.
         share = (mattes["white"] - mattes["black"]).mean(axis=2) / 255
         self.assertAlmostEqual(share.max(), 0.25, delta=0.01)
 
@@ -244,9 +226,9 @@ class Edges(unittest.TestCase):
         self.assertIn("Node is not on PATH", proc.stderr)
         self.assertIn("Install Node.", proc.stderr)
 
-    def test_a_missing_package_exits_3_naming_the_pinned_requirements(
+    def test_256_a_missing_package_exits_3_naming_the_pinned_requirements_on_the_closed_fixture(
         self,
-    ):  # #256; pairs with test_a_closed_contact_passes_at_every_scale
+    ):
         for package in ("numpy", "PIL"):
             with self.subTest(package=package):
                 proc = blocked(

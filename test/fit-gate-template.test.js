@@ -1,7 +1,4 @@
 "use strict";
-// design-project's client-fit gate template, which a new project copies as its own gate (#159): it must pass gate.js
-// check alone and beside the vault gate, every question owned by the project. Break it and every new project's gate
-// is refused by the join script before a round can read it.
 const assert = require("node:assert/strict");
 const { runInProcess } = require("./core-run-in-process.js");
 const fs = require("node:fs");
@@ -14,7 +11,7 @@ const FORM = path.join(ROOT, "plugin", "skills", "design-round", "scripts", "gat
 const VAULT_GATE = path.join(ROOT, "plugin", "skills", "design-critique", "rules");
 const TEMPLATE = path.join(ROOT, "plugin", "skills", "design-project", "references", "fit-gate.md");
 
-test("the client-fit gate template passes check, alone and beside the vault's store of rule records", () => {
+test("the client-fit gate template passes check, alone and beside the vault's store of rule records (#159)", () => {
   for (const files of [[TEMPLATE], [VAULT_GATE, TEMPLATE]]) {
     const r = runInProcess(SCRIPT, ["check", ...files]);
     assert.equal(r.status, 0, r.stdout + r.stderr);

@@ -1,7 +1,4 @@
 "use strict";
-// release-check.js, the session-start count of plugin/ changes the marketplace has not released (#58): run against a
-// throwaway four-commit repo and a stand-in gh at WFC_GH, so neither the network nor the real pin is read.
-// Loosen one and the count is wrong or missing and a fix sits unreleased; the check must still exit 0, as it reports and never refuses.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
@@ -29,17 +26,15 @@ const shas = ["plugin/a", "plugin/b", "docs/c", "plugin/d"].map((file) => {
 
 const run = (...args) => runInProcess(SCRIPT, ["--repo", scratch, ...args]);
 
-// Runs the check with no --pin against a stand-in gh that runs `body`.
 function runWithGh(body) {
   const bin = fs.mkdtempSync(path.join(scratch, "bin-"));
   fs.writeFileSync(path.join(bin, "gh"), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   return runInProcess(SCRIPT, ["--repo", scratch], { env: { ...process.env, WFC_GH: path.join(bin, "gh") } });
 }
 
-// Runs the check against a stand-in gh answering this marketplace.json.
 const runWithMarketplace = (marketplace) => runWithGh(`echo ${Buffer.from(JSON.stringify(marketplace)).toString("base64")}`);
 
-test("a pin on the newest plugin/ commit counts nothing unreleased", () => {
+test("a pin on the newest plugin/ commit counts nothing unreleased (#58)", () => {
   const result = run("--pin", shas[3]);
   assert.equal(result.status, 0);
   assert.match(result.stdout, /: 0 unreleased plugin\/ commits/);

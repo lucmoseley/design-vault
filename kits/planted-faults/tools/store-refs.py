@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""store-refs.py <skills dir> <reader> <out dir> [--asset <class>] [--fact <fact>]... — one critic's rule files from the rule store.
-
-A load-change test (#268) sets the rules a critic loads before a change against those after it, so each load is cut
-from the store as it stood, never written by hand.
+"""python3 kits/planted-faults/tools/store-refs.py <skills dir> <reader> <out dir> [--asset <class>] [--fact <fact>]... — one critic's rule files from the rule store.
 
 Writes what a critic reader is handed in a round, as the kit's confined critics read it: `records.md`, the output of
 `gate.js list --reader <reader>` on <skills dir>'s store, and `sections.md`, every reference section it names, each
@@ -18,7 +15,6 @@ import subprocess
 
 
 def slug(heading):
-    """A heading's anchor as GitHub writes it."""
     s = re.sub(r"[^\w\- ]", "", heading.strip().lower())
     return s.replace(" ", "-")
 

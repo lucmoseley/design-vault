@@ -1,12 +1,3 @@
-"""Pins conditions.py (#304): python3 test/conditions.test.py
-
-It is a suite of the commit gate (test/all.sh): loosening it lets a family
-script read a page it believes is in forced colours, dark, print, another
-locale, right-to-left, under a coarse pointer or with scripts blocked, when
-the page loaded plain. Each condition is read on the fixture both with it and
-without it, so a condition that does nothing fails here.
-"""
-
 import contextlib
 import os
 import pathlib
@@ -15,11 +6,11 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 FIXTURES = os.path.join(HERE, "fixtures", "drivers")
 URL = pathlib.Path(FIXTURES, "conditions.html").resolve().as_uri()
-# Any width past the fixture's 80 px logical box; the rtl box is read against it.
+# guess, #304
 VIEWPORT = {"width": 400, "height": 300}
 
 
@@ -58,7 +49,7 @@ def style(selector, prop):
 
 
 class ForcedColours(unittest.TestCase):
-    def test_drops_the_box_shadow(self):
+    def test_304_drops_the_box_shadow(self):
         shadow = style("#shadow", "boxShadow")
         self.assertNotEqual(read(shadow), "none")
         self.assertEqual(read(shadow, forced_colours=True), "none")
@@ -162,7 +153,6 @@ class Refusals(unittest.TestCase):
             ({"locale": ""}, "locale"),
             ({"block": ("document",)}, "block"),
         ):
-            # No browser: a refusal comes before it is touched.
             with self.subTest(**given), self.assertRaisesRegex(ValueError, word):
                 with conditions.open_page(None, URL, **given):
                     pass

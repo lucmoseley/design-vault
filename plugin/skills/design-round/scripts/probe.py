@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""probe.py — the shared page probe (#300): reads a rendered page's DOM and
-computed style against a rule table and gives one finding per record id, so
-the family scripts each add table lines rather than open and measure a page
-their own way (#250).
-
-USAGE
+"""USAGE
   python3 probe.py <url or file> --table FILE --out DIR [--parts FILE]
         [--part NAME=SELECTOR]… [--step PX] [--widths LOW-HIGH]
         [--heights PHONE,TABLET,DESKTOP] [--timeout MS]
@@ -22,7 +17,7 @@ top or left edge as a parked skip link is:
   role:<role>      an ARIA role, explicit or implicit
   part:<name>      a part the round declares, by its name: the selector the
                    building session's parts declaration gives it (--parts,
-                   design-round §1c, #274), or --part's, which wins
+                   design-round §1c), or --part's, which wins
   fonts            the page's font faces, document.fonts
   sheet            the page's own style rules and @font-face rules, each
                    with the @media and @supports conditions it sits in
@@ -153,7 +148,6 @@ colour_space = siblings.load(
 
 SEP = " | "
 SOURCES = ("css", "role", "part")
-# Reads named after a colon, and reads that are one word.
 NAMED_READS = ("style", "authored", "attr", "face", "decl", "pixels")
 KEYWORD_READS = (
     "count",
@@ -184,7 +178,6 @@ READ_FORMS = "style:, authored:, attr:, face:, decl:, pixels: or one of " + ", "
     KEYWORD_READS
 )
 COLOUR_READS = ("style", "ground", "backdrop", "decl")
-# Reads whose values are words, never numbers.
 TEXT_READS = ("authored", "face", "text", "tag", "lang", "media", "selector", "decl")
 SHEET_READS = {"decl", "media", "selector"}
 SCOPES = ("self", "parent", "prev", "next", "body", "root")
@@ -192,13 +185,11 @@ COMBINE = ("per", "minus", "times", "on")
 WITHIN = ("parent", "column", "ground")
 PIXEL_STATS = ("chroma-share",)
 MUST_FORMS = "=, !=, in, not in, matches, not matches, >=, <=, >, <, between, within N% of, multiple of, present or absent"
-# Computed values carry float rounding: a difference this small is a tie.
-EPS = 1e-6
-# Places a derived value keeps: finer than the 8-bit channels a colour is
-# read in, so rounding never moves a verdict, and short enough to print.
-PLACES = 4
+EPS = 1e-6  # guess, #501
+PLACES = 4  # guess, #501
 BASE_UNIT = {"length": "px", "time": "ms", "percent": "%"}
-# FontFace's attributes by their CSS descriptor names (CSS Font Loading 3 §2).
+# FontFace's attributes by their CSS descriptor names:
+# https://www.w3.org/TR/css-font-loading-3/#fontface-interface
 FACE_DESCRIPTORS = (
     "display",
     "status",
@@ -215,11 +206,10 @@ FACE_DESCRIPTORS = (
 LENSES = ("oklch-l", "oklch-c", "oklch-h", "alpha", "luminance")
 COMPARE = (">=", "<=", "!=", ">", "<", "=")
 NUMERIC = (">=", "<=", ">", "<", "between")
-# Computed "normal" spacing is no added space (CSS Text 3 §8, §9).
+# Computed "normal" letter- and word-spacing is no added space:
+# https://www.w3.org/TR/css-text-3/#letter-spacing-property
 NORMAL_IS_ZERO = ("letter-spacing", "word-spacing")
 NUMBER = re.compile(r"(-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)(px|em|rem|ms|s|%)?", re.I)
-# Each unit's kind and its factor to the kind's base unit; em and rem scale
-# by the element's and the root's font size.
 UNITS = {
     "px": ("length", 1),
     "em": ("length", None),
@@ -229,21 +219,15 @@ UNITS = {
     "%": ("percent", 1),
     "": ("number", 1),
 }
-# Where the elements a line selects wait between page-side calls, for the
-# DevTools reads of authored CSS.
 STASH = "__vaultProbe"
 
 Select = collections.namedtuple("Select", "source value all text where")
-# `op` and `other` combine a read with a second read.
 Read = collections.namedtuple(
     "Read", "kind name lens distinct excepts text scope pseudo op other within arg"
 )
 Must = collections.namedtuple("Must", "op values text ref")
-# What a MUST compares against: a read of the same element (`select` None),
-# or of every element another selection gives.
 Ref = collections.namedtuple("Ref", "select read text")
 Rule = collections.namedtuple("Rule", "id select read must line")
-# One value one line read, and its verdict: pass, miss or unjudged, with why.
 Subject = collections.namedtuple("Subject", "subject value verdict why")
 Result = collections.namedtuple("Result", "rule subjects")
 
@@ -252,16 +236,14 @@ TableError = rule_table.TableError
 
 
 class DeclarationError(Exception):
-    """A parts declaration the probe cannot read (--parts): exit 2."""
+    pass
 
 
 class ProbeError(Exception):
-    """A line the page cannot answer as written, a selector the browser
-    rejects or a part no one declared: exit 2."""
+    pass
 
 
 def parse(text):
-    """The table's rules, in order. Raises TableError naming the line."""
     rules = []
     for n, line in rule_table.lines(text):
         try:
@@ -286,7 +268,6 @@ def _rule(line):
 
 
 def _fits(select, read):
-    """Raises TableError where `read` is not one `select`'s source gives."""
     kinds = {r.kind for r in _simple_reads(read)}
     if (select.source == "fonts") != ("face" in kinds):
         raise TableError("face: reads go with fonts, and fonts takes only face:")
@@ -326,7 +307,6 @@ def _select(text):
 
 
 def _filter(text):
-    """One `where <read> <must>`: the shortest read that leaves a MUST."""
     words = text.split()
     for k in range(1, len(words)):
         try:
@@ -469,7 +449,6 @@ def _must(text):
 
 
 def _ref(text, required=False):
-    """A read to compare against, or None where `text` is a plain value."""
     if text.startswith("all of ("):
         depth = 0
         for i, ch in enumerate(text[len("all of ") :], len("all of ")):
@@ -501,14 +480,14 @@ def _quantity(text):
     return float(m[1]), (m[2] or "").lower()
 
 
-# Any CSS colour as sRGB bytes, gamut-clipped by a canvas: null where it is none.
 RGBA_JS = r"""
 const rgba = (() => {
   let paint = null;
   return (v) => {
     if (!v || !CSS.supports('color', v)) return null;
     paint ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-    // A value the canvas cannot parse, var() among them, leaves fillStyle as it was.
+    // Setting fillStyle to a value the canvas cannot parse leaves it as it was:
+    // https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-fillstyle
     paint.fillStyle = '#000';
     paint.fillStyle = v;
     const onBlack = paint.fillStyle;
@@ -522,18 +501,11 @@ const rgba = (() => {
 })();
 """
 
-# The selected elements' values. Only the drawn ones are kept unless `all`;
-# those kept wait at window[STASH] where `stash` is set. Each read in `reads`
-# gives each element one {value, rgba?, pair?, rect?}.
 ELEMENTS_JS = (
     flow.LABEL_JS
     + RGBA_JS
     + r"""
 (els, { reads, groups, all, stash, places }) => {
-  // Drawn: shown by display, visibility and opacity, not clipped to nothing
-  // (the visually-hidden pattern: 1 px or less with its overflow hidden, a
-  // collapsed clip, an inset clip-path of half or more), and not placed
-  // wholly before the page's top or left edge, where no scroll reaches.
   const clipped = (el, cs, r) => {
     if (r.width <= 1 && r.height <= 1 && (cs.overflowX !== 'visible' || cs.overflowY !== 'visible')) return true;
     const rc = /^rect\((.*)\)$/.exec(cs.clip);
@@ -559,9 +531,7 @@ ELEMENTS_JS = (
   };
   const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
   let ruler = null;
-  // probe.py's PLACES, so a value reads as the Python side rounds it.
   const fixed = (n) => Math.round(n * 10 ** places) / 10 ** places;
-  // 100ex set at 100px, so the ratio keeps four places.
   const xheight = (cs) => {
     if (!ruler) {
       ruler = document.createElement('div');
@@ -572,7 +542,6 @@ ELEMENTS_JS = (
       ruler.style.setProperty(p, cs.getPropertyValue(p));
     return Math.round(ruler.getBoundingClientRect().width) / 10000;
   };
-  // `top` drawn over `under` (sRGB bytes, under opaque), as the browser blends.
   const over = (top, under) => {
     const a = top[3] / 255;
     return [0, 1, 2].map((i) => Math.round(top[i] * a + under[i] * (1 - a))).concat(255);
@@ -589,8 +558,6 @@ ELEMENTS_JS = (
   const ground = (el) => (el ? layered(el).colour : [255, 255, 255, 255]);
   const shown = (c) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
   const IMAGE_TAGS = new Set(['IMG', 'PICTURE', 'VIDEO', 'CANVAS', 'svg']);
-  // An image painted under the element's centre: an img, video, picture or
-  // canvas, or a background image on something beneath it.
   const overImage = (el) => {
     const r = el.getBoundingClientRect();
     const x = r.left + r.width / 2, y = r.top + r.height / 2;
@@ -603,8 +570,6 @@ ELEMENTS_JS = (
     return below.some((u) => IMAGE_TAGS.has(u.tagName) || (!u.contains(el) && /url\(/.test(getComputedStyle(u).backgroundImage))
       || (u !== el && u.contains(el) && /url\(/.test(getComputedStyle(u).backgroundImage))) ? 1 : 0;
   };
-  // The element's line boxes from its words' boxes; its median full line
-  // leaves the last line out where there are more.
   const lineInfo = (el) => {
     const lines = new Map();
     const breaks = new Set();
@@ -623,8 +588,6 @@ ELEMENTS_JS = (
         for (const t of tops.slice(0, -1)) breaks.add(t);
       }
     }
-    // Rects of one line can sit a pixel or two apart (a superscript, a
-    // larger inline face): lines are tops more than half a line apart.
     const half = parseFloat(getComputedStyle(el).fontSize) / 2;
     const merged = [];
     for (const t of [...lines.keys()].sort((a, b) => a - b)) {
@@ -731,7 +694,6 @@ FONTS_JS = r"""
 }))
 """
 
-# A sheet from another origin cannot be read and is skipped.
 SHEET_JS = (
     RGBA_JS
     + r"""
@@ -772,18 +734,10 @@ SELECTOR_ERROR_JS = r"""
 
 
 def read(page, rules, parts=None):
-    """Each rule's Result on the page as it stands, in table order: the page
-    is read, never loaded, so a caller may hover, open or fill it first.
-    `parts` maps a part's name to its CSS selector. Raises ProbeError for a
-    selector the browser rejects or a part `parts` lacks."""
     return [Result(rule, _judge(page, rule, parts or {})) for rule in rules]
 
 
 def values(page, rule, parts=None):
-    """Each element's value for `rule`'s read, as (subject, group, value,
-    why), its where filters applied and its distinct and MUST left to the
-    caller, which pools them across pages or conditions. `group` is the
-    distinct read's within group, else the line's SELECTS."""
     out = []
     found = _rows(page, rule.select, rule.read, rule.must, parts=parts or {})
     for row in _kept(rule.select, rule.read, rule.must, found):
@@ -794,9 +748,6 @@ def values(page, rule, parts=None):
 
 
 def meet(rule, subject, value):
-    """The Subject `value` makes against `rule`'s MUST, as read() judges a
-    distinct count or a value; a MUST that compares with another read is not
-    one a pooled value can take."""
     if rule.must.ref:
         raise ProbeError(f"{rule.must.text!r} compares with a read on the page")
     return _meet(
@@ -821,13 +772,10 @@ def _locator(page, select, parts):
 
 
 def wanted(rule):
-    """The one-element reads each of `rule`'s rows holds, in order."""
     return _wanted(rule.select, rule.read, rule.must)
 
 
 def _wanted(select, read, must):
-    """Every one-element read the line needs, in a fixed order: the read,
-    the where reads, and the MUST's read of the same element."""
     reads = [*_simple_reads(read)]
     for f_read, f_must in select.where:
         reads += _simple_reads(f_read)
@@ -843,8 +791,6 @@ def _spec(read):
 
 
 def _rows(page, select, read, must, *, parts):
-    """A row for each element `select` finds, holding in `values` every read
-    `_wanted` lists, in its order."""
     specs = _wanted(select, read, must)
     groups = [read.within] if read.within else []
     if select.source == "fonts":
@@ -889,8 +835,6 @@ def _rows(page, select, read, must, *, parts):
 
 
 def _kept(select, read, must, rows):
-    """`rows` as the browser hands them back, each value now under its spec,
-    less those `select`'s where filters drop."""
     specs = _wanted(select, read, must)
     for row in rows:
         row["by"] = dict(zip(specs, row.pop("values"), strict=True))
@@ -900,13 +844,11 @@ def _kept(select, read, must, rows):
 
 
 def _passes(read, must, row):
-    """Whether `row` meets one where filter; a value it cannot read does not."""
     value, why = _value(read, row)
     return not why and _meet(must, "", value, row, read=read).verdict == "pass"
 
 
 def _shot(page, rect):
-    """The page's pixels under `rect` (page coordinates), as rows of RGB."""
     x, y, w, h = rect
     if w < 1 or h < 1:
         return None
@@ -918,9 +860,6 @@ def _shot(page, rect):
 
 
 def _authored(page, name):
-    """The authored value of `name` on each element at window[STASH], read
-    from Chromium's DevTools, which lists the rules matching an element as
-    written, in cascade order."""
     devtools = page.context.new_cdp_session(page)
     try:
         devtools.send("DOM.enable")
@@ -950,10 +889,6 @@ def _authored(page, name):
 
 
 def _winning(matched, name):
-    """The declaration of `name` that wins on one element, as written, from
-    CSS.getMatchedStylesForNode's answer: the page's own rules in cascade
-    order, then its inline style, and an !important one over any that is
-    not. "" where the page sets none."""
     declared = []
     for match in matched.get("matchedCSSRules", []):
         if match["rule"].get("origin") == "regular":
@@ -962,16 +897,10 @@ def _winning(matched, name):
         declared += _declarations(matched["inlineStyle"], name)
     if not declared:
         return ""
-    # sorted() is stable, so the last of the highest importance wins.
     return sorted(declared, key=lambda d: d[0])[-1][1]
 
 
 def _declarations(style, name):
-    """(important, value) for each declaration of `name` in one rule or
-    inline style. A longhand a shorthand sets through var() has no value of
-    its own until the var() is substituted, so it takes the shorthand's.
-    DevTools lists such a longhand, empty, only under a shorthand that sets
-    it, so the name-prefix guess never lends one a stranger's value."""
     out, shorthand = [], None
     for p in style.get("cssProperties", []):
         if p.get("disabled") or p.get("parsedOk") is False:
@@ -1004,11 +933,6 @@ def _judge(page, rule, parts):
 
 
 def judged(rule, rows, refs=None):
-    """The Subjects `rule` makes of `rows`, as ELEMENTS_JS hands them back:
-    each with subject, uid, groups, fontSize, rootSize and, in `values`,
-    every read wanted(rule) lists, in its order. `refs` holds (uid, value,
-    row) for each element an `all of (…)` MUST names, and is None for any
-    other MUST."""
     rows = _kept(rule.select, rule.read, rule.must, rows)
     if rule.read.kind == "count":
         return [_meet(rule.must, rule.select.text, len(rows), {})]
@@ -1038,8 +962,6 @@ def judged(rule, rows, refs=None):
 
 
 def _value(read, row):
-    """A row's value for `read`, through its lens and combined with its
-    second read: (value, None), or (None, why) where it cannot be read."""
     if read.op == "on":
         return _on(row["by"][_spec(read)], row["by"][_spec(read.other)])
     first, why = _one(read, row)
@@ -1189,8 +1111,6 @@ def _meet(must, subject, value, row, *, refs=None, read=None):
 
 
 def _numeric(must, value, read, row):
-    """Whether = or != compares as numbers: the read gives a number, or the
-    value and MUST are both one number with a unit."""
     if isinstance(value, (int, float)):
         return True
     try:
@@ -1201,9 +1121,6 @@ def _numeric(must, value, read, row):
 
 
 def _against(must, value, row, other, *, at, read):
-    """True where `value` meets `must` against the read value `other` (read
-    on the row `at`); False where it misses; a why where they cannot be
-    compared."""
     a, b = _actual(read, value, row), _actual(must.ref.read, other, at)
     if a is None or b is None:
         if must.op not in ("=", "!="):
@@ -1253,8 +1170,6 @@ def _compare(must, subject, value, row, *, read, verdict):
 
 
 def _actual(read, value, row):
-    """A value as (number, kind) in the kind's base unit, or None. em and
-    rem read off the row's font sizes."""
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, (int, float)):
@@ -1280,7 +1195,6 @@ def _base(quantity, row):
 
 
 def plain(value):
-    """`value` as text with its runs of white space made one space."""
     return re.sub(r"\s+", " ", str(value)).strip()
 
 
@@ -1295,11 +1209,6 @@ def sweep(
     timeout=flow.LOAD_TIMEOUT_MS,
     **given,
 ):
-    """Reads `rules` on the page at `url` loaded afresh at each width, at
-    check-layout.py's screen heights and phone touch screen, settled as it
-    settles a page, under conditions.py's `given` conditions. Returns
-    ([(width, [Result…])] in width order, how many animations loop). `widths`
-    defaults to check-layout.py's gating sweep."""
     widths = widths or layout.sweep_widths(layout.GATE_STEP)
     out, looping = [], 0
     for width, page, loops in pages(
@@ -1311,8 +1220,6 @@ def sweep(
 
 
 def pages(browser, url, *, widths, heights, timeout, given):
-    """(width, page, how many animations loop) for each of `widths`, loaded
-    as sweep() loads it. One page serves every width its device shares."""
     with contextlib.ExitStack() as stack:
         open_ = {}
         for width in widths:
@@ -1329,10 +1236,6 @@ def pages(browser, url, *, widths, heights, timeout, given):
 
 
 def findings(rules, swept):
-    """One finding per record id, in table order: {"id", "answer", "misses",
-    "unjudged"}. The answer is fail, not judged, pass or no match (module
-    docstring); each miss and each unjudged value is a range of consecutive
-    widths, with the value and why at its first."""
     ids = list(dict.fromkeys(r.id for r in rules))
     out = {
         i: {"id": i, "answer": "no match", "misses": [], "unjudged": []} for i in ids
@@ -1405,16 +1308,10 @@ def report(at, widths, found, *, looping, json_path):
     return "\n".join(lines)
 
 
-# The building session's parts declaration, as design-round §1c and gate.js's
-# usage give it. Its part names are not checked here: gate.js checks them
-# against the vocabulary, and a table names parts freely.
 DECLARATION = '{"declared": {<part>: <its CSS selector, or null>}}'
 
 
 def declared_parts(text):
-    """A parts declaration's ({name: selector}, {names declared with none}),
-    the declaration in DECLARATION's form, which may sit beside a parts map's
-    "parts". Raises DeclarationError saying what is wrong."""
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -1502,8 +1399,6 @@ def parse_args(argv):
         p.error(f"cannot read --table {at.table}: {exc.strerror}")
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
-    # A part declared null has no element to read, so a line naming it is
-    # refused rather than answered "no match" (#274).
     named = {r.select.value for r in at.rules if r.select.source == "part"}
     if named & unselected:
         p.error(
@@ -1514,8 +1409,6 @@ def parse_args(argv):
 
 
 def page_arguments(p, out_file):
-    """The arguments probe.py and its family scripts take alike: the page,
-    where `out_file` goes, the parts, the widths and the load timeout."""
     p.add_argument("url", help="an http(s) URL, or a local HTML file")
     p.add_argument("--out", required=True, metavar="DIR", help=f"where {out_file} goes")
     part_arguments(p)
@@ -1536,8 +1429,6 @@ def page_arguments(p, out_file):
 
 
 def page_options(p, at):
-    """Checks page_arguments' values, setting at.span and at.parts, and
-    returns the parts declared with no selector."""
     if at.step < 1:
         p.error("--step wants 1 or more")
     m = re.fullmatch(r"(\d+)-(\d+)", at.widths)
@@ -1555,7 +1446,6 @@ def main(argv):
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     os.makedirs(at.out, exist_ok=True)
     json_path = os.path.join(at.out, "probe.json")
-    # An earlier run's values would reach a critic as this run's.
     with contextlib.suppress(FileNotFoundError):
         os.unlink(json_path)
     widths = layout.sweep_widths(at.step, *at.span)

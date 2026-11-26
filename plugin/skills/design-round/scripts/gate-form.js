@@ -1,13 +1,6 @@
-/**
- * gate-form.js — the gate question and rule record form design-critique's rules.md sets out, as gate.js reads it (#154,
- * #265). It performs no I/O. It sits apart from gate.js so corrections-log.js and critic-examples.js load the same
- * vocabulary, and the tests call what the program calls (#187).
- */
 "use strict";
 
 const FIELDS = ["applies-when", "question", "answered-by", "writes", "yields-to", "source", "era", "owner"];
-// A rule record's fields beside those (#265): every record the vault owns gives RECORD_REQUIRED; a project's question may
-// give any of them, and is held to the same form where it does.
 const RECORD_FIELDS = ["stage", "target", "inputs", "output", "script", "parts", "reasons", "ledger", "status"];
 const RECORD_REQUIRED = ["stage", "reasons", "ledger", "status"];
 const ALL_FIELDS = [...FIELDS, ...RECORD_FIELDS];
@@ -20,25 +13,17 @@ const isBuilderLoaded = (q) => q.fields["answered-by"]?.value === "builder" || B
 const STATUSES = ["live", "staged"];
 const OWED = "owed";
 const GATE_ANSWERERS = ["script", "code", "look"];
-// The parts a treatment record's `parts` names, which the selector's build stage matches against the candidate's (#273):
-// the roles parts-map.py gives a part a visitor can act on, then parts only the building session's declaration names.
-// rules.md's form lists them too: test/gate-select.test.js holds the three together.
 const MAPPED_PARTS = ["link", "button", "textbox", "combobox", "checkbox", "radio", "switch", "slider", "tab", "menuitem", "option", "iframe"];
 const PARTS = [...MAPPED_PARTS, "hero", "card", "image", "icon", "logo", "form", "nav", "dialog", "toast", "bottom-sheet", "table", "chart", "video", "badge", "testimonial", "primary-action", "destructive-action", "secondary-text", "tag", "list-header", "service-bar", "brand-bar", "user-name", "misspelling", "pixel-image", "cookie-banner", "carousel", "map", "drag-item", "pull-to-refresh", "resizable-sheet", "motion-control", "offer-deadline", "editable-value", "zoomable", "select-all", "empty-state", "category-tile"];
-// A coverage ledger row key, as docs/coverage-ledger.json writes them: BTN-7, NEW1-14, VG-NEW-0.
 const LEDGER_KEY = /^[A-Z][A-Z0-9]*(-[A-Z0-9]+)+$/;
-// The vocabularies rules.md's form lists: a change to one is made in both.
 const ASSET_CLASSES = ["web-surface", "brand-art", "motion", "identity", "print", "social"];
 const ASSET_FACTS = ["has-motion", "has-motion-over-5s", "has-brand-motion", "has-cta", "has-payment-control", "has-traced-mark"];
 const ASSET_TERMS = [...ASSET_CLASSES, ...ASSET_FACTS];
-// #154 §The gate list: 1 law and WCAG 2.2 AA, 2 the project, 3 domain evidence, 4 expert craft ranges,
-// 5 impeccable's craft rules, 6 impeccable's "AI look" bans.
 const LEVELS = 6;
 
 const HEADING = /^(#{1,6})\s+(.*?)\s*$/;
 const FIELD = /^- ([\w-]+):\s*(.*?)\s*$/;
 
-/** The questions in one gate file's text, each { id, line, fields: { name: { value, line } } }, and the lines it cannot read. */
 function parseGate(text) {
   const questions = [];
   const faults = [];
@@ -62,13 +47,11 @@ function parseGate(text) {
   return { questions, faults };
 }
 
-/** An `applies-when` value's { condition, part }: the asset condition before its first `; `, and the part condition after it, empty where there is none. */
 function splitAppliesWhen(value) {
   const cut = value.indexOf("; ");
   return cut < 0 ? { condition: value.trim(), part: "" } : { condition: value.slice(0, cut).trim(), part: value.slice(cut + 2).trim() };
 }
 
-/** Why an `applies-when` value breaks the form, or null. */
 function appliesWhenFault(value) {
   const { condition, part } = splitAppliesWhen(value);
   if (!part) return "gives no part condition after its asset condition and `; `";
@@ -79,7 +62,6 @@ function appliesWhenFault(value) {
   return unknown.length ? `names an asset condition outside the vocabulary: ${unknown.join(", ")} (it is any, or ${ASSET_TERMS.join(", ")})` : null;
 }
 
-/** Why an `era` value breaks the form, or null. */
 function eraFault(value) {
   if (value === "timeless") return null;
   const dated = value.match(/^dated (\d{4})-(\d{2})-(\d{2})$/);
@@ -91,7 +73,6 @@ function eraFault(value) {
   return `has an era that is neither \`timeless\` nor \`dated <YYYY-MM-DD>\`: ${value}`;
 }
 
-/** Why a question's rule record fields break the form, each [message, line]: a vault record's required ones, and any given. */
 function recordFaults(q) {
   const f = q.fields;
   const value = (name) => f[name]?.value;
@@ -120,7 +101,6 @@ function recordFaults(q) {
   return out;
 }
 
-/** { faults, count }: every fault in the gate files given, each { file, line, message }, and how many questions they hold; ids are resolved across all of them. */
 function checkGates(files) {
   const faults = [];
   const parsed = files.map(({ file, text }) => ({ file, ...parseGate(text) }));
@@ -164,10 +144,8 @@ function checkGates(files) {
   return { faults, count: parsed.reduce((n, { questions }) => n + questions.length, 0) };
 }
 
-/** Whether a question is on a gate list: live, or staged where `staged`, and answered by a script, the code or the gate critics (#265). */
 const isGateQuestion = (q, staged = false) => (staged || q.fields.status?.value !== "staged") && GATE_ANSWERERS.includes(q.fields["answered-by"].value);
 
-/** Whether an `applies-when` asset condition holds for an asset of class `asset` with the facts given. */
 function applies(appliesWhen, asset, facts) {
   const { condition } = splitAppliesWhen(appliesWhen);
   if (condition === "any") return true;

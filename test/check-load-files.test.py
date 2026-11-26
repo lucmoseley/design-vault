@@ -1,10 +1,3 @@
-"""Tests check-load.py's --files mode and font-file.py (#313):
-python3 test/check-load-files.test.py
-
-The two fixture pages run the script end to end; every other case feeds
-findings() a page read built here, one fact changed from a page that passes.
-"""
-
 import copy
 import json
 import os
@@ -39,7 +32,7 @@ fontfile = load.fontfile
 
 
 def run(page, out, *args):
-    # A guess: one unthrottled load and a handful of canvas draws.
+    # guess, #501
     return child.run(
         [sys.executable, SCRIPT, page, "--files", "--out", out, *args],
         timeout=180,
@@ -55,7 +48,6 @@ with open(TABLE, encoding="utf8") as fh:
 
 
 def line(check):
-    """The shipped table's first line for `check`."""
     return next(x for x in SHIPPED if x.check == check)
 
 
@@ -100,7 +92,6 @@ def _used(family, ps, custom, glyphs):
 
 
 def page(**over):
-    """A page read that passes every shipped line."""
     base = dict(
         url="https://example.test/",
         faces=[
@@ -159,7 +150,7 @@ class FixturePages(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp)
 
-    def test_the_clean_page_meets_every_record_and_exits_0(self):
+    def test_the_clean_page_meets_every_record_and_exits_0_313(self):
         proc, got = self.runs["clean"]
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(set(got["answers"].values()), {"pass"}, proc.stdout)
@@ -205,7 +196,7 @@ class FixturePages(unittest.TestCase):
 
 class Arguments(unittest.TestCase):
     def test_files_without_out_is_a_usage_error(self):
-        # A guess: it stops on its arguments, before any browser opens.
+        # guess, #501
         proc = child.run([sys.executable, SCRIPT, CLEAN, "--files"], timeout=60)
         self.assertEqual(proc.returncode, 2)
         self.assertIn("--files wants --out DIR", proc.stderr)
@@ -595,7 +586,6 @@ class Banner(unittest.TestCase):
 
 
 def _sfnt(tables):
-    """A TrueType file holding `tables`, {tag: bytes}, and nothing else."""
     head = struct.pack(">4sHHHH", b"\x00\x01\x00\x00", len(tables), 0, 0, 0)
     offset = 12 + 16 * len(tables)
     directory, body = b"", b""

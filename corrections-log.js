@@ -1,19 +1,14 @@
 #!/usr/bin/env node
 /**
- * The corrections log's gate: data/corrections-log.jsonl holds one row per correction the founder makes in a design
- * round, across every project, in his own words (design-vault#166). It refuses a malformed row, and a row that
- * rewrites one HEAD holds: his words never change, and his ruling is written once.
- *
  * Usage:
  *   node corrections-log.js                         the working tree's data/corrections-log.jsonl against HEAD's
  *   node corrections-log.js --staged                the index's copy against HEAD's
  *   node corrections-log.js --log <file> [--previous <file>]
  *
- * candidate is null where the correction was not about one candidate. asset is the brief's asset class, from
- * gate-form.js's vocabulary, and stance whether his words keep a trait or reject one (#193): critic-examples.js deals
- * critics their examples by both. ruling is "pending" until he answers, then
- * "no rule" or "rule: <gate id or rules-file line>". The gate cannot tell whether he said yes: it keeps a ruling, once
- * written, from changing, and design-round's corrections-log section keeps a session from writing one he did not give.
+ * Refuses a malformed row of data/corrections-log.jsonl, and a row that rewrites one HEAD holds, save a pending
+ * ruling answered. candidate is null where the correction was not about one candidate. asset is the brief's asset
+ * class, from gate-form.js's vocabulary, and stance whether his words keep a trait or reject one. ruling is "pending"
+ * until he answers, then "no rule" or "rule: <gate id or rules-file line>".
  *
  * The command line, its exit codes and the reading of the log from git are log-gate.js's.
  */
@@ -23,7 +18,6 @@ const { ASSET_CLASSES } = require("./plugin/skills/design-round/scripts/gate-for
 
 const LOG = "data/corrections-log.jsonl";
 const FIELDS = ["date", "project", "asset", "where", "candidate", "words", "stance", "principle", "missed_by", "ruling"];
-// A round tag and a candidate's name, as design-round's corrections-log section writes it.
 const CANDIDATE = /^rounds\/[\w.-]+-r[1-9]\d* [\w.-]+$/;
 const MISSED_BY = ["lint", "gate", "critic", "building session", "no rule"];
 const STANCES = ["kept", "rejected"];
@@ -31,10 +25,6 @@ const STANCES = ["kept", "rejected"];
 const LANDED = /^rule: \S/;
 const isRuling = (value) => value === "pending" || value === "no rule" || (typeof value === "string" && LANDED.test(value));
 
-/**
- * Returns every fault in the log `text`. `previousText` is the log HEAD holds: each of its rows must stand
- * unchanged at the same place, save a pending ruling answered.
- */
 function checkCorrectionsLog(text, previousText = "") {
   const faults = [];
   const fault = (rule, message) => faults.push(`${rule}: ${message}`);
@@ -52,7 +42,6 @@ function checkCorrectionsLog(text, previousText = "") {
     if (!MISSED_BY.includes(row.missed_by))
       fault("missed-by", `${at}: missed_by ${JSON.stringify(row.missed_by)} is not one of ${MISSED_BY.map((m) => JSON.stringify(m)).join(", ")}`);
     if (!isRuling(row.ruling)) fault("ruling", `${at}: ruling ${JSON.stringify(row.ruling)} is not "pending", "no rule" or "rule: <gate id or rules-file line>"`);
-    // The same words about the same candidate, logged twice from the same place, is one correction appended twice.
     const key = JSON.stringify([row.where, row.candidate, row.words]);
     if (seen.has(key)) fault("duplicate-entry", `${at}: these words from ${JSON.stringify(row.where)} about ${JSON.stringify(row.candidate)} already have a row`);
     seen.add(key);

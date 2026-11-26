@@ -1,10 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/drive-pointer.py (#301): python3 test/drive-pointer.test.py
-
-Lose the settle and a check reads a fading tooltip, a snapping knob or a parallax layer partway; lose the
-cover check and it reads the state of whatever lies over its target. It drives a real Chromium on one
-fixture page, since what it pins is what the browser does under a real mouse.
-"""
-
 import contextlib
 import os
 import pathlib
@@ -13,7 +6,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 PAGE = pathlib.Path(HERE, "fixtures", "drivers", "pointer.html").resolve().as_uri()
 
@@ -62,7 +55,7 @@ class OnThePage(unittest.TestCase):
 
 
 class Hover(OnThePage):
-    def test_a_hover_only_tooltip_shows_faded_in_and_goes_on_leaving(self):
+    def test_a_hover_only_tooltip_shows_faded_in_and_goes_on_leaving_301(self):
         self.assertEqual(self.style("#tip", "opacity"), "0")
         moved = pointer.hover(self.page, "#tip-trigger")
         self.assertTrue(moved.settled)
@@ -72,7 +65,6 @@ class Hover(OnThePage):
         )
         away = pointer.leave(self.page, "#tip-trigger")
         self.assertEqual(self.style("#tip", "opacity"), "0")
-        # The trigger is at the top left, so the farthest corner is the bottom right.
         size = self.page.viewport_size
         self.assertEqual((away.x, away.y), (size["width"] - 1, size["height"] - 1))
 
@@ -117,9 +109,7 @@ class Press(OnThePage):
         pointer.click(self.page, "#count")
         self.assertEqual(clicks(), "2")
 
-    def test_a_click_on_a_moving_target_waits_for_it_to_come_to_rest(self):
-        # #458: a point taken mid-motion lands on whatever moves under it. The still target's
-        # pair is test_a_click_lands_on_release_not_on_press.
+    def test_a_click_on_a_moving_target_waits_for_it_to_come_to_rest_458(self):
         self.page.evaluate("sendGlider()")
         pointer.click(self.page, "#glider")
         self.assertEqual(self.page.get_attribute("#glider", "data-clicked-at"), "400px")
@@ -142,8 +132,7 @@ class Drag(OnThePage):
             "#knob", "el => [Number(el.dataset.moves), Number(el.dataset.gap)]"
         )
         self.assertEqual(moves, round(pointer.DRAG_MS / pointer.FRAME_MS))
-        # The shortest gap, not the whole span: on a loaded machine moves sent back to back can still
-        # span the drag. 1 ms off is slack for the event clock's rounding.
+        # guess, #501
         self.assertGreaterEqual(gap, pointer.FRAME_MS - 1)
 
     def test_a_drag_held_is_read_where_the_pointer_is(self):
@@ -153,7 +142,6 @@ class Drag(OnThePage):
         self.assertEqual(self.knob_x(), 100)
 
     def test_a_drag_to_an_element_ends_on_its_centre(self):
-        # #veil covers #covered, which a drop point may be.
         moved = pointer.drag(self.page, "#knob", "#covered", hold=True)
         box = self.page.locator("#covered").bounding_box()
         self.assertEqual(
@@ -254,8 +242,7 @@ class Settle(OnThePage):
     def test_a_target_that_never_holds_still_is_pointed_at_once_the_cap_passes_unsettled(
         self,
     ):
-        # #crawler slides forever, so its box never holds still; the cap is lowered so the wait is quick,
-        # still past the settle's 800 ms quiet window, so a still target reads settled.
+        # guess, #501
         self.addCleanup(setattr, pointer, "SETTLE_CAP_MS", pointer.SETTLE_CAP_MS)
         pointer.SETTLE_CAP_MS = 1500
         self.assertFalse(pointer.hover(self.page, "#crawler").settled)
@@ -276,21 +263,17 @@ class Settle(OnThePage):
 
 
 class Watched(OnThePage):
-    """WATCH_JS installed before the page's scripts (#462). The quiet window is set past the cap, so a settle
-    reads True only where it ended early, on nothing queued. These cross the real clock, as what they pin is the
-    page's own timers and loads, which a fake clock would replace: a 400 ms timer sits past the 100 ms floor and
-    inside the 1.5 s cap."""
-
     def setUp(self):
         self.page = BROWSER.new_page()
         self.addCleanup(self.page.close)
         self.page.add_init_script(pointer.WATCH_JS)
         self.page.goto(PAGE)
+        # guess, #501
         for name, value in (("QUIET_MS", 60000), ("SETTLE_CAP_MS", 1500)):
             self.addCleanup(setattr, pointer, name, getattr(pointer, name))
             setattr(pointer, name, value)
 
-    def test_a_page_with_nothing_queued_settles_before_the_window_closes(self):
+    def test_a_page_with_nothing_queued_settles_before_the_window_closes_462(self):
         self.assertTrue(pointer.settle(self.page))
 
     def test_a_timer_due_inside_the_window_is_waited_for(self):
@@ -325,7 +308,6 @@ class Watched(OnThePage):
         self.assertFalse(pointer.settle(self.page))
 
     def held(self):
-        """A page on a made-up http site, whose /held request is answered never: a file page cannot fetch."""
         held = []
         self.page.route(
             "http://vault.test/",
@@ -351,7 +333,6 @@ class Watched(OnThePage):
         self.assertEqual(len(held), 1)
 
     def test_changes_the_watch_cannot_see_still_hold_it_while_they_last(self):
-        # A posted message is no timer, so only the quiet floor waits out its changes.
         self.page.evaluate(
             """() => {
               const { port1, port2 } = new MessageChannel(), end = performance.now() + 300;

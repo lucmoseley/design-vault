@@ -53,7 +53,7 @@ Researched: 2026-11-13
 
 - Wait on a signal, not a fixed time: Playwright's own docs say `wait_for_timeout` "should only be used for debugging. Tests using the timer in production are going to be flaky. Use signals such as network events, selectors becoming visible and others instead" (docstring, Playwright 1.61.0, read from the installed package) [standard or field body, for the tool's own behaviour]; Checkly: hard waits "should never appear in production scripts" (checklyhq.com, "Why you should never use page.waitForTimeout()") [named expert]
 - A page is stable when it has no pending macrotask: Angular's Testability waits for no outstanding timers (`setTimeout`, `setInterval`, `requestAnimationFrame`) before a test reads the page (angular.dev/api/core/Testability; NG0506) [named expert]
-- Agreement (Playwright, Checkly): wait on what the page does, not on a fixed time. Ending a quiet-window wait once nothing the page has queued can still change it rests on Angular alone. drive-pointer.py's `WATCH_JS` does so, with a 100 ms floor for what it cannot see; its comment lists both (#462). Measured: check-state's suite 701 s to 211 s on one lane.
+- Agreement (Playwright, Checkly): wait on what the page does, not on a fixed time. Ending a quiet-window wait once nothing the page has queued can still change it rests on Angular alone. drive-pointer.py's `WATCH_JS` does so, with a 100 ms floor for what it cannot see (#462). Measured: check-state's suite 701 s to 211 s on one lane.
 - Research: #462.
 
 ## A browser that stops answering

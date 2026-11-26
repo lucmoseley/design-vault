@@ -1,9 +1,4 @@
 "use strict";
-// check-curves.js, the craft rule that a curve is a true curve (lucmoseley/mmm-infra#16): run on hand-built path data,
-// a half circle traced in straight lines beside the same arc drawn true, curves meeting smoothly or at a corner (#195), and
-// a curve meeting a line along it, nearly along it or at a corner (#219), and two shapes' edges meeting in each contact
-// class (#331), so each case's right answer is known by construction. Loosen one and a polygon logo, or a mark with the
-// ground showing through a seam, reaches the founder as a round's leader.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -16,7 +11,6 @@ const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "check-curves-"));
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 
 let files = 0;
-/** Runs check-curves.js on one file holding `text`; returns its exit code and its lines. */
 function check(text) {
   const file = path.join(scratch, `${++files}.svg`);
   fs.writeFileSync(file, text);
@@ -24,7 +18,6 @@ function check(text) {
   return { status: r.status, lines: r.stdout.trim().split("\n"), stderr: r.stderr };
 }
 
-/** What check-curves reports on one path's data: each run's segment count, and each corner's node and printed angle. */
 function report(d) {
   const { status, lines } = check(`<svg><path d="${d}"/></svg>`);
   assert.ok(!lines.some((l) => l.includes("could not read the path")), lines.join("\n"));
@@ -39,7 +32,6 @@ function report(d) {
 const findRuns = (d) => report(d).runs;
 const findCorners = (d) => report(d).corners;
 
-/** A half circle of radius r as `n` straight segments, the way a polygon trace draws it. 100 is any size a mark might be. */
 function polygonArc(n, r = 100) {
   const pts = [];
   for (let k = 0; k <= n; k++) {
@@ -49,7 +41,7 @@ function polygonArc(n, r = 100) {
   return `M${pts[0]} L${pts.slice(1).join(" ")}`;
 }
 
-test("a half circle traced as 30 straight lines is one breach", () => {
+test("lucmoseley/mmm-infra#16: a half circle traced as 30 straight lines is one breach", () => {
   assert.deepEqual(findRuns(polygonArc(30)), [30]);
 });
 
@@ -71,7 +63,6 @@ test("a zigzag whose turn changes sign is not a curve", () => {
 });
 
 test("fewer straight segments than the minimum run pass, the minimum fails", () => {
-  // A 3-segment polygon arc turns 60° per joint, so build gentle bends by hand.
   const gentle = (n) => {
     let d = "M0 0";
     let a = 0;
@@ -90,7 +81,6 @@ test("fewer straight segments than the minimum run pass, the minimum fails", () 
 });
 
 test("a turn sharper than 30° breaks the run", () => {
-  // 30 segments over a half circle turn 6° each; 4 segments turn 45° each.
   assert.deepEqual(findRuns(polygonArc(4)), []);
 });
 
@@ -108,7 +98,6 @@ test("a new subpath breaks a run", () => {
 });
 
 test("arc flags written together are read as two numbers", () => {
-  // Read as one number, 011 leaves the arc short of its seven.
   assert.deepEqual(report("M0 0a5 5 0 011 1"), { runs: [], corners: [] });
 });
 
@@ -145,7 +134,6 @@ test("a morph between paths of one structure is curves at every key time; one th
   const to = "M 0 300 C 0 283 0 267 0 250 C 0 167 67 100 150 100 C 233 100 300 167 300 250 C 300 267 300 283 300 300 Z";
   const [a, b] = [from.split(" "), to.split(" ")];
   const matched = (p) => a.map((x, i) => (isNaN(x) ? x : (+x + (b[i] - x) * p).toFixed(2))).join(" ");
-  // Each end's cubics, sampled at 24 points apiece: 96 points, as cth9191/animate's angle morph takes.
   const resample = (d) => {
     const n = d.split(" ").filter((x) => !isNaN(x)).map(Number);
     const pts = [];
@@ -171,10 +159,9 @@ test("a morph between paths of one structure is curves at every key time; one th
   }
 });
 
-// A circle of radius 100 as four cubics, each handle 55.228 long: smooth at every node by construction (#195).
 const CIRCLE = "M100 0 C100 55.228 55.228 100 0 100 C-55.228 100 -100 55.228 -100 0 C-100 -55.228 -55.228 -100 0 -100 C55.228 -100 100 -55.228 100 0 Z";
 
-test("a circle drawn as four cubics with collinear handles has no corner", () => {
+test("#195: a circle drawn as four cubics with collinear handles has no corner", () => {
   assert.deepEqual(findCorners(CIRCLE), []);
 });
 
@@ -199,16 +186,13 @@ test("a deliberate cusp between two curves, a pointed arch's apex, is reported",
 
 test("two arcs joined smoothly pass, two arcs meeting in a point fail", () => {
   assert.deepEqual(findCorners("M-100 0 A100 100 0 0 1 100 0 A100 100 0 0 1 -100 0 Z"), []);
-  // An ogee: two quarter circles bending opposite ways, tangent where they meet.
   assert.deepEqual(findCorners("M0 0 A50 50 0 0 1 50 50 A50 50 0 0 0 100 100"), []);
-  // A pointed arch of two arcs of radius 100 over a span of 100: they meet at 60°.
   const pointed = findCorners("M0 100 A100 100 0 0 1 50 13.397 A100 100 0 0 1 100 100");
   assert.equal(pointed.length, 1);
   assert.equal(pointed[0].angle, "60.0");
 });
 
 test("an arc's tangent is read from its radii and rotation, as a cubic standing in for it shows", () => {
-  // A quarter of an ellipse 200 by 100, turned 30°, then the cubic that leaves its end in the same direction.
   const phi = Math.PI / 6;
   const pt = (t) => [200 * Math.cos(t) * Math.cos(phi) - 100 * Math.sin(t) * Math.sin(phi), 200 * Math.cos(t) * Math.sin(phi) + 100 * Math.sin(t) * Math.cos(phi)];
   const dir = (t) => [-200 * Math.sin(t) * Math.cos(phi) - 100 * Math.cos(t) * Math.sin(phi), -200 * Math.sin(t) * Math.sin(phi) + 100 * Math.cos(t) * Math.cos(phi)];
@@ -228,7 +212,6 @@ test("S and T are smooth by construction; S after a line starts from its node", 
   assert.equal(findCorners("M0 0 C10 20 30 20 40 0 Q50 30 80 0").length, 1);
 });
 
-// A D 100 high: stem, flat top and bottom, and a bowl whose 55-unit handles leave each end along the flat (#219).
 const LETTER_D = "M0 0 H40 C95 0 95 100 40 100 H0 Z";
 
 test("a curve meeting a straight line at a corner passes, as a D's bowl meeting its stem is meant", () => {
@@ -239,25 +222,20 @@ test("a curve meeting a straight line exactly along it passes", () => {
   assert.deepEqual(findCorners(LETTER_D), []);
 });
 
-test("a curve meeting a straight line 2° off is a kink, at that node, whichever comes first", () => {
-  // The 55-unit handle turned 2°: (55 cos 2°, 55 sin 2°) from its node.
+test("#219: a curve meeting a straight line 2° off is a kink, at that node, whichever comes first", () => {
   assert.deepEqual(findCorners(LETTER_D.replace("C95 0", "C94.966 1.919")), [{ at: [40, 0], angle: "2.00" }]);
   assert.deepEqual(findCorners(LETTER_D.replace("95 100 40", "94.966 98.081 40")), [{ at: [40, 100], angle: "2.00" }]);
-  // A straight side drawn as a cubic, as a morph draws one, is a straight line too.
   assert.deepEqual(findCorners(LETTER_D.replace("H40 C95 0", "C10 0 30 0 40 0 C94.966 1.919")), [{ at: [40, 0], angle: "2.00" }]);
 });
 
 test("a curve meeting a straight line is a kink under FontBakery's 0.1 rad (5.7°), a corner over it", () => {
-  // The handle turned 5.5° and 6°.
   assert.deepEqual(findCorners(LETTER_D.replace("C95 0", "C94.747 5.272")).map((c) => c.angle), ["5.50"]);
   assert.deepEqual(findCorners(LETTER_D.replace("C95 0", "C94.699 5.749")), []);
 });
 
 test("a break within Red Arrow's 0.49 grid units passes, the same break on a finer grid fails, a larger one fails", () => {
-  // The 30-unit handle turns 1.9°, so the 10-unit one's end lies 0.33 units off its line: under 0.49 on an integer grid.
   assert.deepEqual(findCorners("M-40 10 C-30 5 -10 0 0 0 C30 1 35 0 40 0"), []);
   assert.equal(findCorners("M-40 10 C-30 5 -10 0 0 0 C30 1.000 35 0 40 0").length, 1);
-  // 2 units off a 30-unit handle puts the 10-unit one's end 0.67 off.
   assert.equal(findCorners("M-40 10 C-30 5 -10 0 0 0 C30 2 35 0 40 0").length, 1);
 });
 
@@ -266,7 +244,6 @@ test("an arc of no length is skipped, so it cannot hide the corner across it", (
 });
 
 test("a cubic whose handles lie on its chord is a straight side, as a morph draws one, so its corners and tangent joins pass", () => {
-  // design-round's morph rule draws every segment as C; the arch's sides and base meet the arc at right angles.
   assert.deepEqual(findCorners("M 0 300 C 0 233 0 167 0 100 C 0 45 45 0 100 0 C 155 0 200 45 200 100 C 200 167 200 233 200 300 C 133 300 67 300 0 300 Z"), []);
 });
 
@@ -289,7 +266,6 @@ test("it prints a corner with its angle and the angle allowed, and exits 1", () 
   assert.match(lines[0], /<path id="apex">: the curves meeting at \(50, 0\) turn 53\.1° there, past the [\d.]+° their written precision allows; put the handles either side of the node on one line, unless vault\.curves-script excuses the corner$/);
 });
 
-/** check-curves.js --bends --json on shapes, path data or { d, matrix }: each one's bends (#228). */
 function bendsOf(...shapes) {
   const r = runInProcess(SCRIPT, ["--bends", "--json"], { stdin: JSON.stringify(shapes.map((s) => (typeof s === "string" ? { d: s } : s))) });
   assert.equal(r.status, 0, r.stderr);
@@ -297,7 +273,7 @@ function bendsOf(...shapes) {
 }
 const near = (got, want) => assert.ok(Math.abs(got - want) < 1e-3, `${got} is not ${want}`);
 
-test("the tightest bend of the parabola y = x² is its vertex, radius 0.5", () => {
+test("#228: the tightest bend of the parabola y = x² is its vertex, radius 0.5", () => {
   const [[b]] = bendsOf("M -10 100 Q 0 -100 10 100");
   near(b.at[0], 0);
   near(b.at[1], 0);
@@ -312,7 +288,6 @@ test("an arc's tightest bend is the end of its long axis, radius ry²/rx", () =>
 });
 
 test("a cubic's tightest bend is found off its ends and middle, where y = x³ bends hardest", () => {
-  // This cubic is y = x³ on [-1, 1], whose curvature 6|x| / (1 + 9x⁴)^1.5 peaks at x = ±(1/45)^(1/4).
   const [bends] = bendsOf("M -1 -1 C -0.333333333 1 0.333333333 -1 1 1");
   const x = (1 / 45) ** 0.25;
   near(Math.abs(bends[0].at[0]), x);
@@ -329,11 +304,10 @@ test("each subpath that curves has its own bend, and a corner of straight lines 
 test("a run of straight lines standing in for a curve is shot where it turns most", () => {
   const [[run]] = bendsOf({ points: "0,0 10,0 19.9,1 29.5,3.5 38,8 45,14", closed: false });
   assert.equal(run.segments, 5);
-  assert.deepEqual(run.at, [29.5, 3.5]); // it turns 13.3° there, against 5.8°, 8.8° and 12.7° at the others
+  assert.deepEqual(run.at, [29.5, 3.5]);
 });
 
 test("a stretched shape's bend is found as drawn: the parabola stretched 4x across turns hardest at its vertex, radius 8", () => {
-  // y = x², drawn through matrix(4 0 0 1 0 0), is y = (x/4)² = x²/16 on the page: curvature 1/8 at the vertex.
   const [[b]] = bendsOf({ d: "M -10 100 Q 0 -100 10 100", matrix: [4, 0, 0, 1, 100, 50] });
   near(b.at[0], 100);
   near(b.at[1], 50);
@@ -402,7 +376,6 @@ test("a polygon curve in <defs>, a <symbol> or a <marker> is checked where a <us
   assert.equal(r.status, 1);
   assert.deepEqual(ids(r), ["a", "b", "c", "last"]);
   assert.deepEqual(ids(runInProcess(SCRIPT, ["--bends", file])), ["a", "b", "c", "last"]);
-  // --contacts still reads none of them where they stand: a <use> is not read.
   assert.deepEqual(contactsIn(`<defs>${A()}</defs>\n${B()}\n<use href="#a"/>`).found, []);
 });
 
@@ -417,15 +390,10 @@ test("a transform it cannot read does not stop the default mode or --bends check
   assert.match(r.stdout, /tightest bend at \(0, 0\), radius 0\.5/);
 });
 
-// --contacts (#331): two squares 40 units a side, A at x 10–50 and B beside it at x 50–90 unless a case moves an edge,
-// in an <svg> drawn at one CSS px a unit unless a case scales it. Every number is whole, so the edges agree within
-// half a unit.
 const A = (right = 50) => `<path id="a" fill="#c00" d="M10 10 H${right} V50 H10 Z"/>`;
 const B = (left = 50) => `<path id="b" fill="#00c" d="M${left} 10 H90 V50 H${left} Z"/>`;
-// look-renders.py's own pattern for a --contact (CONTACT in look-renders.py).
 const CONTACT = /^([\w.-]+)=(?:(.+)@)?(-?[\d.]+),(-?[\d.]+)$/;
 
-/** check-curves.js --contacts on one SVG file: its exit code, its lines, and each contact's class, segments and --contact. */
 function contactsIn(body, size = 'width="100" height="100" viewBox="0 0 100 100"') {
   const file = path.join(scratch, `${++files}.svg`);
   fs.writeFileSync(file, `<svg xmlns="http://www.w3.org/2000/svg" ${size}>\n${body}\n</svg>`);
@@ -439,7 +407,7 @@ function contactsIn(body, size = 'width="100" height="100" viewBox="0 0 100 100"
 }
 const classes = (r) => r.found.map((c) => c.cls);
 
-test("two fills that meet on one exact edge fail as the conflation seam", () => {
+test("#331: two fills that meet on one exact edge fail as the conflation seam", () => {
   const r = contactsIn(`${A()}\n${B()}`);
   assert.deepEqual(r.found.map((c) => [c.cls, c.segments]), [["shared edge, no underlap", [2, 4]]]);
   assert.equal(r.status, 1);
@@ -455,7 +423,6 @@ test("two fills a unit apart are separate and fail, the gap's width printed", ()
 
 test("a fill run on a unit past the edge, under the other, is an underlap and passes", () => {
   const r = contactsIn(`${A(51)}\n${B()}`);
-  // Where the underlap runs, the two squares' top and bottom edges lie on one line, both fills below or above it.
   assert.deepEqual(classes(r), ["coincident", "underlap", "coincident"]);
   assert.equal(r.status, 0);
   assert.match(r.lines.at(-1), /^3 contact\(s\) in 1 file\(s\), 0 failing$/);
@@ -468,7 +435,6 @@ test("the upper fill run on over the lower passes too, since the ground never sh
 });
 
 test("edges that match with both fills on one side are coincident and pass, listed for the look renders", () => {
-  // A highlight in the square's top right corner, sharing its top and right edges.
   const r = contactsIn(`${A()}\n<path id="shine" fill="#fff" d="M30 10 H50 V30 H30 Z"/>`);
   assert.deepEqual(r.found.map((c) => [c.cls, c.segments]), [["coincident", [1, 1]], ["coincident", [2, 2]]]);
   assert.equal(r.status, 0);
@@ -476,7 +442,6 @@ test("edges that match with both fills on one side are coincident and pass, list
 
 test("an arch both shapes share, the upper drawing it backwards, is a seam; shifted a unit into the lower, an underlap", () => {
   const ground = '<path fill="#c00" d="M10 90 L10 50 C30 40 70 40 90 50 L90 90 Z"/>';
-  // The arch is shallow, so shifting the sky a unit down moves it at least 0.89 units across the curve.
   const sky = (dy) => `<path id="sky" fill="#0c0" d="M90 ${50 + dy} C70 ${40 + dy} 30 ${40 + dy} 10 ${50 + dy} L10 5 L90 5 Z"/>`;
   assert.deepEqual(classes(contactsIn(`${ground}\n${sky(0)}`)), ["shared edge, no underlap"]);
   const r = contactsIn(`${ground}\n${sky(1)}`);
@@ -516,13 +481,11 @@ test("one path's own subpaths are not two shapes, and a shape that is not drawn 
 });
 
 test("the fill rule decides a seam: a square in an even-odd ring's hole meets it on one edge, in a nonzero ring it is lapped", () => {
-  // Both of the ring's subpaths run clockwise, so nonzero fills the hole and even-odd leaves it empty.
   const ring = (rule) => `<path fill-rule="${rule}" fill="#c00" d="M10 10 H90 V90 H10 Z M30 30 H70 V70 H30 Z"/>`;
   const plug = '<path fill="#00c" d="M30 30 H70 V70 H30 Z"/>';
   const kinds = (body) => [...new Set(classes(contactsIn(body)))];
   assert.deepEqual(kinds(`${ring("evenodd")}\n${plug}`), ["shared edge, no underlap"]);
   assert.deepEqual(kinds(`${ring("nonzero")}\n${plug}`), ["underlap"]);
-  // The rule is inherited from a group, and a style declaration outranks the attribute.
   assert.deepEqual(kinds(`<g fill-rule="evenodd">${ring("inherit")}</g>\n${plug}`), ["shared edge, no underlap"]);
   assert.deepEqual(kinds(`${ring("nonzero").replace("<path", '<path style="fill-rule: evenodd"')}\n${plug}`), ["shared edge, no underlap"]);
 });
@@ -531,12 +494,10 @@ test("a shape with no fill is read at its line alone: on an edge it is coinciden
   const line = (x) => `<path fill="none" stroke="#000" d="M${x} 10 V50"/>`;
   assert.deepEqual(classes(contactsIn(`${A()}\n${line(50)}`)), ["coincident"]);
   assert.deepEqual(classes(contactsIn(`${A()}\n${line(51)}`)), ["separate"]);
-  // A fill of none is inherited: the square in the group is a line too, so it meets B's fill on no seam.
   assert.deepEqual(classes(contactsIn(`<g fill="none"><path d="M10 10 H50 V50 H10 Z"/></g>\n${B()}`)), ["coincident"]);
 });
 
 test("a contact prints as a --contact look-renders.py takes: the upper shape's selector and the meeting point in its user units", () => {
-  // The upper square drawn through two transforms; the point must come back in its own path data's units.
   const r = contactsIn(`${A()}\n<g transform="translate(60 0)"><path transform="scale(0.5)" fill="#00c" d="M-20 20 H60 V100 H-20 Z"/></g>`);
   assert.equal(r.found.length, 1, r.lines.join("\n"));
   const [, name, selector, x, y] = r.found[0].contact.match(CONTACT);
@@ -544,17 +505,14 @@ test("a contact prints as a --contact look-renders.py takes: the upper shape's s
   assert.equal(selector, ":root>g:nth-of-type(1)>path:nth-of-type(1)");
   assert.equal(Number(x), -20);
   assert.ok(Number(y) > 20 && Number(y) < 100, y);
-  // A shape with an id is found by it, and one without by its nearest ancestor's.
   const ids = contactsIn(`${A()}\n<g id="right"><g><path fill="#00c" d="M50 10 H90 V50 H50 Z"/></g></g>`);
   assert.match(ids.found[0].contact, /^a\.2-path2\.4=#right>g:nth-of-type\(1\)>path:nth-of-type\(1\)@50,/);
   assert.match(contactsIn(`${A()}\n${B()}`).found[0].contact, /^a\.2-b\.4=#b@50,[\d.]+$/);
 });
 
 test("each contact between the same two shapes has its own name", () => {
-  // B's left edge drawn as two segments, each meeting A's right edge.
   const r = contactsIn(`${A()}\n<path id="b" fill="#00c" d="M50 10 H90 V50 H50 V30 Z"/>`);
   assert.deepEqual(r.found.map((c) => c.contact.match(CONTACT)[1]), ["a.2-b.4", "a.2-b.5"]);
-  // A segment shorter than the spacing A's edge is read at is found from its own side.
   const short = contactsIn(`${A()}\n<path id="b" fill="#00c" d="M50 10 H90 V50 H50 V30.1 V30 Z"/>`);
   assert.deepEqual(short.found.map((c) => c.contact.match(CONTACT)[1]), ["a.2-b.4", "a.2-b.5", "a.2-b.6"]);
 });
@@ -592,7 +550,6 @@ test("--contacts with no file, or a file it cannot read, is bad usage", () => {
 
 test("--contacts --json gives each contact's two shapes, its point and a point 1 CSS px on along its edge, the flag read before or after the files", () => {
   const file = path.join(scratch, "json.svg");
-  // Drawn at twice its user units, so 1 CSS px along the edge is 0.5 units.
   fs.writeFileSync(file, `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 100 50"><path id="a" d="M5 5 H25 V45 H5 Z"/><path id="b" d="M25.5 5 H45 V45 H25.5 Z"/></svg>`);
   for (const args of [["--contacts", "--json", file], ["--contacts", file, "--json"]]) {
     const r = runInProcess(SCRIPT, args);
@@ -629,9 +586,7 @@ test("shapes in two <svg>s on one page are not compared: the page, not the file,
 });
 
 test("fills either side of edges the precision cannot part are judged by what is drawn: 0.4 px over, or 0.4 px apart", () => {
-  // A is written to tenths, B in whole numbers: half a unit of B's precision covers the 0.4.
   const over = '<path id="a" fill="#c00" d="M10.0 10.0 H50.4 V50.0 H10.0 Z"/>';
-  // A's top and bottom run 0.4 along B's: coincident there.
   const under = contactsIn(`${over}\n${B()}`);
   assert.deepEqual(classes(under), ["coincident", "underlap", "coincident"]);
   assert.equal(under.status, 0);
@@ -642,7 +597,6 @@ test("fills either side of edges the precision cannot part are judged by what is
 });
 
 test("edges a hair apart agree within the coarser path's written precision: coincident, unless both are written finer", () => {
-  // The highlight's right edge sits 0.3 units inside the square's: within half a whole unit, past half a tenth.
   const shine = '<path id="shine" fill="#fff" d="M30 10 H49.7 V30 H30 Z"/>';
   assert.deepEqual(classes(contactsIn(`${A()}\n${shine}`)), ["coincident", "coincident"]);
   const fine = '<path id="a" fill="#c00" d="M10.0 10.0 H50.0 V50.0 H10.0 Z"/>';
@@ -664,17 +618,14 @@ test("a viewBox is fitted as preserveAspectRatio says: met, a unit is 1 px; stre
 test("a square standing a unit deep in a wider one is an underlap; its sides, crossing the wider one's top square on, are not contacts", () => {
   const r = contactsIn('<path fill="#c00" d="M10 50 H90 V90 H10 Z"/>\n<path id="post" fill="#00c" d="M30 10 H70 V51 H30 Z"/>');
   assert.deepEqual(r.found.map((c) => [c.cls, c.segments]), [["underlap", [1, 3]]]);
-  // Its sides leaning 20° off square still cross the top at a corner, 70° from it.
   const lean = contactsIn('<path fill="#c00" d="M10 50 H90 V90 H10 Z"/>\n<path id="post" fill="#00c" d="M30 10 H70 L84.92 51 L15.08 51 Z"/>');
   assert.deepEqual(lean.found.map((c) => c.segments), [[1, 3]]);
 });
 
-// #356: A's edge at 49 and B's at 51, a gap of 2, and a strip 4 wide standing over it unless a case moves or dims it.
 const STRIP = (attrs = "") => `<path id="strip" fill="#0c0"${attrs} d="M48 10 H52 V50 H48 Z"/>`;
-/** The class of A's right edge against B's left, segments 2 and 4. */
 const gapClass = (r) => r.found.find((c) => c.contact.startsWith("a.2-b.4="))?.cls;
 
-test("a gap a shape painted after both fills is covered and passes, its line naming the cover", () => {
+test("#356: a gap a shape painted after both fills is covered and passes, its line naming the cover", () => {
   const r = contactsIn(`${A(49)}\n${B(51)}\n${STRIP()}`);
   assert.equal(gapClass(r), "covered", r.lines.join("\n"));
   assert.match(r.lines.find((l) => l.includes(": covered: ")), /: covered: the edges run 2 px apart, but \S+:4 <path id="strip">, painted over both, fills the gap\. --contact 'a\.2-b\.4=#b@/);
@@ -690,7 +641,6 @@ test("a gap over a shape painted before both, or between them, still fails as se
   }
 });
 
-/** Asserts the A–B gap fails as separate, its line giving the way out, with cover painted over both. */
 function assertUncovered(cover) {
   const r = contactsIn(`${A(49)}\n${B(51)}\n${cover}`);
   assert.equal(gapClass(r), "separate", cover);

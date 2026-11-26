@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Prints how many commits touching plugin/ `main` holds past the sha the
- * lucmoseley marketplace pins (#58).
+ * lucmoseley marketplace pins.
  *
  * Usage:
  *   node release-check.js               reads the pin from lucmoseley/claude-plugins with gh, or $WFC_GH
@@ -9,7 +9,7 @@
  *   node release-check.js --repo <dir>  counts in that checkout instead of this one
  *
  * It reports and never refuses: every outcome, a failed pin read included,
- * exits 0, since a session start must not fail on the network.
+ * exits 0.
  */
 "use strict";
 
@@ -19,8 +19,6 @@ const MARKETPLACE_API = "repos/lucmoseley/claude-plugins/contents/.claude-plugin
 
 const report = (line) => console.log(`design-vault release check: ${line}`);
 
-// The first line of what a failed command said, which names the cause, where
-// its message names only the command.
 const reason = (err) => (String(err.stderr || "").trim() || err.message).split("\n")[0];
 
 function parsePin(marketplace) {
@@ -28,15 +26,12 @@ function parsePin(marketplace) {
   return entry?.source?.sha || null;
 }
 
-// gh is read from WFC_GH where set, so a test points it at a stub (base §N7, #124). The 10 s timeout is a guess
-// at how long a session start may wait on GitHub before this check gives up.
+// guess, #58
 function readPin() {
   const content = execFileSync(process.env.WFC_GH || "gh", ["api", MARKETPLACE_API, "--jq", ".content"], { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] });
   return parsePin(JSON.parse(Buffer.from(content, "base64").toString("utf8")));
 }
 
-// Commits on main past `pin` that touch plugin/, or null when this checkout
-// does not hold the pin. Throws when `repo` is not a checkout.
 function unreleased(repo, pin) {
   const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   git("rev-parse", "--git-dir");
@@ -63,7 +58,6 @@ function main(argv) {
     }
     if (!pin) return report("the marketplace carries no design-vault sha; unreleased plugin/ commits unknown");
   }
-  // Seven hex digits: git's default short sha.
   const short = pin.slice(0, 7);
   let count;
   try {

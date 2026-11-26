@@ -1,10 +1,3 @@
-"""Pins check-access.py's --pointer mode, vault.coarse-target (#317): python3 test/check-access-pointer.test.py
-
-The fault fixture plants one fault for each of the record's two branches, marked
-#coarse-target and #coarse-target-fine. A suite of the commit gate (test/all.sh): a target a finger cannot hit would otherwise
-reach the critic as a pass.
-"""
-
 import concurrent.futures
 import http.server
 import json
@@ -24,7 +17,7 @@ CLEAN = os.path.join(FIXTURES, "target-pointer-clean.html")
 SHEETS = os.path.join(FIXTURES, "target-pointer-sheets.html")
 
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
@@ -33,11 +26,9 @@ import siblings  # noqa: E402
 pointing = siblings.load(SCRIPTS, "access-pointer.py")
 
 QID = "vault.coarse-target"
-# How long one run may take, in s. A guess, unmeasured.
-RUN_S = 300
+RUN_S = 300  # guess, #317
 SCRATCH = tempfile.TemporaryDirectory()
 DONE = {}
-# The page and its style sheet, each served from an origin of its own.
 SITE = tempfile.TemporaryDirectory()
 SERVERS = []
 
@@ -92,7 +83,6 @@ def setUpModule():
     page, DONE["sheet"] = serve()
     runs = {
         "fault": (FAULT,),
-        # --pointer reads no contrast table, so a missing one cannot stop it.
         "clean": (
             CLEAN,
             "--contrast-table",
@@ -123,7 +113,7 @@ def faults(found):
 
 
 class Pointer(unittest.TestCase):
-    def test_the_fault_page_names_each_plant_at_both_widths_and_nothing_else(self):
+    def test_the_fault_page_names_each_plant_at_both_widths_and_nothing_else_317(self):
         code, said, found = DONE["fault"]
         self.assertEqual(code, 1, said)
         got = faults(found)

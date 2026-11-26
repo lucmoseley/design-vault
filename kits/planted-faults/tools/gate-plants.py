@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gate-plants.py — the gate trio's planted faults (#415), each one a fault only a held gate record asks about.
+"""The gate trio's planted faults, each one a fault only a held gate record asks about.
 
   python3 kits/planted-faults/tools/gate-plants.py
 
@@ -25,7 +25,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 VAULT = ROOT.parents[1]
 STORE = VAULT / "plugin/skills/design-critique/rules"
-# Seconds a render may take: one hangs, rather than fails, when the browser stalls.
+# guess, #415
 RENDER_TIMEOUT = 300
 CONDENSED = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400&display=swap">'
 ICON = '<svg class="deco" viewBox="0 0 24 24" aria-hidden="true"><path d="{d}" fill="currentColor"/></svg>'
@@ -276,7 +276,6 @@ def apply(name, spec):
 
 
 def packet(name, spec, page):
-    """The clean page's brief, and the planted page's parts.txt as #224's packets were made."""
     folder = ROOT / "packets" / name
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "brief.md").write_text(
@@ -302,7 +301,6 @@ def packet(name, spec, page):
 
 
 def asked(load):
-    """The record ids a frozen look list asks."""
     lists = ROOT / "prompts/gate-415" / load
     return set(
         re.findall(
@@ -314,8 +312,6 @@ def asked(load):
 
 
 def check_store(spec):
-    """Exits where a plant's record is not held in the rule store, its stage or area is not the store's, or the frozen
-    look lists do not ask it on the held load alone."""
     for f in spec["faults"]:
         area = f["area"]
         text = (

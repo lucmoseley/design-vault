@@ -1,9 +1,3 @@
-"""access-answers.py — check-access.py's questions, and how each width's
-findings merge into one answer per question. A module of its own so its tests
-call what check-access.py calls, not the script's insides (#214). It performs
-no I/O.
-"""
-
 import collections
 
 QUESTIONS = (
@@ -35,21 +29,14 @@ QUESTIONS = (
 )
 
 
-# One width's findings for one question: faults, cannot-measure reasons,
-# exemptions, a logotype's text that would otherwise fail or go unmeasured, and
-# notes, how the measuring fell short without changing the answer.
 Judged = collections.namedtuple("Judged", "faults unmeasured exempt notes")
 
 
 def unjudged():
-    """A Judged with nothing found yet, for a check to fill."""
     return Judged([], [], [], [])
 
 
 def answers(found, questions=QUESTIONS):
-    """Each of `questions`' answer over every width, from each width's {question id: Judged}: its faults and
-    exemptions each merged by subject, with the widths they hold at and the first width's details joined, and
-    its cannot-measure reasons and notes each by its text."""
     out = {}
     for qid, _ in questions:
         faults, unmeasured, exempt, notes = {}, {}, {}, {}
@@ -58,7 +45,6 @@ def answers(found, questions=QUESTIONS):
                 (faults, judged[qid].faults),
                 (exempt, judged[qid].exempt),
             ):
-                # One width's findings on one subject first join into one detail.
                 here = {}
                 for f in findings:
                     details = here.setdefault(f["subject"], [])

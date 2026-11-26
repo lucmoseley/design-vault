@@ -1,12 +1,3 @@
-"""Runs a script as a gate suite's child, catches where it stalls (#430), and runs
-it once more when earlyoom killed one of its renderers and its browser crashed (#431).
-main() runs a Chromium gate suite's tests, and runs once more a test that crashed after
-earlyoom killed one of its renderers (#438).
-
-A stalled child's stacks come from test/child-site/sitecustomize.py, which
-PYTHONPATH loads into it.
-"""
-
 import contextlib
 import functools
 import os
@@ -20,26 +11,19 @@ import traceback
 import unittest
 
 SITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "child-site")
-# How long a stalled child has to write its stacks, and the tree to close its
-# pipes once killed, in s. Guesses, unmeasured.
+# guess, #430
 DUMP_S, GRACE_S = 2, 10
-# How often a running child's process tree is read, in s. A guess, unmeasured. A renderer killed sooner after its
-# birth is missed, and its run fails; a kill that early hangs instead, which is #432's.
+# guess, #431
 WATCH_S = 0.1
-# How far, in s, a journal timestamp may fall outside the span a renderer was seen alive and still be its kill:
-# earlyoom stamps its line just after the signal, and the watcher sees a death up to a read late. A guess, unmeasured.
-# A pid ended and reused by another session's renderer inside that span is mistaken for this run's.
+# guess, #431
 SLACK_S = 1
-# How long the journal read may take, in s. A guess, unmeasured.
+# guess, #431
 JOURNAL_S = 10
-# What Playwright 1.61.0 says when a page's renderer dies under it, SIGTERM or SIGKILL alike (#439, measured): a
-# call made after the death, a goto or wait_for_event it cuts short, and an expect_navigation or wait_for_url.
-# Residual: a wait_for_load_state it cuts short returns with no error, so only the next call can match.
+# What `playwright==1.61.0` raises once a page's renderer dies, SIGTERM or SIGKILL alike, measured in #439.
 CRASHED = ("Target crashed", "Page crashed", "Navigation failed because page crashed!")
-# Chromium's flag on each renderer it starts.
 RENDERER = b"--type=renderer"
 EARLYOOM = "earlyoom"
-# A journal line, as `journalctl -o short-unix` prints it, for each process earlyoom v1.7 signals.
+# earlyoom v1.7's kill line under `journalctl -o short-unix`: https://github.com/rfjakob/earlyoom
 KILL_LINE = re.compile(
     r"^(\d+\.\d+) \S+ [^:]+: sending SIG(?:TERM|KILL) to process (\d+) ", re.MULTILINE
 )
@@ -63,9 +47,8 @@ def listed():
 
 
 def stat(pid):
-    """/proc/<pid>/stat's fields after the command name, from state on; OSError once the process has gone."""
     with open(f"/proc/{pid}/stat", encoding="utf8") as fh:
-        # The command name, in parentheses, may hold spaces; the fields after it are fixed.
+        # comm may hold spaces and parentheses: https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
         return fh.read().rsplit(")", 1)[1].split()
 
 
@@ -88,7 +71,6 @@ def proc(pid):
 
 
 def subtree(root, ppid_of):
-    """root and every pid under it, from a {pid: ppid} reading of /proc."""
     under, grew = {root}, True
     while grew:
         more = {pid for pid, ppid in ppid_of.items() if ppid in under} - under
@@ -100,7 +82,7 @@ def subtree(root, ppid_of):
 def ppids():
     got = {}
     for pid in listed():
-        with contextlib.suppress(OSError):  # it ended between the listing and the read
+        with contextlib.suppress(OSError):
             got[pid] = int(stat(pid)[1])
     return got
 
@@ -108,7 +90,7 @@ def ppids():
 def renderer(pid):
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as fh:
-            # Chromium rewrites its helpers' argv as one string, so the flag is no argument of its own.
+            # Chromium rewrites a helper's argv as one string: https://chromium.googlesource.com/chromium/src/+/main/base/process/set_process_title_linux.cc
             return RENDERER in fh.read()
     except OSError:
         return False
@@ -128,12 +110,11 @@ def tree(root):
 
 def kill(pids):
     for pid in pids:
-        with contextlib.suppress(ProcessLookupError):  # it ended on its own
+        with contextlib.suppress(ProcessLookupError):
             os.kill(pid, signal.SIGKILL)
 
 
 def text(got):
-    """A pipe's capture as text: a timed-out communicate() hands back bytes, or None."""
     return got.decode(errors="replace") if isinstance(got, bytes) else got or ""
 
 
@@ -143,12 +124,9 @@ def stalled(child, argv, timeout):
         pids, table = tree(child.pid)
         child.send_signal(signal.SIGUSR2)
         child.send_signal(signal.SIGUSR1)
-        # The greenlet stacks come once the interpreter next runs; nothing says when they are done.
         time.sleep(DUMP_S)
     finally:
-        # Chromium leads a process group of its own, so the tree is killed by pid, not by group (#430). Residual: a
-        # process started after the tree was read escapes the kill, and one that ended in the wait and whose pid was
-        # reused is killed in its stead. The child's own pid is safe: Popen signals it only while it is unreaped.
+        # #430
         kill(pid for pid in pids if pid != child.pid)
         child.kill()
     try:
@@ -162,8 +140,6 @@ def stalled(child, argv, timeout):
 
 
 def watch(root, lives, done):
-    """Records in `lives`, as {pid: [first seen, first seen gone]}, each renderer under root, read each WATCH_S
-    until `done` is set. One still running then is gone at that moment."""
     while True:
         now = time.time()
         here = {pid for pid in subtree(root, ppids()) if renderer(pid)}
@@ -180,9 +156,6 @@ def watch(root, lives, done):
 
 
 def earlyoom_kills(since, tag=EARLYOOM):
-    """(time, pid) for each process the journal says `tag` signalled since the epoch time `since`. Where the
-    journal cannot be read, none, said on stderr: the run then fails. `tag` is
-    earlyoom's own but in test/child.test.py."""
     try:
         got = subprocess.run(
             ["journalctl", "-t", tag, "--since", f"@{int(since)}"]
@@ -207,12 +180,10 @@ def earlyoom_kills(since, tag=EARLYOOM):
 
 
 def crash(said):
-    """The first CRASHED wording in `said`, or None."""
     return next((wording for wording in CRASHED if wording in said), None)
 
 
 def killed_renderers(lives, kills):
-    """The renderers in `lives` that a (time, pid) in `kills` signalled while it was alive."""
     return {
         pid
         for t, pid in kills
@@ -220,17 +191,10 @@ def killed_renderers(lives, kills):
     }
 
 
-# The renderers of each run that run() ran once more, since the test it ran under started: rerun() does not run
-# that test again for them.
 RERUN_RENDERERS = set()
 
 
 def run(argv, *, timeout, kills=earlyoom_kills):
-    """subprocess.run(argv, capture_output=True, text=True, timeout=timeout), but a
-    stall raises StallError with the child's stacks and tree, and a run that failed with a
-    CRASHED wording after earlyoom killed one of its renderers is run once more, said on stderr.
-    A re-run takes up to `timeout` again, and the first run's output is dropped but for
-    that line. `kills` stands in for earlyoom's journal in test/child.test.py."""
     began = time.time()
     result, lives = once(argv, timeout=timeout)
     if (said := crash(result.stderr)) and (
@@ -269,7 +233,6 @@ def once(argv, *, timeout):
     return subprocess.CompletedProcess(argv, child.returncode, out, err), lives
 
 
-# The unittest result calls that report on a test, held until the test's outcome is known.
 REPORT_CALLS = {
     "startTest",
     "stopTest",
@@ -297,8 +260,6 @@ def watching(root):
 
 
 class HeldResult:
-    """A unittest result that holds what a test tells it until replay(); everything else is the result's own."""
-
     def __init__(self, result):
         self.result, self.told = result, []
 
@@ -309,7 +270,6 @@ class HeldResult:
         return lambda *args: self.told.append((name, args))
 
     def crash(self):
-        """The first CRASHED wording a failure the test told holds, or None."""
         return next(
             (
                 said
@@ -327,12 +287,6 @@ class HeldResult:
 
 
 def rerun(case, run_once, result=None, *, kills):
-    """case.run(result), where `run_once` is the case's own run(), but a test that failed with a CRASHED wording after
-    earlyoom killed a renderer of this process's tree is run once more, said on stderr, and the first run's outcome
-    dropped.
-    Residual: the result is told nothing until the test ends, so a test that hangs leaves no name in a verbose log.
-    A module's or class's fixture runs outside this: launching Chromium starts no renderer until its first page,
-    and a fixture's child is re-run by run(), but a page a fixture opens in this process is not run again."""
     if result is None:
         return run_once(result)
     began, held = time.time(), HeldResult(result)
@@ -352,8 +306,6 @@ def rerun(case, run_once, result=None, *, kills):
 
 
 def raise_if_crashed(stderr):
-    """Raises a captured run's stderr where it holds a CRASHED wording, so main() can run the test once more rather
-    than keep the run's outcome."""
     if crash(stderr):
         raise RuntimeError(stderr)
 
@@ -373,5 +325,4 @@ class Runner(unittest.TextTestRunner):
 
 
 def main(**kwargs):
-    """unittest.main() for a Chromium gate suite: a test earlyoom broke is run once more (#438)."""
     unittest.main(module="__main__", testRunner=Runner, **kwargs)

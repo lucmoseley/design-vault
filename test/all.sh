@@ -1,27 +1,16 @@
 #!/usr/bin/env bash
-# Every vault suite, the repo's declared `commands.test` (#85): bash test/all.sh
-# While its verdict proof stands (test/verdict-canary.test.js, #491) the lander's run is the gate; while it is stale or
-# failed, the core's pre-commit runs it and refuses the commit on a non-zero exit.
-# A missing tool fails the run naming its install step.
-# Inside a commit only the suites its staged files can break run, as test/select-suites.js reads them (#146).
-# Run by hand, or with VAULT_ALL_SUITES=1, every suite runs. --plan prints what would run and runs nothing.
-# bash test/all.sh [--plan] <test file>… runs only those files, as workflow-core's lander reruns a red's files (#436):
-# a .test.js one under node --test, any other by the suite that names it. A red prints `FAIL <path>` per failing file.
-# Up to three run at once, by test/run-lanes.sh, within the machine's suite ceiling (#363).
-# bash test/all.sh [--plan] --shard=k/n runs every nth suite of the list, from the kth on: workflow-core's lander runs the
-# whole list as `fullTestShards` shards, each a run of its own under its suite ceiling (workflow-core#2667), as no one-lane
-# run of every suite fits it (#462).
+# Usage:
+#   bash test/all.sh                          every suite; inside a commit, only the suites its staged files can break
+#   VAULT_ALL_SUITES=1 bash test/all.sh       every suite, inside a commit too
+#   bash test/all.sh [--plan] <test file>…    only those files: a .test.js one under node --test, any other by its suite
+#   bash test/all.sh [--plan] --shard=k/n     every nth suite of the list, from the kth on
+#   --plan prints what would run and runs nothing. A red prints `FAIL <path>` per failing file.
+#   A missing tool fails the run naming its install step.
 
 set -u
-# Its loads are spelled off this file's own path, which workflow-core's verdict proof walks to key the runner (#491).
-# Residual: the walk follows neither the reporter nor the suites the list below holds, so an edit to
-# test/failed-files.js leaves the proof fresh (lucmoseley/workflow-core-tracker#5512).
+# #491
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
-# The one list of suites (#233). A Python suite names after a tab what it needs past the standard library: `images` for
-# numpy, Pillow and scipy, `chromium` for Playwright and its Chromium, `openssl` for the openssl command, `video` for PyAV.
-# A new suite also owes README §Validating the library its sentence, and, if it never loads check-flow.py,
-# test/select-suites.test.js its NO_FLOW entry.
 registry='node --test --test-reporter=./test/failed-files.js
 bash test/design-round-pointer.test.sh
 python3 test/cutout.test.py	images
@@ -85,8 +74,6 @@ while [[ ${1:-} == --plan || ${1:-} == --shard=* ]]; do
   shift
 done
 [[ -n $shard ]] && (($#)) && { echo "test/all.sh: --shard takes no test files" >&2 && exit 2; }
-# A file on disk that no suite lists has no test to fail here, as the lander reads a file the tree lacks: the
-# base check of a suite a later commit lists.
 named=()
 node_files=()
 for file in "$@"; do
@@ -110,25 +97,16 @@ if (($#)) && ((!${#named[@]})); then
   echo "no named file has a suite to run"
   exit 0
 fi
-# A commit is seen by its staged files. Git hands a hook GIT_INDEX_FILE, which commit-paths.js points at an index
-# of its own, so the list is read before the unset below. workflow-core's gate runs this in a worktree holding the
-# commit's tree staged over HEAD, with that variable removed and WFC_GATE_SEAT set instead (#457).
 in_commit=0
 if ((!$#)) && [[ (-n ${GIT_INDEX_FILE:-} || -n ${WFC_GATE_SEAT:-}) && -z ${VAULT_ALL_SUITES:-} ]] &&
   staged="$(git diff --cached --name-only --no-renames)"; then
   in_commit=1
 fi
-# A merge is judged against each of its parents too, and runs only the suites every one of them would (#457): the
-# gate hands them in WFC_MERGE_PARENTS; a hook run has them in MERGE_HEAD, or before git writes it in the
-# GITHEAD_<sha> it exports, as workflow-core's merge-heads.js reads them. This trusts every parent, a branch tip as
-# much as main's, passed the suites it skips, as judging against HEAD alone trusts HEAD. A parent
-# that will not read is left out, which runs more. Per parent, the paths the commit changes from it and all.sh as it
-# has it are read before the unset too, so an edit to the list above alone runs only the suites it lists anew (#363).
 copies="$(mktemp -d)"
 trap 'rm -rf "$copies"' EXIT
 sides=()
 if ((in_commit)); then
-  if [[ -v WFC_MERGE_PARENTS ]]; then # set, even empty, the gate has read the parents and MERGE_HEAD is not consulted
+  if [[ -v WFC_MERGE_PARENTS ]]; then
     parents=$WFC_MERGE_PARENTS
     [[ $parents == 'unread: '* ]] && echo "merge parents unread, so judged against HEAD alone: ${parents#unread: }" && parents=''
   else
@@ -149,15 +127,10 @@ if ((in_commit)); then
   done
   git show :test/all.sh >"$copies/staged" 2>/dev/null || rm -f "$copies/staged"
 fi
-# Where run-lanes.sh keeps each suite's last green seconds, to start the longest first: the git directory every
-# worktree of the vault shares, read before the unset below.
 [[ -n ${VAULT_SUITE_TIMES:-} ]] || ! common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ||
   export VAULT_SUITE_TIMES="$common/vault-suite-times"
-# A hook hands its git environment down (GIT_DIR, GIT_INDEX_FILE…), so a suite's
-# scratch `git init` acts on the vault itself (#85). A suite run on its own from
-# a hook is still exposed.
-# shellcheck disable=SC2046 # one variable name per word is the point
-unset $(git rev-parse --local-env-vars)
+mapfile -t local_env < <(git rev-parse --local-env-vars)
+unset "${local_env[@]}"
 
 run=("${suites[@]}")
 (($#)) && run=("${named[@]}")
@@ -178,9 +151,6 @@ if ((in_commit)); then
     echo "all suites: test/select-suites.js could not choose"
   fi
 fi
-# Split by place in the list, not by kept seconds: the lander's WFC_SHARD_TIMINGS reads vitest files, not these suites.
-# Residual: a suite added or moved reshuffles every shard, and nothing keeps one shard clear of the ceiling but
-# check-suite-margin's report.
 if [[ -n $shard ]]; then
   shard_suites=() k=${shard%/*} n=${shard#*/}
   for i in "${!run[@]}"; do ((i % n == k - 1)) && shard_suites+=("${run[i]}"); done
@@ -193,7 +163,7 @@ if ((plan_only)); then
 fi
 
 missing=0
-need() { # need <what> <install step> <check command…>
+need() {
   local what="$1" install="$2"
   shift 2
   if ! "$@" >/dev/null 2>&1; then
@@ -204,8 +174,7 @@ need() { # need <what> <install step> <check command…>
 
 need node 'Node, from nodejs.org or nvm' command -v node
 need jq 'sudo apt install jq' command -v jq
-# The Python checks are owed only for the suites that run, so a docs commit neither launches Chromium nor needs it.
-suites_needing() { # suites_needing <need>: the suites in this run that need it, as "a, b and c"
+suites_needing() {
   local suite list=()
   for suite in "${run[@]}"; do
     [[ " ${needs[$suite]:-} " == *" $1 "* ]] && list+=("${suite#python3 }")
@@ -233,7 +202,6 @@ if [[ " ${run[*]} " == *" python3 "* ]]; then
     need "the Python package playwright, for $for_chromium" \
       'python3 -m pip install -r plugin/requirements.txt && python3 -m playwright install chromium' \
       python3 -c 'import playwright.sync_api'
-    # Only once the package imports, so an absent package is not reported twice.
     python3 -c 'import playwright.sync_api' 2>/dev/null &&
       need "Playwright's Chromium, for $for_chromium" \
         'python3 -m playwright install chromium' \
@@ -249,10 +217,6 @@ if ((missing)); then
   exit 1
 fi
 
-# A gate seat's run, a commit's or the lander's, is held to workflow-core's suite ceiling (workflow-core#2667), which
-# kills it there: run-lanes.sh refuses at once a plan its kept seconds say cannot end in what is left of it on the
-# lanes it gets (#473). Where the ceiling will not read the run goes ahead, since the ceiling still kills an overrun:
-# only the early verdict is lost.
 if [[ (-n ${WFC_GATE_SEAT:-} || in_commit -eq 1) && -z ${VAULT_SUITE_BUDGET:-} ]]; then
   if ceiling_ms="$(node -e 'const core = require(process.argv[1]).resolveCore();
 process.stdout.write(String(require(`${core}/scripts/lib/suite-ceiling.js`).ceilingMs()))' "$vault/scripts/lib/resolve-core.js")" &&

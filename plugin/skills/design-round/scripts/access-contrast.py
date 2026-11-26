@@ -1,25 +1,3 @@
-"""access-contrast.py — check-access.py's contrast questions past text and field edges (#316): controls set on a
-photo, the contrast ladder's icon and state-mark floors and thin-face aims, text on a fill, chart marks, edges under
-forced colours, and every colour scheme the page ships. check-access.py's
-docstring says what each question asks of a page.
-
-check-access.py calls, at each width:
-
-    contrasts.parse_table(text)                       # check-access-contrast.table's figures, once
-    contrasts.measure(page, js, table, parts=parts, absent=absent, texts=texts, fresh=fresh)  # the page at rest, after its own contrast shots: the answers,
-                                                      # and vault.carousel-focus's for undeclared page dots, and the Readings
-    contrasts.scheme_table(name, table)               # the figures a scheme's pass holds each role to
-    contrasts.rung_drops(light, dark, table)          # vault.theme-contrast's faults for a part a rung lower in dark
-    contrasts.signature(page, js)                     # the colours the page draws in, to tell a scheme it ships
-    contrasts.scheme(name, judged, measured, light)   # one scheme's vault.theme-contrast, from its own judge() and measure()
-
-`js` wraps a page-side body with check-access.py's helpers (css, rgba, shown, label, box and the rest); `parts` is the
-parts declaration's {name: selector} and `absent` the names it declares null; `texts` is the light page's (MEASURE_JS's result, its Shots), or None in a scheme's pass, which takes no thin-face notes; `fresh()` gives a new load of the page.
-
-Its I/O is the Playwright page it is handed: it marks elements with data-contrast-* attributes and injected styles, and
-takes them off again, leaving only its window.__contrast* lists.
-"""
-
 import collections
 import functools
 import io
@@ -44,7 +22,6 @@ rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-access-contrast.table")
 SEP = "|"
-# Each table line, by (record id, name): how many numbers it holds.
 LINES = {
     ("vault.contrast", "text"): 2,
     ("vault.contrast", "large"): 3,
@@ -74,31 +51,19 @@ QUESTIONS = (
     "vault.chart-contrast",
     "vault.forced-colours-edge",
 )
-# The schemes a page may ship beside its light one, each with the browser context options that ask for it.
 SCHEMES = (("dark", {"color_scheme": "dark"}), ("more contrast", {"contrast": "more"}))
 
-# How far out from a glyph, past its antialiased edge, the colours next to it are read, in px: check-access's
-# control edges read 2 px outside a box. A guess, unmeasured: a halo or backdrop of 3 px or more is read as the
-# glyph's ground, a thinner one as the image's.
-RING_PX = 3
+RING_PX = 3  # guess, #501
 MAX_SLIDES = 12  # guess, #427
-# Two hued colours share a hue within this many degrees of OKLCH hue. A guess, unmeasured: a USWDS family spans about
-# this much.
-HUE_SAME = 30
-# The fewest pixels a chart mark must touch a colour along to count it as next to it: two marks meeting at one
-# corner do not. A guess, unmeasured.
-ADJ_PX = 2
-# The colours that name chart mark k's fill (2k) and stroke (2k + 1) in the id shot: the index plus one in red and
-# green, and this blue, which no other part of the shot is taken to draw. Arbitrary: any blue the shot's ground
-# does not draw serves, as the chart's own colours are painted over first.
-ID_BLUE = 167
+HUE_SAME = 30  # guess, #501
+ADJ_PX = 2  # guess, #501
+ID_BLUE = 167  # guess, #501
 
 
 TableError = rule_table.TableError
 
 
 def parse_table(text):
-    """The Table check-access-contrast.table's lines give."""
     got = {}
     for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
@@ -149,8 +114,6 @@ def parse_table(text):
 
 
 def scheme_table(name, table):
-    """The Table a scheme's pass holds every part to: under more contrast, each role on its top rung, text on the
-    ladder's aim and every other role on the non-text more-contrast rung; in dark, the floors."""
     if name == "more contrast":
         more = table.more
         return table._replace(
@@ -172,7 +135,6 @@ _ROLES = (
 
 
 def _role_rungs(role, table):
-    """(floor rung, top rung) of `role`, from the light page's `table`: the top is also its more-contrast rung."""
     return {
         "text": (table.floors.body, table.aim.body),
         "large text": (table.floors.large, table.aim.large),
@@ -185,8 +147,6 @@ def _role_rungs(role, table):
 
 
 def rung(ratio, role, table):
-    """The highest ladder rung from `role`'s floor up that `ratio` clears, capped at its top rung; None under its
-    floor."""
     floor, top = _role_rungs(role, table)
     ladder = {r for each in _ROLES for r in _role_rungs(each, table)}
     cleared = [r for r in ladder if floor <= r <= ratio]
@@ -202,8 +162,6 @@ def _worst(readings):
 
 
 def rung_drops(light, dark, table):
-    """vault.theme-contrast's {subject, detail} faults for each part, by subject and role, read in both `light` and
-    `dark`, each a list of Readings, whose worst ratio sits on a lower rung in dark."""
     lit, dim = _worst(light), _worst(dark)
     out = []
     for key, was in lit.items():
@@ -222,7 +180,6 @@ def rung_drops(light, dark, table):
     return out
 
 
-# Takes the marks MARK_JS sets off every element.
 STRIP_JS = """
 () => document.querySelectorAll('[data-contrast-glyph], [data-contrast-box], [data-contrast-chart]').forEach(
   (el) => ['data-contrast-glyph', 'data-contrast-box', 'data-contrast-chart'].forEach((a) => el.removeAttribute(a)))
@@ -259,13 +216,9 @@ SLIDE_SHOWN_JS = r"""
 }
 """
 
-# With no chart declared (#429), the longest side, in px, of a canvas or SVG left out as an icon rather than listed
-# as what may be a chart, and the fewest shapes an SVG draws to be listed: a bar chart's three bars, or an axis and
-# two rules. Guesses, unmeasured.
-STRAY_CHART_PX = 48
-STRAY_CHART_MARKS = 3
+STRAY_CHART_PX = 48  # guess, #501
+STRAY_CHART_MARKS = 3  # guess, #501
 
-# Marks the page's candidates and gives what each question reads of them.
 MARK_JS = r"""
 ({ charts, carousels, undeclared, STRAY_CHART_PX, STRAY_CHART_MARKS }) => {
   const bad = [...charts, ...carousels].filter((s) => { try { document.querySelector(s); return false; } catch (e) { return true; } });
@@ -275,7 +228,6 @@ MARK_JS = r"""
   const drawnSide = (cs, s) => parseFloat(cs[`border${s}Width`]) > 0 && !/none|hidden/.test(cs[`border${s}Style`]);
   const rectOf = (el) => visiblePart(el, box(el.getBoundingClientRect()));
   const range = document.createRange();
-  // Text an element draws: a text node with a box at least 2 px each way, or a button input's value.
   const drawsText = (el) => {
     if (el.localName === 'input') return /\S/.test(el.value || '');
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -287,9 +239,6 @@ MARK_JS = r"""
     return false;
   };
   const icons = (el) => [...el.querySelectorAll('svg, img')].filter((e) => !e.parentElement.closest('svg') && shown(e) && !empty(rectOf(e)));
-  // What a control is drawn over, read at its centre: 'image' for a photo, an <img> or a url() background, 'video'
-  // or 'canvas' for one, or null where an opaque box lies between. Each ancestor's other content is drawn over its
-  // background, so it is read first.
   const under = (el) => {
     const r = el.getBoundingClientRect(), x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
     const holds = (e) => { const q = e.getBoundingClientRect(); return q.left <= x && x <= q.right && q.top <= y && y <= q.bottom; };
@@ -327,8 +276,6 @@ MARK_JS = r"""
     photo.push({ subject: label(el), rect, box: !!kind, why: null });
   }
 
-  // Page dots inside `root`: each row of two or more controls that draw no text and no icon, under one parent, or
-  // one grandparent where each sits alone in a wrapper (a list's items).
   const dotRows = (root) => {
     const rows = new Map();
     for (const el of root.querySelectorAll(CONTROL)) {
@@ -339,8 +286,6 @@ MARK_JS = r"""
     }
     return [...rows].filter(([, row]) => row.length >= 2);
   };
-  // The current dot of each declared carousel: its page dots must hold one that differs from the rest by more than
-  // its opacity.
   const dots = [];
   const KEYS = ['backgroundColor', 'backgroundImage', 'width', 'height', 'borderTopLeftRadius', 'borderTopColor', 'borderTopWidth', 'borderTopStyle', 'boxShadow', 'transform', 'outlineStyle'];
   for (const sel of carousels) for (const c of document.querySelectorAll(sel)) {
@@ -353,9 +298,6 @@ MARK_JS = r"""
         : `holds ${row.length} page dots drawn alike, so none shows the current page; mark it by fill, size or shape` });
     }
   }
-  // Where no carousel was declared (#429), a row counts as page dots only where its controls' names match once
-  // digits are dropped ("Slide 1", "Slide 2", or none) and none draws a ::before or ::after glyph. Residual: dots
-  // named in words ("first slide") are missed.
   const unnumbered = (el) => (el.getAttribute('aria-label') || el.title || '').replace(/\d+/g, '').trim().toLowerCase();
   const glyph = (el) => ['::before', '::after'].some((p) => !/^(none|normal|""|'')$/.test(getComputedStyle(el, p).content));
   const strayDots = !undeclared.carousel ? [] : dotRows(document)
@@ -374,9 +316,6 @@ MARK_JS = r"""
     slides.push({ subject: label(c), dots: row.length, next: !!next, media });
   }
 
-  // Custom checkboxes, radios and switches, each with the box its state is drawn in: its own, or its labels' where
-  // it is hidden and they draw it. A native one the browser draws is left out, as is a radio not checked, since
-  // its group's checked one is flipped instead.
   const states = [];
   window.__contrastStates = [];
   for (const el of document.querySelectorAll('input[type=checkbox], input[type=radio], [role=checkbox], [role=radio], [role=switch]')) {
@@ -396,8 +335,6 @@ MARK_JS = r"""
     window.__contrastStates.push({ el, checked: native ? el.checked : el.getAttribute('aria-checked') });
   }
 
-  // Text and icons on an opaque fill of one colour: the nearest painted background, where no background image
-  // lies nearer and it is at least OPAQUE. The canvas's own white is no fill.
   const fillOf = (el) => {
     for (let e = el; e; e = e.parentElement) {
       const cs = css(e);
@@ -421,7 +358,6 @@ MARK_JS = r"""
     const cs = css(el);
     let paint;
     if (icon) {
-      // Its first paint unlike the fill: a shape painted in the fill's colour is the icon's own ground.
       const ground = f.c.slice(0, 3).join();
       paint = [...el.querySelectorAll(SHAPES)].map(css).flatMap((s) => [s.fill, s.stroke]).filter(solid).map(rgba)
         .find((c) => c[3] > 0 && c.slice(0, 3).join() !== ground);
@@ -431,8 +367,6 @@ MARK_JS = r"""
       size: parseFloat(cs.fontSize), weight: parseInt(cs.fontWeight, 10), icon, rect: rectOf(el) });
   }
 
-  // Each declared chart's marks: its SVG shapes and its HTML boxes with no children and no text, each with its fill
-  // and its stroke or border as [r, g, b, a], the box holding every other mark, the plot's ground, left out.
   const chartsOut = [];
   window.__contrastMarks = [];
   const withAlpha = (c, a) => [...c.slice(0, 3), c[3] * a];
@@ -471,10 +405,6 @@ MARK_JS = r"""
     chartsOut.push({ subject: label(c), why: null, rect: box(c.getBoundingClientRect()), patterned,
       marks: kept.map((m, k) => ({ index: first + k, subject: m.subject, fill: m.fill, stroke: m.stroke })) });
   }
-  // Where no chart was declared (#429), what may be one: a canvas, or an outermost SVG holding a polyline or
-  // STRAY_CHART_MARKS shapes, its shown part longer than STRAY_CHART_PX on a side, and not
-  // hidden from assistive tech as decoration. Residual: a canvas drawing a background, or a large logo of three
-  // paths, is listed; a one-path sparkline or a two-circle donut is missed.
   const strayCharts = [];
   if (undeclared.chart) for (const el of document.querySelectorAll('canvas, svg')) {
     if (el.parentElement.closest('svg') || !shown(el) || el.closest('[aria-hidden=true], [role=presentation], [role=none]')) continue;
@@ -484,8 +414,6 @@ MARK_JS = r"""
     if (el.localName === 'canvas' || drawn('polyline').length || drawn('path, rect, line, circle, ellipse, polygon').length >= STRAY_CHART_MARKS) strayCharts.push(label(el));
   }
 
-  // Controls told from the ground around them by nothing but a shadow, a gradient or a fill, with no border drawn
-  // on all four sides, past the Tab stops hidden at rest, which show no edge there.
   const resting = restingStops();
   const forced = [];
   window.__contrastForced = [];
@@ -504,9 +432,6 @@ MARK_JS = r"""
 }
 """
 
-# Recolours what data-contrast-glyph and data-contrast-box mark with one colour: a control's text and icons, then its fill
-# or border. Shadows and filters are taken off the recoloured parts, so a halo stays as drawn only in the shot
-# taken without this.
 GLYPH_CSS = """
 [data-contrast-glyph], [data-contrast-glyph] *, [data-contrast-glyph] *::before, [data-contrast-glyph] *::after,
 [data-contrast-glyph]::before, [data-contrast-glyph]::after {{
@@ -519,7 +444,6 @@ BOX_CSS = """
 [data-contrast-box=border] {{ border-color: {fill} !important; }}
 """
 
-# Flips each of window.__contrastStates to its other state, or with `back` puts each as it was.
 STATE_JS = r"""
 (back) => {
   for (const { el, checked } of window.__contrastStates) {
@@ -530,8 +454,6 @@ STATE_JS = r"""
 }
 """
 
-# Paints each of window.__contrastMarks in its id colours, edges crisp and nothing faded, or with `mode` 'hide' hides
-# them, or with null puts each as it was.
 MARKS_JS = r"""
 (mode) => {
   const id = (n) => `rgb(${(n + 1) & 255}, ${((n + 1) >> 8) & 255}, ID_BLUE)`;
@@ -555,7 +477,6 @@ MARKS_JS = r"""
 """.replace("ID_BLUE", str(ID_BLUE))
 CHART_CSS = "[data-contrast-chart], [data-contrast-chart] * { opacity: 1 !important; }"
 
-# Whether each of window.__contrastForced draws a border on all four sides or an outline, as the browser now styles it.
 FORCED_JS = r"""
 () => window.__contrastForced.map((el) => {
   const cs = css(el);
@@ -564,7 +485,6 @@ FORCED_JS = r"""
 })
 """
 
-# Each text MEASURE_JS found, by window.__texts, as the font setting face-profile.py keys its settings by.
 SETTINGS_JS = r"""
 () => window.__texts.map(({ el }) => {
   const cs = css(el);
@@ -572,7 +492,6 @@ SETTINGS_JS = r"""
 })
 """
 
-# The colours every element is drawn in, joined.
 SIGNATURE_JS = r"""
 () => [document.documentElement, ...document.querySelectorAll('body, body *')].map((el) => {
   const s = css(el);
@@ -591,7 +510,6 @@ def _shoot(page):
 
 
 def _recoloured(page, css):
-    """Two shots with `css` formatted black and then white, and which pixels differ between them."""
     out = []
     for fill, invert in (("rgb(0, 0, 0)", ""), ("rgb(255, 255, 255)", " invert(1)")):
         style = page.add_style_tag(content=css.format(fill=fill, invert=invert))
@@ -611,7 +529,6 @@ def _clip(shape, rect, pad=0):
 
 
 def _dilate(mask, r):
-    """`mask` grown by r px each way, a square at a time."""
     if r <= 0:
         return mask
     view = np.lib.stride_tricks.sliding_window_view(
@@ -624,9 +541,6 @@ Figure = collections.namedtuple("Figure", "ratio colour next")
 
 
 def glyph_figure(drawn, glyph, rect):
-    """The Figure of the glyph pixels inside `rect` against the colours drawn next to them, from maths.BLEND_PX out
-    to RING_PX past that, leaving out every glyph's pixels, so the control's own fill or backdrop counts. None where no glyph or no
-    ring shows."""
     pad = maths.BLEND_PX + RING_PX
     left, top, right, bottom = _clip(drawn.shape, rect, pad)
     inner = np.zeros((bottom - top, right - left), dtype=bool)
@@ -649,9 +563,6 @@ def glyph_figure(drawn, glyph, rect):
 
 
 def box_figure(drawn, painted, taken, rect):
-    """The Figure of a box's own fill or border, the median of the pixels `painted` marks inside `rect`, against the
-    colours drawn from maths.BLEND_PX to RING_PX past that outside `rect`, leaving out `taken`. None where neither
-    shows."""
     pad = maths.BLEND_PX + RING_PX
     left, top, right, bottom = _clip(drawn.shape, rect, pad)
     il, it, ir, ib = _clip(drawn.shape, rect)
@@ -673,8 +584,6 @@ def box_figure(drawn, painted, taken, rect):
 
 
 def state_figure(on, off, rect):
-    """The median contrast between two shots of a state box over the pixels its flip changed, or None where none
-    did."""
     left, top, right, bottom = _clip(on.shape, rect)
     a = on[top:bottom, left:right].astype(int)
     b = off[top:bottom, left:right].astype(int)
@@ -690,7 +599,6 @@ def _linear(rgb):
 
 
 def oklch(rgb):
-    """(L, C, h in degrees) of an sRGB 0–255 colour, by Ottosson's OKLab."""
     r, g, b = _linear(rgb)
     lms = np.cbrt(
         np.array(
@@ -719,9 +627,6 @@ def oklch(rgb):
 
 
 def fill_drawn(shot, entry):
-    """Whether the fill vault.fill-text takes from the text's ancestors is what the page draws under it: the median
-    pixel of its box within maths.PAINT_NOISE of the fill. Where something else is drawn there, a fixed backdrop, a
-    layer between or a loop the shot holds, the text has no one fill, and vault.contrast reads what is."""
     left, top, right, bottom = _clip(shot.shape, entry["rect"])
     if right <= left or bottom <= top:
         return False
@@ -734,7 +639,6 @@ def fill_drawn(shot, entry):
 
 
 def fill_fault(entry, table):
-    """vault.fill-text's fault detail for one text or icon on a fill, or None."""
     *rgb, alpha = entry["text"]
     fill = np.array(entry["fill"], dtype=float)
     seen = alpha * np.array(rgb, dtype=float) + (1 - alpha) * fill
@@ -764,16 +668,12 @@ def fill_fault(entry, table):
 
 
 def _ids(shot):
-    """Each pixel's chart-mark id from MARKS_JS's colours, or -1."""
     s = shot.astype(int)
     n = s[..., 0] + 256 * s[..., 1] - 1
     return np.where((s[..., 2] == ID_BLUE) & (n >= 0), n, -1)
 
 
 def chart_faults(chart, ids_shot, ground, table):
-    """vault.chart-contrast's {subject, detail} faults for one chart, and a Reading for each mark it read and did not
-    fault, from its id shot and its shot with every mark hidden. A filled mark is read against the ground, its own border and the filled marks it touches; a line, a
-    mark with a stroke and no fill, only against the ground, as lines need not contrast with each other."""
     left, top, right, bottom = _clip(ids_shot.shape, chart["rect"], 1)
     ids = _ids(ids_shot[top:bottom, left:right])
     ground_px = ground[top:bottom, left:right].astype(float)
@@ -839,8 +739,6 @@ def chart_faults(chart, ids_shot, ground, table):
 
 
 def _thin_notes(page, js, table, texts):
-    """vault.contrast-ladder's notes: text in a thin face, a stem under the table's em or a weight under its figure,
-    that meets vault.contrast's floor but not the ladder's aim for it."""
     got, shots = texts
     readable = [t for t in got["texts"] if not t["logotype"] and not t["why"]]
     if not readable:
@@ -1078,9 +976,6 @@ def _photo_verdict(photo, readings, table):
 
 
 def measure(page, js, table, *, parts, absent, texts, fresh):
-    """The page's {question id: Judged} for QUESTIONS, at rest and, for vault.controls-on-photo, on each slide of the
-    declared carousel, read on the page `fresh()` loads; and vault.carousel-focus's cannot-measure reason for each row
-    of page dots where no carousel was declared; and a Reading for each part they read and did not fault."""
     readings, on_photo = [], []
     out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
     got = _mark(page, js, parts, absent)
@@ -1233,9 +1128,6 @@ def signature(page, js):
 
 
 def scheme(name, judged, measured, light):
-    """vault.theme-contrast's Judged for one scheme the page ships: each fault and cannot-measure reason its own
-    vault.contrast and vault.control-edges, in `judged`, and QUESTIONS, in `measured`, found, said to hold in that
-    scheme, past a fault on the same subject that question already finds in `light`, the light page's answers."""
     out = answering.unjudged()
     for qid in ("vault.contrast", "vault.control-edges", *QUESTIONS):
         found = measured[qid] if qid in QUESTIONS else judged[qid]

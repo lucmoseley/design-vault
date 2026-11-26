@@ -1,11 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/cutout.py (#56): python3 test/cutout.test.py
-
-The fixture, drawn at 8x and averaged down so each edge pixel's coverage is
-known: a flat orange disc with an anti-aliased 8 px dark outline on chroma
-green, running off the frame's bottom edge; an enclosed key-coloured hole in
-it; and a key-coloured slot in it that reaches the frame's edge.
-"""
-
 import os
 import subprocess
 import sys
@@ -62,7 +54,7 @@ class Cut(unittest.TestCase):
         cls.rgba, cls.report = cutout.cut(cls.rgb)
         cls.alpha = cls.rgba[..., 3] / 255
 
-    def test_the_key_is_the_border_median(self):
+    def test_the_key_is_the_border_median_56(self):
         np.testing.assert_array_equal(self.report["key"], KEY)
 
     def test_the_background_is_clear(self):
@@ -101,8 +93,6 @@ class Cut(unittest.TestCase):
         self.assertTrue((self.alpha[self.masks["slot"] == 1] == 0).all())
 
     def test_an_edge_pixel_off_the_key_to_outline_line_is_projected_onto_it(self):
-        # A shift at right angles to F-B leaves the projection unmoved, where a
-        # plain distance ratio |C-B|/|F-B| would read it as more coverage.
         fb = OUTLINE - KEY
         off = np.cross(fb, [1, 0, 0])
         off *= 30 / np.linalg.norm(off)
@@ -163,7 +153,6 @@ class Cli(unittest.TestCase):
         self.assertIn("nothing cut — key #00b140, and no subject found", stderr)
 
     def test_a_render_with_no_plain_border_is_refused_as_having_no_background(self):
-        # Half black, half white: the border's median is a grey no pixel is near.
         checks = (np.indices((64, 64)).sum(0) % 2 * 255).astype(np.uint8)
         stderr = self.refused(np.dstack([checks] * 3))
         self.assertIn("no background touches the frame's edge", stderr)

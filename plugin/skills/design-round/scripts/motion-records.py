@@ -1,18 +1,3 @@
-"""motion-records.py — the record checks check-flow.py --records runs (#318):
-how each reading becomes a record's faults, and how a record's checks give it
-one answer. It does no I/O: check-flow.py loads it by path, drives the page
-and passes what it reads to the functions below. The checks and the value
-each takes are in CHECKS; each table line names its record, its check and the
-value from that record:
-
-    vault.motion-frequency | frequent | under 150
-
-A record's answer is fail where any of its checks found a fault, else not
-judged where a check needs a part the round did not declare or could not
-read the page, else pass where a check found something the record applies
-to, else no match.
-"""
-
 import collections
 import itertools
 import math
@@ -30,8 +15,6 @@ rule_table = siblings.load(HERE, "rule-table.py")
 NUMBER = r"(\d+(?:\.\d+)?)"
 Check = collections.namedtuple("Check", "pattern parse needs")
 Line = collections.namedtuple("Line", "id mode value")
-# One check's reading: its faults (None where it could not judge), whether it
-# found anything its record applies to, and why it could not judge, if so.
 Answer = collections.namedtuple("Answer", "faults seen unmet")
 
 
@@ -43,8 +26,6 @@ def _numbers(*keys):
     return lambda m: dict(zip(keys, (float(g) for g in m.groups()), strict=True))
 
 
-# Each check: the shape of its table value, what it reads from the match, and
-# the part the round must declare before it can judge.
 CHECKS = {
     "native-scroll": Check(
         rf"wheel {NUMBER}, slack {NUMBER}", _numbers("wheel", "slack"), ()
@@ -85,7 +66,6 @@ CHECKS = {
     "slow-update": Check(r"none", _none, ()),
 }
 
-# The parts drag-release reads, by the record's `parts`.
 DRAG_PARTS = ("bottom-sheet", "card")
 
 
@@ -93,8 +73,6 @@ TableError = rule_table.TableError
 
 
 def parse_value(mode, value):
-    """A table value for `mode`, as its check reads it. Raises ValueError
-    where it does not fit the check's shape."""
     m = re.fullmatch(CHECKS[mode].pattern, value)
     if m is None:
         raise ValueError(
@@ -104,7 +82,6 @@ def parse_value(mode, value):
 
 
 def parse_table(text):
-    """The table's lines, each a Line; `#` lines and blank ones are skipped."""
     lines, first_by_check = [], {}
     for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split("|")]
@@ -132,8 +109,6 @@ def parse_table(text):
 
 
 def missing(mode, parts):
-    """What the round must still declare before `mode` can judge, in words,
-    or None. `parts` maps a declared part to its selector."""
     for name in CHECKS[mode].needs:
         if not parts.get(name):
             return f"no {name} part declared with a selector (--parts)"
@@ -141,26 +116,15 @@ def missing(mode, parts):
 
 
 def fault(mode, subject, detail, fix):
-    """One fault: what `subject` does wrong, and `fix`, the way out."""
     return {"kind": mode, "subject": subject, "detail": detail, "fix": fix}
 
 
-# The ways a visitor scrolls that native-scroll drives, each with the words
-# its faults use.
 SCROLL_INPUTS = {"wheel": "wheel turn", "key": "Page Down", "touch": "touch drag"}
 
 
 def native_scroll_faults(got, v):
-    """vault.native-scroll's faults from one scroll by each of SCROLL_INPUTS,
-    each on a fresh load: `got` maps an input to the window's scroll before
-    and after, how far it could scroll, and the cancels a handler made. A
-    cancelled input is a fault; so is a wheel turn that moves the page other
-    than its own distance, or a key or touch scroll that does not move it
-    down. None where the page has no room to scroll."""
     out, judged = [], False
     for name, read in got.items():
-        # A wheel turn needs room for its whole distance; a key or touch
-        # scroll, whose distance is the browser's, needs only some room.
         if read["room"] <= 0 or (name == "wheel" and read["room"] < v["wheel"]):
             continue
         judged = True
@@ -198,16 +162,10 @@ def native_scroll_faults(got, v):
 
 
 def _rate_kind(rate, slack):
-    """'native' for a box that moves with the page or stays put, else None."""
     return "native" if abs(rate + 1) <= slack or abs(rate) <= slack else None
 
 
 def parallax_faults(track, v):
-    """vault.parallax's faults and the parallax layers seen, from `track`:
-    the scroll offsets of each step and, for each element, its kind (text,
-    control or image) and its top at each step, None where it was out of the
-    window. A layer moving at a rate neither the page's nor none for `steps`
-    steps in a row is parallax; text or a control moving so is a fault."""
     scrolls = track["scrolls"]
     faults, seen = [], []
     for el in track["elements"]:
@@ -239,26 +197,16 @@ def parallax_faults(track, v):
 
 
 def replays(ran):
-    """The animations each element ran on the first sweep down and on the
-    second, from `ran`, the page's log by phase, leaving out every element
-    that also animated while the page sat still, since its motion is the
-    clock's, not the scroll's."""
     idle = set(ran.get("idle", {}))
     first = {k: n for k, n in ran["down"].items() if k not in idle}
     again = {k: n for k, n in ran["again"].items() if k not in idle}
     return first, again
 
 
-# The properties a parallax layer's scroll moves: a transition on them
-# smooths the scroll's own motion, which runs on every sweep.
 SCROLL_MOVED = frozenset({"transform", "translate", "top"})
 
 
 def replay_faults(first, again, layers):
-    """vault.parallax's replay faults: each parallax layer, by `layers`, whose
-    animation or transition ran as the page scrolled down, `first`, and ran
-    again when it was scrolled down a second time, `again`, each
-    {label: [names]}, leaving out SCROLL_MOVED."""
     out = []
     for label in sorted(set(layers)):
         ran = set(first.get(label, ())) - SCROLL_MOVED
@@ -276,9 +224,6 @@ def replay_faults(first, again, layers):
 
 
 def carousel_widths(phone, wide, v):
-    """Why the carousel check cannot judge at these load widths, or None: its
-    phone load must sit under the record's phone width and its wide load at
-    or over it."""
     if phone >= v["phone"]:
         return f"the phone load is {phone} px wide, not under {v['phone']:.0f}"
     if wide < v["phone"]:
@@ -287,12 +232,6 @@ def carousel_widths(phone, wide, v):
 
 
 def carousel_faults(got, v, slack):
-    """vault.carousel-timing's faults, from `got`: the phone load's advances,
-    and the wide load's frames (each the time it showed from and its word
-    count), whether it advanced while hovered, while focused and after the
-    visitor changed frame, and the control used for that (None where none
-    was found). A hold is read to within `slack` s, the clock step it was
-    read at."""
     out = []
     label = got["label"]
     if got["phone_advances"]:
@@ -341,15 +280,12 @@ def carousel_faults(got, v, slack):
     return out
 
 
+# Apple's release projection: https://developer.apple.com/videos/play/wwdc2018/803/
 def projected(position, velocity, rate):
-    """Where a release at `velocity` px/s ends once it decays at `rate` a
-    millisecond: Apple's projection, velocity / 1000 × rate / (1 − rate)."""
     return position + velocity / 1000 * rate / (1 - rate)
 
 
 def snap_points(rests, slack):
-    """The distinct places a part's releases came to rest, nearer than
-    `slack` px counted as one."""
     out = []
     for r in sorted(rests):
         if not out or r - out[-1] > slack:
@@ -358,16 +294,10 @@ def snap_points(rests, slack):
 
 
 def fling_way(snaps, here):
-    """+1 or -1: the way from `here` with more room before the farthest snap
-    point, so a fling has somewhere to go."""
     return 1 if max(snaps) - here > here - min(snaps) else -1
 
 
 def release_velocity(release, axis, horizon):
-    """The release's velocity in px/s along `axis` (left or top), from
-    `release`: its time and the pointer's moves, each [ms, x, y], since the
-    press. Only the moves within `horizon` ms of the release count; 0 where
-    fewer than two do, or they span no time."""
     k = 2 if axis == "top" else 1
     recent = [m for m in release["moves"] if m[0] > release["at"] - horizon]
     span = recent[-1][0] - recent[0][0] if len(recent) > 1 else 0
@@ -379,10 +309,6 @@ def nearest(snaps, x):
 
 
 def picks_another_snap(snaps, fling, rate):
-    """Whether the fling's projection picks a different snap point than the
-    one nearest where it was let go, so a part that ignores its velocity
-    would settle wrong. A part with one snap point has none to pick between,
-    so any fling serves."""
     if len(snaps) < 2:
         return True
     aim = projected(fling["at"], fling["velocity"], rate)
@@ -390,11 +316,6 @@ def picks_another_snap(snaps, fling, rate):
 
 
 def drag_faults(got, v):
-    """vault.drag-release's faults for one part dragged along one axis, from
-    `got`: the snap points its slow releases settled at, and its flung
-    release: where it was let go, at what velocity, and the path it took
-    after, one position a frame. It must settle where the release's
-    projection picks, set off the way it was thrown and not overshoot."""
     snaps, fling, label = got["snaps"], got["fling"], got["label"]
     path = fling["path"]
     end = path[-1]
@@ -411,8 +332,6 @@ def drag_faults(got, v):
                 f"settle on the snap point nearest its projection, {want:.0f} px",
             )
         )
-    # The path starts at the release, before the page's own handler runs, so
-    # its first move is the release's.
     first = next(
         (b - a for a, b in itertools.pairwise(path) if abs(b - a) > v["slack"]), 0
     )
@@ -441,9 +360,6 @@ def drag_faults(got, v):
 
 
 def frequent_faults(changes, v):
-    """vault.motion-frequency's faults, from `changes`: each control's state
-    change (hover or press) that started motion, and STARTED_JS's reading of
-    it, ENDLESS or ENDS with its `ms`."""
     return [
         fault(
             "frequent",
@@ -459,9 +375,6 @@ def frequent_faults(changes, v):
 
 
 def slow_update_faults(got):
-    """vault.slow-update's faults, from the page's authored animation and
-    transition rules outside `@media (update: fast)`, its inline ones, and
-    the script animations it runs when told the screen updates slowly."""
     out = [
         fault(
             "slow-update",
@@ -483,27 +396,21 @@ def slow_update_faults(got):
     return out
 
 
-# --- the flash analysis (WCAG 2.3.1) -----------------------------------------
-# Each function imports numpy itself: check-flow.py loads this module in every
-# mode, and its brand-motion mode runs without numpy installed.
-
-
+# #477
 def _linear(rgb):
-    """sRGB values in [0, 1] made linear, by WCAG's formula."""
     import numpy as np
 
     return np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
 
 
+# https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
 def relative_luminance(rgb):
-    """WCAG's relative luminance of sRGB values in [0, 1], last axis RGB."""
     import numpy as np
 
     return _linear(rgb) @ np.array([0.2126, 0.7152, 0.0722])
 
 
 def chromaticity(rgb):
-    """CIE 1976 u′v′ of sRGB values in [0, 1], last axis RGB, and R/(R+G+B)."""
     import numpy as np
 
     lin = _linear(rgb)
@@ -519,11 +426,8 @@ def chromaticity(rgb):
     return uv, share
 
 
+# https://www.w3.org/TR/WCAG22/#dfn-general-flash-and-red-flash-thresholds
 def luminance_transitions(lum, v):
-    """Per frame and pixel, whether a general-flash transition ends there:
-    the luminance has moved `luminance` or more from the last peak or valley,
-    the way opposite the last transition, and the darker of the two states is
-    under `darker` (WCAG 2.2's general flash; Note 2's peaks and valleys)."""
     import numpy as np
 
     out = np.zeros(lum.shape, dtype=bool)
@@ -537,15 +441,11 @@ def luminance_transitions(lum, v):
         hit = up | down
         out[t] = hit
         way = np.where(up, 1, np.where(down, -1, way)).astype(np.int8)
-        # The peak or valley to come is read from here on.
         hi, lo = np.where(hit, x, hi), np.where(hit, x, lo)
     return out
 
 
 def red_transitions(uv, share, v):
-    """Per frame and pixel, whether a red-flash transition ends there: the
-    state differs from the last one by more than `chroma` in u′v′, and one of
-    the two has R/(R+G+B) at `red` or more (WCAG 2.2's Note 3)."""
     import numpy as np
 
     n = uv.shape[0]
@@ -562,7 +462,6 @@ def red_transitions(uv, share, v):
 
 
 def box_sum(mask, h, w):
-    """The sum over every h × w window of a 2-D array, by a summed-area table."""
     import numpy as np
 
     s = np.pad(mask.astype(np.int64).cumsum(0).cumsum(1), ((1, 0), (1, 0)))
@@ -571,11 +470,6 @@ def box_sum(mask, h, w):
 
 
 def flash_faults(rgb, times, px, v):
-    """vault.flash-limit's faults over one screen's frames: `rgb` (frames ×
-    rows × columns × 3, sRGB in [0, 1]) sampled at `times` seconds, each cell
-    `px` CSS px on a side. A cell flashes in a one-second window holding more
-    than twice `flashes` transitions; a window fails where its flashing cells
-    cover more than `share` of some field-sized box."""
     import numpy as np
 
     lum = relative_luminance(rgb)
@@ -595,8 +489,6 @@ def flash_faults(rgb, times, px, v):
         )
         start = 0
         for end in range(len(times)):
-            # A one-second window, open at its far end, to within a ms of
-            # float error in the frame times.
             while times[end] - times[start] >= 1 - 1e-3:
                 start += 1
             count = cum[end + 1] - cum[start]
@@ -619,16 +511,10 @@ def flash_faults(rgb, times, px, v):
     return out
 
 
-# --- what the page is asked ----------------------------------------------------
-
-
 def with_label(js, label_js):
-    """`js` with check-flow.py's label() defined at its LABEL mark."""
     return js.replace("LABEL", label_js, 1)
 
 
-# Before any page script: each cancelled wheel, touch or scrolling key, by
-# its type and, for a key, the key.
 CANCEL_INIT = r"""
 window.__cancelled = [];
 const prevent = Event.prototype.preventDefault;
@@ -640,7 +526,6 @@ Event.prototype.preventDefault = function () {
 };
 """
 
-# Before any page script: matchMedia answers as a screen that updates slowly.
 SLOW_INIT = r"""
 const real = window.matchMedia.bind(window);
 window.matchMedia = (q) => {
@@ -654,9 +539,6 @@ window.matchMedia = (q) => {
 };
 """
 
-# How far the window can still scroll down, where it stands, the wheel
-# handlers' cancels, and the scroll box of its own under the window's middle,
-# if any, which a wheel there would scroll rather than the window.
 ROOM_JS = r"""
 () => {
   let nested = null;
@@ -669,8 +551,6 @@ ROOM_JS = r"""
 }
 """
 
-# Whether the element under ([x, y]), or an ancestor, sets a touch-action
-# that takes the vertical pan for itself, as a map or canvas does.
 PANS_ITSELF_JS = r"""
 ([x, y]) => {
   for (let el = document.elementFromPoint(x, y); el; el = el.parentElement) {
@@ -681,8 +561,6 @@ PANS_ITSELF_JS = r"""
 }
 """
 
-# Waits until the window's scroll has held still for `still` ms, up to `cap`
-# ms, so a key's smooth scroll has ended before it is read.
 SCROLLED_JS = r"""
 async ([still, cap]) => {
   const t0 = performance.now();
@@ -696,8 +574,6 @@ async ([still, cap]) => {
 }
 """
 
-# Waits for every finite animation the page runs off the document clock to
-# end, up to `cap` ms, two frames at least.
 SETTLE_JS = r"""
 async (cap) => {
   const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
@@ -712,9 +588,6 @@ async (cap) => {
 }
 """
 
-# The elements parallax is read on, each its label and kind: a control, text
-# (an element holding text of its own) or an image (an img, svg, video,
-# canvas or background image). Logs each animation and transition that starts.
 TRACK_JS = (
     "(cap) => {"
     + "LABEL"
@@ -741,7 +614,6 @@ TRACK_JS = (
   const log = (e) => {
     const into = window.__ran[window.__phase];
     if (!into) return;
-    // Named once, so a class the motion toggles does not rename it.
     if (!window.__names.has(e.target)) window.__names.set(e.target, label(e.target));
     const l = window.__names.get(e.target);
     (into[l] = into[l] || []).push(e.animationName || e.propertyName);
@@ -753,7 +625,6 @@ TRACK_JS = (
 """
 )
 
-# Each tracked element's top, null where it is out of the window.
 TOPS_JS = r"""
 () => {
   return window.__tracked.map(({ el }) => {
@@ -763,10 +634,6 @@ TOPS_JS = r"""
 }
 """
 
-# A carousel's frame: its slides are the children of the descendant, itself
-# included, with the most children each at least half the carousel's width;
-# the frame shown is the slide covering most of the carousel, by its area in
-# the carousel's box times its opacity.
 FRAME_JS = r"""
 (sel) => {
   const box = document.querySelector(sel);
@@ -791,15 +658,12 @@ FRAME_JS = r"""
 }
 """
 
-# Ends every finite animation now, so a frame is read at rest.
 FINISH_JS = r"""
 () => document.getAnimations().forEach((a) => {
   if (Number.isFinite(a.effect.getComputedTiming().endTime)) a.finish();
 })
 """
 
-# The carousel's control that changes frame: the first button, tab or link
-# in it named for next, previous or a slide, else its first button.
 CHANGE_JS = (
     "(sel) => {"
     + "LABEL"
@@ -816,7 +680,6 @@ CHANGE_JS = (
 """
 )
 
-# The carousel's first part that takes focus, focused, or null.
 FOCUS_JS = r"""
 (sel) => {
   const box = document.querySelector(sel);
@@ -828,8 +691,6 @@ FOCUS_JS = r"""
 }
 """
 
-# The controls a visitor hovers and presses many times, up to `cap`: links,
-# buttons and menu items.
 CONTROLS_JS = (
     "(cap) => {"
     + "LABEL"
@@ -844,8 +705,6 @@ CONTROLS_JS = (
 """
 )
 
-# The `i`th control's centre in the window, scrolled into view, with every
-# animation now running marked as already there.
 CONTROL_AT_JS = r"""
 (i) => {
   const el = window.__controls[i];
@@ -856,10 +715,6 @@ CONTROL_AT_JS = r"""
 }
 """
 
-# The motion the `i`th control's state change started, from the animations
-# on it or inside it begun since CONTROL_AT_JS: {motion: "none"} where there
-# are none, {motion: "endless"} where one never ends, else {motion: "ends",
-# ms} with the latest end, in ms.
 NO_MOTION, ENDLESS, ENDS = "none", "endless", "ends"
 STARTED_JS = r"""
 async (i) => {
@@ -876,10 +731,6 @@ async (i) => {
 }
 """
 
-# The page's own animation and transition rules outside @media (update:
-# fast), each where it is and what it sets; inline ones; the sheets it could
-# not read; whether any rule animates at all; and the script animations
-# running now, which SLOW_INIT has told the page's script a slow screen.
 SLOW_JS = (
     "() => {"
     + "LABEL"
@@ -924,8 +775,6 @@ SLOW_JS = (
 """
 )
 
-# The centre of the element `sel` in the window, scrolled to the middle of
-# the window first where `show` is set.
 CENTRE_JS = r"""
 ([sel, show]) => {
   const e = document.querySelector(sel);
@@ -935,7 +784,6 @@ CENTRE_JS = r"""
 }
 """
 
-# The label of the element drawn at the point [x, y], or 'the screen'.
 POINT_JS = (
     "([x, y]) => {"
     + "LABEL"
@@ -946,18 +794,12 @@ POINT_JS = (
 """
 )
 
-# The part's position along `axis` (left or top), in the page, so a scroll
-# that brings it under the pointer is no move of its own.
 AT_JS = "const at = (el, axis) => el.getBoundingClientRect()[axis] + (axis === 'top' ? scrollY : scrollX);"
 WHERE_JS = (
     "([sel, axis]) => {" + AT_JS + " return at(document.querySelector(sel), axis); }"
 )
 
-# Records the part's position along `axis`, as AT_JS reads it, now and each
-# frame after until it has not moved for `still` ms, or `cap` ms have passed,
-# into window.__path. A move of half a CSS px or less is no move, so sub-pixel
-# jitter at rest does not hold the path open: a guess, which reads a part
-# creeping under half a px a frame, about 30 px/s at 60 Hz, as still.
+PATH_STILL_PX = 0.5  # guess, #501
 PATH_JS = (
     "([sel, axis, still, cap]) => {"
     + AT_JS
@@ -968,7 +810,9 @@ PATH_JS = (
   let last = t0;
   const tick = (now) => {
     const p = at(el, axis);
-    if (Math.abs(p - path[path.length - 1]) > 0.5) last = now;
+    if (Math.abs(p - path[path.length - 1]) > """
+    + str(PATH_STILL_PX)
+    + r""") last = now;
     path.push(p);
     if (now - last >= still || now - t0 >= cap) window.__path = path;
     else requestAnimationFrame(tick);
@@ -978,11 +822,6 @@ PATH_JS = (
 """
 )
 
-# The press and each pointer move since, timed by the events' own clock, and
-# the release: its time and those moves into window.__release. Where
-# window.__watch holds PATH_JS's arguments, the release starts that path
-# before the page's own handler runs, so its first position is the one let
-# go at.
 RELEASE_INIT = (
     "const pathOf = ("
     + PATH_JS
@@ -1002,12 +841,7 @@ addEventListener('pointerup', (e) => {
 )
 
 
-# --- answers -------------------------------------------------------------------
-
-
 def answers(lines, got):
-    """Each record's answer, from `got`, which maps each of its lines' checks
-    to its Answer."""
     by_record = collections.defaultdict(list)
     for line in lines:
         by_record[line.id].append(got[line.mode])
