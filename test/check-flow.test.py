@@ -2113,8 +2113,6 @@ def eased(start, ms):
 
 
 def off_the_grid(off):
-    """One morph's frames at 60 fps over 1 s, each `off` ms either side of the
-    grid in turn."""
     return [[0] + [k * STEP + off * (-1) ** k for k in range(1, 60)] + [1000]]
 
 
@@ -2319,7 +2317,7 @@ class MorphFlow(unittest.TestCase):
             with self.subTest(fps=fps):
                 found, times = self.steps_and_sample_times(off_the_grid(4), fps)
                 self.assertEqual(found, [])
-                # A drawn frame 8 ms long, split in two at 120 fps, is 12.3 ms.
+                # Frames 4 ms either way leave a 24.7 ms gap: 12.3 ms halves at 120 fps.
                 gaps = [b - a for a, b in itertools.pairwise(times)]
                 self.assertLessEqual(max(gaps), 1.5 * 1000 / fps)
 
