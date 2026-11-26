@@ -273,11 +273,12 @@ from fail_open import expected  # noqa: E402
 
 layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
+runner = siblings.load(HERE, "runner.py")
 try:
     import numpy as np
     from PIL import Image
 except ImportError as err:
-    sys.exit(flow.missing(err))
+    sys.exit(runner.missing(err))
 maths = siblings.load(HERE, "access-pixels.py")
 answering = siblings.load(HERE, "access-answers.py")
 pseudo_boxes = siblings.load(HERE, "access-boxes.py")
@@ -1689,7 +1690,7 @@ def merge(into, more):
 
 def run(at):
     found, looping = [], 0
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         for name, width, height in VIEWPORTS:
             context, page, loops = open_page(browser, at, width, height)
             looping = max(looping, loops)
@@ -1770,7 +1771,7 @@ def parse(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -1787,7 +1788,7 @@ def parse(argv):
         help="the contrast figures, one line per record value",
     )
     at = p.parse_args(argv)
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     if at.pointer:
         try:
             with open(at.pointer_table, encoding="utf8") as fh:
@@ -1820,7 +1821,7 @@ def parse(argv):
 
 def pointer_run(at):
     # #317
-    with flow.chromium(("--allow-file-access-from-files",)) as browser:
+    with runner.chromium(("--allow-file-access-from-files",)) as browser:
         return pointing.run(
             browser,
             at,
@@ -1847,7 +1848,7 @@ def main(argv):
     pathlib.Path(json_path).unlink(missing_ok=True)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     try:
-        got, code = flow.run_browser(lambda: mode.run(at), at.timeout, at.url)
+        got, code = runner.run_browser(lambda: mode.run(at), at.timeout, at.url)
     except BadSelectorError as exc:
         print(
             f"check-access.py: {exc.option} is not a CSS selector: {', '.join(exc.selectors)}",

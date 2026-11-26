@@ -139,6 +139,7 @@ import siblings  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 layout = siblings.load(HERE, "check-layout.py")
 conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -1206,7 +1207,7 @@ def sweep(
     widths=None,
     heights=layout.HEIGHTS,
     parts=None,
-    timeout=flow.LOAD_TIMEOUT_MS,
+    timeout=runner.LOAD_TIMEOUT_MS,
     **given,
 ):
     widths = widths or layout.sweep_widths(layout.GATE_STEP)
@@ -1404,7 +1405,7 @@ def parse_args(argv):
         p.error(
             f"--parts {at.declaration} declares {', '.join(sorted(named & unselected))} with no selector, which a part: line reads; give one with --part"
         )
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -1422,7 +1423,7 @@ def page_arguments(p, out_file):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -1451,7 +1452,7 @@ def main(argv):
     widths = layout.sweep_widths(at.step, *at.span)
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return sweep(
                 browser,
                 at.url,
@@ -1463,7 +1464,7 @@ def main(argv):
             )
 
     try:
-        got, code = flow.run_browser(run, at.timeout, at.url)
+        got, code = runner.run_browser(run, at.timeout, at.url)
     except ProbeError as exc:
         p.print_usage(sys.stderr)
         print(f"probe.py: error: {exc}", file=sys.stderr)

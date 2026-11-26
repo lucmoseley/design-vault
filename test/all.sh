@@ -18,6 +18,7 @@ python3 test/check-render.test.py	images
 python3 test/check-logo.test.py	images chromium
 python3 test/check-clip.test.py
 python3 test/check-flow.test.py	chromium
+python3 test/runner.test.py	chromium
 python3 test/check-flow-records.test.py	images chromium
 python3 test/check-frames.test.py	chromium
 python3 test/check-overlay.test.py	images chromium

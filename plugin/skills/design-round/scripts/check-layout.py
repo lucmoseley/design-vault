@@ -134,6 +134,7 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 
 
 records = siblings.load(HERE, "layout-records.py")
@@ -1010,7 +1011,7 @@ def run(at, when):
     found, arts, shots, looping = [], [], [], 0
     text = {name: [] for name in at.text}
     rec = Records(at) if at.records else None
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         pages = {}
 
         def page_as(options, sizes=None):
@@ -1286,7 +1287,7 @@ def parse(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -1395,7 +1396,7 @@ def parse(argv):
         p.error(
             f"--widths wants LOW-HIGH within {LOW}-{HIGH}, e.g. 1100-1340 — got {at.widths!r}"
         )
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -1409,7 +1410,7 @@ def main(argv):
     ]:
         old.unlink(missing_ok=True)
     try:
-        got, code = flow.run_browser(lambda: run(at, when), at.timeout, at.url)
+        got, code = runner.run_browser(lambda: run(at, when), at.timeout, at.url)
     except BadSelectorError as exc:
         flag, selector, message = exc.args
         p.print_usage(sys.stderr)

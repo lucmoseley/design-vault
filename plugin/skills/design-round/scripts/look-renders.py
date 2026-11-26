@@ -68,11 +68,12 @@ frames = siblings.load(HERE, "check-frames.py")
 look = siblings.load(HERE, "look.py")
 layout = look.layout
 flow = frames.flow
+runner = siblings.load(HERE, "runner.py")
 try:
     from PIL import Image, ImageDraw
 except ImportError as err:
-    sys.exit(flow.missing(err))
-UnmeasurableError = flow.UnmeasurableError
+    sys.exit(runner.missing(err))
+UnmeasurableError = runner.UnmeasurableError
 
 SCALES = (1, 2, 3)
 MAGNIFY = 4
@@ -171,7 +172,7 @@ def parse(argv):
         s.add_argument("--height", type=int)
         s.add_argument("--wait", metavar="SELECTOR")
         s.add_argument(
-            "--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS"
+            "--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS"
         )
     contacts.add_argument(
         "--contact", action="append", required=True, metavar="NAME=[SELECTOR@]X,Y"
@@ -201,7 +202,7 @@ def parse(argv):
             ]
         except ValueError:
             p.error("--times wants numbers of ms, or `end`")
-    args.url = flow.page_url(p, args.url)
+    args.url = runner.page_url(p, args.url)
     return args
 
 
@@ -501,10 +502,10 @@ def main(argv):
     clear(args.out)
 
     def run():
-        with flow.chromium(frames.HASH_ARGS) as browser:
+        with runner.chromium(frames.HASH_ARGS) as browser:
             return render(browser, args)
 
-    result, code = flow.run_browser(
+    result, code = runner.run_browser(
         run,
         args.timeout,
         args.url,

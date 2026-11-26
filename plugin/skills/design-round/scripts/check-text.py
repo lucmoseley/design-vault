@@ -59,7 +59,7 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 
-flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 layout = siblings.load(HERE, "check-layout.py")
 probe = siblings.load(HERE, "probe.py")
 conditions = siblings.load(HERE, "conditions.py")
@@ -414,7 +414,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -447,7 +447,7 @@ def parse_args(argv):
         p.error(f"cannot read {exc.filename}: {exc.strerror}")
     except (checks.TableError, checks.WordsError) as exc:
         p.error(str(exc))
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -460,7 +460,7 @@ def main(argv):
         os.unlink(json_path)
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return sweep(
                 browser,
                 at.url,
@@ -471,7 +471,7 @@ def main(argv):
                 timeout=at.timeout,
             )
 
-    loads, code_ = flow.run_browser(run, at.timeout, at.url)
+    loads, code_ = runner.run_browser(run, at.timeout, at.url)
     if code_:
         return code_
     unjudged = (

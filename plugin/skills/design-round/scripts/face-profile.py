@@ -56,7 +56,7 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 layout = siblings.load(HERE, "check-layout.py")
-flow = layout.flow
+runner = siblings.load(HERE, "runner.py")
 
 AXES = ("wght", "wdth", "opsz", "GRAD")
 BEYOND = {  # guess, #501
@@ -381,7 +381,7 @@ def parse(argv):
         help=f"the viewport widths in px; {layout.PHONE_WIDTH} and {layout.DESKTOP_WIDTH} by default",
     )
     p.add_argument("--wait", metavar="SELECTOR")
-    p.add_argument("--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS")
+    p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
     at = p.parse_args(argv)
     if at.widths:
         try:
@@ -392,13 +392,13 @@ def parse(argv):
             p.error(f"--widths wants widths from {layout.LOW} to {layout.HIGH}")
     else:
         at.widths = [layout.PHONE_WIDTH, layout.DESKTOP_WIDTH]
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return at
 
 
 def run(at):
     found = {}
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         for w in at.widths:
             context = browser.new_context(
                 viewport={"width": w, "height": layout.height_at(w, layout.HEIGHTS)},
@@ -420,7 +420,7 @@ def main(argv):
     path = os.path.join(at.out, "face-profile.json")
     if os.path.exists(path):
         os.remove(path)
-    found, code = flow.run_browser(lambda: run(at), at.timeout, at.url)
+    found, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code
     os.makedirs(at.out, exist_ok=True)

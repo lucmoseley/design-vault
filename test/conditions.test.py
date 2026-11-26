@@ -14,25 +14,25 @@ URL = pathlib.Path(FIXTURES, "conditions.html").resolve().as_uri()
 VIEWPORT = {"width": 400, "height": 300}
 
 
-FLOW = os.path.join(
-    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+RUNNER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "runner.py"
 )
 CONDITIONS = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "conditions.py"
 )
-SCRIPTS = os.path.dirname(FLOW)
+SCRIPTS = os.path.dirname(RUNNER)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 conditions = siblings.load(SCRIPTS, os.path.basename(CONDITIONS))
-flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
+runner = siblings.load(SCRIPTS, os.path.basename(RUNNER))
 STACK = contextlib.ExitStack()
 BROWSER = None
 
 
 def setUpModule():
     global BROWSER
-    BROWSER = STACK.enter_context(flow.chromium())
+    BROWSER = STACK.enter_context(runner.chromium())
 
 
 def tearDownModule():

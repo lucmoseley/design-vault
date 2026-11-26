@@ -69,6 +69,7 @@ import siblings  # noqa: E402
 
 access = siblings.load(HERE, "check-access.py")
 layout, flow = access.layout, access.flow
+runner = siblings.load(HERE, "runner.py")
 
 FILES = (
     "parts.json",
@@ -281,7 +282,7 @@ UNKEY_JS = "() => document.getElementById('__parts_map_key')?.remove()"
 
 
 def run(at):
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         found = []
         for name, width, height in access.VIEWPORTS:
             context = browser.new_context(
@@ -451,12 +452,12 @@ def parse(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
     at = p.parse_args(argv)
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return at
 
 
@@ -466,7 +467,7 @@ def main(argv):
     for f in FILES:
         pathlib.Path(at.out, f).unlink(missing_ok=True)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    got, code = flow.run_browser(lambda: run(at), at.timeout, at.url)
+    got, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code
     parts, unread = got

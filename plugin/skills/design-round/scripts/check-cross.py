@@ -84,7 +84,7 @@ import siblings  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
-flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 form = siblings.load(HERE, "drive-form.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
@@ -189,7 +189,7 @@ def crawl(browser, home, read=None, **context):
             except PlaywrightError as exc:
                 if url == _bare(home):
                     raise
-                unread.append((url, flow.first_line(exc)))
+                unread.append((url, runner.first_line(exc)))
                 continue
             if read is not None:
                 got["read"] = read(page)
@@ -448,7 +448,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -460,8 +460,8 @@ def parse_args(argv):
         p.error(f"cannot read --table {at.table}: {exc.strerror}")
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
-    at.url = flow.page_url(p, at.url)
-    at.flow = [flow.page_url(p, f) for f in at.flow]
+    at.url = runner.page_url(p, at.url)
+    at.flow = [runner.page_url(p, f) for f in at.flow]
     return p, at
 
 
@@ -476,7 +476,7 @@ def main(argv):
 
     def run():
         phone = device(phone_line.value) if phone_line else None
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             pages, unread = crawl(browser, at.url)
             walks = []
             for start in at.flow:
@@ -485,7 +485,7 @@ def main(argv):
             return pages, unread, walks, phones
 
     try:
-        got, code = flow.run_browser(run, at.timeout, at.url)
+        got, code = runner.run_browser(run, at.timeout, at.url)
     except TableError as exc:
         p.print_usage(sys.stderr)
         print(f"check-cross.py: error: --table {at.table}: {exc}", file=sys.stderr)

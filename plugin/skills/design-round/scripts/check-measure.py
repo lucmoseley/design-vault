@@ -48,6 +48,7 @@ from fail_open import fail_open  # noqa: E402
 
 layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
+runner = siblings.load(HERE, "runner.py")
 
 DEFAULT_UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -299,7 +300,7 @@ def parse(argv):
         help="the viewport height; the default is a guess",
     )
     p.add_argument("--wait", metavar="SELECTOR")
-    p.add_argument("--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS")
+    p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
     at = p.parse_args(argv)
     if not 0 < at.min <= at.max:
         p.error(f"--min {at.min} and --max {at.max} make no range")
@@ -310,7 +311,7 @@ def parse(argv):
             p.error(f"--widths wants whole px, e.g. 390,1440 — got {at.widths!r}")
         if at.widths[0] <= 0:
             p.error("--widths wants widths above 0")
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return at
 
 
@@ -333,7 +334,7 @@ def fetch(page, href):
 
 
 def run(at):
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         page_if_phone = {}
 
         def page_at(width):
@@ -377,7 +378,7 @@ def run(at):
 
 def main(argv):
     at = parse(argv)
-    got, code = flow.run_browser(lambda: run(at), at.timeout, at.url)
+    got, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code
     breaks, results = got
