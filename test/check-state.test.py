@@ -107,6 +107,15 @@ class TheFixtures(unittest.TestCase):
                 own = record if record not in PAGE_FAULTS else None
                 self.assertIn(own, [m["fault"] for m in f["misses"]], f["misses"])
 
+    def test_an_undo_that_restores_nothing_fails_the_press_it_follows(self):
+        # #423
+        misses = found("fault")["vault.act-on-release"]["misses"]
+        self.assertIn(
+            'pressing the button "Undo" it shows does not undo it',
+            " ".join(m["what"] for m in misses if "#discard" in str(m["where"])),
+            misses,
+        )
+
     def test_the_page_s_own_timer_fails_with_no_warning(self):
         (miss,) = found("fault")["vault.time-limit"]["misses"]
         self.assertEqual(miss["where"], None)
@@ -247,18 +256,23 @@ class TheTableGivesTheValues(unittest.TestCase):
 class TheRulesExemptions(unittest.TestCase):
     run_line = TheCommandLine.run_line
 
-    def test_a_press_the_release_undoes_passes_and_one_an_undo_offers_is_put_to_review(
-        self,
-    ):
+    def test_a_press_the_release_undoes_or_an_undo_it_offers_restores_passes(self):
         code, printed, _ = self.run_line(
             EXEMPT, "vault.act-on-release | release | undone by undo"
         )
         self.assertEqual(code, 0, printed)
         self.assertIn("vault.act-on-release: pass", printed)
         self.assertNotIn("button#peek", printed)
-        self.assertRegex(
-            printed, r'~ \[release\] button#delete .*, and shows button "Undo"'
+        self.assertNotIn("button#delete", printed)
+
+    def test_a_delete_whose_press_adds_an_undo_is_no_disclosure(self):
+        # #423; pair: the fault page's "More about lists" in
+        # test_every_record_fails_on_the_fault_page_naming_its_own_plant
+        code, printed, _ = self.run_line(
+            EXEMPT, "vault.expanded-state | expanded | axe aria-valid-attr-value"
         )
+        self.assertEqual(code, 0, printed)
+        self.assertIn("vault.expanded-state: pass", printed)
 
     def test_a_single_key_a_setting_may_turn_off_is_put_to_review(self):
         code, printed, _ = self.run_line(

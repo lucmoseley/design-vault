@@ -50,8 +50,8 @@ starting with # are skipped.
   release         undone by WORDS: pressing a button or link down, before
                   release, acts on nothing (no markup change, submit, window
                   or page load) that sliding off it and releasing leaves in
-                  place; a control named with a word in WORDS that the press
-                  shows is put to review, as an undo the rule allows
+                  place, save where the press shows a control named with a
+                  word in WORDS whose press leaves the page as it was before
   single-key      turned off by WORDS: with focus on the page, no printable
                   key acts or moves focus; where a control named with a word
                   in WORDS is on the page, an acting key is put to review, as
@@ -672,6 +672,10 @@ def info(page, el):
     return page.evaluate("(el) => __st.info(el)", el)
 
 
+def describe(page, el):
+    return page.evaluate("(el) => __st.describe(el)", el)
+
+
 def drawn(page, el):
     return page.evaluate("(el) => __st.drawn(el)", el)
 
@@ -771,10 +775,12 @@ def undrawn(page, els):
     )
 
 
-def trial(run, page, keep=None, before=None):
+def trial(run, page, *, keep=None, before=None, after=None):
     """Clicks each visible button that would not submit a form, on the page
     reloaded before each, and yields (button, its info, what the click drew).
-    `keep` filters the buttons in the page; `before` runs before each click."""
+    `keep` filters the buttons in the page; `before` runs before each click;
+    `after(page, button, drawn)`, where given, is yielded in place of what the
+    click drew, and may press on."""
     find = (
         "(keep) => __st.controls(['button']).filter((b) => b.type !== 'submit' && !b.disabled"
         " && b.getAttribute('aria-disabled') !== 'true' && !b.closest('[inert]')"
@@ -792,10 +798,12 @@ def trial(run, page, keep=None, before=None):
         page.evaluate("() => __st.mark()")
         try:
             pointer.click(page, button)
+            at, drawn = info(page, button), elements(page, "() => __st.revealed()")
+            got = after(page, button, drawn) if after else drawn
         except pointer.PointerError:
             # A button no visitor can reach shows them nothing to judge (#312).
             continue
-        yield button, info(page, button), elements(page, "() => __st.revealed()")
+        yield button, at, got
 
 
 # ---- hover --------------------------------------------------------------
@@ -1273,6 +1281,7 @@ def check_release(run, line, ans):
             el, url0 = found[i], page.url
             at = info(page, el)
             run.popups.clear()
+            acted = []
             try:
                 pointer.hover(page, el)
                 # Focused first, so what a focus or blur handler writes is not
@@ -1282,28 +1291,35 @@ def check_release(run, line, ans):
                 was, undo0 = page.evaluate(SEEN_JS), _named(page, words)
                 page.evaluate("(el) => __st.watch(el)", el)
                 pointer.press(page, el)
-            except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
-                unreached(page, line, ans, el, exc=exc)
-                continue
-            acted = (
-                ["loaded another page"]
-                if gone(page, url0)
-                else page.evaluate("() => __st.acts()")
-            )
-            acted += ["opened a window"] * bool(run.popups)
-            undo = acted and not gone(page, url0) and not undo0 and _named(page, words)
-            if not gone(page, url0):
-                pointer.leave(page, el)
-            pointer.release(page)
-            quick(page)
-            if acted and (gone(page, url0) or page.evaluate(SEEN_JS) != was):
-                (ans.review if undo else ans.miss)(
-                    line,
-                    at,
-                    f"acts on the press, before release: {'; '.join(acted[:3])}"
-                    + (f", and shows {undo}" if undo else ""),
+                acted = (
+                    ["loaded another page"]
+                    if gone(page, url0)
+                    else page.evaluate("() => __st.acts()")
                 )
+                acted += ["opened a window"] * bool(run.popups)
+                undo = (
+                    _control(page, words)
+                    if acted and not gone(page, url0) and not undo0
+                    else None
+                )
+                if not gone(page, url0):
+                    pointer.leave(page, el)
+                pointer.release(page)
+                quick(page)
+                if acted and (gone(page, url0) or page.evaluate(SEEN_JS) != was):
+                    said = f"acts on the press, before release: {'; '.join(acted[:3])}"
+                    if undo is None:
+                        ans.miss(line, at, said)
+                    elif not _undoes(page, undo, was):
+                        shown = describe(page, undo)
+                        ans.miss(
+                            line,
+                            at,
+                            f"{said}, and pressing the {shown} it shows does not undo it",
+                        )
+            except pointer.PointerError as exc:
+                # #312
+                unreached(page, line, ans, el, exc=exc)
             if acted:
                 page.goto(run.url)
                 pointer.settle(page)
@@ -1317,14 +1333,25 @@ SEEN_JS = r"""() => [document.body.innerText,
       el.getAttribute('aria-checked'), el.getAttribute('aria-selected'), el.checked, el.value].join())]"""
 
 
-def _named(page, words):
+def _undoes(page, undo, was):
+    url0 = page.url
+    pointer.click(page, undo)
+    quick(page)
+    return not gone(page, url0) and page.evaluate(SEEN_JS) == was
+
+
+def _control(page, words):
     """The first drawn button, link or box named with one of `words`, or None."""
-    return page.evaluate(
-        """(words) => { const el = __st.controls(['button', 'link', 'box'])
-          .find((c) => words.some((w) => __st.nameOf(c).toLowerCase().includes(w)));
-          return el ? __st.describe(el) : null; }""",
+    return page.evaluate_handle(
+        """(words) => __st.controls(['button', 'link', 'box'])
+          .find((c) => words.some((w) => __st.nameOf(c).toLowerCase().includes(w))) || null""",
         words,
-    )
+    ).as_element()
+
+
+def _named(page, words):
+    el = _control(page, words)
+    return describe(page, el) if el else None
 
 
 def check_single_key(run, line, ans):
@@ -2626,6 +2653,19 @@ PLAIN_BUTTON = (
 )
 
 
+def _hides(page, button, shown):
+    panels = elements(
+        page,
+        "(els) => els.filter((e) => __st.text(e) && !e.closest(__st.DIALOGS) && !__st.liveOf(e)"
+        " && !e.closest('[role=tooltip]'))",
+        shown,
+    )
+    if not panels:
+        return []
+    pointer.click(page, button)
+    return undrawn(page, panels)
+
+
 def check_expanded(run, line, ans):
     with run.page() as page:
         for ov in overlay.find(page):
@@ -2658,14 +2698,9 @@ def check_expanded(run, line, ans):
                 ans.miss(line, at, wrong)
             _shut(page, ov)
             ans.met(line)
-        for _, at, shown in trial(run, page, keep=PLAIN_BUTTON):
-            panels = page.evaluate(
-                "(els) => els.filter((e) => __st.text(e) && !e.closest(__st.DIALOGS) && !__st.liveOf(e)"
-                " && !e.closest('[role=tooltip]')).map(__st.describe)",
-                shown,
-            )
-            if panels:
-                ans.miss(line, at, f"shows {panels[0]} with no aria-expanded")
+        for _, at, hidden in trial(run, page, keep=PLAIN_BUTTON, after=_hides):
+            if hidden:
+                ans.miss(line, at, f"shows and hides {hidden[0]} with no aria-expanded")
             ans.met(line)
 
 

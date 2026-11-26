@@ -13,7 +13,7 @@
   <!-- vault.act-on-release allows a press the release undoes: it peeks while held. -->
   <button type="button" id="peek">Hold to peek</button>
   <p id="peeked" hidden>Lisbon, Porto and Faro</p>
-  <!-- ... and an action undone after it: the press deletes and offers Undo. -->
+  <!-- ... and an action undone after it: the press deletes and offers an Undo that restores it. -->
   <ul id="list"><li>Porto in a weekend</li></ul>
   <button type="button" id="delete">Delete guide</button>
   <!-- vault.key-shortcuts allows a single key a setting turns off. -->
@@ -46,11 +46,16 @@
     peek.addEventListener(e, () => (peeked.hidden = true));
   document.getElementById("delete").addEventListener("pointerdown", (e) => {
     const list = document.getElementById("list");
-    if (!list.firstElementChild) return;
-    list.firstElementChild.remove();
+    const item = list.firstElementChild;
+    if (!item) return;
+    item.remove();
     const undo = document.createElement("button");
     undo.type = "button";
     undo.textContent = "Undo";
+    undo.addEventListener("click", () => {
+      list.append(item);
+      undo.remove();
+    });
     e.target.after(undo);
   });
   addEventListener("keydown", (e) => {

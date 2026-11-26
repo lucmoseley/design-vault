@@ -79,9 +79,21 @@
     }),
   );
 
-  // vault.act-on-release: a button that acts as it is pressed down.
-  $$("[data-fault='vault.act-on-release']").forEach((b) =>
+  // vault.act-on-release: a button that acts as it is pressed down, and one
+  // that deletes as it is pressed down and offers an Undo that restores nothing.
+  $$("[data-fault='vault.act-on-release']:not([data-removes])").forEach((b) =>
     b.addEventListener("pointerdown", () => (b.textContent = "Sent")),
+  );
+  $$("[data-fault='vault.act-on-release'][data-removes]").forEach((b) =>
+    b.addEventListener("pointerdown", () => {
+      const item = $("#" + b.dataset.removes).firstElementChild;
+      if (!item) return;
+      item.remove();
+      const undo = document.createElement("button");
+      undo.type = "button";
+      undo.textContent = "Undo";
+      b.after(undo);
+    }),
   );
   // vault.key-shortcuts: "s" alone jumps to the search field.
   if ($("[data-fault='vault.key-shortcuts']")) {
