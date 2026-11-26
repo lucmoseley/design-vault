@@ -254,7 +254,7 @@ class Hash(unittest.TestCase):
 
     def test_a_frame_that_depends_on_the_frame_before_it_fails(self):
         # #67 review: fresh loads alone cannot see order, which tile.mjs's reversal exists to catch.
-        proc = hash_page(os.path.join(FIXTURES, "trail.html"))
+        proc = hash_page(os.path.join(FIXTURES, "trail.html"), "--wait", "#ready")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertRegex(
             proc.stdout, r"1 frame\(s\) differ\n  0 ms: [\d,]+ pixels differ"

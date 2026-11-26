@@ -16,9 +16,18 @@ const move = document.getElementById("box").animate([{ transform: "none" }, { tr
   { duration: 1000, easing: "ease-in-out", fill: "both" });
 let furthest = 0;
 (function tick() {
-  furthest = Math.max(furthest, move.currentTime || 0);
-  document.getElementById("trail").style.width = furthest * 0.6 + "px";
+  // #621
+  if (move.playState === "paused") {
+    furthest = Math.max(furthest, move.currentTime || 0);
+    document.getElementById("trail").style.width = furthest * 0.6 + "px";
+  }
   requestAnimationFrame(tick);
 })();
+setTimeout(() => {
+  const ready = document.createElement("p");
+  ready.id = "ready";
+  ready.textContent = "ready";
+  document.body.append(ready);
+}, 600);
 </script>
 </body></html>
