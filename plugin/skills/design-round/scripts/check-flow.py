@@ -42,19 +42,19 @@ DIR/flow.json, every sample behind it.
 IT MEASURES WEB ANIMATIONS API MOTION: `element.animate()`, CSS animations and
 CSS transitions. It also measures a morph, a path whose `d` a script rewrites
 frame by frame: it records the `d` written at each frame while the page plays,
-interpolates the numbers between frames as the morph does, and writes every
-frame's `d` to DIR/morph.svg for check-curves.js. Where the browser drops two
-or more of a morph's frames in a row, the page is loaded again, up to ATTEMPTS
-times in all, and then the stretch is listed as not measured and no jolt, jump
-or step rests on it. A page that also moves another way gets no list of
-findings. It says it cannot measure, and names why: a canvas, a video, an
-embedded document, SVG SMIL, shadow DOM, a scroll-driven timeline, an
-animation played in reverse or seeked by hand from a script, one CSS
-animation-play-state holds paused, an element other than a path's `d` that a
-script rewrites frame by frame, a morph that scrolling drives, whose command
-structure changes or whose frame loop never stops, or animations that start,
-or are released, when the page is scrolled, or keep starting. An animated GIF
-is not detected.
+measures the morph's speed only between the frames the browser drew it in, and
+writes every frame's `d` to DIR/morph.svg for check-curves.js. Where the
+browser drops two or more of a morph's frames in a row, the page is loaded
+again, up to ATTEMPTS times in all, and then the stretch is listed as not
+measured and no jolt, jump or step rests on it. A page that also moves another
+way gets no list of findings. It says it cannot measure, and names why: a
+canvas, a video, an embedded document, SVG SMIL, shadow DOM, a scroll-driven
+timeline, an animation played in reverse or seeked by hand from a script, one
+CSS animation-play-state holds paused, an element other than a path's `d` that
+a script rewrites frame by frame, a morph that scrolling drives, whose command
+structure changes or whose frame loop never stops, or animations that start, or
+are released, when the page is scrolled, or keep starting. An animated GIF is
+not detected.
 
 Time zero is the page's first frame.
 
@@ -442,19 +442,11 @@ PREPARE_JS = (
   let first = Infinity;
   const edges = [];
   const starts = [];
-  const drawn = [];
   for (const m of morphs) {
     const w0 = m.writes[0];
     first = Math.min(first, (w0.prevFrameAt === null ? w0.frameAt : w0.prevFrameAt) - t0);
-    const own = [];
-    for (const w of m.writes) {
-      own.push(w.frameAt - t0);
-      if (w.prevFrameAt !== null) own.push(w.prevFrameAt - t0);
-    }
-    drawn.push(own);
     end = Math.max(end, m.writes[m.writes.length - 1].frameAt - t0);
   }
-  edges.push(...drawn.flat());
   for (const x of anims) {
     x.a.pause();
     const t = x.a.effect.getComputedTiming();
@@ -504,7 +496,7 @@ PREPARE_JS = (
   }
   f.sampling = { anims, elements };
   const rel = (t) => (t === null ? null : t - t0);
-  return { anims: anims.length, first, length, infinite, end, edges, starts, drawn, morphs: morphs.map((m) => ({
+  return { anims: anims.length, first, length, infinite, end, edges, starts, morphs: morphs.map((m) => ({
     label: label(m.el), writes: m.writes.map((w) => ({ ms: rel(w.frameAt), prev_ms: rel(w.prevFrameAt), old: w.old, value: w.value })),
   })) };
 }
@@ -570,8 +562,8 @@ SAMPLE_JS = (
 )
 
 
-def sample_times(end, edges, fps, starts=(), *, drawn=()):
-    # #126 #297 #326 #411 #612 #620
+def sample_times(end, edges, fps, starts=()):
+    # #126 #297 #326 #411
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
@@ -586,18 +578,6 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
         if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
     frames = [k * step for k in range(1, int(end // step) + 1)]
-    if any(drawn):
-        lo = min(t for own in drawn for t in own)
-        hi = max(t for own in drawn for t in own)
-        frames = [t for t in frames if not lo - step / 2 < t < hi + step / 2]
-        for own in drawn:
-            gaps = list(itertools.pairwise(sorted(set(own))))
-            drawn_frame = statistics.median(b - a for a, b in gaps) if gaps else step
-            for a, b in gaps:
-                n = max(1, round(drawn_frame / step))
-                if is_dropped_gap(b - a, drawn_frame):
-                    n *= round((b - a) / drawn_frame)
-                frames += [a + (b - a) * i / n for i in range(1, n)]
     return sorted(
         exact
         + [
@@ -692,7 +672,15 @@ def add_morphs(sample):
                 "channels": {},
             }
             sample["elements"].append(el)
-        el["channels"]["d"] = [morph_at(points, t) for t in sample["times"]]
+        # #624
+        lo, hi = sample["times"][0], sample["times"][-1]
+        own = (
+            [lo]
+            + [t for t, _ in points if lo + MIN_GAP_MS <= t <= hi - MIN_GAP_MS]
+            + [hi]
+        )
+        el.setdefault("times", {})["d"] = own
+        el["channels"]["d"] = [morph_at(points, t) for t in own]
         el.setdefault("dropped", {})["d"] = dropped_frames(m["writes"])
 
 
@@ -824,9 +812,9 @@ def steps_in(r, changes, times, *, s, e):
 
 
 # #623
-def merged_steps(label, found, times):
+def merged_steps(label, found):
     out, reach = [], None
-    for way, lo, hi, _, name, i, n, before, after in sorted(found):
+    for way, lo, hi, _, name, at, before, after in sorted(found):
         if out and out[-1]["way"] == way and lo <= reach:
             out[-1]["channels"].append(name)
             reach = max(reach, hi)
@@ -835,7 +823,7 @@ def merged_steps(label, found, times):
             {
                 "element": label,
                 "way": way,
-                "at": round((times[i] + times[i + n]) / 2),
+                "at": at,
                 "from": round(before, 2),
                 "to": round(after, 2),
                 "channels": [name],
@@ -874,16 +862,29 @@ def jolt_line(ms):
     return (JOLT_BAND[-1][1] + JOLT_BAND[-1][2]) / 2
 
 
+def nearest(ts, t):
+    i = bisect.bisect_left(ts, t)
+    return min(
+        (j for j in (i - 1, i) if 0 <= j < len(ts)), key=lambda j: abs(ts[j] - t)
+    )
+
+
 def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
-    times = sample["times"]
-    gaps = len(times) - 1
-    active = [False] * gaps
+    shared = sample["times"]
+    moved = []
     elements = []
     steps = []
     for el in sample["elements"]:
         channels = {}
+        seen_at = el.get("seen") or [True] * len(shared)
         found = []
         for name, values in el["channels"].items():
+            times = el.get("times", {}).get(name, shared)
+            seen = (
+                seen_at
+                if times is shared
+                else [seen_at[nearest(shared, t)] for t in times]
+            )
             changes = deltas([numbers(name, v) for v in values])
             r = rates(changes, times, PX_NOISE if name in PX_CHANNELS else 0.0)
             peak = max(r, default=0.0)
@@ -906,36 +907,51 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                 ):
                     turns[s] = e
             channels[name] = {
+                "times": times,
+                "seen": seen,
                 "rates": r,
                 "peak": peak,
                 "moving": moving,
                 "unknown": unknown,
                 "turns": turns,
             }
-            active = [x or y for x, y in zip(active, moving, strict=True)]
+            moved += [(times[s], times[e + 1]) for s, e in runs(moving)]
             for s, e in runs(moving):
                 for i, n, before, after, way in steps_in(r, changes, times, s=s, e=e):
                     if any(unknown[i - STEP_SIDE_FRAMES : i + n + STEP_SIDE_FRAMES]):
                         continue
+                    # #624
                     found.append(
-                        (way, i - 1, i + n, len(channels), name, i, n, before, after)
+                        (
+                            way,
+                            times[i - 1],
+                            times[i + n],
+                            len(channels),
+                            name,
+                            round((times[i] + times[i + n]) / 2),
+                            before,
+                            after,
+                        )
                     )
-        steps += merged_steps(el["label"], found, times)
+        steps += merged_steps(el["label"], found)
         elements.append(
             {
                 "label": el["label"],
                 "loops": el.get("loops", False),
-                "seen": el.get("seen") or [True] * len(times),
                 "channels": channels,
             }
         )
 
     # #220
     pauses = []
-    for s, e in runs([not a for a in active]):
-        start, end = times[s], times[e + 1]
-        if s > 0 and end - start > pause_ms:
-            where = "at the end" if e == gaps - 1 else None
+    still, reach = [], shared[0]
+    for a, b in sorted(moved) + [(shared[-1], shared[-1])]:
+        if a > reach:
+            still.append((reach, a))
+        reach = max(reach, b)
+    for start, end in still:
+        if start > shared[0] and end - start > pause_ms:
+            where = "at the end" if end == shared[-1] else None
             pauses.append(
                 {
                     "start": round(start),
@@ -949,7 +965,9 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
     jump_min = jump_px(view_cm)
     for el in elements:
         for name, ch in el["channels"].items():
+            times, seen = ch["times"], ch["seen"]
             r, turns, unknown = ch["rates"], ch["turns"], ch["unknown"]
+            gaps = len(times) - 1
             in_frame = {e for s, e in turns.items() if s - e - 1 <= TURN_FRAMES}
             jolted = set()
             for s, e in runs(ch["moving"]):
@@ -989,7 +1007,7 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                         jolted.add(i)
                     if not (jolt or jump):
                         continue
-                    if not el["seen"][rest]:
+                    if not seen[rest]:
                         u = unseen.setdefault(
                             (el["label"], edge, round(t)),
                             {
@@ -1067,7 +1085,6 @@ def chart(sample, result, pause_ms):
             f'<rect x="{x(p["start"]):.1f}" y="{top - 6}" width="{x(p["end"]) - x(p["start"]):.1f}" '
             f'height="{h - top - 24}" fill="#9ca3af" fill-opacity="0.25"/>'
         )
-    mids = [(times[i] + times[i + 1]) / 2 for i in range(len(times) - 1)]
     for n, el in enumerate(els):
         y0 = top + n * (panel + gap)
         base = y0 + panel
@@ -1081,7 +1098,11 @@ def chart(sample, result, pause_ms):
             colour = PALETTE[c % len(PALETTE)]
             pts = " ".join(
                 f"{x(t):.1f},{base - panel * v / ch['peak']:.1f}"
-                for t, v in zip(mids, ch["rates"], strict=True)
+                for t, v in zip(
+                    [(a + b) / 2 for a, b in itertools.pairwise(ch["times"])],
+                    ch["rates"],
+                    strict=True,
+                )
             )
             out.append(
                 f'<polyline points="{pts}" fill="none" stroke="{colour}" stroke-width="1.5"/>'
@@ -1539,7 +1560,6 @@ def measure(at):
                 sample["edges"],
                 at.fps,
                 sample["starts"],
-                drawn=sample["drawn"],
             )
             sample["elements"] = page.evaluate(SAMPLE_JS, sample["times"])
     if not sample["anims"] and not sample["morphs"]:
