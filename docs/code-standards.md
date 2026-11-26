@@ -19,7 +19,8 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/access-pixels.py` | library: the pixel maths check-access.py measures its screenshots with (#198) |
 | `plugin/skills/design-round/scripts/access-answers.py` | library: check-access.py's questions, and how each width's findings merge into one answer per question (#214) |
 | `plugin/skills/design-round/scripts/access-keys.py` | library: check-access.py's keyboard and focus questions read from its Tab walk and from keys and mouse presses on a page of their own (#315) |
-| `plugin/skills/design-round/scripts/access-pointer.py` | library: check-access.py's --pointer question, read from pages it opens under each pointer through the browser and conditions.py it is handed (#317) |
+| `plugin/skills/design-round/scripts/access-pointer.py` | library: check-access.py's --pointer question, read from pages it opens under each pointer in the browser it is handed (#317) |
+| `plugin/skills/design-round/scripts/access-page.py` | library: the page-side prelude the access checks send before their own page code — the constants declared to the page and the helpers in CUE_JS (#641) |
 | `plugin/skills/design-round/scripts/access-boxes.py` | library: the boxes of generated `::before` and `::after` text, read from Chromium's DevTools for check-access.py's contrast question (#189) |
 | `plugin/skills/design-round/scripts/access-contrast.py` | library: check-access.py's contrast questions past text and field edges, with their table's parser (#316) |
 | `plugin/skills/design-round/scripts/text-checks.py` | library: check-text.py's checks, its table and word lists, and how each load's findings merge into one answer per record, split out so its tests call what the program calls (#314) |

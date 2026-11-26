@@ -29,6 +29,7 @@ answering = siblings.load(SCRIPTS, "access-answers.py")
 boxes = siblings.load(SCRIPTS, "access-boxes.py")
 contrasts = siblings.load(SCRIPTS, "access-contrast.py")
 keys = siblings.load(SCRIPTS, "access-keys.py")
+prelude = siblings.load(SCRIPTS, "access-page.py")
 colour_space = maths.colour_space
 with open(contrasts.TABLE) as table:
     FLOORS = contrasts.parse_table(table.read()).floors
@@ -146,6 +147,11 @@ class OneCopy(unittest.TestCase):  # #606
         self.assertIs(access.answering, answering)
         self.assertIs(access.pseudo_boxes, boxes)
         self.assertIs(access.contrasts, contrasts)
+        self.assertIs(access.prelude, prelude)  # #641
+        self.assertIs(keys.prelude, prelude)
+        self.assertIs(contrasts.prelude, prelude)
+        self.assertIs(access.pointing.prelude, prelude)
+        self.assertIs(access.pointing.answering, answering)
 
 
 class Arithmetic(unittest.TestCase):
@@ -616,7 +622,6 @@ class LateMotionRead(Browsed):
 
 class PageContrast(Browsed):
     def test_the_pages_contrast_is_colour_spaces_on_every_pair(self):
-        access = siblings.load(SCRIPTS, "check-access.py")
         greys = [[v] * 3 for v in (0, 10, 11, 0x76, 0x77, 128, 255)]
         primaries = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
         pairs = [(a, b) for a in greys + primaries for b in greys + primaries]
@@ -629,7 +634,7 @@ class PageContrast(Browsed):
         try:
             got = page.evaluate(
                 "(pairs) => {"
-                + access.page_js("return pairs.map(([a, b]) => contrast(a, b));")
+                + prelude.page_js("return pairs.map(([a, b]) => contrast(a, b));")
                 + "}",
                 pairs,
             )
@@ -682,9 +687,9 @@ class TimedChange(Browsed):
         self,
     ):
         access = siblings.load(SCRIPTS, "check-access.py")
-        long_s, rotate_s = access.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
+        long_s, rotate_s = prelude.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
         # guess, #154
-        every = access.LONG_MS + 3 * access.keys.ROTATE_MS
+        every = prelude.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
             f"carousel.html?every={every}", carousels=[".slides", "main > div"]
         )

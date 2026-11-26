@@ -307,7 +307,6 @@ class Chart(unittest.TestCase):
 def photo_answer(fixture, carousel, fresh=None):
     from playwright.sync_api import sync_playwright
 
-    access = siblings.load(SCRIPTS, "check-access.py")
     url = pathlib.Path(FIXTURES, fixture).resolve().as_uri()
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -320,7 +319,6 @@ def photo_answer(fixture, carousel, fresh=None):
 
             out, readings = contrasts.measure(
                 load(),
-                access.contrast_js,
                 TABLE,
                 parts={"carousel": carousel},
                 absent={"chart"},
