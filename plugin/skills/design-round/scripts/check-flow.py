@@ -361,7 +361,8 @@ STATUS_JS = (
 )
 
 DRAWN_JS = r"""
-const listing = (els, shown) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
+const listed = (names, shown) => names.slice(0, shown).join(', ') + (names.length > shown ? ', …' : '');
+const listing = (els, shown) => listed(els.map((e) => label(e)), shown);
 const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
 const drawn = (f, { frames, span, shown, morphs }) => {
   const reasons = [];
@@ -407,7 +408,7 @@ BLOCKERS_JS = (
   const held = paused.filter(cssPaused);
   const seeked = paused.filter((a) => !held.includes(a));
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
-  if (held.length) reasons.push('holds ' + held.length + ' animation(s) CSS animation-play-state keeps paused (' + listing(held.map((a) => a.effect.target), shown) + '), which play only once something such as a scroll or a click releases them');
+  if (held.length) reasons.push('holds ' + held.length + ' animation(s) CSS animation-play-state keeps paused (' + listed([...new Set(held.map((a) => label(a.effect.target, a.effect.pseudoElement)))].sort(), shown) + '), which play only once something such as a scroll or a click releases them');
   f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
   if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');

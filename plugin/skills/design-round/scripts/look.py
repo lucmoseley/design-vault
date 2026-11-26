@@ -21,8 +21,10 @@ USAGE
       an animation when another finishes, or after its timeline was read, is
       refused and its frames are not written.
   python3 look.py measure <url or file> --at X,Y [--width W] [--height H]
+        [--after MS]
       The part under the point (CSS px, page coordinates) on the settled page:
-      its element, box, font size and weight, and colour.
+      its element, box, font size and weight, and colour. --after waits MS in
+      place of SETTLE_MS, as zoom's does.
   python3 look.py pixels <png> --at X,Y --against X,Y
       Two pixels of a screenshot, their colours and their WCAG contrast ratio.
 
@@ -111,12 +113,13 @@ def parse(argv):
     pages["zoom"].add_argument("--clip", required=True)
     pages["zoom"].add_argument("--scale", type=int, default=4)  # guess, #501
     pages["zoom"].add_argument("--out", required=True)
-    pages["zoom"].add_argument("--after", type=int, default=SETTLE_MS)
     pages["scrub"].add_argument("--out", required=True)
     pages["scrub"].add_argument("--step", type=int, default=50)  # guess, #501
     pages["scrub"].add_argument("--until", type=int, default=2500)  # guess, #501
     pages["scrub"].add_argument("--wait")
     pages["measure"].add_argument("--at", required=True)
+    for name in ("zoom", "measure"):
+        pages[name].add_argument("--after", type=int, default=SETTLE_MS)
     px = sub.add_parser("pixels")
     px.add_argument("png")
     px.add_argument("--at", required=True)
@@ -201,7 +204,7 @@ def scrub(browser, args):
 
 def measure(browser, args):
     page = settled_page(browser, args)
-    page.wait_for_timeout(SETTLE_MS)
+    page.wait_for_timeout(args.after)
     found = page.evaluate(MEASURE_JS, args.at)
     if found is None:
         return f"nothing is drawn at {args.at[0]:g},{args.at[1]:g}"
