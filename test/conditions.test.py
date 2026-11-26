@@ -23,9 +23,7 @@ URL = pathlib.Path(FIXTURES, "conditions.html").resolve().as_uri()
 VIEWPORT = {"width": 400, "height": 300}
 
 
-SCRIPTS = os.path.join(
-    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
-)
+SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 

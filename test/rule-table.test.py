@@ -1,17 +1,8 @@
 import os
-import sys
 import re
+import sys
 import unittest
 
-SCRIPT = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "plugin",
-    "skills",
-    "design-round",
-    "scripts",
-    "rule-table.py",
-)
 SCRIPTS = os.path.join(
     os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
 )

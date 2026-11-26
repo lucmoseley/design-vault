@@ -20,9 +20,7 @@ sys.path.insert(0, HERE)
 import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
 
-SCRIPTS = os.path.join(
-    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
-)
+SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 

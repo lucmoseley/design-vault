@@ -21,7 +21,7 @@ from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-# Private: a harness, which no design-round script loads back, so siblings.load's one copy is not owed (#606).
+# #606
 def load(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)

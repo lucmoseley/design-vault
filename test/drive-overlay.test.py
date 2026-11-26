@@ -22,9 +22,7 @@ AT_LOAD = (
 )
 
 
-SCRIPTS = os.path.join(
-    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
-)
+SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
