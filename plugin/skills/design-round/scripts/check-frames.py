@@ -52,9 +52,12 @@ its first load timed, and --save keeps that timeline for --check, which names
 any start its own load put more than STAGE_JITTER_MS away (#259). Both refuse,
 naming it, a page holding what that list does not: a visible canvas, video or
 embedded document, SMIL or shadow DOM, moving or not; a script rewriting an
-element or a path's d frame by frame; or an animation the page paused itself,
-which a seek would move. One such part refuses the whole page, its listed
-animations included.
+element or a path's d frame by frame; or an animation a script paused, which
+a seek would move as the script may be seeking it by hand. One such part
+refuses the whole page, its listed animations included. An animation CSS
+animation-play-state holds paused, a reveal a scroll releases, is seeked as it
+plays from when it is first seen, so one a script seeks by hand through CSS, a
+custom property in its animation-delay, is drawn as if playing.
 
 EXITS 0 every frame matches / 1 a frame differs (each printed) / 2 the arguments
 are wrong / 3 Playwright or its browser is missing / 4 the page did not render
@@ -123,6 +126,19 @@ async ({ quiet, cap, shown, timeline }) => {
   let latest = [];
   let quietNow = false;
   const held = [];
+  // #610
+  const cssPaused = (a) => {
+    if (!(a instanceof CSSAnimation) || !a.effect || !a.effect.target) return false;
+    const { target, pseudoElement } = a.effect;
+    const style = getComputedStyle(target, pseudoElement);
+    const splitList = (v) => v.split(',').map((x) => x.trim());
+    const states = splitList(style.animationPlayState);
+    // One CSSAnimation per entry of animation-name, listed in its order.
+    const twins = target.getAnimations({ subtree: true }).filter((b) => b instanceof CSSAnimation && b.effect.target === target && b.effect.pseudoElement === pseudoElement && b.animationName === a.animationName);
+    let nth = twins.indexOf(a);
+    const entry = splitList(style.animationName).findIndex((n) => n === a.animationName && nth-- === 0);
+    return entry >= 0 && states[entry % states.length] === 'paused';
+  };
   for (;;) {
     const fresh = document.getAnimations().filter((a) => !starts.has(a));
     // An animation cancelled while it waits rejects its ready promise; it is
@@ -130,7 +146,7 @@ async ({ quiet, cap, shown, timeline }) => {
     await Promise.all(fresh.map((a) => a.ready.catch(() => null)));
     const now = document.timeline.currentTime;
     for (const a of fresh) {
-      if (a.playState === 'paused') held.push(a);
+      if (a.playState === 'paused' && !cssPaused(a)) held.push(a);
       starts.set(a, a.startTime !== null ? a.startTime : now - a.currentTime / a.playbackRate);
       a.pause();
     }
@@ -143,7 +159,7 @@ async ({ quiet, cap, shown, timeline }) => {
   const reasons = [];
   const names = (as) => [...new Set(as.map(name))].sort().slice(0, shown).join(', ');
   if (!quietNow) reasons.push('is still starting animations ' + cap + ' ms after it loaded and its fonts were ready (' + names(latest) + '), so its frames have no fixed timeline; start its motion once and let it end');
-  if (held.length) reasons.push('holds ' + held.length + ' animation(s) it paused itself (' + names(held) + '), which a seek would move as if playing');
+  if (held.length) reasons.push('holds ' + held.length + ' animation(s) a script paused (' + names(held) + '), which a seek would move as if playing');
   const anims = [...starts.keys()];
   const rows = [];
   for (const a of anims) {
