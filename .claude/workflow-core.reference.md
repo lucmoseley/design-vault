@@ -25,5 +25,5 @@ What a `.claude/workflow-core.json` key does where it is absent or wrong — whi
 
 ## Plugin provenance
 
-- url source, ref v3.2.2 (sha unknown)
+- url source, ref v3.2.2, HEAD 489a0f0a41eb8f325821db7638e97fa39c2cd981
 - the seven husky hooks run from `WFC_PLUGIN_ROOT` in both branches, so this is what the last init or upgrade installed, not what the hooks run today
