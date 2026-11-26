@@ -388,6 +388,11 @@ class Scripted(unittest.TestCase):
         self.refused(hash_page(os.path.join(FIXTURES, "raf-asset.html")), why)
 
 
+def bottom_of(record):
+    """The staggered page's #bottom entry in a saved timeline."""
+    return next(s for s in record["timeline"] if s["name"] == "div#bottom")
+
+
 class StagedBuilds(unittest.TestCase):
     """#259: a build carried on by finish events, or started in stages."""
 
@@ -455,8 +460,9 @@ class StagedBuilds(unittest.TestCase):
 
         def nudge(record):
             # Within STAGE_JITTER_MS, so read as one load's clock; off the 16.7 ms frame grid, so no load times it.
-            record["timeline"][1]["ms"] += 10
-            nudged["ms"] = record["timeline"][1]["ms"]
+            bottom = bottom_of(record)
+            bottom["ms"] += 10
+            nudged["ms"] = bottom["ms"]
 
         proc = self.check_against(nudge)
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
@@ -469,7 +475,7 @@ class StagedBuilds(unittest.TestCase):
 
     def test_check_names_a_start_the_page_moved(self):
         def moved(record):
-            record["timeline"][1]["ms"] += 300
+            bottom_of(record)["ms"] += 300
 
         proc = self.check_against(moved)
         self.assertRegex(
@@ -481,7 +487,7 @@ class StagedBuilds(unittest.TestCase):
 
     def test_check_times_a_page_whose_animations_changed_itself_and_says_so(self):
         def renamed(record):
-            record["timeline"][1]["name"] = "div#gone"
+            bottom_of(record)["name"] = "div#gone"
 
         proc = self.check_against(renamed)
         self.assertIn(
@@ -523,9 +529,30 @@ class StagedBuilds(unittest.TestCase):
             [{"name": "div#bottom", "ms": 150}, {"name": "div#top", "ms": 0}]
         )
         self.assertEqual(
-            prep["timeline"],
-            [{"name": "div#top", "ms": 0}, {"name": "div#bottom", "ms": 150}],
+            sorted((s["name"], s["ms"]) for s in prep["timeline"]),
+            [("div#bottom", 150), ("div#top", 0)],
         )
+
+    def test_two_animations_on_one_element_keep_their_starts_whichever_load_tied_them(
+        self,
+    ):
+        """#619"""
+        _, at = frames.parse(
+            ["hash", os.path.join(FIXTURES, "revealed.html"), "--out", self.dir]
+        )
+        timeline = [
+            {"name": "div#box", "ms": 0},
+            {"name": "div#twin", "ms": 0},
+            {"name": "div#twin", "ms": 50},
+        ]
+        with frames.flow.chromium() as browser:
+            context, page, _ = frames.open_page(browser, at, 1, timeline=timeline)
+            try:
+                frames.seek(page, 50)
+                shown = page.evaluate("getComputedStyle(twin).transform")
+            finally:
+                context.close()
+        self.assertEqual(shown, "matrix(1, 0, 0, 1, 0, 0)")
 
 
 class WaitingStart(unittest.TestCase):

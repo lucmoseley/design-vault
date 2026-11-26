@@ -247,7 +247,7 @@ class Jolts(unittest.TestCase):
         self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
 
     def test_a_drawn_frame_takes_the_place_of_frames_within_half_a_frame(self):
-        times = flow.sample_times(100, [12.7, 37.3], 60, drawn=[12.7, 37.3])
+        times = flow.sample_times(100, [12.7, 37.3], 60, drawn=[[12.7, 37.3]])
         self.assertEqual(
             [round(t, 1) for t in times], [0, 12.7, 37.3, 50, 66.7, 83.3, 100]
         )
@@ -1925,6 +1925,10 @@ def eased(start, ms):
     return lambda t: ease_in_out(min(1, max(0, (t - start) / ms)))
 
 
+def off_the_grid(off):
+    return [[0] + [k * STEP + off * (-1) ** k for k in range(1, 60)] + [1000]]
+
+
 def morph_measured(w, until):
     s = {
         "times": flow.sample_times(until, [], 60),
@@ -2092,22 +2096,63 @@ class MorphFlow(unittest.TestCase):
         self.assertAlmostEqual(p["start"], 400, delta=2 * STEP)
         self.assertAlmostEqual(p["end"], 800, delta=2 * STEP)
 
+    def steps_and_sample_times(self, drawn, fps, progress=None, *, given=True):
+        progress = progress or eased(0, 1000)
+        s = {
+            "times": flow.sample_times(
+                1000,
+                [t for own in drawn for t in own],
+                fps,
+                drawn=drawn if given else (),
+            ),
+            "elements": [],
+            "morphs": [
+                {"label": f"path#m{i}", "writes": writes(progress, own)}
+                for i, own in enumerate(drawn)
+            ],
+        }
+        flow.add_morphs(s)
+        return flow.analyse(s)["steps"], s["times"]
+
     def test_a_morph_drawn_4_ms_off_the_sampled_frames_has_no_step(self):  # #612
-        drawn = [0, STEP - 4, 2 * STEP + 4] + [k * STEP for k in range(3, 61)]
+        drawn = [[0, STEP - 4, 2 * STEP + 4] + [k * STEP for k in range(3, 61)]]
+        self.assertEqual(self.steps_and_sample_times(drawn, 60)[0], [])
+        self.assertTrue(self.steps_and_sample_times(drawn, 60, given=False)[0])
 
-        def steps(times):
-            s = {
-                "times": times,
-                "elements": [],
-                "morphs": [
-                    {"label": "path#arch", "writes": writes(eased(0, 1000), drawn)}
-                ],
-            }
-            flow.add_morphs(s)
-            return flow.analyse(s)["steps"]
+    def test_a_morph_drawn_4_ms_off_the_grid_has_no_step_at_each_fps(self):  # #620
+        for fps in (30, 60, 120):
+            with self.subTest(fps=fps):
+                found, times = self.steps_and_sample_times(off_the_grid(4), fps)
+                self.assertEqual(found, [])
+                gaps = [b - a for a, b in itertools.pairwise(times)]
+                self.assertLessEqual(max(gaps), 1.5 * 1000 / fps)
 
-        self.assertEqual(steps(flow.sample_times(1000, drawn, 60, drawn=drawn)), [])
-        self.assertTrue(steps(flow.sample_times(1000, drawn, 60)))
+    def test_a_morph_drawn_6_ms_off_the_grid_has_no_step_at_120_fps(self):  # #620
+        drawn = off_the_grid(6)
+        found, times = self.steps_and_sample_times(drawn, 120)
+        self.assertEqual(found, [])
+        self.assertGreater(len(times), 1.5 * len(drawn[0]))
+
+    def test_a_step_in_a_morph_drawn_off_the_grid_is_still_found(self):  # #620
+        def doubles(t):
+            return min(1, t / 1500 if t < 500 else 1 / 3 + (t - 500) / 750)
+
+        for fps, off in ((30, 4), (60, 4), (120, 4), (120, 6)):
+            with self.subTest(fps=fps, off=off):
+                found, _ = self.steps_and_sample_times(off_the_grid(off), fps, doubles)
+                self.assertEqual([round(st["at"] / STEP) for st in found], [30])
+
+    def test_two_morphs_out_of_phase_leave_sampling_at_the_fps(self):  # #620
+        drawn = [[k * STEP for k in range(61)], [3 + k * STEP for k in range(60)]]
+        _, times = self.steps_and_sample_times(drawn, 120)
+        self.assertLessEqual(
+            max(b - a for a, b in itertools.pairwise(times)), 1000 / 120
+        )
+
+    def test_frames_a_morph_dropped_are_still_sampled_at_the_fps(self):  # #620
+        drawn = [k * STEP for k in range(7)] + [12 * STEP, 13 * STEP]
+        times = flow.sample_times(13 * STEP, drawn, 60, drawn=[drawn])
+        self.assertEqual(len([t for t in times if 6 * STEP < t < 12 * STEP]), 5)
 
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {
