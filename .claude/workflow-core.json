@@ -46,11 +46,6 @@
 	"stepsOwed": [
 		{
 			"tag": "v1.3.16",
-			"type": "act",
-			"text": "Clear the uncited swallows already in your tree (workflow-core#1830). Paste this into a session in your repo: \"Run `node <plugin root>/scripts/check-swallowed-errors.js --all`. For each `except` it lists, decide whether swallowing is the design. Where it is, write a comment at the site saying why and citing the ticket that chose it, filing one if none exists; where the drop reaches a person reading the output, also print it (base §N5). Where it is not, let the error raise or exit non-zero. Re-run until it prints OK, then commit.\""
-		},
-		{
-			"tag": "v1.3.16",
 			"type": "choice",
 			"text": "Turn the mutation hold on only where every `sensitivePaths` glob you declare is code your vitest tests import in process, not code they spawn as a child (workflow-core#1871, workflow-core#1912). Then, in this order: install both packages at the version the hold is verified against, `npm install --save-dev @stryker-mutator/core@10.0.0 @stryker-mutator/vitest-runner@10.0.0`; seed the cache with one cold run over the declared paths at HEAD, `node scripts/lib/resolve-core.js scripts/mutation-hold-gate.js --seed`; and add `\"mutation\"` to `modules` in `.claude/workflow-core.json`.",
 			"declined": true

@@ -1062,6 +1062,14 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/held-reveal-toggle.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/flow/held-reveal.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/keyframe-hold.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"

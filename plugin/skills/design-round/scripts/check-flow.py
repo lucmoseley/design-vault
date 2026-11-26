@@ -58,9 +58,10 @@ no jolt, jump or step rests on it. A page that also moves another way gets no li
 because an empty one would read as a pass. It says it cannot measure, and names
 why: a canvas, a video, an embedded document, SVG SMIL, shadow DOM, a
 scroll-driven timeline, an animation played in reverse or seeked by hand from a
-script, an element other than a path's `d` that a script rewrites frame by
-frame, a morph that scrolling drives, whose command structure changes or whose
-frame loop never stops, or animations that start when the page is scrolled or
+script, one CSS animation-play-state holds paused, an element other than a
+path's `d` that a script rewrites frame by frame, a morph that scrolling
+drives, whose command structure changes or whose frame loop never stops, or
+animations that start, or are released, when the page is scrolled, or
 keep starting. An animated GIF is not detected.
 
 Time zero is the page's first frame.
@@ -340,6 +341,13 @@ COLLECTOR_JS = r"""
     return raf((t) => { try { return cb(t); } finally { state.scan(t); } });
   };
   state.raf = raf;
+  state.neverStarted = () => [...seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused').map(([a]) => a);
+  state.markSweep = () => {
+    state.scan();
+    state.sweptFrom = performance.now();
+    state.pausedAtSweep = state.neverStarted();
+    return seen.size;
+  };
   // `ended` is set once an animation reaches its end, so one the page then
   // cancels, as on animationend, is still known to have run its course (#368).
   const keep = (a) => {
@@ -445,6 +453,21 @@ const label = (el, pseudo) => {
 };
 """
 
+# #610
+CSS_PAUSED_JS = r"""
+const cssPaused = (a) => {
+  if (!(a instanceof CSSAnimation) || !a.effect || !a.effect.target) return false;
+  const { target, pseudoElement } = a.effect;
+  const style = getComputedStyle(target, pseudoElement);
+  const splitList = (v) => v.split(',').map((x) => x.trim());
+  const states = splitList(style.animationPlayState);
+  const twins = target.getAnimations({ subtree: true }).filter((b) => b instanceof CSSAnimation && b.effect.target === target && b.effect.pseudoElement === pseudoElement && b.animationName === a.animationName);
+  let nth = twins.indexOf(a);
+  const entry = splitList(style.animationName).findIndex((n) => n === a.animationName && nth-- === 0);
+  return entry >= 0 && states[entry % states.length] === 'paused';
+};
+"""
+
 # Whether a rewrite log shows a script moving its element frame by frame.
 LOOP_JS = r"""
 const loop = (log, frames, span) => log.some((w, i) => {
@@ -520,6 +543,7 @@ BLOCKERS_JS = (
     + LABEL_JS
     + LOOP_JS
     + DRAWN_JS
+    + CSS_PAUSED_JS
     + r"""
   const f = window.__flow;
   f.scan();
@@ -529,12 +553,16 @@ BLOCKERS_JS = (
   if (scrolled.length) reasons.push('drives ' + scrolled.length + ' animation(s) by scroll position, not time');
   const reversed = [...f.seen.keys()].filter((a) => a.playbackRate <= 0);
   if (reversed.length) reasons.push('plays ' + reversed.length + ' animation(s) in reverse or at zero speed');
-  const seeked = [...f.seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused');
+  const paused = f.neverStarted();
+  const held = paused.filter(cssPaused);
+  const seeked = paused.filter((a) => !held.includes(a));
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
+  if (held.length) reasons.push('holds ' + held.length + ' animation(s) CSS animation-play-state keeps paused (' + listing(held.map((a) => a.effect.target), shown) + '), which play only once something such as a scroll or a click releases them');
   f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
   if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
-  if (before !== null && f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
+  const started = before === null ? 0 : f.seen.size - before + f.pausedAtSweep.filter((a) => a.playState !== 'paused' || f.seen.get(a).start !== null).length;
+  if (started) reasons.push('starts ' + started + ' animation(s) when the page is scrolled');
   return reasons;
 }
 """
@@ -568,15 +596,17 @@ PREPARE_JS = (
   let first = Infinity;
   const edges = [];
   const starts = [];
+  const drawn = [];
   for (const m of morphs) {
     const w0 = m.writes[0];
     first = Math.min(first, (w0.prevFrameAt === null ? w0.frameAt : w0.prevFrameAt) - t0);
     for (const w of m.writes) {
-      edges.push(w.frameAt - t0);
-      if (w.prevFrameAt !== null) edges.push(w.prevFrameAt - t0);
+      drawn.push(w.frameAt - t0);
+      if (w.prevFrameAt !== null) drawn.push(w.prevFrameAt - t0);
     }
     end = Math.max(end, m.writes[m.writes.length - 1].frameAt - t0);
   }
+  edges.push(...drawn);
   for (const x of anims) {
     x.a.pause();
     const t = x.a.effect.getComputedTiming();
@@ -630,7 +660,7 @@ PREPARE_JS = (
   }
   f.sampling = { anims, elements };
   const rel = (t) => (t === null ? null : t - t0);
-  return { anims: anims.length, first, length, infinite, end, edges, starts, morphs: morphs.map((m) => ({
+  return { anims: anims.length, first, length, infinite, end, edges, starts, drawn, morphs: morphs.map((m) => ({
     label: label(m.el), writes: m.writes.map((w) => ({ ms: rel(w.frameAt), prev_ms: rel(w.prevFrameAt), old: w.old, value: w.value })),
   })) };
 }
@@ -706,7 +736,7 @@ SAMPLE_JS = (
 )
 
 
-def sample_times(end, edges, fps, starts=()):
+def sample_times(end, edges, fps, starts=(), *, drawn=()):
     """Every frame, plus each animation's exact start, end and keyframes: a move
     that began mid-frame would otherwise show a part-speed first frame and hide
     its jolt. An exact time within 1 ms of a frame takes that frame's place, as
@@ -722,17 +752,19 @@ def sample_times(end, edges, fps, starts=()):
     inside that frame still cuts it, another element's move from rest inside it
     gets a first frame in the wrong phase, and a move from rest at a later
     keyframe or pass keeps the sampled frames' phase.
+    Each of `drawn`, a frame the browser drew a morph in, takes the place of
+    every frame within half a frame of it.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
     spans = []
     for start, moves_at in starts:
-        drawn = start + (math.floor((moves_at - start) / step) + 1) * step
-        if drawn - moves_at < MIN_GAP_MS:
-            drawn += step
-        if 0 <= moves_at and drawn < end:
-            spans.append((moves_at, drawn))
+        moving = start + (math.floor((moves_at - start) / step) + 1) * step
+        if moving - moves_at < MIN_GAP_MS:
+            moving += step
+        if 0 <= moves_at and moving < end:
+            spans.append((moves_at, moving))
     for e in sorted(edges) + [b for _, b in spans]:
         if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
@@ -744,6 +776,8 @@ def sample_times(end, edges, fps, starts=()):
             for t in frames
             if all(abs(t - x) >= MIN_GAP_MS for x in exact)
             and not any(a < t < b for a, b in spans)
+            # #612
+            and all(abs(t - d) >= step / 2 for d in drawn)
         ]
     )
 
@@ -976,14 +1010,17 @@ def steps_in(r, changes, times, *, s, e):
             "up" if up else "down",
         )
 
+    def first(tries):
+        return next(filter(None, (step_at(i, n) for i, n in tries)), None)
+
     out = []
     i = s + k
     while i < e:
-        found = next(filter(None, (step_at(i, n) for n in range(STEP_SPREAD))), None)
-        # A frame between that reads the slower speed but for float noise, as
-        # one ending on the keyframe does, would put the step a frame early
-        # (#126). One between that reads the faster speed still does.
-        while found and found[1] and (later := step_at(found[0] + 1, found[1] - 1)):
+        found = first((i, n) for n in range(STEP_SPREAD))
+        # #126, #612
+        while found and (
+            later := first((found[0] + j, found[1] - j) for j in range(1, found[1] + 1))
+        ):
             found = later
         out += [found] if found else []
         i = found[0] + found[1] + 1 if found else i + 1
@@ -1773,9 +1810,7 @@ def measure(at):
             looped = settle(page, at)["looped"]
             before = None
             if not looped:
-                before = page.evaluate(
-                    "() => { const f = window.__flow; f.scan(); f.sweptFrom = performance.now(); return f.seen.size; }"
-                )
+                before = page.evaluate("() => window.__flow.markSweep()")
                 sweep(page)
             reasons = page.evaluate(
                 BLOCKERS_JS,
@@ -1796,7 +1831,11 @@ def measure(at):
             page.close()
         if sample["anims"] or sample["morphs"]:
             sample["times"] = sample_times(
-                sample["end"], sample["edges"], at.fps, sample["starts"]
+                sample["end"],
+                sample["edges"],
+                at.fps,
+                sample["starts"],
+                drawn=sample["drawn"],
             )
             sample["elements"] = page.evaluate(SAMPLE_JS, sample["times"])
     if not sample["anims"] and not sample["morphs"]:

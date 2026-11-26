@@ -6,7 +6,8 @@
 <!-- vault.pause (#545): three slides a setInterval changes every 3 s forever, and no control on the page.
      ?route= picks how a slide changes: class (the default, a class swap fading by a short CSS transition),
      text (the slide's text rewritten), hidden (the hidden attribute moved) or scroll (a scroller stepped);
-     ?every= sets the interval in ms; ?pause adds a Pause button that stops it. -->
+     ?every= sets the interval in ms; ?pause adds a Pause button that stops it,
+     ?pause=restart one that sets it going again from the start. -->
 <style>
   body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
   main { padding: 16px }
@@ -41,11 +42,15 @@
     hidden: () => { slides[at].hidden = true; at = (at + 1) % 3; slides[at].hidden = false; },
     scroll: () => { at = (at + 1) % 3; box.scrollLeft = at * 300; },
   }[route];
-  const turning = setInterval(turn, Number(query.get('every')) || 3000);
+  const every = Number(query.get('every')) || 3000;
+  let turning = setInterval(turn, every);
   if (query.has('pause')) {
     const pause = document.createElement('button');
     pause.textContent = 'Pause';
-    pause.addEventListener('click', () => clearInterval(turning));
+    pause.addEventListener('click', () => {
+      clearInterval(turning);
+      if (query.get('pause') === 'restart') turning = setInterval(turn, every);
+    });
     document.querySelector('main').append(pause);
   }
 </script>
