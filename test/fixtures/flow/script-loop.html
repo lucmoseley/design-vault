@@ -1,18 +1,17 @@
 <!doctype html>
-<!-- WAAPI motion beside a box a requestAnimationFrame loop moves for 500 ms
-     (design-vault#60). -->
+<!-- WAAPI motion beside a box a requestAnimationFrame loop moves over 30 frames,
+     500 ms at 60 fps (design-vault#60). -->
 <html><body>
 <div id="waapi" style="width:40px;height:40px;background:#333"></div>
 <div id="loop" style="width:40px;height:40px;background:#333"></div>
 <script>
 document.getElementById("waapi").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
 const loop = document.getElementById("loop");
-let first = null;
-requestAnimationFrame(function tick(now) {
-  if (first === null) first = now;
-  const t = Math.min(1, (now - first) / 500);
-  loop.style.transform = `translateX(${300 * t}px)`;
-  if (t < 1) requestAnimationFrame(tick);
+const FRAMES = 30;
+let frame = 0;
+requestAnimationFrame(function tick() {
+  loop.style.transform = `translateX(${300 * frame / FRAMES}px)`;
+  if (frame++ < FRAMES) requestAnimationFrame(tick);
 });
 </script>
 </body></html>
