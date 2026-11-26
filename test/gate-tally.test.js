@@ -1,6 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const { gateScratch, refusedWithout, runGate: run } = require("./gate-files.js");
+const { STORE } = require("./rule-store.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const { test } = require("node:test");
@@ -133,18 +134,17 @@ test("a script's cannot measure is tallied from the look critics", () => {
 });
 
 test("check-frames.py's exit 6 sends the vault gate's end-frame and drafts-kept to the gate critics, who answer them (#613)", () => {
-  const rules = path.join(__dirname, "..", "plugin", "skills", "design-critique", "rules");
   const args = ["--asset", "motion", "--fact", "has-motion", "--fact", "has-brand-motion"];
   const ids = (out, head) => [...out.slice(out.indexOf(head)).split("\n\n")[1].matchAll(/^\d+\. (\S+?)[ :]/gm)].map((m) => m[1]);
   const unmeasured = ["vault.end-frame", "vault.drafts-kept"];
-  const scripted = ids(run("list", ...args, rules).out, "Script and code questions");
+  const scripted = ids(run("list", ...args, STORE).out, "Script and code questions");
   assert.ok(unmeasured.every((id) => scripted.includes(id)), scripted.join(", "));
   const exit6 = { answer: "cannot measure", evidence: "v1-build/frames/out.txt, exit 6: a visible canvas" };
   const answered = writeText(
     "frames-answered.json",
     JSON.stringify({ answers: { "v1-build": Object.fromEntries(scripted.map((id) => [id, unmeasured.includes(id) ? exit6 : said("pass")])) } }),
   );
-  const listed = run("list", ...args, "--look", "--answered", answered, rules);
+  const listed = run("list", ...args, "--look", "--answered", answered, STORE);
   assert.equal(listed.status, 0, listed.out + listed.err);
   for (const id of unmeasured) assert.match(listed.out, new RegExp(`^\\d+\\. ${id.replace(".", "\\.")} \\(script cannot measure it for v1-build\\):`, "m"));
   const looked = ids(listed.out, "Look questions");
@@ -153,7 +153,7 @@ test("check-frames.py's exit 6 sends the vault gate's end-frame and drafts-kept 
       `frames-critic-${n}.json`,
       JSON.stringify({ answers: { "v1-build": Object.fromEntries(looked.map((id) => [id, said(id === "vault.end-frame" ? "No" : "Yes")])) }, clashes: [] }),
     );
-  const r = run("tally", ...args, "--answered", answered, ...[1, 2, 3].flatMap((n) => ["--critic", critic(n)]), rules);
+  const r = run("tally", ...args, "--answered", answered, ...[1, 2, 3].flatMap((n) => ["--critic", critic(n)]), STORE);
   assert.equal(r.status, 0, r.out + r.err);
   const v = parseVerdicts(r.out)["v1-build"];
   assert.deepEqual(v["vault.end-frame"], { by: "script cannot measure it, so look", verdict: "fault" });

@@ -1496,6 +1496,14 @@ class Refused(unittest.TestCase):
         )
         self.assertNotIn("seeks by hand", proc.stdout)
 
+    def test_a_reveal_css_holds_paused_names_each_held_element_once_and_its_pseudo_element_apart(
+        self,
+    ):  # #615
+        self.refuses(
+            "held-pair.html",
+            "holds 3 animation(s) CSS animation-play-state keeps paused (div#pair, div#pair::before)",
+        )
+
     def test_a_timer_due_past_the_timeout(self):
         self.refuses("long-timer.html", "past --timeout", "--timeout", "3000")
 
