@@ -1639,7 +1639,8 @@ def pause_answer(context, url, carousels, spans):
         "while the page still ran a timer, so a slower rotation cannot be ruled out"
         for subject, _, _ in stilled
     ]
-    return found, unmeasured
+    # Sorted, as the order things first changed in is the machine's timing (#603).
+    return found, sorted(unmeasured)
 
 
 def judge(got, shots, measured, table):
