@@ -14,9 +14,10 @@ const { plan, planSides } = require("./select-suites.js");
 const SCRIPTS = "plugin/skills/design-round/scripts";
 const allSh = (args, { cwd, env } = {}) => spawnSync("bash", [path.join(cwd ?? ROOT, "test", "all.sh"), ...args],
   { cwd, encoding: "utf8", env: { ...HAND_ENV, ...env } });
+const runsOf = (text) => text.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
 
 const byHand = allSh(["--plan"]);
-const SUITES = byHand.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+const SUITES = runsOf(byHand.stdout);
 const PYTHON = SUITES.filter((s) => s.startsWith("python3 "));
 const NODE = SUITES.find((s) => s.startsWith("node "));
 const ran = (staged) => {
@@ -30,7 +31,7 @@ test("the lander's --shard=k/n runs each suite in exactly one shard, every nth o
   const shardOf = (k, n) => {
     const r = allSh(["--plan", `--shard=${k}/${n}`]);
     assert.equal(r.status, 0, r.stderr);
-    return r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+    return runsOf(r.stdout);
   };
   const n = JSON.parse(fs.readFileSync(path.join(ROOT, ".claude", "workflow-core.json"), "utf8")).fullTestShards;
   const shards = Array.from({ length: n }, (_, i) => shardOf(i + 1, n));
@@ -178,7 +179,12 @@ git(["-c", "core.hooksPath=/dev/null", "add", "-A"]);
 git(["-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "base"]);
 git(["config", "core.hooksPath", hooks]);
 const touch = (rel) => fs.appendFileSync(path.join(repo, rel), "\n# touched\n");
-const planRuns = () => fs.readFileSync(planOut, "utf8").split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+const planRuns = () => runsOf(fs.readFileSync(planOut, "utf8"));
+const planIn = (env) => {
+  const r = allSh(["--plan"], { cwd: repo, env });
+  assert.equal(r.status, 0, r.stderr);
+  return { runs: runsOf(r.stdout), out: r.stdout };
+};
 
 test("a script a followed directory holds, named by no suite, still runs every suite (#382)", () => {
   const unnamed = `${SCRIPTS}/unnamed-by-any-suite.py`;
@@ -214,11 +220,6 @@ test("a plain commit is judged on the shared index, and VAULT_ALL_SUITES=1 runs 
 });
 
 test("in workflow-core's gate, which drops GIT_INDEX_FILE and sets WFC_GATE_SEAT, staged files choose; by hand they do not (#457)", () => {
-  const planIn = (env) => {
-    const r = allSh(["--plan"], { cwd: repo, env });
-    assert.equal(r.status, 0, r.stderr);
-    return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
-  };
   assert.equal(git(["diff", "--cached", "--name-only"]), "");
   const gate = { WFC_GATE_SEAT: path.join(scratch, "seat.json") };
   assert.deepEqual(planIn(gate).runs, FAST);
@@ -279,11 +280,6 @@ test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate
   const main = git(["rev-parse", "main"]).trim();
   git(["checkout", "-q", "branch"]);
   git(["merge", "-q", "--no-commit", "--no-ff", "main"]);
-  const planIn = (env) => {
-    const r = allSh(["--plan"], { cwd: repo, env });
-    assert.equal(r.status, 0, r.stderr);
-    return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
-  };
   const seat = { WFC_GATE_SEAT: path.join(scratch, "seat.json") };
   try {
     assert.deepEqual(planIn({ ...seat, WFC_MERGE_PARENTS: main }).runs, SHEET);
