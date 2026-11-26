@@ -13,7 +13,6 @@ that scrolljacks, strobes or replays its parallax passes, or a clean one fails.
 
 import concurrent.futures
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -28,28 +27,19 @@ HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
 import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
-RECORDS = os.path.join(
-    HERE, "..", "plugin", "skills", "design-round", "scripts", "motion-records.py"
-)
 FLOW = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-)
-ACCESS = os.path.join(
-    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
 LATE_INPUT = os.path.join(HERE, "late-input.py")
 
 
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+SCRIPTS = os.path.dirname(FLOW)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-records = load("motion_records", RECORDS)
-flow = load("check_flow", FLOW)
+records = siblings.load(SCRIPTS, "motion-records.py")
+flow = siblings.load(SCRIPTS, "check-flow.py")
 with open(flow.TABLE, encoding="utf8") as fh:
     LINES = records.parse_table(fh.read())
 V = {line.mode: line.value for line in LINES}
@@ -771,7 +761,7 @@ class Pages(unittest.TestCase):
 
 class Pause(unittest.TestCase):
     def test_check_access_answers_the_pause_plant(self):
-        access = load("check_access", ACCESS)
+        access = siblings.load(SCRIPTS, "check-access.py")
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as play:

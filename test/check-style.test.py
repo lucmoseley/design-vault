@@ -12,7 +12,6 @@ and nothing may fail or go unjudged there.
 
 import collections
 import concurrent.futures
-import importlib.util
 import json
 import os
 import re
@@ -58,14 +57,11 @@ UNMET = {
 }
 
 
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-style = load("check_style", SCRIPT)
+style = siblings.load(SCRIPTS, "check-style.py")
 RAN = {}
 WORK = []
 

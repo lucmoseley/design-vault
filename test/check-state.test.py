@@ -8,7 +8,6 @@ no static read of a page reaches the states only a visitor drives it into.
 
 import concurrent.futures
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -29,14 +28,11 @@ SCRIPT = os.path.join(
 )
 
 
-def library(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-state = library("check_state", SCRIPT)
+state = siblings.load(SCRIPTS, "check-state.py")
 FIXTURES = pathlib.Path(HERE, "fixtures", "state").resolve()
 FAULT = FIXTURES / "tier01-fault.html"
 CLEAN = FIXTURES / "tier01-clean.html"

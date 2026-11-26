@@ -1939,6 +1939,7 @@ class RendererDeath(unittest.TestCase):
                 f"class BrowserContext:\n    def {method}(self):\n"
                 "        raise RuntimeError('Target page, context or browser has been closed')\n"
             )
+        # Private: a stub written above, which no design-round script loads back (#606).
         spec = importlib.util.spec_from_file_location("api", path)
         api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(api)

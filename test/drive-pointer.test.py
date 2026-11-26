@@ -6,7 +6,6 @@ fixture page, since what it pins is what the browser does under a real mouse.
 """
 
 import contextlib
-import importlib.util
 import os
 import pathlib
 import sys
@@ -19,25 +18,14 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 PAGE = pathlib.Path(HERE, "fixtures", "drivers", "pointer.html").resolve().as_uri()
 
 
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = load(
-    "check_flow",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-    ),
+SCRIPTS = os.path.join(
+    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
 )
-pointer = load(
-    "drive_pointer",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-pointer.py"
-    ),
-)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+flow = siblings.load(SCRIPTS, "check-flow.py")
+pointer = siblings.load(SCRIPTS, "drive-pointer.py")
 OPEN = contextlib.ExitStack()
 BROWSER = None
 

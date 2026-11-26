@@ -1,5 +1,5 @@
-import importlib.util
 import os
+import sys
 import re
 import unittest
 
@@ -12,9 +12,13 @@ SCRIPT = os.path.join(
     "scripts",
     "rule-table.py",
 )
-_spec = importlib.util.spec_from_file_location("rule_table", SCRIPT)
-rule_table = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(rule_table)
+SCRIPTS = os.path.join(
+    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
+)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+rule_table = siblings.load(SCRIPTS, "rule-table.py")
 
 CHECKS = {"order": None, "ways": r">=\s*(\d+)"}
 

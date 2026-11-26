@@ -9,7 +9,6 @@ candidate on no evidence.
 """
 
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -32,9 +31,11 @@ TABLE_FILE = os.path.join(
 AXE_FILE = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "vendor", "axe-core", "axe.min.js"
 )
-spec = importlib.util.spec_from_file_location("check_markup", SCRIPT)
-markup = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(markup)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+markup = siblings.load(SCRIPTS, "check-markup.py")
 
 FIXTURES = pathlib.Path(HERE, "fixtures", "markup").resolve()
 FAULT = FIXTURES / "tier01-fault.html"
