@@ -722,6 +722,44 @@ class TimedChange(Browsed):
         self.assertGreaterEqual(start2, end1 - 0.1)
         self.assertGreater(end2, start2)
 
+    UNSEEN = (
+        "the page still ran a timer that did not run in the 6 s watched past 5 s from its load, and {}, "
+        "so a slower change cannot be ruled out"
+    )
+
+    def test_an_undeclared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_timer(
+        self,
+    ):
+        self.assertEqual(
+            self.pause_answer("carousel.html?every=12000"),
+            (
+                [],
+                [
+                    self.UNSEEN.format(
+                        "no control on the page is named for pausing, stopping or hiding it"
+                    )
+                ],
+            ),
+        )
+
+    def test_a_timeout_set_for_longer_than_the_watch_cannot_be_measured(self):
+        self.assertEqual(
+            self.pause_answer("entrance.html?later=30000"),
+            (
+                [],
+                [
+                    self.UNSEEN.format(
+                        "no control on the page is named for pausing, stopping or hiding it"
+                    )
+                ],
+            ),
+        )
+
+    def test_an_undeclared_carousel_slower_than_the_watch_passes_where_a_pause_button_clears_its_timer(
+        self,
+    ):
+        self.assertEqual(self.pause_answer("carousel.html?every=12000&pause"), ([], []))
+
     def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self):
         for carousels in ([".slides"], []):
             with self.subTest(carousels=carousels):
@@ -731,7 +769,9 @@ class TimedChange(Browsed):
                 )
 
     def test_an_entrance_that_ends_within_5_s_beside_a_running_interval_passes(self):
-        self.assertEqual(self.pause_answer("entrance.html"), ([], []))
+        for query in ("", "?chain"):
+            with self.subTest(query=query):
+                self.assertEqual(self.pause_answer(f"entrance.html{query}"), ([], []))
 
     def test_vault_pause_holds_a_declared_carousel_for_the_span_vault_carousel_focus_timed(
         self,

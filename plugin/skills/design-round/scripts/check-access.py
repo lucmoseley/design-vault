@@ -161,7 +161,10 @@ check-layout.py does, and measures each question at both:
   holds it still for its slide's span as vault.carousel-focus timed it, or
   ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
   still through that watch while the page still runs an interval or holds
-  a pending timeout cannot be measured, as it may turn more slowly. Outside
+  a pending timeout cannot be measured, as it may turn more slowly. Where
+  none does, nor can a page that still runs an interval which did not fire
+  in that ROTATE_MS watch, or holds a pending timeout set for longer than
+  ROTATE_MS, unless such a control, clicked, clears it (#611). Outside
   a declared carousel, where in that window a script changes an attribute,
   past the caret style a screenshot writes, adds or removes nodes, changes
   text or scrolls a box, or an animation or transition starts, the changed
@@ -169,7 +172,8 @@ check-layout.py does, and measures each question at both:
   ROTATE_MS and STILL_SLACK_MS. An entrance that ends within 5 s is no such
   change, and one is watched for only where a carousel is declared or the
   page, at the read, still runs an interval, holds a pending timeout or
-  asks for frames; an undeclared one slower than ROTATE_MS is not seen.
+  asks for frames; an undeclared one slower than ROTATE_MS is seen only by
+  its timer.
   A long animation that ends before the check could try a control, or while
   it tries them, an element a script moves frame by frame, and a canvas,
   image or SVG whose pixels change across WATCH_MS without an animation the
@@ -1091,9 +1095,20 @@ ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
 # Run before any page script, as a timer or change made at load is missed after.
 TIMERS_JS = r"""
 (() => {
-  const live = new Set(), set = window.setInterval, clear = window.clearInterval;
-  window.setInterval = function (...a) { const id = set.apply(this, a); live.add(id); return id; };
+  const live = new Set(), ran = new Map(), set = window.setInterval, clear = window.clearInterval;
+  window.setInterval = function (fn, ...a) {
+    const id = set.call(this, function (...b) {
+      ran.set(id, performance.now());
+      return typeof fn === 'function' ? fn.apply(this, b) : (0, eval)(String(fn));
+    }, ...a);
+    live.add(id);
+    return id;
+  };
   window.clearInterval = function (id) { live.delete(id); return clear.call(this, id); };
+  // Each timeout's wait, and those cleared, so one too slow to have run in the watch is known (#611).
+  const waits = new Map(), cleared = new Set(), setT = window.setTimeout, clearT = window.clearTimeout;
+  window.setTimeout = function (fn, ms, ...a) { const id = setT.call(this, fn, ms, ...a); waits.set(id, Number(ms) || 0); return id; };
+  window.clearTimeout = function (id) { cleared.add(id); return clearT.call(this, id); };
   const changed = new Map();
   const note = (el) => {
     if (!el || el.nodeType !== 1) return;
@@ -1110,7 +1125,7 @@ TIMERS_JS = r"""
     }
   }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   addEventListener('scroll', (e) => note(e.target), true);
-  window.__timers = { live, changed };
+  window.__timers = { live, ran, waits, cleared, changed };
 })();
 """
 
@@ -1122,6 +1137,23 @@ TIMED_JS = r"""
 """
 
 LIVE_JS = "() => window.__timers.live.size > 0 || window.__flow.pending.size > 0"
+
+# The timers the watch from `since` never saw run (#611): each interval that has
+# not fired since, and each pending timeout whose wait is longer than `watch`.
+UNSEEN_JS = r"""
+([since, watch]) => {
+  const t = window.__timers;
+  return {
+    intervals: [...t.live].filter((id) => !(t.ran.get(id) >= since)),
+    timeouts: [...window.__flow.pending.keys()].filter((id) => !(t.waits.get(id) <= watch)),
+  };
+}
+"""
+
+# Whether any of `unseen` still runs: an interval not cleared, or a timeout not.
+UNSEEN_LIVE_JS = r"""
+({ intervals, timeouts }) => intervals.some((id) => window.__timers.live.has(id)) || timeouts.some((id) => !window.__timers.cleared.has(id))
+"""
 
 CHANGED_JS = r"""
 const changedSince = (since) => {
@@ -1547,7 +1579,7 @@ def pause_answer(context, url, carousels, spans):
         c = el.evaluate(page_js(CAROUSEL_JS))
         if c["on"]:
             declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
-    turning, stilled, others = [], [], []
+    turning, stilled, others, unseen = [], [], [], None
     if page.evaluate(page_js(TIMED_JS), len(carousels)):
         page.wait_for_timeout(
             max(0, LONG_MS - page.evaluate("() => performance.now()"))
@@ -1565,12 +1597,17 @@ def pause_answer(context, url, carousels, spans):
         others = page.evaluate(page_js(ROTATION_JS), [list(carousels), since])
         if not page.evaluate(LIVE_JS):
             stilled = []
+        if not stilled:
+            timers = page.evaluate(UNSEEN_JS, [since, keys.ROTATE_MS])
+            if timers["intervals"] or timers["timeouts"]:
+                unseen = timers
     stopped, held, held_others, unclickable = set(), set(), set(), 0
     for i in range(got["pauses"]):
         if (
             len(stopped) == len(got["long"])
             and len(held) == len(turning)
             and len(held_others) == len(others)
+            and unseen is None
         ):
             break
         # Covered, moving or detached: a visitor could not click it either,
@@ -1601,6 +1638,8 @@ def pause_answer(context, url, carousels, spans):
             page.wait_for_timeout(hold_ms(None))
             moved = page.evaluate(page_js(ROTATED_JS), since)
             held_others.update(set(range(len(others))) - set(moved))
+        if unseen is not None and not page.evaluate(UNSEEN_LIVE_JS, unseen):
+            unseen = None
     ended = set(page.evaluate(ENDED_JS)) - stopped
     page.close()
     tried = (
@@ -1642,6 +1681,11 @@ def pause_answer(context, url, carousels, spans):
         "while the page still ran a timer, so a slower rotation cannot be ruled out"
         for subject, start, end in stilled
     ]
+    if unseen is not None:
+        unmeasured.append(
+            f"the page still ran a timer that did not run in the {keys.ROTATE_MS / 1000:g} s watched "
+            f"past {LONG_MS / 1000:g} s from its load, and {tried}, so a slower change cannot be ruled out"
+        )
     # #603
     return found, sorted(unmeasured)
 
