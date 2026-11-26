@@ -6,7 +6,6 @@ screen than the packet's shots (#169's 720 against 900); break measure or
 pixels and it settles on a wrong number.
 """
 
-import importlib.util
 import os
 import re
 import subprocess
@@ -38,9 +37,11 @@ STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
-spec = importlib.util.spec_from_file_location("look", SCRIPT)
-look = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(look)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+look = siblings.load(SCRIPTS, "look.py")
 
 
 def run(*args):

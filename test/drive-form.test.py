@@ -8,7 +8,6 @@ checks (#312) and the cross-page probe (#306) then judge the wrong state.
 
 import contextlib
 import http.server
-import importlib.util
 import os
 import pathlib
 import sys
@@ -21,25 +20,18 @@ sys.path.insert(0, HERE)
 import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
 
-def library(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-driver = library(
-    "drive_form",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-form.py"
-    ),
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
 )
-flow = library(
-    "check_flow",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-    ),
+DRIVER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-form.py"
 )
+SCRIPTS = os.path.dirname(FLOW)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+driver = siblings.load(SCRIPTS, os.path.basename(DRIVER))
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 PAGE_FILE = pathlib.Path(HERE, "fixtures", "drivers", "form.html").resolve()
 PAGE = PAGE_FILE.as_uri()
 OPEN = contextlib.ExitStack()

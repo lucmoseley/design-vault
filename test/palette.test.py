@@ -8,7 +8,6 @@ and a project's rules file records a near-miss of the client's logo colour as fi
 on as one it can, and the client-fit gate's colour question passes a candidate that recolours the client's grey.
 """
 
-import importlib.util
 import os
 import subprocess
 import sys
@@ -17,11 +16,8 @@ import unittest
 HERE = os.path.dirname(__file__)
 SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-project", "scripts")
 SCRIPT = os.path.join(SCRIPTS, "palette.py")
-spec = importlib.util.spec_from_file_location(
-    "colour_space", os.path.join(SCRIPTS, "colour_space.py")
-)
-colour_space = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(colour_space)
+sys.path.insert(0, SCRIPTS)
+import colour_space  # noqa: E402 - palette.py imports it by this name, so one copy serves both
 
 LOGO = ["--logo", "blue=#0070C0", "--logo", "grey=#404040"]
 

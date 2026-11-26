@@ -6,7 +6,6 @@ green, running off the frame's bottom edge; an enclosed key-coloured hole in
 it; and a key-coloured slot in it that reaches the frame's edge.
 """
 
-import importlib.util
 import os
 import subprocess
 import sys
@@ -25,9 +24,11 @@ SCRIPT = os.path.join(
     "scripts",
     "cutout.py",
 )
-spec = importlib.util.spec_from_file_location("cutout", SCRIPT)
-cutout = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(cutout)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+cutout = siblings.load(SCRIPTS, "cutout.py")
 
 W, H, SS = 200, 160, 8
 KEY = np.array([0, 177, 64], np.float32)

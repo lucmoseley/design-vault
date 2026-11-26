@@ -6,7 +6,6 @@ a visitor cannot see reach the critic as a pass.
 """
 
 import concurrent.futures
-import importlib.util
 import json
 import os
 import pathlib
@@ -29,16 +28,11 @@ PARTS = os.path.join(FIXTURES, "contrast-tier01-parts.json")
 ABSENT = os.path.join(FIXTURES, "contrast-tier01-absent.json")
 
 
-def library(name):
-    spec = importlib.util.spec_from_file_location(
-        name[:-3].replace("-", "_"), os.path.join(os.path.dirname(SCRIPT), name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-contrasts = library("access-contrast.py")
+contrasts = siblings.load(SCRIPTS, "access-contrast.py")
 with open(contrasts.TABLE, encoding="utf8") as fh:
     TABLE_TEXT = fh.read()
 TABLE = contrasts.parse_table(TABLE_TEXT)
@@ -377,7 +371,7 @@ class Slides(unittest.TestCase):  # #427
 def photo_answer(fixture, carousel, fresh=None):
     from playwright.sync_api import sync_playwright
 
-    access = library("check-access.py")
+    access = siblings.load(SCRIPTS, "check-access.py")
     url = pathlib.Path(FIXTURES, fixture).resolve().as_uri()
     with sync_playwright() as p:
         browser = p.chromium.launch()

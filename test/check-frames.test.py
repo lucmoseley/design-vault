@@ -10,7 +10,6 @@ stages fails as drawn two ways. Loosen #346's and a hash taken with threaded
 animation can render an animation waiting to start in its unanimated style.
 """
 
-import importlib.util
 import json
 import os
 import shutil
@@ -27,9 +26,11 @@ SCRIPT = os.path.join(
 )
 FIXTURES = os.path.join(HERE, "fixtures", "frames")
 MARK = os.path.join(FIXTURES, "mark.svg")
-spec = importlib.util.spec_from_file_location("check_frames", SCRIPT)
-frames = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(frames)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+frames = siblings.load(SCRIPTS, "check-frames.py")
 
 
 def run(*args):
