@@ -10,13 +10,12 @@ const { spec } = require("node:test/reporters");
 
 const fromRoot = (file) => path.relative(process.cwd(), file).split(path.sep).join("/");
 
-// A file's own seconds are the duration Node's runner gives the file's own test, which it times from before it spawns
-// the file's process to that process's exit, so module load counts and a slow reporter loses none of it (#626).
-const ownTest = (event) => event.type === "test:complete" && event.data.nesting === 0
+const isFileTest = (event) => event.type === "test:complete" && event.data.nesting === 0
   && path.resolve(event.data.name) === event.data.file;
 
 async function* recorded(events) {
   const named = new Set();
+  const fileMs = new Map();
   for await (const event of events) {
     const { file, todo } = event.data ?? {};
     // A failing todo test fails no run, so it names no file.
@@ -27,12 +26,11 @@ async function* recorded(events) {
         fs.appendFileSync(process.env.VAULT_FAILED_FILES, `${rel}\n`);
       }
     }
-    if (file && process.env.VAULT_FILE_SECONDS && ownTest(event)) {
-      const seconds = (event.data.details.duration_ms / 1000).toFixed(3);
-      fs.appendFileSync(process.env.VAULT_FILE_SECONDS, `${fromRoot(file)}\t${seconds}\n`);
-    }
+    if (file && isFileTest(event)) fileMs.set(file, event.data.details.duration_ms);
     yield event;
   }
+  if (!process.env.VAULT_FILE_SECONDS) return;
+  for (const [file, ms] of fileMs) fs.appendFileSync(process.env.VAULT_FILE_SECONDS, `${fromRoot(file)}\t${(ms / 1000).toFixed(3)}\n`);
 }
 
 module.exports = async function* failedFiles(events) {
