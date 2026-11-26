@@ -227,7 +227,8 @@ TURN_FRAMES = 2
 # draws them (#135), is moving it frame by frame. A framework's few setup
 # writes and a storyboard's class changes a beat apart stay under it.
 # Residual: where frames come a beat or more apart, changes a beat apart land
-# in consecutive frames and are refused as a loop.
+# in consecutive frames and are refused as a loop. A loop that ends by the
+# clock, which a stall leaves fewer frames than this, is not seen (#469).
 REWRITE_FRAMES = 5
 REWRITE_SPAN_MS = 250
 # Across two or more dropped frames in a row, as a busy machine or a page's
@@ -469,8 +470,15 @@ STATUS_JS = (
   const now = performance.now();
   const timers = [...f.pending.values()].map((due) => Math.max(0, due - now));
   const morphed = [...f.morphs.values()].some((log) => loop(log, frames, span));
+  // A frame loop that rewrote an element in this frame and asked for the next
+  // may yet be refused as one, however few frames a starved browser has drawn
+  // it by the time the quiet window ends (#469).
+  const logs = [...f.rewrites.values()];
+  const looped = logs.some((log) => loop(log, frames, span));
+  const asked = f.lastPageFrame >= f.frame;
   return { now, firstFrame: f.firstFrame, lastNew: f.lastNew, running, timer: timers.length ? Math.max(...timers) : null,
-    framing: morphed && f.lastPageFrame >= f.frame };
+    framing: morphed && asked, looped,
+    rewriting: asked && logs.some((log) => log[log.length - 1].frame === f.frame) };
 }
 """
 )
@@ -1668,14 +1676,16 @@ def run_browser(work, timeout, url=None, unmeasurable=None):
 
 
 def settled(s, quiet):
-    """Whether a page's status shows its motion over. The quiet window runs from
-    its first frame at the earliest: a busy machine can delay that frame past
-    --quiet, and a frame loop has written nothing before it (#135)."""
-    return (
+    """Whether a page's status shows its motion over, or a frame loop it will be
+    refused for. The quiet window runs from its first frame at the earliest: a
+    busy machine can delay that frame past --quiet, and a frame loop has
+    written nothing before it (#135)."""
+    return s["looped"] or (
         s["firstFrame"] is not None
         and s["running"] == 0
         and s["timer"] is None
         and not s["framing"]
+        and not s["rewriting"]
         and s["now"] - max(s["lastNew"], s["firstFrame"]) >= quiet
     )
 
