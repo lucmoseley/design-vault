@@ -1577,7 +1577,8 @@ class RunBrowser(unittest.TestCase):
                 if line.strip() and not line.startswith("#")
             ]
         self.assertEqual(
-            sorted(name for name, _ in pins), ["Pillow", "numpy", "playwright", "scipy"]
+            sorted(name for name, _ in pins),
+            ["Pillow", "av", "numpy", "playwright", "scipy"],
         )
 
     def test_each_failure_exits_with_its_code_and_message(self):
