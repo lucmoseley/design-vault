@@ -1972,7 +1972,7 @@ def off_the_grid(off):
     return [[0] + [k * STEP + off * (-1) ** k for k in range(1, 60)] + [1000]]
 
 
-OFF_GRID_MS = 8  # #624
+OFF_GRID_MS = 8  # measured, #624: 1 fake step in 200 seeded runs at 120 fps
 
 
 def morph_sample(ws, until, fps=60, edges=()):
@@ -2166,7 +2166,7 @@ class MorphFlow(unittest.TestCase):
         s = morph_sample([writes(eased(0, 1000), own)], 1000, 120)
         self.assertEqual(s["elements"][0]["times"]["d"], own)
 
-    def test_a_morph_drawn_off_the_grid_has_no_step_at_each_fps(self):  # #620, #624
+    def test_a_morph_drawn_off_the_grid_has_no_step_at_each_fps(self):  # #624
         for fps in (30, 60, 120):
             for off in (4, 6, OFF_GRID_MS):
                 with self.subTest(fps=fps, off=off):
@@ -2182,7 +2182,7 @@ class MorphFlow(unittest.TestCase):
         drawn = [[k * STEP for k in range(61)], [3 + k * STEP for k in range(60)]]
         self.assertEqual(self.morph_steps(drawn, 120), [])
 
-    def test_a_step_is_still_found_in_each_no_step_case_above(self):  # #620, #624
+    def test_a_step_is_still_found_in_each_no_step_case_above(self):  # #624
         rng = random.Random(624)
         cases = [
             *(
