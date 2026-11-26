@@ -20,11 +20,17 @@ sys.path.insert(0, HERE)
 import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
 
-SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+)
+DRIVER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-form.py"
+)
+SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-driver = siblings.load(SCRIPTS, "drive-form.py")
+driver = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 flow = siblings.load(SCRIPTS, "check-flow.py")
 PAGE_FILE = pathlib.Path(HERE, "fixtures", "drivers", "form.html").resolve()
 PAGE = PAGE_FILE.as_uri()

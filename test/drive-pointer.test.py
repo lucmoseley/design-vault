@@ -18,12 +18,18 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 PAGE = pathlib.Path(HERE, "fixtures", "drivers", "pointer.html").resolve().as_uri()
 
 
-SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+)
+DRIVER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-pointer.py"
+)
+SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 flow = siblings.load(SCRIPTS, "check-flow.py")
-pointer = siblings.load(SCRIPTS, "drive-pointer.py")
+pointer = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 OPEN = contextlib.ExitStack()
 BROWSER = None
 

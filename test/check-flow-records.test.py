@@ -30,6 +30,9 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 FLOW = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
 )
+ACCESS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
+)
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
 LATE_INPUT = os.path.join(HERE, "late-input.py")
 
@@ -761,7 +764,7 @@ class Pages(unittest.TestCase):
 
 class Pause(unittest.TestCase):
     def test_check_access_answers_the_pause_plant(self):
-        access = siblings.load(SCRIPTS, "check-access.py")
+        access = siblings.load(SCRIPTS, os.path.basename(ACCESS))
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as play:

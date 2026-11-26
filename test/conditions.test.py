@@ -23,11 +23,17 @@ URL = pathlib.Path(FIXTURES, "conditions.html").resolve().as_uri()
 VIEWPORT = {"width": 400, "height": 300}
 
 
-SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+)
+CONDITIONS = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "conditions.py"
+)
+SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-conditions = siblings.load(SCRIPTS, "conditions.py")
+conditions = siblings.load(SCRIPTS, os.path.basename(CONDITIONS))
 flow = siblings.load(SCRIPTS, "check-flow.py")
 STACK = contextlib.ExitStack()
 BROWSER = None

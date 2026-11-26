@@ -3,9 +3,16 @@ import re
 import sys
 import unittest
 
-SCRIPTS = os.path.join(
-    os.path.dirname(__file__), "..", "plugin", "skills", "design-round", "scripts"
+SCRIPT = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "plugin",
+    "skills",
+    "design-round",
+    "scripts",
+    "rule-table.py",
 )
+SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 

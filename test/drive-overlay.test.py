@@ -22,12 +22,18 @@ AT_LOAD = (
 )
 
 
-SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts")
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+)
+DRIVER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-overlay.py"
+)
+SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 flow = siblings.load(SCRIPTS, "check-flow.py")
-overlay = siblings.load(SCRIPTS, "drive-overlay.py")
+overlay = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 
 # trigger id: (kind, whether markup names its target, the close control's id, or None for none)
 TRIGGERS = {
