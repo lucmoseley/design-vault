@@ -83,7 +83,7 @@ const UNLIMITED = fs.mkdtempSync(path.join(dir, "cgroup-"));
 const UNSEATED = { WFC_GATE_SEAT: "", VAULT_CGROUP: UNLIMITED, VAULT_LANE_WAIT_S: "" };
 
 let runs = 0;
-// Starts run-lanes.sh under none of the gate seat, cgroup or suite settings the run of this test may carry (#622).
+// #622
 function start(args, env, { cwd } = {}) {
   const full = { ...process.env, ...UNSEATED, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", CI: "1", ...env };
   for (const key of Object.keys(full)) if (full[key] === undefined) delete full[key];
@@ -465,8 +465,7 @@ EOF
       // The suites and their children, not run-lanes.sh itself, whose own command line names `d` too.
       const alive = () => spawnSync("pgrep", ["-f", d], { encoding: "utf8" }).stdout.trim().split("\n")
         .filter((pid) => pid && Number(pid) !== child.pid);
-      // Each child marks its own start, so this waits on both, however slow the machine; the bound only ends a hang.
-      // guess #622
+      // guess #622: 60 s for both children's start markers, a hang bound only
       for (let i = 0; i < 600 && !(fs.existsSync(kids) && fs.readdirSync(kids).length === 2); i++) {
         await new Promise((r) => setTimeout(r, 100));
       }
