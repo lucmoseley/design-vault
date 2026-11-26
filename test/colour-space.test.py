@@ -103,6 +103,12 @@ class ScalarAndArray(unittest.TestCase):
                 float(got), colour_space.contrast(against, c), places=12
             )
 
+    def test_a_list_of_colours_takes_the_array_path(self):
+        self.assertEqual(
+            [float(y) for y in colour_space.luminance([[0, 0, 0], [255, 255, 255]])],
+            [0.0, 1.0],
+        )
+
     def test_oklch_takes_one_colour_as_an_array(self):
         self.assertEqual(
             colour_space.oklch(np.array([10.0, 200.0, 30.0])),
@@ -125,15 +131,20 @@ class WithoutNumpy(unittest.TestCase):
                 "--logo",
                 "grey=#404040",
                 "--colour",
-                "text=#3F3F3F",
+                "text=#404040",
+                "--colour",
+                "slate=#223448",
             ],
             capture_output=True,
             text=True,
+            # guess, #175
             timeout=30,
             check=False,
         )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertNotIn("numpy", proc.stderr)
-        self.assertIn("| grey / text |", proc.stdout)
+        self.assertIn("| grey / slate | 11.9 |", proc.stdout)
+        self.assertIn("on a light ground at L* 57.4 or above", proc.stdout)
 
 
 if __name__ == "__main__":

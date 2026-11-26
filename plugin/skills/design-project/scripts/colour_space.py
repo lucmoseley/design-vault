@@ -22,8 +22,10 @@ def _pick(test, yes, no):
     return np.where(test, yes, no)
 
 
-def _one(c):
-    return isinstance(c, (tuple, list))
+def _one_colour(c):
+    return isinstance(c, (tuple, list)) and not any(
+        isinstance(v, (tuple, list)) or getattr(v, "ndim", 0) for v in c
+    )
 
 
 def hex_rgb(h):
@@ -43,7 +45,7 @@ def linear_rgb(h):
 
 
 def linear_luminance(linear):
-    if _one(linear):
+    if _one_colour(linear):
         return sum(w * c for w, c in zip(WCAG_Y, linear, strict=True))
     import numpy as np
 
@@ -52,7 +54,7 @@ def linear_luminance(linear):
 
 def luminance(c):
     c = _rgb(c)
-    if _one(c):
+    if _one_colour(c):
         return linear_luminance([lin(v / 255) for v in c])
     import numpy as np
 
