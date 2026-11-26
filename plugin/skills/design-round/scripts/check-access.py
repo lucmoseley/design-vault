@@ -160,7 +160,9 @@ check-layout.py does, and measures each question at both:
   while the controls are tried was not watched, so is not cleared. Outside
   a declared carousel, where in that window a script changes an attribute,
   past the caret style a screenshot writes, adds or removes nodes, changes
-  text or scrolls a box, or an animation or transition starts, the changed
+  text or scrolls a box, or an animation or transition starts, past what
+  a resize handler added to the window does at once when a screenshot
+  fires it, the changed
   element's parent cannot be measured unless a control holds it still for
   ROTATE_MS and STILL_SLACK_MS. An entrance that ends within 5 s is no such
   change, and one is watched for only where a carousel is declared or the
@@ -799,14 +801,41 @@ TIMERS_JS = r"""
   // Playwright's screenshot hides the caret with a caret-color style it adds, then removes:
   // https://playwright.dev/python/docs/api/class-page#page-screenshot-option-caret
   const caret = (v) => (v || '').replace(/caret-color: transparent !important;\s*/g, '');
-  new MutationObserver((records) => {
+  const watch = new MutationObserver((records) => {
     for (const m of records) {
       if (m.type === 'attributes' && caret(m.oldValue) === caret(m.target.getAttribute(m.attributeName))) continue;
       note(m.type === 'characterData' ? m.target.parentElement : m.target);
     }
-  }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
+  });
+  watch.observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   addEventListener('scroll', (e) => note(e.target), true);
-  window.__timers = { live, ran, waits, cleared, changed };
+  // The viewport holds its size, so a resize the browser fires is a full-page screenshot's, and what its handlers change is unwatched.
+  const unwatched = new WeakSet(), quiet = new WeakMap();
+  const quieted = (fn) => {
+    if (!fn || (typeof fn !== 'function' && typeof fn.handleEvent !== 'function')) return fn;
+    const call = (self, a) => (typeof fn === 'function' ? fn.apply(self, a) : fn.handleEvent(...a));
+    if (!quiet.has(fn)) quiet.set(fn, function (...a) {
+      if (!(a[0] && a[0].isTrusted)) return call(this, a);
+      const had = new Set(document.getAnimations());
+      try { return call(this, a); } finally {
+        watch.takeRecords();
+        for (const an of document.getAnimations()) if (!had.has(an)) unwatched.add(an);
+      }
+    });
+    return quiet.get(fn);
+  };
+  const add = window.addEventListener, remove = window.removeEventListener;
+  window.addEventListener = function (type, fn, ...a) { return add.call(this, type, type === 'resize' ? quieted(fn) : fn, ...a); };
+  window.removeEventListener = function (type, fn, ...a) { return remove.call(this, type, type === 'resize' && quiet.has(fn) ? quiet.get(fn) : fn, ...a); };
+  const handler = Object.getOwnPropertyDescriptor(window, 'onresize');
+  let onresize = null;
+  if (handler && handler.set) Object.defineProperty(window, 'onresize', {
+    configurable: true,
+    enumerable: handler.enumerable,
+    get: () => onresize ?? handler.get.call(window),
+    set: (fn) => { onresize = fn; handler.set.call(window, quieted(fn)); },
+  });
+  window.__timers = { live, ran, waits, cleared, changed, unwatched };
 })();
 """
 
@@ -841,16 +870,17 @@ UNSEEN_RUNNING_JS = r"""
 """
 
 CHANGED_JS = r"""
-const changedSince = (since) => {
+const changedSince = (since, until = Infinity) => {
   const f = window.__flow;
   f.scan();
   const out = new Set();
+  const watched = (t) => t >= since && t <= until;
   const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el), REWRITE_FRAMES, REWRITE_SPAN_MS);
   const keep = (el) => el && el.isConnected && !scripted(el) && !window.__pauses.some((p) => p.contains(el));
-  for (const [el, times] of window.__timers.changed) if (keep(el) && times.some((t) => t >= since)) out.add(el);
+  for (const [el, times] of window.__timers.changed) if (keep(el) && times.some(watched)) out.add(el);
   for (const [a, rec] of f.seen) {
     const el = a.effect && a.effect.target;
-    if (keep(el) && rec.start !== null && rec.start >= since) out.add(el);
+    if (keep(el) && !window.__timers.unwatched.has(a) && rec.start !== null && watched(rec.start)) out.add(el);
   }
   return out;
 };
@@ -861,10 +891,10 @@ ROTATION_JS = (
     + flow.LOOP_JS
     + CHANGED_JS
     + r"""
-([selectors, since]) => {
+([selectors, since, until]) => {
   const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
   const carousels = selectors.flatMap((s) => [...document.querySelectorAll(s)]);
-  const rest = [...changedSince(since)].filter((el) => !carousels.some((c) => c.contains(el))).map((el) => el.parentElement || el);
+  const rest = [...changedSince(since, until)].filter((el) => !carousels.some((c) => c.contains(el))).map((el) => el.parentElement || el);
   const roots = window.__rotations = [];
   for (const root of rest)
     if (on(root) && !rest.some((o) => o !== root && o.contains(root)) && !roots.includes(root)) roots.push(root);
@@ -1192,7 +1222,7 @@ def pause_answer(context, url, carousels, spans):
         page.wait_for_timeout(
             max(0, prelude.LONG_MS - page.evaluate("() => performance.now()"))
         )
-        since = page.evaluate("() => performance.now()")
+        since = prelude.LONG_MS  # #628
         for c in declared:
             start = page.evaluate("() => performance.now()")
             if keys.change(page, c[1], keys.ROTATE_MS) is None:
@@ -1202,7 +1232,10 @@ def pause_answer(context, url, carousels, spans):
         page.wait_for_timeout(
             max(0, since + keys.ROTATE_MS - page.evaluate("() => performance.now()"))
         )
-        others = page.evaluate(prelude.page_js(ROTATION_JS), [list(carousels), since])
+        others = page.evaluate(
+            prelude.page_js(ROTATION_JS),
+            [list(carousels), since, since + keys.ROTATE_MS],
+        )
         if not page.evaluate(LIVE_JS):
             stilled = []
         if not stilled:
