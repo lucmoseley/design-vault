@@ -257,7 +257,7 @@ STRAY_CHART_MARKS = 3
 
 # Marks the page's candidates and gives what each question reads of them.
 MARK_JS = (
-    keys.CAROUSEL_CONTROLS_JS
+    keys.CONTROL_NAMES_JS
     + r"""
 ({ charts, carousels, undeclared, STRAY_CHART_PX, STRAY_CHART_MARKS }) => {
   const bad = [...charts, ...carousels].filter((s) => { try { document.querySelector(s); return false; } catch (e) { return true; } });
@@ -356,8 +356,8 @@ MARK_JS = (
   window.__contrastCarousels = [];
   const slides = [];
   for (const sel of carousels) for (const c of document.querySelectorAll(sel)) {
-    const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => step.test(nameOf(e)))) || [];
-    const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && ahead.test(nameOf(e))) || null;
+    const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => nameMatches(e, step))) || [];
+    const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && nameMatches(e, ahead)) || null;
     window.__contrastCarousels.push({ el: c, dots: row, next });
     const media = [c, ...c.querySelectorAll('*')].some((e) => ['img', 'video', 'canvas'].includes(e.localName)
       || /url\(/.test(getComputedStyle(e).backgroundImage));
@@ -901,12 +901,13 @@ def _shots(page, photo):
     return Shots(drawn, glyph, boxed, glyph | (boxed if boxed is not None else False))
 
 
-Sighting = collections.namedtuple("Sighting", "subject where figure why")
+Measured = collections.namedtuple("Measured", "subject where figure")
+Unmeasured = collections.namedtuple("Unmeasured", "subject where why")
 
 
 def _sighting(c, shots, where):
     if c["why"]:
-        return Sighting(c["subject"], where, None, c["why"])
+        return Unmeasured(c["subject"], where, c["why"])
     figures = [
         f
         for f in (
@@ -918,10 +919,10 @@ def _sighting(c, shots, where):
         if f
     ]
     if not figures:
-        return Sighting(
-            c["subject"], where, None, "shows no glyph or edge the check can find"
+        return Unmeasured(
+            c["subject"], where, "shows no glyph or edge the check can find"
         )
-    return Sighting(c["subject"], where, max(figures, key=lambda f: f.ratio), None)
+    return Measured(c["subject"], where, max(figures, key=lambda f: f.ratio))
 
 
 def _sightings(photo, shots, where):
@@ -1047,18 +1048,17 @@ def _photo_verdict(photo, sightings, table):
     for subject, seen in by.items():
         reasons = {}
         for s in seen:
-            if s.why:
+            if isinstance(s, Unmeasured):
                 reasons.setdefault(s.why, s.where)
         photo.unmeasured.extend(
             f"{subject} {why}" + (f", {where}" if where else "")
             for why, where in reasons.items()
         )
-        figures = [s for s in seen if s.figure is not None]
-        if not figures:
+        measured = [s for s in seen if isinstance(s, Measured)]
+        if not measured:
             continue
-        where, worst = min(
-            ((s.where, s.figure) for s in figures), key=lambda wf: wf[1].ratio
-        )
+        least = min(measured, key=lambda s: s.figure.ratio)
+        where, worst = least.where, least.figure
         if worst.ratio < table.photo:
             photo.faults.append(
                 {

@@ -401,7 +401,7 @@ class SlidePassLimits(unittest.TestCase):  # #512
             for r in self.readings
             if r[:2] == ("button#held-save", "control on a photo")
         ]
-        self.assertGreaterEqual(reading.ratio, TABLE.photo)
+        self.assertAlmostEqual(reading.ratio, 7.46, places=2)
 
     def test_a_reason_seen_on_every_slide_is_named_once_where_first_seen(
         self,

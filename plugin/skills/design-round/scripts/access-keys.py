@@ -73,15 +73,15 @@ ROW_SHARE = 0.5
 # to find them, short enough to read.
 EXAMPLES = 3
 
-CAROUSEL_CONTROLS_JS = r"""
-const nameOf = (e) => [e.getAttribute('aria-label'), e.title, e.textContent, e.value].filter(Boolean).join(' ').trim();
+CONTROL_NAMES_JS = r"""
+const nameMatches = (e, pattern) => [e.getAttribute('aria-label'), e.title, e.textContent, e.value].some((n) => n && pattern.test(n));
 const step = /\b(prev|previous|next|back|forward)\b|^\s*[‹›←→<>]\s*$/i, ahead = /\b(next|forward)\b|^\s*[›→>]\s*$/i;
 """
 
 # The composite widgets the APG keeps to one Tab stop, each with the items arrows move between, and the arrow
 # that moves to the next item where aria-orientation does not say.
 COMPOSITES_JS = (
-    CAROUSEL_CONTROLS_JS
+    CONTROL_NAMES_JS
     + r"""
 const COMPOSITE = {
   tablist: ['[role=tab]', 'ArrowRight'],
@@ -276,7 +276,7 @@ WALKED_JS = (
     if (heard.length) out.carousel.push({ subject: label(el), detail: `keeps ${heard.slice(0, EXAMPLES).join(', ')}, on a slide out of view, in the accessibility tree, with no inert or aria-hidden` });
     const landed = order.filter((e) => unseen.has(e));
     if (landed.length) out.carousel.push({ subject: label(el), detail: `lets the Tab key land on ${landed.slice(0, EXAMPLES).map((e) => label(e)).join(', ')}, on a slide out of view` });
-    const control = [...el.querySelectorAll(TARGET)].find((e) => tabbable(e) && rotation.test(nameOf(e)));
+    const control = [...el.querySelectorAll(TARGET)].find((e) => tabbable(e) && nameMatches(e, rotation));
     const firstIn = order.find((e) => inside(el, e));
     if (control && firstIn && firstIn !== control) out.carousel.push({ subject: label(el), detail: `puts ${label(firstIn)} before its rotation control ${label(control)} in the Tab order` });
   }
@@ -303,7 +303,7 @@ DRIVE_JS = (
 (selectors) => {
   const d = window.__drive = { groups: groups(), carousels: selectors.flatMap((s) => [...document.querySelectorAll(s)]) };
   document.addEventListener('submit', (e) => e.preventDefault(), true);
-  d.steps = d.carousels.map((c) => [...c.querySelectorAll(TARGET)].filter((e) => tabbable(e) && !rotation.test(nameOf(e)) && step.test(nameOf(e))));
+  d.steps = d.carousels.map((c) => [...c.querySelectorAll(TARGET)].filter((e) => tabbable(e) && !nameMatches(e, rotation) && nameMatches(e, step)));
   return {
     groups: d.groups.map((g) => ({ subject: label(g), items: itemsOf(g).length, arrow: arrowOf(g) })),
     carousels: d.carousels.map((c, n) => ({ subject: label(c), steps: d.steps[n].length })),
@@ -676,20 +676,17 @@ def _menus(page, js):
     return faults
 
 
-# The box, opacity, visibility and image of carousel e and its first `limit` elements, as one string: what a
-# slide moving, fading or swapping its image changes, and a focus ring, a hover colour or the page scrolling
-# does not. Boxes are read from the carousel's own corner.
 SIG_JS = r"""
-  const sig = () => {
+  const sig = (images = false) => {
     const o = e.getBoundingClientRect();
-    return [e, ...e.querySelectorAll('*')].slice(0, limit).map((d) => {
+    return [...(images ? [e] : []), ...e.querySelectorAll('*')].slice(0, limit).map((d) => {
       const r = d.getBoundingClientRect(), s = getComputedStyle(d);
-      return [r.left - o.left, r.top - o.top, r.width, r.height].map(Math.round).join(',')
-        + `,${s.opacity},${s.visibility},${d.currentSrc || ''},${s.backgroundImage}`;
+      return [r.left - o.left, r.top - o.top, r.width, r.height].map(Math.round).join(',') + ',' + s.opacity + ',' + s.visibility
+        + (images ? `,${d.currentSrc || ''},${s.backgroundImage}` : '');
     }).join(';');
   };
 """
-SHOWN_JS = "(e, limit) => {" + SIG_JS + "  return sig();\n}"
+SHOWN_JS = "(e, limit) => {" + SIG_JS + "  return sig(true);\n}"
 # Watches a carousel on every frame until told to stop, setting e.__watch.moved once SIG_JS differs from the
 # first frame's.
 WATCH_JS = (
