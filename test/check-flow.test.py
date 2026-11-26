@@ -1575,7 +1575,7 @@ def off_the_grid(off):
     return [[0] + [k * STEP + off * (-1) ** k for k in range(1, 60)] + [1000]]
 
 
-OFF_GRID_MS = 8  # #624
+OFF_GRID_MS = 8  # measured, #624: 1 fake step in 200 seeded runs at 120 fps
 
 
 def morph_sample(ws, until, fps=60, edges=()):
@@ -1769,7 +1769,7 @@ class MorphFlow(unittest.TestCase):
         s = morph_sample([writes(eased(0, 1000), own)], 1000, 120)
         self.assertEqual(s["elements"][0]["times"]["d"], own)
 
-    def test_a_morph_drawn_off_the_grid_has_no_step_at_each_fps(self):  # #620, #624
+    def test_a_morph_drawn_off_the_grid_has_no_step_at_each_fps(self):  # #624
         for fps in (30, 60, 120):
             for off in (4, 6, OFF_GRID_MS):
                 with self.subTest(fps=fps, off=off):
@@ -1785,7 +1785,7 @@ class MorphFlow(unittest.TestCase):
         drawn = [[k * STEP for k in range(61)], [3 + k * STEP for k in range(60)]]
         self.assertEqual(self.morph_steps(drawn, 120), [])
 
-    def test_a_step_is_still_found_in_each_no_step_case_above(self):  # #620, #624
+    def test_a_step_is_still_found_in_each_no_step_case_above(self):  # #624
         rng = random.Random(624)
         cases = [
             *(
@@ -1851,6 +1851,125 @@ class MorphFlow(unittest.TestCase):
         flow.add_morphs(s)
         [st] = flow.analyse(s)["steps"]
         self.assertEqual(sorted(st["channels"]), ["d", "position"])
+
+    def analyse_morph_and_position(
+        self, position_from, *, seen=None, ease=linear, px=300, opacity_from=None, **at
+    ):
+        times = flow.sample_times(800, [], 60)
+
+        def go(t):
+            return ease(min(1, max(0, (t - position_from) / 500)))
+
+        s = {
+            "times": times,
+            "elements": [
+                {
+                    "label": "path#m0",
+                    "channels": {"position": [[px * go(t), 0] for t in times]}
+                    | (
+                        {
+                            "opacity": [
+                                str(min(1, max(0, (t - opacity_from) / 500)))
+                                for t in times
+                            ]
+                        }
+                        if opacity_from is not None
+                        else {}
+                    ),
+                }
+                | ({"seen": [seen(t) for t in times]} if seen else {})
+            ],
+            "morphs": [
+                {
+                    "label": "path#m0",
+                    "writes": writes(
+                        lambda t: min(1, max(0, (t - 107) / 500)),
+                        [7 + k * STEP for k in range(48)],
+                    ),
+                }
+            ],
+        }
+        flow.add_morphs(s)
+        return flow.analyse(s, **at)
+
+    def test_a_morph_and_another_channel_starting_together_jolt_once_632(self):
+        got = [
+            (j["edge"], j["at"], j["channels"])
+            for j in self.analyse_morph_and_position(100)["jolts"]
+        ]
+        self.assertEqual(
+            got, [("starts", 100, ["position", "d"]), ("stops", 600, ["position", "d"])]
+        )
+
+    def test_a_morph_and_another_channel_unseen_together_are_listed_once_632(self):
+        r = self.analyse_morph_and_position(100, seen=lambda t: t < 300)
+        self.assertEqual(
+            [(u["edge"], u["at"], u["channels"]) for u in r["unseen"]],
+            [("stops", 600, ["position", "d"])],
+        )
+
+    def test_one_jolt_both_channels_find_takes_the_higher_share_632(self):
+        r = self.analyse_morph_and_position(100, ease=lambda p: p**1.2, jolt_ratio=0.3)
+        start = r["jolts"][0]
+        self.assertEqual(
+            (start["edge"], start["channels"]), ("starts", ["position", "d"])
+        )
+        self.assertEqual(start["share"], 1.0)
+
+    def test_one_unseen_start_both_channels_find_names_all_it_would_be_632(self):
+        r = self.analyse_morph_and_position(100 + STEP, seen=lambda t: t > 300, px=600)
+        self.assertEqual(
+            [(u["edge"], u["channels"], u["would_be"]) for u in r["unseen"]],
+            [("starts", ["d", "position"], ["jolt", "jump"])],
+        )
+
+    def test_edges_join_only_within_a_frame_of_their_first_632(self):
+        got = [
+            (j["at"], j["channels"])
+            for j in self.analyse_morph_and_position(100, opacity_from=100 + STEP)[
+                "jolts"
+            ]
+            if j["edge"] == "starts"
+        ]
+        self.assertEqual(got, [(100, ["position", "d"]), (117, ["opacity"])])
+
+    def edge(self, name, share=1.0, line=0.5):
+        return {"channels": [name], "share": share, "line": line}
+
+    def test_edges_on_adjacent_frames_stay_apart_at_every_frame_632(self):
+        for k in range(1, 200):
+            found = [
+                ("k", k * STEP, self.edge("position")),
+                ("k", (k + 1) * STEP, self.edge("opacity")),
+            ]
+            self.assertEqual(len(flow.merged_edges(found, flow.FPS)), 2, k)
+
+    def test_one_channel_is_never_joined_to_itself_632(self):
+        found = [("k", 100, self.edge("d")), ("k", 105, self.edge("d"))]
+        self.assertEqual(len(flow.merged_edges(found, flow.FPS)), 2)
+
+    def test_a_joined_jolt_takes_the_line_of_its_higher_share_632(self):
+        found = [
+            ("k", 100, self.edge("position", 0.5, 0.4)),
+            ("k", 105, self.edge("d", 0.9, 0.6)),
+        ]
+        [j] = flow.merged_edges(found, flow.FPS)
+        self.assertEqual((j["share"], j["line"]), (0.9, 0.6))
+
+    def test_a_morph_and_another_channel_two_frames_apart_jolt_apart_632(self):
+        got = [
+            (j["edge"], j["at"], j["channels"])
+            for j in self.analyse_morph_and_position(100 + 2 * STEP)["jolts"]
+        ]
+        self.assertEqual(
+            got,
+            [
+                ("starts", 107, ["d"]),
+                ("starts", 133, ["position"]),
+                ("stops", 607, ["d"]),
+                ("stops", 633, ["position"]),
+            ],
+        )
 
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {

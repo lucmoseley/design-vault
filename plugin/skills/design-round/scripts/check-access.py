@@ -280,12 +280,12 @@ try:
 except ImportError as err:
     sys.exit(runner.missing(err))
 maths = siblings.load(HERE, "access-pixels.py")
+prelude = siblings.load(HERE, "access-page.py")
 answering = siblings.load(HERE, "access-answers.py")
 pseudo_boxes = siblings.load(HERE, "access-boxes.py")
 keys = siblings.load(HERE, "access-keys.py")
 contrasts = siblings.load(HERE, "access-contrast.py")
 pointing = siblings.load(HERE, "access-pointer.py")
-conditions = siblings.load(HERE, "conditions.py")
 
 VIEWPORTS = tuple(
     (name, width, layout.height_at(width, layout.HEIGHTS))
@@ -294,47 +294,8 @@ VIEWPORTS = tuple(
         ("phone", layout.PHONE_WIDTH),
     )
 )
-# G183 asks 3:1 contrast between a link and the text around it:
-# https://www.w3.org/WAI/WCAG22/Techniques/general/G183
-LINK_RATIO = 3.0
-# WCAG 2.5.8 sets a pointer target's minimum at 24 by 24 CSS px:
-# https://www.w3.org/TR/WCAG22/#target-size-minimum
-MIN_TARGET = 24
-BOLD_CUE = 600  # guess, #501
-WRAP, WRAPPERS = 12, 3  # guess, #501
-FOCUS_REACH = 8  # guess, #501
-OPAQUE = 0.9  # guess, #501
-# WCAG 2.2.2 covers moving content that starts automatically and lasts more than five seconds:
-# https://www.w3.org/TR/WCAG22/#pause-stop-hide
-LONG_MS = 5000
 WATCH_MS = 1000  # guess, #164
-PAUSE_TRIES = 6  # guess, #501
-# Frames a pause control has to hold still in before it counts as moving (#536): a guess.
-PAUSE_FRAMES = 10
-# Frames since the page last asked for one in which its frame loop counts as running (#545): a guess.
-PAGE_LOOP_FRAMES = 2
-ACT_EVENTS = (
-    "click",
-    "dblclick",
-    "mousedown",
-    "mouseup",
-    "pointerdown",
-    "pointerup",
-    "touchstart",
-    "touchend",
-)
-REACT_PROPS = (
-    "onClick",
-    "onDoubleClick",
-    "onMouseDown",
-    "onMouseUp",
-    "onPointerDown",
-    "onPointerUp",
-    "onTouchStart",
-    "onTouchEnd",
-)
 WALK_SLACK = 20  # guess, #501
-DATE_PARTS = 6  # measured 6 Tab stops in a datetime-local, #501
 
 MEASURE_JS = (
     flow.LABEL_JS
@@ -570,147 +531,6 @@ UNDER_JS = (
 """
 )
 
-CUE_JS = r"""
-const css = (el) => getComputedStyle(el);
-const badSelectors = (list) => list.filter((s) => { try { document.querySelector(s); return false; } catch (e) { return true; } });
-const ink = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-const rgbaCache = new Map();
-const rgba = (c) => {
-  if (!rgbaCache.has(c)) {
-    ink.clearRect(0, 0, 1, 1);
-    ink.fillStyle = '#000';
-    ink.fillStyle = c;
-    ink.fillRect(0, 0, 1, 1);
-    const [r, g, b, a] = ink.getImageData(0, 0, 1, 1).data;
-    rgbaCache.set(c, [r, g, b, a / 255]);
-  }
-  return rgbaCache.get(c);
-};
-const painted = (c) => rgba(c)[3] > 0;
-const backdrop = (el) => {
-  for (let e = el; e; e = e.parentElement) if (painted(css(e).backgroundColor)) return rgba(css(e).backgroundColor);
-  return [255, 255, 255, 1];
-};
-const shadowed = (s) => s !== 'none' && s.split(/,(?![^(]*\))/).some((layer) => {
-  const c = (layer.match(/rgba?\([^)]*\)/) || ['transparent'])[0];
-  return painted(c) && /[1-9]/.test(layer.replace(c, ''));
-});
-const bold = (cs) => parseInt(cs.fontWeight, 10) >= BOLD_CUE;
-const italic = (cs) => cs.fontStyle !== 'normal';
-const textBesideOf = (a) => {
-  const block = blockOf(a);
-  for (let e = a.parentElement; e && e !== block; e = e.parentElement)
-    if ([...e.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && /\S/.test(n.data))) return e;
-  return block;
-};
-const cued = (a) => {
-  const parent = css(textBesideOf(a));
-  return [a, ...a.querySelectorAll('*')].some((e) => {
-    const cs = css(e);
-    return (/underline|overline/.test(cs.textDecorationLine) && painted(cs.textDecorationColor)) ||
-      (parseFloat(cs.borderBottomWidth) > 0 && !/none|hidden/.test(cs.borderBottomStyle) && painted(cs.borderBottomColor)) ||
-      (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 && painted(cs.outlineColor)) || shadowed(cs.boxShadow) ||
-      (painted(cs.backgroundColor) && backdrop(e).join() !== backdrop(e.parentElement).join()) || cs.backgroundImage !== 'none' ||
-      bold(cs) !== bold(parent) || italic(cs) !== italic(parent);
-  });
-};
-const lum = ([r, g, b]) => {
-  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-};
-const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-const DATED = /^(date|datetime-local|month|week|time)$/;
-const TARGET = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [onclick], ' +
-  '[role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=menuitem], ' +
-  '[role=option], [tabindex]:not([tabindex="-1"])';
-const shown = (el) => {
-  for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
-    const cs = css(e);
-    if (cs.visibility === 'hidden' || cs.visibility === 'collapse' || cs.opacity === '0') return false;
-  }
-  return true;
-};
-const opacity = (el) => { let o = 1; for (let e = el; e && e.nodeType === 1; e = e.parentElement) o *= parseFloat(css(e).opacity); return o; };
-const ancestorsOf = (el) => { const out = []; for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) out.push(e); return out; };
-const disabled = (el) => !!el.closest(':disabled, [aria-disabled="true"]');
-const box = (r) => [r.left, r.top, r.right, r.bottom];
-const meet = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
-// guess, #501
-const DRAWN = 2;
-const empty = (r) => r[2] - r[0] < DRAWN || r[3] - r[1] < DRAWN;
-const clips = (cs) => cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || cs.clipPath !== 'none' || cs.clip !== 'auto';
-const contentBox = (el) => {
-  const r = el.getBoundingClientRect(), cs = css(el), px = (k) => parseFloat(cs[k]);
-  return [r.left + px('borderLeftWidth') + px('paddingLeft'), r.top + px('borderTopWidth') + px('paddingTop'),
-    r.right - px('borderRightWidth') - px('paddingRight'), r.bottom - px('borderBottomWidth') - px('paddingBottom')];
-};
-const focused = () => {
-  let el = document.activeElement;
-  while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
-  return el;
-};
-const finished = (animations) => {
-  for (const a of animations) {
-    try { if (a.effect.getComputedTiming().endTime !== Infinity) a.finish(); } catch (e) {}
-  }
-};
-const settled = async () => {
-  finished(document.getAnimations());
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-};
-const blockOf = (el) => {
-  for (let e = el; e; e = e.parentElement) { const d = css(e).display; if (d !== 'inline' && d !== 'contents') return e; }
-  return document.body;
-};
-const inText = (el) => {
-  if (css(el).display !== 'inline') return false;
-  const block = blockOf(el);
-  const around = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-  for (let n = around.nextNode(); n; n = around.nextNode()) {
-    if (/\S/.test(n.data) && !n.parentElement.closest(TARGET) && blockOf(n.parentElement) === block) return true;
-  }
-  return false;
-};
-// guess, #501
-const FINDABLE = 0.5;
-const pointerTargets = (skip) => [...document.querySelectorAll(TARGET)].filter((el) => {
-  if (!shown(el) || disabled(el) || skip(el)) return false;
-  const r = el.getBoundingClientRect();
-  return r.width >= FINDABLE && r.height >= FINDABLE && r.right > 0 && r.bottom > 0;
-});
-// #421
-const restingStops = () => {
-  const root = document.documentElement;
-  const onPage = [-scrollX, -scrollY, root.scrollWidth - scrollX, root.scrollHeight - scrollY];
-  const drawnOnPage = (el) => !empty(meet(box(el.getBoundingClientRect()), onPage));
-  const shownByFocus = (el) => {
-    el.focus({ preventScroll: true });
-    finished(el.getAnimations({ subtree: true }));
-    const on = drawnOnPage(el);
-    el.blur();
-    finished(el.getAnimations({ subtree: true }));
-    return on;
-  };
-  const atRest = (el) => {
-    const r = box(el.getBoundingClientRect());
-    return (r[2] - r[0] < DRAWN && r[3] - r[1] < DRAWN) || (!drawnOnPage(el) && shownByFocus(el));
-  };
-  return [...document.querySelectorAll(TARGET)]
-    .filter((el) => el.tabIndex >= 0 && el.getClientRects().length && shown(el) && !disabled(el) && atRest(el));
-};
-const visiblePart = (el, r) => {
-  for (let e = el; e && e !== document.body && e !== document.documentElement;) {
-    const cs = css(e);
-    if (clips(cs)) r = meet(r, box(e.getBoundingClientRect()));
-    if (cs.position === 'fixed') break;
-    let p = e.parentElement;
-    if (cs.position === 'absolute') while (p && p !== document.body && css(p).position === 'static') p = p.parentElement;
-    e = p;
-  }
-  return r;
-};
-"""
-
 LISTEN_JS = r"""
 ((ACT_EVENTS) => {
   const acts = new WeakSet();
@@ -722,7 +542,7 @@ LISTEN_JS = r"""
     return add.call(this, type, ...rest);
   };
 })(ACT_EVENTS_JSON);
-""".replace("ACT_EVENTS_JSON", json.dumps(ACT_EVENTS))
+""".replace("ACT_EVENTS_JSON", json.dumps(prelude.ACT_EVENTS))
 
 WANTED_JS = (
     flow.LABEL_JS
@@ -1085,16 +905,6 @@ def text_css(fill):
 """
 
 
-def page_js(body):
-    consts = (
-        f"const MIN_TARGET = {MIN_TARGET}, PX_SLACK = {maths.PX_SLACK}, BOLD_CUE = {BOLD_CUE}, WRAP = {WRAP}, "
-        f"LINK_RATIO = {LINK_RATIO}, WRAPPERS = {WRAPPERS}, FOCUS_REACH = {FOCUS_REACH}, LONG_MS = {LONG_MS}, "
-        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, PAUSE_FRAMES = {PAUSE_FRAMES}, PAGE_LOOP_FRAMES = {PAGE_LOOP_FRAMES}, "
-        f"OPAQUE = {OPAQUE}, DATE_PARTS = {DATE_PARTS}, ACT_EVENTS = {json.dumps(ACT_EVENTS)}, REACT_PROPS = {json.dumps(REACT_PROPS)};\n"
-    )
-    return consts + CUE_JS + body
-
-
 def decoded(png):
     return np.asarray(Image.open(io.BytesIO(png)).convert("RGB"))
 
@@ -1218,7 +1028,7 @@ TOP_JS = r"""
 def focused_texts(page, hidden_stops):
     found = []
     for i in range(hidden_stops):
-        texts = page.evaluate(page_js(FOCUSED_JS), i)
+        texts = page.evaluate(prelude.page_js(FOCUSED_JS), i)
         if not texts:
             continue
         shots = []
@@ -1261,13 +1071,15 @@ def focus_fault(page, stop, key):
 
 
 def stop_at(frame, back, entered):
-    stop = frame.evaluate(page_js(STOP_JS), back)
+    stop = frame.evaluate(prelude.page_js(STOP_JS), back)
     if not (stop.get("frame") or stop.get("unreadable")):
         stop["at"] = frame
         return stop
-    inner = frame.evaluate_handle(page_js(ACTIVE_JS)).as_element().content_frame()
+    inner = (
+        frame.evaluate_handle(prelude.page_js(ACTIVE_JS)).as_element().content_frame()
+    )
     if inner not in entered:
-        entered[inner] = inner.evaluate(page_js(WANTED_JS))
+        entered[inner] = inner.evaluate(prelude.page_js(WANTED_JS))
     if stop.get("unreadable"):
         stop["at"] = frame
         return stop
@@ -1275,19 +1087,15 @@ def stop_at(frame, back, entered):
     if "subject" not in got:
         return {"inside": True} if got.get("end") else got
     at = got.pop("at")
-    stop = frame.evaluate(page_js(THROUGH_JS), got)
+    stop = frame.evaluate(prelude.page_js(THROUGH_JS), got)
     stop["at"] = at
     return stop
 
 
-def keys_js(body):
-    return page_js(flow.LABEL_JS + body)
-
-
 def tab_walk(page, carousels):
     page.add_style_tag(content="*, html { scroll-behavior: auto !important }")
-    focusable = page.evaluate(page_js(WANTED_JS))
-    keys.mark(page, keys_js, carousels)
+    focusable = page.evaluate(prelude.page_js(WANTED_JS))
+    keys.mark(page, carousels)
     page.evaluate(BLUR_JS)
     page.evaluate("() => scrollTo(0, 0)")
     faults, notes, cut, entered, readings, unseen = {}, [], [], {}, [], set()
@@ -1309,7 +1117,7 @@ def tab_walk(page, carousels):
                 if note not in notes:
                     notes.append(note)
             if key == "Tab" and not stop["unreadable"]:
-                reading = keys.ring(stop["at"], keys_js, stop["i"])
+                reading = keys.ring(stop["at"], stop["i"])
                 reading.update(i=stop["i"], main=stop["at"] == page.main_frame)
                 readings.append(reading)
             if stop["subject"] in faults or (key != "Tab" and not stop["covered"]):
@@ -1323,8 +1131,8 @@ def tab_walk(page, carousels):
             cut.append(
                 f"the {key} walk stopped after {n} stops, short of the page's end"
             )
-    unreached = page.evaluate(page_js(KEYBOARD_JS))
-    walked = keys.walked(page, keys_js, readings, unseen)
+    unreached = page.evaluate(prelude.page_js(KEYBOARD_JS))
+    walked = keys.walked(page, readings, unseen)
     for judged in walked.values():
         judged.unmeasured.extend(cut)
     return {
@@ -1341,7 +1149,7 @@ def hold_ms(span):
 
 
 def motion_answers(context, url, carousels, *, mouse):
-    driven, spans = keys.driven(context, url, keys_js, carousels, mouse=mouse)
+    driven, spans = keys.driven(context, url, carousels, mouse=mouse)
     return driven, answering.Judged(
         *pause_answer(context, url, carousels, spans), [], []
     )
@@ -1358,7 +1166,7 @@ def pause_answer(context, url, carousels, spans):
     before = page.screenshot(full_page=True)
     page.wait_for_timeout(WATCH_MS)
     after = page.screenshot(full_page=True)
-    got = page.evaluate(page_js(MOTION_JS))
+    got = page.evaluate(prelude.page_js(MOTION_JS))
     unmeasured = [
         f"{m['subject']} {m['what']} from the page's load and ended before a control could be tried on it"
         for m in got["ended"]
@@ -1377,13 +1185,13 @@ def pause_answer(context, url, carousels, spans):
     for n, el in enumerate(
         el for sel in carousels for el in page.query_selector_all(sel)
     ):
-        c = el.evaluate(page_js(CAROUSEL_JS))
+        c = el.evaluate(prelude.page_js(CAROUSEL_JS))
         if c["on"]:
             declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
     turning, stilled, others, unseen = [], [], [], None
-    if page.evaluate(page_js(TIMED_JS), len(carousels)):
+    if page.evaluate(prelude.page_js(TIMED_JS), len(carousels)):
         page.wait_for_timeout(
-            max(0, LONG_MS - page.evaluate("() => performance.now()"))
+            max(0, prelude.LONG_MS - page.evaluate("() => performance.now()"))
         )
         since = page.evaluate("() => performance.now()")
         for c in declared:
@@ -1395,7 +1203,7 @@ def pause_answer(context, url, carousels, spans):
         page.wait_for_timeout(
             max(0, since + keys.ROTATE_MS - page.evaluate("() => performance.now()"))
         )
-        others = page.evaluate(page_js(ROTATION_JS), [list(carousels), since])
+        others = page.evaluate(prelude.page_js(ROTATION_JS), [list(carousels), since])
         if not page.evaluate(LIVE_JS):
             stilled = []
         if not stilled:
@@ -1411,7 +1219,7 @@ def pause_answer(context, url, carousels, spans):
             and unseen is None
         ):
             break
-        if not page.evaluate(page_js(CLICKABLE_JS), i):
+        if not page.evaluate(prelude.page_js(CLICKABLE_JS), i):
             unclickable += 1
             continue
         try:
@@ -1433,7 +1241,7 @@ def pause_answer(context, url, carousels, spans):
         if len(held_others) < len(others):
             since = page.evaluate("() => performance.now()")
             page.wait_for_timeout(hold_ms(None))
-            moved = page.evaluate(page_js(ROTATED_JS), since)
+            moved = page.evaluate(prelude.page_js(ROTATED_JS), since)
             held_others.update(set(range(len(others))) - set(moved))
         if unseen is not None and not page.evaluate(UNSEEN_RUNNING_JS, unseen):
             unseen = None
@@ -1463,7 +1271,7 @@ def pause_answer(context, url, carousels, spans):
         }
         for s, f in faults.items()
     ]
-    changing = f"changes what it shows more than {LONG_MS / 1000:g} s after the page's load, and {tried}"
+    changing = f"changes what it shows more than {prelude.LONG_MS / 1000:g} s after the page's load, and {tried}"
     found += [
         {"subject": subject, "detail": changing}
         for k, (subject, _, _) in enumerate(turning)
@@ -1481,7 +1289,7 @@ def pause_answer(context, url, carousels, spans):
     if unseen is not None:
         unmeasured.append(
             f"the page still ran a timer that did not run in the {keys.ROTATE_MS / 1000:g} s watched "
-            f"past {LONG_MS / 1000:g} s from its load, and {tried}, so a slower change cannot be ruled out"
+            f"past {prelude.LONG_MS / 1000:g} s from its load, and {tried}, so a slower change cannot be ruled out"
         )
     # #603
     return found, sorted(unmeasured)
@@ -1591,10 +1399,6 @@ class BadSelectorError(Exception):
         self.selectors = selectors
 
 
-def contrast_js(body):
-    return page_js(flow.LABEL_JS + body)
-
-
 def open_page(browser, at, width, height, **scheme):
     context = browser.new_context(
         viewport={"width": width, "height": height}, **layout.device(width), **scheme
@@ -1611,7 +1415,7 @@ def load(context, url):
 
 
 def read_texts(page, logotype):
-    got = page.evaluate(page_js(MEASURE_JS), logotype)
+    got = page.evaluate(prelude.page_js(MEASURE_JS), logotype)
     if "bad" in got:
         raise BadSelectorError("--logotype", got["bad"])
     devtools = page.context.new_cdp_session(page)
@@ -1623,10 +1427,10 @@ def read_texts(page, logotype):
         ],
     )
     devtools.detach()
-    got["texts"] += page.evaluate(page_js(GENERATED_JS), generated)
+    got["texts"] += page.evaluate(prelude.page_js(GENERATED_JS), generated)
     for text, (under, why) in zip(
         got["texts"],
-        page.evaluate(page_js(UNDER_JS), [t["why"] for t in got["texts"]]),
+        page.evaluate(prelude.page_js(UNDER_JS), [t["why"] for t in got["texts"]]),
         strict=True,
     ):
         text["under"], text["why"] = under, why
@@ -1638,7 +1442,6 @@ def read_texts(page, logotype):
 def contrast_answers(page, at, texts, table):
     found, readings = contrasts.measure(
         page,
-        contrast_js,
         table,
         parts=at.parts,
         absent=at.absent,
@@ -1655,7 +1458,7 @@ def theme_answer(browser, at, width, height, *, light, answered, readings):
     for name, options in contrasts.SCHEMES:
         context, page, _ = open_page(browser, at, width, height, **options)
         try:
-            if contrasts.signature(page, contrast_js) == light:
+            if contrasts.signature(page) == light:
                 continue
             shipped.append(name)
             table = contrasts.scheme_table(name, at.table)
@@ -1698,7 +1501,7 @@ def run(at):
             measured, contrast_readings = contrast_answers(
                 page, at, (got, shots), at.table
             )
-            light = contrasts.signature(page, contrast_js)
+            light = contrasts.signature(page)
             merge(measured, tab_walk(page, at.carousels))
             driven, measured["vault.pause"] = motion_answers(
                 context, at.url, at.carousels, mouse=name == "desktop"
@@ -1792,7 +1595,7 @@ def parse(argv):
     if at.pointer:
         try:
             with open(at.pointer_table, encoding="utf8") as fh:
-                at.pointer_floor = pointing.parse_table(fh.read(), MIN_TARGET)
+                at.pointer_floor = pointing.parse_table(fh.read(), prelude.MIN_TARGET)
         except OSError as exc:
             p.error(f"cannot read --pointer-table {at.pointer_table}: {exc.strerror}")
         except pointing.TableError as exc:
@@ -1822,15 +1625,7 @@ def parse(argv):
 def pointer_run(at):
     # #317
     with runner.chromium(("--allow-file-access-from-files",)) as browser:
-        return pointing.run(
-            browser,
-            at,
-            VIEWPORTS,
-            conditions=conditions,
-            layout=layout,
-            page_js=page_js,
-            answering=answering,
-        )
+        return pointing.run(browser, at, VIEWPORTS)
 
 
 Mode = collections.namedtuple("Mode", "report run questions")

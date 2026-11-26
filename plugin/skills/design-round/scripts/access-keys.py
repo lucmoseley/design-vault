@@ -9,6 +9,7 @@ import siblings  # noqa: E402
 
 
 answering = siblings.load(HERE, "access-answers.py")
+prelude = siblings.load(HERE, "access-page.py")
 overlay = siblings.load(HERE, "drive-overlay.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
 
@@ -358,14 +359,14 @@ PRESSABLE_JS = (
 BLUR_JS = "() => document.activeElement && document.activeElement.blur()"
 
 
-def mark(page, js, carousels):
-    page.evaluate(js(MARK_JS), list(carousels))
+def mark(page, carousels):
+    page.evaluate(prelude.labelled_js(MARK_JS), list(carousels))
 
 
-def ring(frame, js, i):
-    on = frame.evaluate(js(RING_JS), i)
+def ring(frame, i):
+    on = frame.evaluate(prelude.labelled_js(RING_JS), i)
     frame.evaluate(BLUR_JS)
-    off = frame.evaluate(js(RING_JS), i)
+    off = frame.evaluate(prelude.labelled_js(RING_JS), i)
     frame.evaluate("(i) => window.__walk.els[i].focus({ preventScroll: true })", i)
     return {
         "subject": on["subject"],
@@ -478,11 +479,11 @@ def kept(colours, uses):
     return faults
 
 
-def walked(page, js, readings, unseen):
+def walked(page, readings, unseen):
     out = {qid: answering.unjudged() for qid in WALKED}
     full = {str(r["i"]): r["full"] for r in readings if r["main"]}
     page.evaluate(BLUR_JS)
-    got = page.evaluate(js(WALKED_JS), full)
+    got = page.evaluate(prelude.labelled_js(WALKED_JS), full)
     out["vault.skip-link"].faults.extend(got["skip"]["faults"])
     out["vault.skip-link"].unmeasured.extend(got["skip"]["unmeasured"])
     for qid, key in (
@@ -508,17 +509,17 @@ def _frames(page):
     page.evaluate(FRAMES_JS)
 
 
-def _arrows(page, js, groups):
+def _arrows(page, groups):
     faults = []
     for n, g in enumerate(groups):
         if g["items"] < 2:
             continue
-        was = page.evaluate(js(ENTER_JS), n)
+        was = page.evaluate(prelude.labelled_js(ENTER_JS), n)
         if was is None:
             continue
         page.keyboard.press(g["arrow"])
         _frames(page)
-        now = page.evaluate(js(WHERE_JS), n)
+        now = page.evaluate(prelude.labelled_js(WHERE_JS), n)
         if not now["inside"]:
             faults.append(
                 {
@@ -550,7 +551,7 @@ def _closed(page, ov):
         return False
 
 
-def _menus(page, js):
+def _menus(page):
     faults = []
     for ov in overlay.find(page):
         if ov.kind != "menu" or ov.trigger is None:
@@ -565,7 +566,7 @@ def _menus(page, js):
                 }
             )
             continue
-        got = page.evaluate(js(MENU_JS), ov.target)
+        got = page.evaluate(prelude.labelled_js(MENU_JS), ov.target)
         if got["items"] and got["at"] != 0:
             wrong.append(
                 f"opening it by Enter leaves focus on {got['focus']}, not its first item"
@@ -573,7 +574,7 @@ def _menus(page, js):
         if got["at"] == 0 and len(got["items"]) > 1:
             page.keyboard.press("ArrowDown")
             _frames(page)
-            if page.evaluate(js(MENU_JS), ov.target)["at"] != 1:
+            if page.evaluate(prelude.labelled_js(MENU_JS), ov.target)["at"] != 1:
                 wrong.append("Down Arrow does not move focus to its next item")
         state = overlay.close(page, ov, by="escape")
         if state["open"]:
@@ -592,7 +593,7 @@ def _menus(page, js):
                 overlay.close(page, ov, by="escape")
         state = overlay.open(page, ov, by="keyboard", key="ArrowUp")
         if state["open"]:
-            got = page.evaluate(js(MENU_JS), ov.target)
+            got = page.evaluate(prelude.labelled_js(MENU_JS), ov.target)
             if got["items"] and got["at"] != len(got["items"]) - 1:
                 wrong.append(
                     f"opening it by Up Arrow leaves focus on {got['focus']}, not its last item"
@@ -683,7 +684,7 @@ def still(handle):
     return handle.evaluate(STILL_JS, [WATCH_LIMIT, ROTATE_POLL_MS, ROTATE_MS])
 
 
-def _carousels(page, js, carousels):
+def _carousels(page, carousels):
     faults, unmeasured, spans = [], [], []
     for n, c in enumerate(carousels):
         handle = page.evaluate_handle(
@@ -695,7 +696,7 @@ def _carousels(page, js, carousels):
             unmeasured.append(f"{c['subject']} {span}")
         elif span is not None:
             hold = span + STILL_SLACK_MS
-            page.evaluate(js(FOCUS_IN_JS), n)
+            page.evaluate(prelude.labelled_js(FOCUS_IN_JS), n)
             if change(page, handle, hold) is not None:
                 faults.append(
                     {
@@ -717,10 +718,10 @@ def _carousels(page, js, carousels):
             except pointer.PointerError as exc:
                 unmeasured.append(f"{c['subject']} cannot be hovered: {exc}")
         for k in range(c["steps"]):
-            name = page.evaluate(js(STEP_JS), [n, k])
+            name = page.evaluate(prelude.labelled_js(STEP_JS), [n, k])
             page.keyboard.press("Enter")
             _frames(page)
-            moved = page.evaluate(js(MOVED_JS), [n, k])
+            moved = page.evaluate(prelude.labelled_js(MOVED_JS), [n, k])
             if moved:
                 faults.append(
                     {
@@ -753,9 +754,11 @@ BLOCK_JS = r"""
 """
 
 
-def _presses(page, js):
+def _presses(page):
     faults, unmeasured = [], []
-    pressed = page.evaluate(js(PRESSABLE_JS), [PRESS_TRIES, FIELD_TRIES])
+    pressed = page.evaluate(
+        prelude.labelled_js(PRESSABLE_JS), [PRESS_TRIES, FIELD_TRIES]
+    )
     page.evaluate(BLOCK_JS, True)
     away = False
     for n, p in enumerate(pressed):
@@ -790,21 +793,21 @@ def _presses(page, js):
     return faults, unmeasured
 
 
-def driven(context, url, js, carousels, *, mouse):
+def driven(context, url, carousels, *, mouse):
     out = {qid: answering.unjudged() for qid in DRIVEN}
     page = context.new_page()
     page.add_init_script(pointer.WATCH_JS)
     page.goto(url, wait_until="load")
     page.evaluate("() => document.fonts.ready")
-    got = page.evaluate(js(DRIVE_JS), list(carousels))
-    out["vault.roving-focus"].faults.extend(_arrows(page, js, got["groups"]))
-    faults, unmeasured, spans = _carousels(page, js, got["carousels"])
+    got = page.evaluate(prelude.labelled_js(DRIVE_JS), list(carousels))
+    out["vault.roving-focus"].faults.extend(_arrows(page, got["groups"]))
+    faults, unmeasured, spans = _carousels(page, got["carousels"])
     out["vault.carousel-focus"].faults.extend(faults)
     out["vault.carousel-focus"].unmeasured.extend(unmeasured)
     if mouse:
-        faults, unmeasured = _presses(page, js)
+        faults, unmeasured = _presses(page)
         out["vault.focus-visible"].faults.extend(faults)
         out["vault.focus-visible"].unmeasured.extend(unmeasured)
-    out["vault.menu-focus"].faults.extend(_menus(page, js))
+    out["vault.menu-focus"].faults.extend(_menus(page))
     page.close()
     return out, spans
