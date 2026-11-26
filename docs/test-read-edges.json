@@ -1250,6 +1250,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/revealed.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/ring.svg": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
