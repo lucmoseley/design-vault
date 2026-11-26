@@ -1,13 +1,3 @@
-"""text-checks.py — check-text.py's checks (#314): what each text record asks
-of a page check-text.py has read, its table and word lists, and how each
-load's findings merge into one answer per record.
-
-A load is Load(condition, width, data): data is what check-text.py's page
-read returns, with `formatted` added under a locale load and `offer` on the
-desktop load. A check takes (load, its table values, the word lists) and
-returns a Found.
-"""
-
 import collections
 import os
 import sys
@@ -23,14 +13,10 @@ rule_table = siblings.load(HERE, "rule-table.py")
 PAGE = "page"
 RTL = "rtl"
 SEP = " | "
-# How much text either side of a miss its report keeps: a guess, enough to
-# find it on the page.
+# guess, #314
 CONTEXT = 24
-# Running text, for vault.emphasis-share.
 PROSE_TAGS = ("p", "li", "dd", "blockquote", "figcaption")
-# The kinds of element vault.label-case reads.
 CASE_KINDS = ("heading", "button", "link", "list-item", "menu-item")
-# Attribute text no visitor sees, which vault.typed-case leaves out.
 UNSEEN = ("aria-label", "alt")
 WEEKDAYS = (
     "Monday",
@@ -42,18 +28,13 @@ WEEKDAYS = (
     "Sunday",
 )
 TWELVE_HOUR = ("h11", "h12")
-# Spaces that join what they sit between, and spaces wider than a word space.
 NO_BREAK = "\u00a0\u202f\u2060"
 WIDE = "\u00a0\u2000-\u200a\u202f\u205f\u3000"
-# A digit group separator: a stop, comma, apostrophe or a no-break or thin
-# space; a plain space is not one, being a break between words.
 GROUP_CHARS = ".,'’\u00a0\u202f\u2009"
 SPACE_GROUP = "\u00a0\u202f\u2009"
 CURRENCY = "$€£¥"
 WORD = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)*")
 LETTERS = re.compile(r"[^\W\d_]")
-# A typed fraction: digits, a slash and digits, with no digit, slash or
-# decimal marker either side, so a date such as 1/2/2026 is none.
 FRACTION = r"(?<![\d/.,])(\d+)\/(\d+)(?![\d/.,])"
 
 Load = collections.namedtuple("Load", "condition width data")
@@ -64,9 +45,6 @@ TableError = rule_table.TableError
 
 class WordsError(Exception):
     pass
-
-
-# ----------------------------------------------------------------- helpers
 
 
 def prose(block):
@@ -83,7 +61,6 @@ def snippet(text, start, end=None):
 
 
 def miss(block, text, span, what):
-    """A miss on `block`, quoting its text around `span`: a match or (start, end)."""
     start, end = span.span() if hasattr(span, "span") else span
     return {"place": block["place"], "text": snippet(text, start, end), "what": what}
 
@@ -108,8 +85,6 @@ def rendered(run):
 
 
 def locale_of(load, block, f):
-    """The block's locale data, or None, adding to `f` why a lang tag the
-    browser cannot read is not judged."""
     locales = load.data["locales"]
     loc = locales.get(block["lang"])
     if loc is None and block["lang"] in locales:
@@ -120,17 +95,11 @@ def locale_of(load, block, f):
 
 
 class Found:
-    """What one check found under one load: its misses, how many things it
-    judged, and what it could not read."""
-
     def __init__(self):
         self.misses, self.judged, self.unjudged = [], 0, []
 
     def add(self, m):
         self.misses.append(m)
-
-
-# ------------------------------------------------------------------ checks
 
 
 def prose_quotes(load, v, words):
@@ -146,8 +115,6 @@ def prose_quotes(load, v, words):
             continue
         f.judged += 1
         for m in straight.finditer(text):
-            # After a digit a straight mark is a measure, vault.prime-marks'
-            # own; before a letter it is still an apostrophe (2026's).
             after_digit = m.start() and text[m.start() - 1].isdigit()
             if after_digit and not text[m.end() : m.end() + 1].isalpha():
                 continue
@@ -180,7 +147,6 @@ def prime_marks(load, v, words):
     for b in load.data["blocks"]:
         text = prose(b)
         for m in mark.finditer(text):
-            # A mark a letter follows is an apostrophe (2026’s), no measure.
             if text[m.end() : m.end() + 1].isalpha():
                 continue
             f.judged += 1
@@ -201,7 +167,6 @@ def prime_marks(load, v, words):
 
 
 def subtraction(hyphen):
-    """A spaced hyphen between two numbers an equals sign follows: 5 - 3 = 2."""
     return re.compile(rf"(?<=\d) ?[{hyphen}] ?(?=\d[\d.,]* ?=)")
 
 
@@ -243,10 +208,7 @@ def dash_glyphs(load, v, words):
     lead = rf"[{CURRENCY}]?(?P<a>\d+)(?P<a_unit>{suffix})?"
     tail = rf"[{CURRENCY}]?(?P<b>\d+)(?P<b_unit>{suffix})?"
     span = re.compile(rf"(?<![\w.,/{h}]){lead}{h}{tail}(?![\w.,/{h}])")
-    # A phone number written as three digits and four: 555-1234.
     phone = re.compile(rf"\d{{3}}{h}\d{{4}}")
-    # Em dashes between two words; one opening an attribution, or standing
-    # alone in a cell, sets no spacing for the page.
     flush = re.compile(rf"(?<=\w){em}(?=\w)")
     spaced_em = re.compile(rf"(?<=\w)[ \u00a0]{em}[ \u00a0](?=\w)")
     ems = {"flush": [], "spaced": []}
@@ -264,8 +226,6 @@ def dash_glyphs(load, v, words):
             if phone.fullmatch(m[0]):
                 continue
             first, second = m["a"], m["b"]
-            # 2025-26 abbreviates 2025-2026; a time range such as 9am-5pm
-            # runs past noon, so its numbers need not rise.
             rises = (
                 int(first) < int(second)
                 if len(second) >= len(first)
@@ -276,8 +236,6 @@ def dash_glyphs(load, v, words):
         ems["flush"] += [(b, plain, m) for m in flush.finditer(plain)]
         ems["spaced"] += [(b, plain, m) for m in spaced_em.finditer(plain)]
     if ems["flush"] and ems["spaced"]:
-        # The fewer are the odd ones out; a tie reports the flush ones, a
-        # guess, as neither is then the page's way.
         fewer = min(ems, key=lambda k: len(ems[k]))
         other = "spaced" if fewer == "flush" else "set flush"
         for b, text, m in ems[fewer]:
@@ -312,17 +270,11 @@ SEPARATOR = re.compile(f"[{GROUP_CHARS}]")
 
 
 def _same(a, b):
-    """Separators equal, every no-break or thin space counting as one."""
     space = f"[{SPACE_GROUP}]"
     return re.sub(space, " ", a) == re.sub(space, " ", b)
 
 
 def number_shape(token, loc):
-    """(integer groups, group separator or None, decimal marker or None) of a
-    number token as the locale `loc` reads it, or None where it is no number
-    shown as data: a date, a version or a code. The group sizes are CLDR's:
-    a lead group of 1 to 3 digits, middle groups of 2 (Indian) or 3, and a
-    last group of 3."""
     groups = SEPARATOR.split(token)
     seps = SEPARATOR.findall(token)
     if not seps:
@@ -357,10 +309,6 @@ def number_shape(token, loc):
 
 
 def number_tokens(load, f=None):
-    """Each number shown as data, with its block, the block's text, its
-    match, its shape and its locale. Numbers follow the page's lang (the
-    record's target), so the browser locale counts only where no lang is
-    given."""
     f = f if f is not None else Found()
     for b in load.data["blocks"]:
         loc = locale_of(load, b, f)
@@ -405,9 +353,6 @@ def locale_numbers(load, v, words):
 
 
 def week_hour(load, v, words):
-    """Against the text's lang, or under a locale load the browser's locale,
-    the visitor's own choice. A lang naming no region (en) is not judged:
-    its week and clock differ by region."""
     f = Found()
     browser = load.data.get("browser")
 
@@ -452,8 +397,6 @@ def week_hour(load, v, words):
     twenty_four = re.compile(
         rf"(?<![\d:.])([01]?\d|2[0-3]):[0-5]\d(?![\d:])(?! ?(?:{meridiem})(?!\w))"
     )
-    # A time just after an opening bracket is a duration, a video's or a
-    # track's (14:32).
     duration = re.compile(r"\(\s*$")
     for b in load.data["blocks"]:
         loc = locale_of(load, b, f)
@@ -478,7 +421,6 @@ def week_hour(load, v, words):
                     )
                 )
         for m in twenty_four.finditer(text):
-            # An hour of 1 to 12 with no meridiem reads as either cycle.
             if 1 <= int(m[1]) <= 12 or duration.search(text[: m.start()]):
                 continue
             f.judged += 1
@@ -519,8 +461,6 @@ def typed_case(load, v, words):
             len(w[0]) >= least and w[0].isupper() and w[0] not in acronyms
             for w in found
         ]
-        # Two capitals words side by side: only spaces between them, so a
-        # comma's list (EUR, USD) is no pair.
         pair = [
             caps[i] and caps[i + 1] and not text[w.end() : found[i + 1].start()].strip()
             for i, w in enumerate(found[:-1])
@@ -561,15 +501,11 @@ def caps_extent(load, v, words):
     return f
 
 
-# Text that is an address, not a label: an email, a URL or a handle.
 ADDRESS = re.compile(r"@|://|^www\.", re.IGNORECASE)
-# A word with a capital inside it (iPhone, eBay) keeps its own case.
 INNER_CAPITAL = re.compile(r"^\w*[a-z]\w*[A-Z]")
 
 
 def label_case(load, v, words):
-    """vault.label-case: a later capitalised word is title case when it is
-    lower-cased elsewhere on the page or in [common-words]; a name never is."""
     f = Found()
     share = float(v["share"])
     names = set(words["proper-nouns"]) | acronyms_of(words)
@@ -638,7 +574,6 @@ def emphasis_share(load, v, words):
             strong = r["weight"] >= heavy and r["weight"] > b["weight"]
             slant = r["italic"] and not b["italic"]
             text += r["text"]
-            # A bold link is the link's style, vault.link-style's own.
             marks += [(strong or slant) and not (r["cite"] or r["link"])] * len(
                 r["text"]
             )
@@ -763,8 +698,6 @@ def sentence_space(load, v, words):
 
 
 def fractions(load, v, words):
-    """A fraction is a rising pair over a denominator the table names, with
-    no counting word before it: 9/10 is a rating and Slide 1/5 a count."""
     f = Found()
     feature = v["feature"]
     denominators = set(v["denominators"].split())
@@ -806,9 +739,6 @@ def rtl_digit_order(load, v, words):
 
 
 def offer_end_date(load, v, words):
-    """Read off load.data['offer']: None where the part is absent, a string
-    saying why it is not judged, else each element's text and its text once
-    the watch passed."""
     f = Found()
     got = load.data.get("offer")
     if got is None:
@@ -841,8 +771,6 @@ def offer_end_date(load, v, words):
         dated = numeric_date.search(text) or (
             month.search(text) and re.search(r"\d", text)
         )
-        # A price's figures are no time (€12.50); the clock's own bounds
-        # already refuse a date's (30.11.2026).
         undated = price.sub(" ", text)
         lacks = [
             name
@@ -872,8 +800,6 @@ def offer_end_date(load, v, words):
     return f
 
 
-# Each record's check, the keys its table lines must give, and the loads it
-# reads: the page's own at both widths, right to left, or the locales.
 Check = collections.namedtuple("Check", "run keys loads")
 CHECKS = {
     "vault.prose-quotes": Check(prose_quotes, ("straight", "opening"), PAGE),
@@ -908,9 +834,6 @@ NUMBER_KEYS = {
     "weight",
     "joined",
 }
-
-
-# --------------------------------------------------------- table and words
 
 
 def parse_table(text):
@@ -966,8 +889,6 @@ LISTS = (
 
 
 def parse_words(text, into=None, name="the word lists"):
-    """The word lists `text` gives, appended to `into` where given: the
-    caller's lists, so a project's file adds to the vault's."""
     lists = into if into is not None else {k: [] for k in LISTS}
     current = None
     for n, raw in enumerate(text.splitlines(), 1):
@@ -988,11 +909,7 @@ def parse_words(text, into=None, name="the word lists"):
     return lists
 
 
-# ---------------------------------------------------------------- findings
-
-
 def wanted(check, load, v, desktop):
-    """Whether a check reads this load."""
     if check.loads == PAGE:
         return load.condition == PAGE
     if check.loads == RTL:
@@ -1001,10 +918,6 @@ def wanted(check, load, v, desktop):
 
 
 def findings(values, loads, words, desktop, *, unjudged=None):
-    """One finding per record: fail where any load misses, else not judged
-    where it could not read something, else pass where it judged anything,
-    else no match. `unjudged` maps a record id to why it is not judged at
-    all, such as a project's own case."""
     out = []
     for rid, v in values.items():
         check = CHECKS[rid]

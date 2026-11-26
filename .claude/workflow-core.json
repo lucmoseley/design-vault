@@ -3,7 +3,7 @@
 	"founder": "Luc Moseley",
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
-	"modules": [],
+	"modules": ["comments"],
 	"walkedTo": "v3.2.2",
 	"refillPanel": true,
 	"admissionGate": true,

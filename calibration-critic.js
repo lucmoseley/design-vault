@@ -1,14 +1,11 @@
 #!/usr/bin/env node
 /**
- * calibration-critic.js — runs one calibration critic as a headless child session confined by its tool permissions
- * to one round's folder of the calibration packet, and proves that confinement with a canary (design-vault#168).
- *
  * Usage:
  *   node calibration-critic.js --packet <packet> --model <id> --answers <dir>
  *   node calibration-critic.js --round <packet>/<round folder> --model <id> --out <answers file>
  *   node calibration-critic.js --canary --model <id> --out <canary file>
  *
- * The child is `claude`, or WFC_CLAUDE_BIN where set (base §N7), with CONFINED's flags, its working folder the round's folder: no shell, no web, no MCP
+ * The child is `claude`, or WFC_CLAUDE_BIN where set, with CONFINED's flags, its working folder the round's folder: no shell, no web, no MCP
  * server, no settings, CLAUDE.md, skills, hooks or plugins, and the file tools Read, Glob and Grep held to the working
  * folder, anything that would ask permission denied. It is given the prompt on its standard input.
  *
@@ -20,7 +17,7 @@
  *
  * --packet runs the canary into <dir>/canary.json and, only where it holds, three critics on each round folder of the
  * packet in turn, into <dir>/<round folder>/critic-a.json, -b and -c, a critic whose answers are refused run once
- * more. It is the run's one command, so the founder can run it himself where a session may not start child sessions.
+ * more.
  *
  * --canary builds a throwaway packet of two round folders, one holding a control token and the other, with a file
  * beside the packet, a canary token, and asks the confined child to read both by any route it has. It holds where the
@@ -38,7 +35,6 @@ const os = require("os");
 const path = require("path");
 const { CRITICS } = require("./calibration-log.js");
 
-// The confinement the canary proves.
 const CONFINED = [
   "--print",
   "--restricted",
@@ -52,13 +48,10 @@ const CONFINED = [
   "--verbose",
 ];
 const ANSWERS = ["yes", "no", "unsure"];
-// Guesses, not measurements: thirty minutes for a critic to read a round and answer, ten for a canary child, and
-// 256 MiB for a child's transcript.
-const CRITIC_TIMEOUT = 30 * 60 * 1000;
-const CANARY_TIMEOUT = 10 * 60 * 1000;
-const TRANSCRIPT_BYTES = 256 * 1024 * 1024;
+const CRITIC_TIMEOUT = 30 * 60 * 1000; // guess, #168
+const CANARY_TIMEOUT = 10 * 60 * 1000; // guess, #168
+const TRANSCRIPT_BYTES = 256 * 1024 * 1024; // guess, #168
 const claudeBin = () => process.env.WFC_CLAUDE_BIN || "claude";
-// A gate list's question line, as `gate.js list --look` prints it: "3. vault.colour-look: Is every meaning …".
 const QUESTION = /^\s*\d+\.\s+([\w.-]+)/;
 
 function parseArgs(argv) {
@@ -75,7 +68,6 @@ function parseArgs(argv) {
   return options;
 }
 
-/** What one round's folder asks a critic: { candidates, questions, entries, texts }, its candidates' names, gate question ids, entry lines and each question's wording by id. */
 function roundAsked(folder) {
   const files = fs.readdirSync(folder);
   const gateList = files.find((f) => /^gate-list(\.|$)/.test(f));
@@ -90,7 +82,6 @@ function roundAsked(folder) {
   return { candidates, questions: [...texts.keys()], entries, texts };
 }
 
-/** Each question of the gate list `text` by its id, as its numbered line and the indented lines under it word it, less its number. */
 function questionTexts(text) {
   const texts = new Map();
   let id = null;
@@ -105,7 +96,6 @@ function questionTexts(text) {
 
 const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** Every fault in a critic's `data` against what its round asked. */
 function answerFaults(asked, data) {
   if (!isObject(data)) return ["the answer is not a JSON object"];
   const faults = [];
@@ -144,18 +134,21 @@ Reply with one JSON object and nothing else:
 {"answers": {<candidate>: {<question id>: {"answer": "yes" | "no" | "unsure", "evidence": <one line>}}}, "principles": {<candidate>: {<entry>: {"answer": "yes" | "no" | "unsure", "evidence": <one line>}}}, "leader": {"candidate": <name or null>, "turned_on": <the lens or question>}}`;
 }
 
-/** Runs the confined child in `cwd` on `prompt`, `more` flags after CONFINED's: { status, stdout, result }, result the final message. */
+function eventOf(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+
 function runChild(cwd, model, prompt, timeout, more = []) {
   const child = spawnSync(claudeBin(), [...CONFINED, ...more, "--model", model], { cwd, input: prompt, encoding: "utf8", timeout, maxBuffer: TRANSCRIPT_BYTES });
   if (child.error) throw new Error(`claude could not run: ${child.error.message}`);
   let result = null;
   for (const line of child.stdout.split("\n")) {
-    try {
-      const event = JSON.parse(line);
-      if (event.type === "result") result = typeof event.result === "string" ? event.result : null;
-    } catch {
-      // A line that is not one event is the child's own noise, which the transcript keeps.
-    }
+    const event = eventOf(line);
+    if (event?.type === "result") result = typeof event.result === "string" ? event.result : null;
   }
   return { status: child.status, stdout: child.stdout, stderr: child.stderr, result };
 }
@@ -167,7 +160,6 @@ function claudeVersion() {
   return match[1];
 }
 
-/** The JSON object in a critic's final message, which may sit inside a code fence. */
 function parseReply(text) {
   const body = text.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/, "$1");
   return JSON.parse(body);
@@ -256,7 +248,6 @@ function packet({ packet: dir, model, answers }) {
   return 0;
 }
 
-/** critic(), with a usage error printed and returned as 2. */
 function runCritic(options) {
   try {
     return critic(options);

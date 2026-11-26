@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""check-cross.py — the cross-page probe (#306): opens every page of a
-candidate site, and walks each step of a flow, and answers the rule records
-that compare one page with another, which no single-page check can (#250).
-
-USAGE
+"""USAGE
   python3 check-cross.py <home page> --out DIR [--flow URL]… [--form SELECTOR]
         [--table FILE] [--timeout MS]
 
@@ -93,7 +89,6 @@ form = siblings.load(HERE, "drive-form.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-cross.table")
-# Each check and the shape of the value its line gives: None for no value.
 CHECKS = {
     "phone": re.compile(r"\S.*"),
     "order": None,
@@ -104,12 +99,8 @@ CHECKS = {
 }
 WAYS = ("navigation", "links", "search")
 
-# One flow's walk: each step's URL, what was typed into it, what its fields
-# held on arrival with their autocomplete tokens, and what Back showed.
 Step = collections.namedtuple("Step", "url typed arrived back")
 Walk = collections.namedtuple("Walk", "start steps ended")
-# Why a walk ends on a submit that reaches a page with no form. Back after
-# it is vault.once-only-back's, a look question, so it is not pressed.
 LAST_SUBMIT = "the last step's submit, after which Back is not pressed"
 
 
@@ -117,7 +108,6 @@ TableError = rule_table.TableError
 
 
 def parse(text):
-    """The table's lines as Line records, in order."""
     lines = rule_table.parse(text, CHECKS, _line_value)
     first_by_check = {}
     for line in lines:
@@ -170,8 +160,6 @@ def _bare(url):
 
 
 def on_site(home, url):
-    """Whether `url` is a page of `home`'s site: the same http(s) origin, or a
-    local file in the home page's folder or below it."""
     h, u = urllib.parse.urlsplit(home), urllib.parse.urlsplit(url)
     if h.scheme == "file":
         folder = h.path.rsplit("/", 1)[0] + "/"
@@ -183,18 +171,11 @@ def on_site(home, url):
 
 
 def _open(page, url):
-    """Loads `url` and returns the page's read once it has settled, any
-    redirect it makes on load followed."""
     form.after(page, lambda: page.goto(url))
     return page.evaluate(PAGE_JS)
 
 
 def crawl(browser, home, read=None, **context):
-    """Every page of `home`'s site its links reach, each loaded in a context
-    of `context` options: ({final URL: its read}, [(url, why) for each page
-    that would not load]). `read(page)`, where given, runs on each page once
-    it has settled, and its result is the read's "read". The home page
-    refusing to load raises, as Playwright does."""
     from playwright.sync_api import Error as PlaywrightError
 
     pages, unread, queue, seen = {}, [], [_bare(home)], {_bare(home)}
@@ -223,8 +204,6 @@ def crawl(browser, home, read=None, **context):
 
 
 def phone_urls(browser, urls, device):
-    """Where each of `urls` ends when loaded as `device`, a Playwright device
-    descriptor: {url: (final URL, the mobile pages it names)}."""
     ctx = browser.new_context(**device)
     try:
         page = ctx.new_page()
@@ -238,7 +217,6 @@ def phone_urls(browser, urls, device):
 
 
 def walk(browser, start, selector=None):
-    """Walks the flow from `start` and returns a Walk."""
     ctx = browser.new_context()
     try:
         page = ctx.new_page()
@@ -248,7 +226,6 @@ def walk(browser, start, selector=None):
             try:
                 fields = form.fields(page, selector)
             except form.FormError as exc:
-                # No form here is where a flow ends, an answer, not a fault (#306).
                 expected(exc, "the walk ends")
                 return Walk(start, steps, "a step with no form")
             url = _bare(page.url)
@@ -282,23 +259,17 @@ def _has_form(page, selector):
     try:
         form.fields(page, selector)
     except form.FormError as exc:
-        # FormError is drive-form's word for a page with no form (#306).
         expected(exc, "no form")
         return False
     return True
 
 
 def _token(token):
-    """An autocomplete token two fields can share, or None for none."""
     words = " ".join(token.lower().split())
     return words if form.name_of(words) else None
 
 
 def findings(table, pages, walks, *, phones, home):
-    """One finding per record id, in table order: {"id", "answer", "misses",
-    "unjudged"}, each miss and unjudged entry {"check", "page", "what"}.
-    `walks` holds a Walk for each flow; `phones` is phone_urls()'s result, or
-    None where the table has no phone line."""
     answers = rule_table.Answers(table, "page")
     hubs = {line.id: line for line in table if line.check == "home-hub"}
     for line in {(line.id, line.check): line for line in table}.values():
@@ -327,12 +298,6 @@ def _phone(answers, line, phones):
 
 
 def _order(answers, line, pages):
-    """Each navigation on each page against the first page read before it
-    whose navigation shares two or more items with it, the navigation that
-    shares most, an item being a link's text and target: so a page out of
-    order is named once, against the page it first differs from, and a
-    pagination's Previous and Next, whose targets move, are not items its
-    numbered links share."""
     urls = list(pages)
     for i, b in enumerate(urls):
         for nav in pages[b]["navs"]:
@@ -442,8 +407,6 @@ def _repeat(answers, line, w):
 
 
 def device(name):
-    """Playwright's descriptor for the device `name`, the phone line's value.
-    It starts Playwright of its own, so call it before chromium() opens."""
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as play:

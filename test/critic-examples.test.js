@@ -1,7 +1,4 @@
 "use strict";
-// critic-examples.js, which deals each critic its own examples of the founder's taste from the corrections log (#193):
-// driven through the CLI on logs written here. Loosen it and three critics read one shared set again, a set of
-// mostly rejections pushes a Yes/No critic toward No, or an entry about another asset crowds out one about this one.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -17,7 +14,6 @@ const BRIEF = path.join(SCRATCH, "brief.md");
 fs.writeFileSync(BRIEF, "Aesthetic: a calm harbour page. Client values: the navy ground, a muted gold accent, photos of the boats.");
 
 let day = 0;
-// A corrections-log row; each gets its own date, later than the one before.
 const entry = (stance, words, { asset = "web-surface", project = "mmm-infra", principle = words } = {}) => ({
   date: new Date(Date.UTC(2026, 0, ++day)).toISOString().slice(0, 10),
   project,
@@ -39,7 +35,6 @@ function run(rows, ...args) {
   return { status: r.status, out: r.stdout, err: r.stderr };
 }
 
-// { a: [{ stance, words }], b: … } from the script's output.
 function parseSets(out) {
   const sets = {};
   let current;
@@ -53,7 +48,7 @@ function parseSets(out) {
 }
 const wordsOf = (set) => set.map((e) => e.words).sort();
 
-test("each critic gets as many kept entries as rejected, alternating, ten in all by default", () => {
+test("each critic gets as many kept entries as rejected, alternating, ten in all by default (#193)", () => {
   const r = run([...many("kept", 20), ...many("rejected", 40)]);
   assert.equal(r.status, 0, r.err);
   const sets = parseSets(r.out);

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """look-renders.py — the renders vault.contacts-look and vault.curves-look ask
-for, made before the gate critics run, so a critic answers from them rather
-than Unsure for want of a render (design-vault#228).
+for.
 
 USAGE
   python3 look-renders.py contacts <url or file> --contact NAME=[SELECTOR@]X,Y
@@ -16,15 +15,14 @@ the page fresh, seeks the frame, and shoots a CONTACT_SIZE CSS px square
 centred on each contact. Each shot is then magnified 4x by repeating pixels,
 never drawn again. A contact is X,Y in page CSS px, or SELECTOR@X,Y in the user
 space of the first element SELECTOR matches: through its getScreenCTM() for an
-SVG element, so a contact on a moving piece is followed frame by frame; from
-its border box's top left for any other. Take the contacts from
+SVG element, followed frame by frame; from its border box's top left for any other. Take the contacts from
 vault.contacts-code's answer. It writes DIR/<name>-<ms>ms-<n>x.png, and one
 sheet a frame, DIR/sheet-<ms>ms-<k>.png, of at most 2 x CONTACT_ROWS contacts,
 each a labelled run of its 1x, 2x and 3x crops. A contact whose crops are the
 same as on the last sheet it is on is left off a later frame's sheet.
 
 `bends`: at the end frame, it reads every path, polygon, polyline, circle,
-ellipse and rounded rect from the DOM, so a shape a script draws counts, with
+ellipse and rounded rect from the DOM, a shape a script draws among them, with
 the transform each is drawn through. check-curves.js --bends finds each
 subpath's tightest bend on the page as drawn, exact under any stretch or skew,
 and each run of straight segments that stands in for a curve, at its sharpest
@@ -40,8 +38,7 @@ earlier run's renders.json in DIR names, and refuse a page check-frames.py hash
 refuses. --width and --height frame the page as the motion scripts do
 (1920x945 unless given); a bare SVG
 file larger than that is framed at its drawn size, which the report and
-renders.json give. A sheet fits the standard image tier, so no critic's model scales
-it down and its repeated pixels stay whole.
+renders.json give. A sheet fits the standard image tier.
 
 EXITS 0 written / 2 the arguments are wrong / 3 Playwright, its browser, numpy
 or Pillow is missing / 4 the page did not render in time / 5 the browser refused
@@ -77,28 +74,18 @@ except ImportError as err:
     sys.exit(flow.missing(err))
 UnmeasurableError = flow.UnmeasurableError
 
-# vault.contacts-look's scales and magnification, and vault.curves-look's zoom
-# (design-critique/rules/imagery.md).
 SCALES = (1, 2, 3)
 MAGNIFY = 4
 ZOOM = 8
-# The square shot around a contact or a bend, in CSS px: a guess, enough to see
-# both sides meet.
-CONTACT_SIZE = 16
-BEND_SIZE = 32
-# The space around a tile and the height of its label line: guesses, enough to
-# part the tiles and fit Pillow's default 11 px font.
-GAP = 8
-LABEL = 14
-# A sheet fits the standard image tier, at most 1568 px on its long edge and
-# 1568 visual tokens of 28x28 px (platform.claude.com/docs/en/build-with-claude/
-# vision, Resolution and token cost); test/look-renders.test.py checks each
-# sheet against both.
+CONTACT_SIZE = 16  # guess, #228
+BEND_SIZE = 32  # guess, #228
+GAP = 8  # guess, #228
+LABEL = 14  # guess, #228
+# Claude's standard image tier: at most 1568 px a long edge and 1568 tokens of 28x28 px,
+# https://platform.claude.com/docs/en/build-with-claude/vision
 CONTACT_ROWS = 6
 BEND_COLUMNS, BEND_ROWS = 5, 3
-# The characters of a shape's name a bend tile's label shows: a guess that fits
-# a 256 px tile.
-LABEL_CHARS = 24
+LABEL_CHARS = 24  # guess, #228
 
 POINT_JS = r"""
 ({ sel, x, y }) => {
@@ -115,10 +102,6 @@ POINT_JS = r"""
 }
 """
 
-# Every drawn shape that can hold a curve, as check-curves.js --bends --json
-# reads it: path data or a points list, and its CTM to page CSS px. A circle,
-# ellipse or rounded rect becomes arcs from its computed geometry. A shape with
-# no box is not drawn.
 SHAPES_JS = r"""
 () => {
   const out = [];
@@ -160,7 +143,6 @@ SHAPES_JS = r"""
 }
 """
 
-# A bare SVG document's drawn size in CSS px, rounded up, or null for any other.
 SVG_ROOT_JS = r"""
 () => {
   const root = document.documentElement;
@@ -230,10 +212,7 @@ def open_page(browser, args, scale, timeline=None):
 
 
 def fit(browser, args):
-    """A copy of `args` with full_page. A bare SVG document never finishes a
-    full-page shot (#354), so it is shot without one, its viewport grown to its
-    drawn size. Residual: an SVG larger than Chromium will take as a viewport
-    is untried."""
+    # #354
     context, page, _ = open_page(browser, args, 1)
     try:
         drawn = page.evaluate(SVG_ROOT_JS)
@@ -269,9 +248,6 @@ def magnify(png):
 
 
 def render_contacts(browser, args, also=None):
-    """Every contact's crops. `also(page, args, contact=, point=, png=)`, where given, runs once every contact's crop at
-    a frame and scale is shot, with the page still there, for each contact with its device-size crop; its dict joins
-    that crop's record. check-seams.py's mattes restyle the page, so they come after every crop they could tint."""
     args = fit(browser, args)
     prep = frames.read_timeline(browser, args, 1, layout.device(args.width))
     times = frames.key_times(prep, args.times)
@@ -313,8 +289,6 @@ def render_contacts(browser, args, also=None):
 
 
 def find_bends(shapes):
-    """Each shape's bends in page CSS px, from check-curves.js --bends --json,
-    and the shapes whose path data it could not read."""
     proc = subprocess.run(
         ["node", os.path.join(HERE, "check-curves.js"), "--bends", "--json"],
         input=json.dumps(
@@ -368,8 +342,6 @@ def render_bends(browser, args):
 
 
 def sheet(tiles, columns, out):
-    """Tiles, each (label, image), in rows of `columns`, labelled, each framed
-    in magenta so a white crop does not run into the sheet."""
     rows = [tiles[i : i + columns] for i in range(0, len(tiles), columns)]
     width = max(sum(im.width for _, im in r) + GAP * (len(r) + 1) for r in rows)
     heights = [max(im.height for _, im in r) + LABEL + GAP for r in rows]
@@ -396,7 +368,6 @@ def tile(args, label, file):
 
 
 def contact_sheets(args, result):
-    """The sheets; a contact left off a frame's sheet goes in result["unchanged"]."""
     sheets, unchanged, last = [], [], {}
     for t in result["times"]:
         due = []
@@ -503,8 +474,6 @@ MODES = {
 
 
 def clear(out):
-    """Deletes the renders an earlier run's renders.json in `out` names, so a
-    sheet that run made and this one does not is never handed on."""
     path = os.path.join(out, "renders.json")
     try:
         with open(path, encoding="utf8") as fh:

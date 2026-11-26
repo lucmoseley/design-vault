@@ -1,8 +1,4 @@
 "use strict";
-// higgsfield.js, which spends money on Higgsfield's pay-per-request API (#18): its client run against a stand-in API
-// and CDN handed in as fetch, and the program itself only on runs refused before any call, so no request is real and
-// nothing is charged.
-// Loosen one and a round can pass its spend ceiling, send the key to the CDN, or lose an image it paid for.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -14,7 +10,6 @@ const { runInProcessAsync } = require("./core-run-in-process.js");
 const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield.js");
 const { render, parseArgs, settings } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-client.js"));
 const { RefusalError, withRetry } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-api.js"));
-// The round's ledger, as higgsfield.js's header names it.
 const LEDGER = "higgsfield-spend.jsonl";
 
 const KEY = "key-id:key-secret";
@@ -41,10 +36,6 @@ const reply = (status, body, headers = {}) => ({
   arrayBuffer: async () => body,
 });
 
-/**
- * A stand-in for api.higgsfield.ai and its CDN. `statuses` is what successive
- * status polls answer; `submit` may answer a list of replies, one per attempt.
- */
 function fakeApi({ usd = "0.094", estimate, estimates = [], statuses = ["in_progress", "completed"], pollReply, submit, images = [{ url: CDN }], video, cdn = () => reply(200, PNG) } = {}) {
   const calls = [];
   let polls = 0;
@@ -96,7 +87,7 @@ const ledger = (dir) =>
 const outcomes = (dir) => ledger(dir).filter((entry) => entry.status !== "submitting" && entry.status !== "submitted");
 const stopFields = (error) => ({ stoppedAt: error.stoppedAt, ran: error.ran, notSubmitted: error.notSubmitted, mayBeCharged: error.mayBeCharged });
 
-test("a job is priced, submitted, polled, saved under its sniffed type and charged to the round's ledger", async () => {
+test("a job is priced, submitted, polled, saved under its sniffed type and charged to the round's ledger (#18)", async () => {
   const dir = roundDir();
   const api = fakeApi();
   const lines = [];
@@ -958,7 +949,6 @@ test("a run whose round folder goes before its lock is taken is refused plainly,
   assert.equal(api.calls.length, 0);
 });
 
-// Runs where the scratch folder folds case, as macOS's APFS and /mnt/c on WSL do; TMPDIR=/mnt/c/... runs it on WSL.
 const foldsCase = (() => {
   const probe = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-case-"));
   scratch.push(probe);
@@ -1163,10 +1153,9 @@ test("two different r1 folders in one batch are not taken for the same candidate
   assert.equal(await render([job(roundDir()), job(roundDir())], api.options()), 0);
 });
 
-// FLUX.2 and GPT Image 2.5 estimate as a price rule in words, with no usd figure (#49).
 const RULE = { type: "description", description: "$0.03 for its first output megapixel, plus $0.015 for every additional output megapixel" };
 
-test("a job priced by a rule and given no max_usd is refused before anything is submitted, naming the rule", async () => {
+test("a job priced by a rule and given no max_usd is refused before anything is submitted, naming the rule (#49)", async () => {
   const dir = roundDir();
   const api = fakeApi({ estimate: RULE });
   await assert.rejects(render([job(dir)], api.options()), /carried no usd figure.*first output megapixel.*max_usd/s);
@@ -1387,10 +1376,6 @@ test("a 403 on the batch's first job says no job ran", async () => {
   await assert.rejects(render([job(roundDir())], api.options()), /No job ran\. Not submitted: r1\/v1-dusk/);
 });
 
-/**
- * Runs higgsfield.js with `args` and HOME a throwaway folder holding `envFileText` as its .higgsfield.env, or none
- * where it is omitted, so the founder's own key file is never read.
- */
 async function program(args, envFileText) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "higgsfield-home-"));
   scratch.push(home);
@@ -1411,8 +1396,6 @@ test("the program refuses bad usage with exit 2, naming the fault and the usage"
   }
 });
 
-// Each run below is refused before the API is called: by the key or the ceiling, and failing that by the out path,
-// which sits in no round folder.
 test("the program with no key exits 1 naming where to set it, before any call", async () => {
   const r = await program(["--out", "dusk", "--model", MODEL, "--prompt", "p"]);
   assert.equal(r.status, 1);

@@ -1,28 +1,23 @@
 #!/usr/bin/env python3
-"""check-measure.py — counts the characters on each line of a page's running
-text, at every breakpoint the page has: design-critique's Measure lens
-(design-vault#86).
-
-USAGE
+"""USAGE
   python3 check-measure.py <url or file> [--min N] [--max N] [--widths W,W,…]
         [--height PX] [--wait SEL] [--timeout MS]
 
 It reads the width breakpoints in the page's media queries, splits 320–2560 px
-at them, and renders both ends of each range, since a
-fluid column sets its shortest and longest lines there. --widths names the
+at them, and renders both ends of each range. --widths names the
 widths instead. At each width it counts the characters on every full line of
 running text, spaces included: real characters as the browser set them, never
-a CSS width, since `ch` is the width of a zero and most letters are narrower.
+a CSS width.
 Phone widths, 320–767 px, render with a touch screen, as check-layout.py's do,
 so text a page sets for `(pointer: coarse)` or `(hover: none)` is counted there
-at the size a phone sets it (#230). Where its media rules test the pointer or
+at the size a phone sets it. Where its media rules test the pointer or
 hover, the touch screen's end is a breakpoint too, so 767 and 768 px are
 rendered.
 A paragraph's last line, a line a <br> ends and a block of one line are not
 full, so only --max binds them. Headings, navigation, buttons, forms, tables,
 preformatted text and hidden text, a screen reader's clipped text included, are
 not running text. A line outside the range, 50–75 as the record vault.measure
-sets (#270), is printed with its block and its first words.
+sets, is printed with its block and its first words.
 
 A stylesheet the browser will not let a page script read, from another origin,
 is fetched from its address and its @media rules read; one that cannot be
@@ -54,21 +49,13 @@ from fail_open import fail_open  # noqa: E402
 layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
 
-# scripts/browse.py's desktop Chrome UA: a live client page is often served a
-# 403 for Playwright's own, which advertises HeadlessChrome. Re-pin it with that.
 DEFAULT_UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 )
-# check-layout.py's span, WCAG 1.4.10's reflow width to the widest common
-# desktop; a breakpoint outside it is not rendered.
 NARROWEST, WIDEST = layout.LOW, layout.HIGH
-# Out-of-range lines quoted per block before the rest are only counted: a first
-# guess at enough to show the fault without burying the report.
-SHOWN = 3
+SHOWN = 3  # guess, #501
 
-# Every media condition the page's stylesheets hold, and the address of each
-# sheet the browser will not let a script read.
 MEDIA_JS = r"""
 () => {
   const media = [];
@@ -91,9 +78,6 @@ MEDIA_JS = r"""
 }
 """
 
-# Every line of running text at the current width, each marked full or not. A
-# line ends where a character sits below the last one's bottom, or back to its
-# left and lower.
 LINES_JS = (
     r"""
 async () => {
@@ -101,8 +85,6 @@ async () => {
     + flow.LABEL_JS
     + r"""
   await document.fonts.ready;
-  // A block inside one of these is not running text; inline code in a
-  // paragraph is set on its line, so it counts.
   const NOT_RUNNING = 'h1, h2, h3, h4, h5, h6, [role="heading"], nav, button, label, select, textarea, input, table, pre';
   const NOT_SET = 'script, style, noscript, template, svg, math, [aria-hidden="true"]';
   const INLINE = new Set(['inline', 'contents', 'ruby']);
@@ -111,8 +93,6 @@ async () => {
     while (e && INLINE.has(getComputedStyle(e).display)) e = e.parentElement;
     return e;
   };
-  // A screen reader's text: clipped while positioned, or in a box of 1px or
-  // less that hides its overflow.
   const clipped = new Map();
   const isClipped = (e) => {
     if (!e || e === document.body) return false;
@@ -130,8 +110,6 @@ async () => {
   const blocks = new Map();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    // Text and <br>s. A space between two inline elements is a node of its
-    // own, and is set; a <br> ends a line short.
     const el = n.nodeType === 1 ? n : n.parentElement;
     if ((n.nodeType === 1 && n.localName !== 'br') || el.closest(NOT_SET) || isClipped(el)) continue;
     const b = blockOf(n);
@@ -142,7 +120,6 @@ async () => {
   }
   const range = document.createRange();
   const out = [];
-  // Each block's place among body's elements, for a caller that reads more of it.
   const order = new Map([...document.body.querySelectorAll('*')].map((e, i) => [e, i]));
   for (const [b, nodes] of blocks) {
     const lines = [];
@@ -158,10 +135,6 @@ async () => {
         const end = i + (n.data.codePointAt(i) > 0xffff ? 2 : 1);
         range.setStart(n, i);
         range.setEnd(n, end);
-        // A letter after a soft hyphen's break gets the hyphen's box first, and
-        // a space at a break a zero-width box on each line: the last box is
-        // where it sits. A box of no width is not set, nor is a soft hyphen
-        // within a line.
         const boxes = range.getClientRects();
         const r = boxes[boxes.length - 1];
         const ch = n.data.slice(i, end);
@@ -185,16 +158,13 @@ async () => {
 )
 
 
-# Where each width range starts: a min-width query's value, one pixel past a
-# max-width's, both in the level 4 range forms too. A media query's em is the
-# browser's initial 16px, whatever the page sets.
+# A media query's em is the initial font size, whatever the page sets:
+# https://www.w3.org/TR/mediaqueries-4/#units
 LENGTH = r"([\d.]+)(px|r?em)\b"
 NAMED = re.compile(r"(min|max)-(?:device-)?width\s*:\s*" + LENGTH)
 AFTER = re.compile(r"\bwidth\s*(>=|<=|>|<)\s*" + LENGTH)
 BEFORE = re.compile(LENGTH + r"\s*(>=|<=|>|<)\s*width\b")
-# A sheet's own text, for one the page could not read: each @media's condition.
 AT_MEDIA = re.compile(r"@media\b([^{;]*)\{")
-# A condition on the pointer or hover, which the phone band's touch screen sets.
 INPUT = re.compile(r"\b(?:any-)?(?:pointer|hover)\b")
 
 
@@ -203,7 +173,6 @@ def px(n, unit):
 
 
 def range_starts(media):
-    """Every width a media condition in `media` starts a range at."""
     out = set()
     for text in media:
         for kind, n, unit in NAMED.findall(text):
@@ -219,12 +188,10 @@ def range_starts(media):
 
 
 def edges(starts):
-    """The range starts inside NARROWEST–WIDEST, in order."""
     return sorted({s for s in starts if NARROWEST < s <= WIDEST})
 
 
 def widths(starts):
-    """Both ends of each range the breakpoints split NARROWEST–WIDEST into."""
     inner = edges(starts)
     lows = [NARROWEST, *inner]
     highs = [e - 1 for e in inner] + [WIDEST]
@@ -232,8 +199,6 @@ def widths(starts):
 
 
 def judge(blocks, lo, hi):
-    """Returns the full lines' range and count, the blocks holding them, and
-    each block with a full line outside lo–hi or any line over hi."""
     counts = [len(line["text"]) for b in blocks for line in b["lines"] if line["full"]]
     out = []
     for b in blocks:
@@ -256,8 +221,7 @@ def span(lo, hi):
     return f"{lo}" if lo == hi else f"{lo}–{hi}"
 
 
-# The first eight words: a guess at enough to find the line on the page.
-def words(text, n=8):
+def words(text, n=8):  # guess, #501
     head = " ".join(text.split(" ")[:n])
     return head if head == text else head + " …"
 
@@ -351,7 +315,6 @@ def parse(argv):
 
 
 def fetch(page, href):
-    """A stylesheet's text, by its address, or None."""
     if not href:
         return None
     from playwright.sync_api import Error as PlaywrightError
@@ -374,7 +337,6 @@ def run(at):
         page_if_phone = {}
 
         def page_at(width):
-            """The page at `width`, loaded once per device, as touch is fixed per context."""
             phone = layout.is_phone(width)
             viewport = {"width": width, "height": at.height}
             if phone not in page_if_phone:

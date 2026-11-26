@@ -1,12 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/contact-sheet.py (#71): python3 test/contact-sheet.test.py
-
-The page is synthetic, test/fixtures/sheet/ramp.html: its ground's red channel
-is a fifth of the time in ms, so each tile's time is read back from its pixels.
-Loosen it and a sheet whose frames are not the moments its labels name reaches
-the critic as one view of the candidate. Loosen the chain refusal and a build a finish
-event carries on is sheeted only to its first link's end (#259).
-"""
-
 import json
 import os
 import sys
@@ -33,7 +24,7 @@ LABELS = ["0.00 s", "0.25 s", "0.50 s", "0.75 s", "1.00 s", "1.10 s (end)"]
 
 
 def run(*args):
-    # A guess for contact-sheet.py alone, not taken from the other tests' timeouts: one run takes seconds here.
+    # guess, #501
     return child.run([sys.executable, SCRIPT, *args], timeout=180)
 
 
@@ -54,7 +45,7 @@ class Ramp(unittest.TestCase):
     def tearDownClass(cls):
         cls.dir.cleanup()
 
-    def test_it_writes_both_sheets_and_says_so(self):
+    def test_it_writes_both_sheets_and_says_so_71(self):
         self.assertEqual(self.proc.returncode, 0, self.proc.stdout + self.proc.stderr)
         self.assertIn(
             "desktop 1920x945: 6 frames, 0 to 1100 ms every 250 ms", self.proc.stdout
@@ -121,8 +112,7 @@ class Refusals(unittest.TestCase):
         self.assertIn("has no timeline", proc.stdout)
         self.assertIn("Record it playing instead", proc.stdout)
 
-    def test_a_chain_started_by_finish_events_cannot_be_sheeted(self):
-        # #259: a seek reaches only the chain's first link.
+    def test_a_chain_started_by_finish_events_cannot_be_sheeted_259(self):
         with tempfile.TemporaryDirectory() as out:
             proc = run(
                 os.path.join(HERE, "fixtures", "frames", "chained.html"), "--out", out

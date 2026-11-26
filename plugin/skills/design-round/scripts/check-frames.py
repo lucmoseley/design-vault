@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""check-frames.py — proves a motion candidate's frames, two ways
-(lucmoseley/mmm-infra#28, design-vault#67).
+"""Proves a motion candidate's frames, two ways.
 
 USAGE
   python3 check-frames.py last <url or file> --at SELECTOR --asset SVG [--asset SVG]
@@ -14,27 +13,24 @@ USAGE
 1 and then 2, it finishes every animation, as the build ends for a visitor, so
 the page's own end handlers run, and screenshots the asset's region. It then
 covers the page with the bare asset files drawn in one layer at the same
-transform, on --background, and screenshots that. Any pixel difference fails: a
-finished asset faded in over the pieces that built it is not the asset, because
-its anti-aliased edges are drawn twice. --at names the one element whose user
-space is the asset files' own coordinates: an SVG element (its getScreenCTM()
-is the transform), or an HTML box the first asset's viewBox is stretched to
-fill. Each --asset is drawn in that space, the mark first and then any
-wordmark, so a wordmark file must share the mark's coordinates. The background
-defaults to the first opaque background colour behind --at; pass --background
-for a gradient or an image ground. A hand-over a timer starts after the build
-ends is not waited for: the frame checked is the one before it. The asset is
-drawn inside the page, so the page's web fonts reach a wordmark set as text. It
-writes DIR/last-<n>x.png, DIR/asset-<n>x.png and DIR/diff-<n>x.png, each
-difference in red.
+transform, on --background, and screenshots that. Any pixel difference fails.
+--at names the one element whose user space is the asset files' own
+coordinates: an SVG element (its getScreenCTM() is the transform), or an HTML
+box the first asset's viewBox is stretched to fill. Each --asset is drawn in
+that space, the mark first and then any wordmark; a wordmark file must share
+the mark's coordinates. The background defaults to the first opaque background
+colour behind --at; pass --background for a gradient or an image ground. A
+hand-over a timer starts after the build ends is not waited for: the frame
+checked is the one before it. The page's web fonts reach a wordmark set as
+text. It writes DIR/last-<n>x.png, DIR/asset-<n>x.png and DIR/diff-<n>x.png,
+each difference in red.
 
 `hash`: renders each key frame from a fresh load, then seeks one more load
 backwards through them all, and fails a frame whose two renders differ. Key
 frames default to every keyframe's time, every animation's start and end, and
 time zero; --times names them in ms, `end` for the last. --save FILE stores
 each frame's SHA-256; --check FILE renders the frames FILE names, at its
-viewport and scale, and fails each whose hash changed, which is how a kept
-draft is re-checked after an edit to an engine it shares. It writes
+viewport and scale, and fails each whose hash changed. It writes
 DIR/frame-<ms>.png. A hash is of the PNG Chromium encodes, so a frame can
 change with the browser; --check names a browser change.
 
@@ -43,19 +39,16 @@ loaded, its fonts are ready, --wait has matched and no new one has started for
 QUIET_MS: `element.animate()`, CSS animations and CSS transitions. Time zero is
 the earliest animation's start. They refuse a page whose animations never end,
 run off a scroll timeline or play in reverse, or that keeps starting them for
-SETTLE_CAP_MS (#240). `hash` also refuses one that starts animations after that
-point, or when one finishes, because a seek could not reach them; `last`
-finishes those too, and refuses a page that keeps starting them. An animation a
-timer or an event starts after the first sits where that load's clock put it,
-which moves from load to load, so `hash` renders every frame on the timeline
-its first load timed, and --save keeps that timeline for --check, which names
-any start its own load put more than STAGE_JITTER_MS away (#259). Both refuse,
+SETTLE_CAP_MS. `hash` also refuses one that starts animations after that
+point, or when one finishes; `last` finishes those too, and refuses a page that
+keeps starting them. `hash` renders every frame on the timeline its first load
+timed, and --save keeps that timeline for --check, which names any start its
+own load put more than STAGE_JITTER_MS away. Both refuse,
 naming it, a page holding what that list does not: a visible canvas, video or
 embedded document, SMIL or shadow DOM, moving or not; a script rewriting an
 element or a path's d frame by frame; or an animation a script paused, which
 a seek would move. One such part refuses the whole page, its listed animations
-included. An animation CSS
-animation-play-state holds paused, a reveal a scroll releases, is seeked as it
+included. An animation CSS animation-play-state holds paused is seeked as it
 plays from when it is first seen, so one a script seeks by hand through CSS, a
 custom property in its animation-delay, is drawn as if playing.
 
@@ -83,35 +76,17 @@ import siblings  # noqa: E402
 flow = siblings.load(HERE, "check-flow.py")
 UnmeasurableError = flow.UnmeasurableError
 
-# LABEL_JS plus a name for an animation, by its target.
 NAME_JS = (
     flow.LABEL_JS
     + r"""
 const name = (a) => a.effect && a.effect.target ? label(a.effect.target, a.effect.pseudoElement) : 'an animation with no target';
 """
 )
-# FINISH_JS finishes what a build's end starts for this many rounds, then
-# refuses the page. A first guess: a build chained by finish events ends in a
-# few.
-FINISH_ROUNDS = 20
-# How long, in ms, no new animation may start before a loaded page counts as
-# done starting them, and how long it may keep starting them (#240). A page
-# that starts its motion on an event after load, a photo decoding, has none
-# yet at load. Guesses, unmeasured: the quiet window is paid on every load.
-# Residual: a page whose only motion starts later than that reads as still.
-QUIET_MS = 500
-SETTLE_CAP_MS = 5000
-# How far, in ms, a start may sit from a --check file's before the report names
-# it (#259). A guess: one gap measured here moved by 17 ms between runs on a
-# quiet machine, and by up to 150 ms with three test suites running.
-STAGE_JITTER_MS = 50
+FINISH_ROUNDS = 20  # guess, #501
+QUIET_MS = 500  # guess, #240
+SETTLE_CAP_MS = 5000  # guess, #240
+STAGE_JITTER_MS = 50  # guess over a measured 17 ms quiet and 150 ms loaded jitter, #259
 
-# Pauses every animation the page makes until it has made none for `quiet` ms,
-# and records where each sits on one page timeline, so a seek puts them all at
-# the same moment. Animations started in one frame share a start; ones a timer
-# or an event starts later sit wherever that load's clock put them (#259), so
-# a `timeline` from an earlier load, each animation's name and ms, puts them
-# where that load did.
 PREPARE_JS = (
     r"""
 async ({ quiet, cap, shown, timeline }) => {
@@ -120,7 +95,7 @@ async ({ quiet, cap, shown, timeline }) => {
     + flow.CSS_PAUSED_JS
     + r"""
   await document.fonts.ready;
-  // Each start is read before its pause, which nulls startTime.
+  // pause() nulls an animation's startTime: https://www.w3.org/TR/web-animations-1/#pausing-an-animation-section
   const starts = new Map();
   const began = performance.now();
   let lastNew = began;
@@ -129,8 +104,7 @@ async ({ quiet, cap, shown, timeline }) => {
   const held = [];
   for (;;) {
     const fresh = document.getAnimations().filter((a) => !starts.has(a));
-    // An animation cancelled while it waits rejects its ready promise; it is
-    // still in the list and judged below like any other.
+    // A cancelled pending animation rejects its ready promise: https://www.w3.org/TR/web-animations-1/#canceling-an-animation-section
     await Promise.all(fresh.map((a) => a.ready.catch(() => null)));
     const now = document.timeline.currentTime;
     for (const a of fresh) {
@@ -181,7 +155,6 @@ async ({ quiet, cap, shown, timeline }) => {
     if (!r.t) continue;
     end = Math.max(end, off + r.t.endTime / r.rate);
     keys.push(off + r.t.delay / r.rate, off + (r.t.delay + r.t.activeDuration) / r.rate);
-    // A keyframe's offset maps straight to time only under linear effect easing.
     if (r.t.easing === 'linear' && r.t.duration > 0) {
       for (const k of r.a.effect.getKeyframes()) keys.push(off + (r.t.delay + r.t.duration * k.computedOffset) / r.rate);
     }
@@ -208,11 +181,6 @@ SCRIPTED_JS = (
 """
 )
 
-# Names the animations the page starts in `quiet` ms with nothing finished,
-# `late`, and then, if none, those it starts in the `quiet` ms after every
-# animation PREPARE_JS paused is finished, `chained`: links a finish event
-# starts, which no seek reaches. QUIET_MS serves here too, a guess like it: a
-# link a timer starts later than that after its finish is missed.
 CHAIN_JS = (
     r"""
 async (quiet) => {
@@ -220,7 +188,7 @@ async (quiet) => {
     + NAME_JS
     + r"""
   const f = window.__frames;
-  // Read every frame: a short link with no fill leaves the list once it ends.
+  // A finished animation with no fill leaves getAnimations(): https://www.w3.org/TR/web-animations-1/#relevant-animations-section
   const watch = async () => {
     const found = new Set();
     const began = performance.now();
@@ -239,8 +207,6 @@ async (quiet) => {
 """
 )
 
-# Puts every animation at page time t and waits for that frame to paint; names
-# any animation the page started since PREPARE_JS.
 SEEK_JS = (
     r"""
 async (t) => {
@@ -256,9 +222,6 @@ async (t) => {
 """
 )
 
-# Ends the build as a visitor's ends: every animation finished, so the page's
-# own end handlers run, and any it starts then finished in turn. Names the
-# animations that still hold an end state.
 FINISH_JS = (
     r"""
 async (rounds) => {
@@ -279,15 +242,11 @@ async (rounds) => {
 """
 )
 
-# The transform from the asset's coordinates to the viewport, the region the
-# asset covers, and the background behind it.
 REGION_JS = r"""
 ({ sel, boxes, margin }) => {
   const els = document.querySelectorAll(sel);
   if (els.length !== 1) return { error: '--at ' + sel + ' matches ' + els.length + ' elements, not one' };
   const el = els[0];
-  // Chrome snaps an <svg> root's paint origin to whole pixels, so the bare
-  // asset is drawn from an <svg> at the same origin, snapped the same way.
   let m, origin;
   if (el instanceof SVGGraphicsElement) {
     let root = el;
@@ -320,8 +279,6 @@ REGION_JS = r"""
 }
 """
 
-# Covers the viewport with the bare asset files at the given transform. A
-# shadow root keeps the page's own CSS off them.
 OVERLAY_JS = r"""
 ({ assets, matrix, origin, background }) => {
   const NS = 'http://www.w3.org/2000/svg';
@@ -352,8 +309,6 @@ OVERLAY_JS = r"""
 }
 """
 
-# Runs in a blank page: decodes two PNGs and counts the pixels that differ, by
-# the largest channel difference, with an image of where.
 COMPARE_JS = r"""
 async ({ a, b }) => {
   const load = async (s) => {
@@ -374,7 +329,6 @@ async ({ a, b }) => {
     if (d > 0) {
       count++;
       if (d > max) { max = d; at = [(i / 4) % A.width, Math.floor(i / 4 / A.width)]; }
-      // A differing pixel red, the rest faded to a quarter of their darkness: picked by eye.
       out.data.set([255, 0, 0, 255], i);
     } else {
       const grey = 255 - (255 - (A.data[i] + A.data[i + 1] + A.data[i + 2]) / 3) / 4;
@@ -385,7 +339,7 @@ async ({ a, b }) => {
   canvas.getContext('2d').putImageData(out, 0, 0);
   const png = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer());
   let bin = '';
-  // 32k bytes a call: a guess well under the engines' argument-count limits.
+  // guess, #501
   const CHUNK = 0x8000;
   for (let i = 0; i < png.length; i += CHUNK) bin += String.fromCharCode(...png.subarray(i, i + CHUNK));
   return { count, max, at, diff: btoa(bin) };
@@ -394,8 +348,6 @@ async ({ a, b }) => {
 
 
 def viewbox(text, name):
-    """The asset file's viewBox, as [x, y, w, h]. A file that is not well-formed
-    XML is refused here: the browser's parser would draw nothing for it."""
     try:
         ET.fromstring(text)
     except ET.ParseError as exc:
@@ -412,7 +364,6 @@ def viewbox(text, name):
 
 
 def key_times(prep, asked):
-    """The frames to render, in ms on the page timeline, 1 ms apart at least (a guess)."""
     if asked:
         times = [prep["end"] if t == "end" else t for t in asked]
     else:
@@ -436,9 +387,6 @@ def compare(blank, a, b):
 
 
 def open_page(browser, at, scale, *, device=None, timeline=None):
-    """The page loaded, its animations paused and timed; `device` adds context
-    options, a phone's touch screen. `timeline`, an earlier load's
-    prep["timeline"], places this load's animations where that load did (#259)."""
     context = browser.new_context(
         viewport=at.viewport_size, device_scale_factor=scale, **(device or {})
     )
@@ -472,8 +420,6 @@ def open_page(browser, at, scale, *, device=None, timeline=None):
 
 
 def keyed(timeline):
-    """Each start in a prep["timeline"] by the animation's name and its count
-    so far, as PREPARE_JS matches them."""
     seen, out = {}, {}
     for s in timeline:
         seen[s["name"]] = seen.get(s["name"], 0) + 1
@@ -482,8 +428,6 @@ def keyed(timeline):
 
 
 def read_timeline(browser, at, scale, device=None):
-    """prep from a load opened only to read the timeline, refusing a chained
-    build on it."""
     context, page, prep = open_page(browser, at, scale, device=device)
     try:
         refuse_chain(page)
@@ -493,8 +437,6 @@ def read_timeline(browser, at, scale, device=None):
 
 
 def refuse_chain(page):
-    """Refuses a build a finish event carries on (#259). Spends the page: call
-    it last on a page, or on one opened only to read the timeline."""
     found = page.evaluate(CHAIN_JS, QUIET_MS)
     if found["late"]:
         raise late_error(found["late"])
@@ -509,7 +451,6 @@ def refuse_chain(page):
 
 
 def listed(found):
-    """Animation names for a message: sorted, once each, the first NAMES_SHOWN."""
     return ", ".join(sorted(set(found))[: flow.NAMES_SHOWN])
 
 
@@ -523,7 +464,6 @@ def late_error(found):
 
 
 def still_note(end):
-    """The line a report adds when the page read as still (#240)."""
     if end > 0:
         return []
     return [
@@ -539,8 +479,6 @@ def seek(page, t):
 
 
 def seek_shots(page, times):
-    """Each time in `times` seeked and shot, as (ms, PNG), then refuse_chain,
-    so it spends the page."""
     shots = []
     for t in times:
         seek(page, t)
@@ -601,7 +539,6 @@ def check_last(browser, blank, at, assets):
 
 
 def render(browser, at, t, timeline):
-    """One frame from a fresh context, so no state a load leaves reaches the next."""
     context, page, _ = open_page(browser, at, at.scale, timeline=timeline)
     try:
         seek(page, t)
@@ -611,7 +548,6 @@ def render(browser, at, t, timeline):
 
 
 def args_with(at, **fields):
-    """A copy of the parsed arguments `at` with `fields` set, so the caller's own stay as it passed them (base §N9)."""
     return argparse.Namespace(**{**vars(at), **fields})
 
 
@@ -620,8 +556,6 @@ def check_hash(browser, blank, at):
     if stored:
         at = args_with(at, viewport_size=stored["viewport"], scale=stored["scale"])
     prep = read_timeline(browser, at, at.scale)
-    # A --check re-renders the saved timeline, so a stage's start a later
-    # load's clock moved is not read as a changed frame.
     timeline, timed_by, note = prep["timeline"], "one load", None
     saved_timeline = (stored or {}).get("timeline")
     if stored and saved_timeline is None:
@@ -647,8 +581,6 @@ def check_hash(browser, blank, at):
     for t in times:
         with open(os.path.join(at.out, f"frame-{ms(t)}.png"), "wb") as fh:
             fh.write(first[t])
-    # The second pass seeks one page through every frame backwards, so a frame
-    # that depends on the frame before it differs from its fresh render.
     context, page, _ = open_page(browser, at, at.scale, timeline=timeline)
     second = {}
     for t in reversed(times):
@@ -847,7 +779,7 @@ def parse(argv):
                         and isinstance(f["sha256"], str)
                         for f in at.stored["frames"]
                     )
-                    # A file saved before #259 has no timeline.
+                    # #259
                     and all(
                         isinstance(s["name"], str) and isinstance(s["ms"], (int, float))
                         for s in at.stored.get("timeline") or []
@@ -872,18 +804,11 @@ def parse(argv):
     return p, at
 
 
-# A compositor animation keeps a scaled layer's raster from the frame before,
-# so one moment of a fixed page can hash two ways. On the main thread, an
-# animation also starts in the first frame it waits in, so no frame draws it
-# waiting at its first keyframe before its start, which a seek earlier than its
-# start would draw in its unanimated style, as check-flow's did (#326, #346).
-# Residual: a visitor's threaded Chrome on a loaded machine draws such a frame,
-# which no hash renders.
+# #326 #346
 HASH_ARGS = ["--disable-threaded-animation"]
 
 
 def run(at, assets):
-    # A last frame is checked as a visitor's Chrome draws it.
     with flow.chromium(HASH_ARGS if at.mode == "hash" else []) as browser:
         blank = browser.new_page()
         if at.mode == "last":

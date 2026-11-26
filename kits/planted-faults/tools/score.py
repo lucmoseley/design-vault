@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
-"""score.py — the planted-fault kit's blinded scorers and tally (built for #224, moved into the repo by #238).
-
-  score.py match  [--jobs 3]   three text-only scorers per (candidate, run): which findings name each known fault
-  score.py judge  [--jobs 3]   two scorers per clean candidate, run and page version: real, invented or out of scope
-  score.py third  [--jobs 3]   a third scorer, on only the findings the two judges split on
-  score.py tally               the shapes' numbers, to results.json and stdout
-  each takes --critics (the critics that ran), --runs (default 1,2,3), --cands (candidate names, default all) and
-  --passes (the gate passes that ran, default all)
-
-The gate trio's loads (runner.py GATE, #415) are critics here too: their findings are the questions, or under
-vault.affordance the parts, that at least two of the three critics of a pass failed (see gate_findings()). Its recall
-counts the gate set of the key, the faults gate-plants.py planted for it, and the critic set besides.
-
-A scorer sees findings under shuffled ids, with no critic, shape or severity; the map back sits outside its folder.
-Known faults are the planted ones (fixtures/key.json) and the founder's verdicts on these candidates
-(past-design-rejections.md Part B).
+"""
+python3 kits/planted-faults/tools/score.py match  [--jobs 3]   three text-only scorers per (candidate, run): which findings name each known fault
+python3 kits/planted-faults/tools/score.py judge  [--jobs 3]   two scorers per clean candidate, run and page version: real, invented or out of scope
+python3 kits/planted-faults/tools/score.py third  [--jobs 3]   a third scorer, on only the findings the two judges split on
+python3 kits/planted-faults/tools/score.py tally               the shapes' numbers, to results.json and stdout
+each takes --critics (the critics that ran), --runs (default 1,2,3), --cands (candidate names, default all) and
+--passes (the gate passes that ran, default all)
 """
 
 import argparse
@@ -43,7 +34,6 @@ def use_runs(runs):
     RUNS[:] = runs
 
 
-# {gate load: the passes scored}, from --passes as runner.py gate takes it.
 PASSES = None
 CRITICS = [
     "W",
@@ -78,30 +68,24 @@ SHAPES["1 + W3"] = ["W", "W3"]
 SHAPES["1 + T-type + T-layout"] = ["W", "T-type", "T-layout"]
 SHAPES["1 + T-type + T-colour"] = ["W", "T-type", "T-colour"]
 SHAPES["1 + T-type + T-layout + T-colour"] = ["W", "T-type", "T-layout", "T-colour"]
-# #268's load-change test: the whole-page critic's load before the restructure, and after it with the type critic.
 SHAPES["268 old"] = ["W0"]
 SHAPES["268 new"] = ["W1", "TT1"]
 SHAPES["268 new, whole-page alone"] = ["W1"]
-# #292's: tier 0's staged records made live, against the live load.
 SHAPES["292 live"] = ["WL", "TT1"]
 SHAPES["292 live, whole-page alone"] = ["WL"]
 SHAPES["292 tier 0 live"] = ["WS", "TS"]
 SHAPES["292 tier 0 live, whole-page alone"] = ["WS"]
-# #293's: tier 1's staged whole-page records made live, against the live load (#292's new one).
 SHAPES["293 tier 1 live"] = ["WT", "TS"]
 SHAPES["293 tier 1 live, whole-page alone"] = ["WT"]
-# #294's: the tone lens and tone lines, against #293's live load.
 SHAPES["294 tone line"] = ["WN", "TN"]
 SHAPES["294 tone line, whole-page alone"] = ["WN"]
 SHAPES["294 lean tone lens"] = ["WM", "TN"]
 SHAPES["294 lean tone lens, whole-page alone"] = ["WM"]
 SHAPES["502 visible-nav whole-page"] = ["WV0"]
 SHAPES["502 visible-nav script"] = ["WV1"]
-# #415's: the gate trio on the live look records, and on the live and held ones in passes of at most 20.
 SHAPES["415 gate, live"] = ["G-old"]
 SHAPES["415 gate, live and held"] = ["G-new"]
-# The kit runs no settle critic, which in a round settles every split: two No of three is the nearest stand-in.
-GATE_VOTES = 2
+GATE_VOTES = 2  # guess, #415
 KEY = json.load(open(ROOT / "fixtures/key.json"))
 B8 = (
     "B8",
@@ -156,7 +140,6 @@ def gate_run():
 
 
 def in_play(k):
-    """Whether a key entry counts: the gate set only where a gate load is scored, as only its runs cover its pages."""
     return k["candidate"] in CANDS and (k.get("set") != "gate" or gate_run())
 
 
@@ -165,12 +148,10 @@ def planted():
 
 
 def founder_scored():
-    """The founder's verdicts are scored where a critic of #224's kind ran; no gate question asks after them."""
     return not all(c in runner.GATE for c in CRITICS)
 
 
 def scored_cands():
-    """The candidates the match scorers read: each with a planted fault, and each the founder judged."""
     founder = (
         [c for c in FOUNDER if c in CANDS and c not in planted()]
         if founder_scored()
@@ -196,8 +177,6 @@ class NotReadyError(Exception):
 
 
 def gate_answers(run, load, n, cid):
-    """The three critics' answers for one candidate on one pass, each from the one dispatch that held it, and the
-    look list that dispatch was given."""
     out, look = [], None
     for critic in runner.GATE_CRITICS:
         found = [
@@ -221,10 +200,6 @@ def said(rows, answer):
 
 
 def affordance_findings(src, answers, parts):
-    """vault.affordance's findings, as gate.js affordanceRow() reads the panel: a part whose look, by at least
-    GATE_VOTES, disagrees with whether parts-map.py found it actable, or whose link goes nowhere. A part that acts but
-    does not look it, where a part that does look actable goes to the same place, is a minor case and no finding.
-    `unlisted` is not read: in a round only a settle critic rules on it."""
     rows = {p["id"]: [a["parts"].get(p["id"], {}) for a in answers] for p in parts}
     looks = {}
     for p in parts:
@@ -268,8 +243,6 @@ def affordance_findings(src, answers, parts):
 
 
 def gate_findings(cand, run, load):
-    """A gate load's findings on one candidate: each question at least GATE_VOTES of a pass's three critics answered
-    No, and affordance_findings(). Each is { src, where, fault, who_objects }."""
     cid = runner.CID[cand]
     parts = json.load(open(WORK / "packets" / cand / "pm/parts.json"))["parts"]
     out = []
@@ -318,8 +291,6 @@ def gather(cand, run, critics):
 
 
 def ids_file(folder):
-    """The map from a scorer's shuffled ids back to critics and faults, beside the scorer's folder so the scorer
-    cannot read it (#238)."""
     return folder.parent / f"{folder.name}.ids.json"
 
 
@@ -360,8 +331,6 @@ def judge_folder(cand, run, version, scorer):
 
 
 def same_findings(folder, found):
-    """Refuses a scorer folder whose findings are not the ones gathered now: one a test with other critics left in
-    the same work folder, whose answers would be scored as this test's."""
     f = ids_file(folder)
     if f.exists() and set(json.load(open(f))["findings"].values()) != {
         x["src"] for x in found
@@ -397,7 +366,6 @@ def _match_job(cand, run, scorer):
 
 
 def judge_sets(cand, run):
-    """(version, packet, critics): the original page and, where the chain is scored, the two pages its fixes made."""
     chain = WORK / f"runs/r{run}/chain/{runner.CID[cand]}"
     sets = [
         ("orig", WORK / "packets" / cand, [c for c in CRITICS if c not in ("C2", "C3")])
@@ -410,7 +378,6 @@ def judge_sets(cand, run):
 
 
 def scored_shapes():
-    """The shapes whose every critic is scored."""
     return {s: crit for s, crit in SHAPES.items() if set(crit) <= set(CRITICS)}
 
 
@@ -425,8 +392,6 @@ def _judge_job(cand, run, jset, scorer, *, only=None):
         folder.mkdir(parents=True, exist_ok=True)
         import shutil
 
-        # Where a load read the brief with its tone lines, every load's findings are judged against that brief (#294).
-        # Residual: an old load's findings are then judged against tone lines its critics never read.
         brief = next(
             (runner.BRIEF[c] for c in critics if c in runner.BRIEF), "brief.md"
         )
@@ -463,8 +428,7 @@ def split_of(cand, run, version):
 
 def tally():
     res = {"match_agreement": {}, "recall": {}, "founder": {}, "judged": {}}
-    # Recall: a known fault counts as found by a finding where at least two of three scorers matched them.
-    hit = {}  # (cand, run, fault) -> set of finding srcs
+    hit = {}
     pair_agree = []
     for cand in scored_cands():
         for run in RUNS:
@@ -487,7 +451,6 @@ def tally():
                 if n >= 2:
                     hit.setdefault((cand, run, fault), set()).add(src)
             for fault, *_ in known(cand):
-                # scorer agreement on "found by each shape's pooled findings", per fault
                 for crit in scored_shapes().values():
                     says = [
                         any(f == fault and src.split("#")[0] in crit for f, src in s)
@@ -498,7 +461,6 @@ def tally():
         "unanimous_share": round(sum(pair_agree) / max(len(pair_agree), 1), 3),
         "n": len(pair_agree),
     }
-    # The critic set's rows by kind, then the gate set's by stage, where it is scored.
     rows = {}
     for k in KEY:
         if in_play(k):
@@ -548,8 +510,7 @@ def tally():
                 for c, b in fv
             },
         }
-    # Judged: on the clean candidates, a finding's verdict is the two scorers' where they agree, else the third's.
-    final = {}  # (cand, run, src) -> (verdict, group)
+    final = {}
     agree = [0, 0]
     for cand in clean():
         for run in RUNS:

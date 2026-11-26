@@ -1,12 +1,3 @@
-"""colour_space.py — the colour maths the palette checks share (#175): sRGB
-hex to CIELAB, OKLCH and WCAG relative luminance, and the CIEDE2000 colour
-difference.
-
-CIELAB and luminance are taken under D65 from sRGB (IEC 61966-2-1); CIEDE2000
-follows Sharma, Wu & Dalal 2005 (kL = kC = kH = 1); OKLab is Ottosson's, in
-polar form; contrast is WCAG 2.x's.
-"""
-
 import math
 
 D65_WHITE = (0.95047, 1.0, 1.08883)
@@ -52,8 +43,8 @@ def l_star_of_luminance(y):
     return 116 * f_lab(y) - 16
 
 
+# OKLab's two matrices, as Ottosson publishes them: https://bottosson.github.io/posts/oklab/
 def oklch(h):
-    """(L, C, h in degrees) in OKLCH."""
     r, g, b = linear_rgb(h)
     long_ = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
     medium = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
@@ -68,6 +59,7 @@ def oklch(h):
     )
 
 
+# The CIEDE2000 difference, as Sharma, Wu and Dalal give it: https://hajim.rochester.edu/ece/sites/gsharma/ciede2000/
 def de2000(lab1, lab2):
     l1, a1, b1 = lab1
     l2, a2, b2 = lab2

@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""plants.py — the planted faults of the #224 critic-shape test, applied to clean copies.
-The record of how fixtures/*p/index.html and fixtures/key.json were made: it reads the clean pages in src/, which
-the kit does not keep.
-Each fault: id, kind (function|global|type|colour-surface|treatment), what (the fault in plain words, for the scorer),
-edits (old -> new, each old must occur exactly once), css (appended in one <style> before </head>), fonts (extra <link>)."""
-
 import json
 import sys
 import pathlib

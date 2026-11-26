@@ -1,23 +1,5 @@
-"""Writes the two fixture fonts face-profile.test.py reads, with metrics set
-to known values so the test can name the right answer (#282):
-
-  flex.ttf   variable: wght 100–900 (400), wdth 75–125 (100), opsz 8–144
-             (14), GRAD -200–150 (0); x-height 500 of 1000 units
-  plain.ttf  static: x-height 400 of 1000 units, no axes
-
-Every lowercase letter is one upright bar centred in its advance: 'l' rises
-to 700 units, the rest to the x-height. The bar's width is the stem.
-
-    flex at its defaults   advance 500, stem 100
-      wght 900             advance +50, stem +100   (wght 100: stem -60)
-      wdth 125 / 75        advance +100 / -100
-      opsz 8 / 144         advance +60 / -40, stem +0 / -20
-      GRAD 150 / -200      stem +40 / -40, advance unchanged
-    plain                  advance 450, stem 60
-
-It needs fontTools, which the vault does not depend on: run it from a
-scratch environment, `pip install fonttools`, then
-`python make-fonts.py <this directory>`.
+"""pip install fonttools
+python make-fonts.py <this directory>
 """
 
 import pathlib
@@ -80,8 +62,6 @@ def build(path, family, *, advance, stem, xheight, axes=None):
 
 
 def deltas(wide, thick):
-    """The four corners' and four phantom points' x deltas for a bar whose
-    advance grows by `wide` and stem by `thick`: the bar stays centred."""
     left = (wide - thick) // 2
     right = (wide + thick) // 2
     return [
@@ -97,7 +77,6 @@ def deltas(wide, thick):
 
 
 def variations():
-    # (axis, peak, advance change, stem change)
     moves = [
         ("wght", 1.0, 50, 100),
         ("wght", -1.0, 0, -60),

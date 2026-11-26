@@ -1,12 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-render.py (#328, #332): python3 test/check-render.test.py
-
-Drives the check from outside, by exit code and printed lines, on renders the
-test draws into a scratch round folder `r1` beside its spend log, and on real
-Grok renders in test/fixtures/render cut to 960 px on the long side. Broken, it
-lets a downscaled hero pass vault.render-size, a missing size read as a pass, or
-a painted checkerboard pass where a transparent background was asked.
-"""
-
 import json
 import os
 import re
@@ -38,6 +29,8 @@ ROSTER = os.path.join(
 
 GROK = "xai/grok-imagine-image-2.0"
 QWEN = "alibaba/qwen-image-3/text-to-image"
+CELL_SLACK_PX = 1  # guess, #332
+CELL_SLACK_SHARE = 0.15  # guess, #332
 
 
 def largest(model, aspect="16:9"):
@@ -91,7 +84,7 @@ class Size(unittest.TestCase):
             out, r"size: PASS — 2816x1584 against the largest, 2816x1584 \(measured"
         )
 
-    def test_a_render_below_its_models_largest_size_fails_by_either_side(self):
+    def test_a_render_below_its_models_largest_size_fails_by_either_side_328(self):
         w, h = largest(GROK)
         self.logged(
             ("r1/v1-half", GROK, "16:9"),
@@ -133,7 +126,6 @@ class Size(unittest.TestCase):
             self.assertNotIn("PASS", out)
 
     def test_the_model_and_aspect_are_read_from_the_line_whose_candidate_matches(self):
-        # One size, two candidates: it passes on Qwen's largest and fails on Grok's, so each render reads its own line.
         self.logged(("r1/v1-grok", GROK, "16:9"), ("r1/v2-qwen", QWEN, "16:9"))
         size = largest(QWEN)
         code, out, _ = run(self.render("v1-grok", size), self.render("v2-qwen", size))
@@ -258,7 +250,6 @@ class Size(unittest.TestCase):
         self.assertIn("none.jsonl", err)
 
     def test_a_missing_or_broken_sizes_file_exits_2_not_1(self):
-        # A copy of the check in a scratch plugin tree, so render-sizes.json beside it can be broken.
         scripts = os.path.join(self.tmp.name, "plugin", "scripts")
         references = os.path.join(self.tmp.name, "plugin", "references")
         os.makedirs(scripts)
@@ -290,7 +281,6 @@ class Size(unittest.TestCase):
 
 
 def checkerboard(size, cell=20, tones=((255, 255, 255), (204, 204, 204))):
-    """#262's fixture."""
     import numpy as np
 
     w, h = size
@@ -308,7 +298,6 @@ REMEDY = r"checkerboard: FAIL — .*: render it again on one loud plain colour a
 
 
 class Checkerboard(unittest.TestCase):
-    # Each Grok render is at least Grok's largest 16:9 size, so the size check passes and the exit is the checkerboard's.
     @classmethod
     def setUpClass(cls):
         cls.scaled = tempfile.TemporaryDirectory()
@@ -347,7 +336,7 @@ class Checkerboard(unittest.TestCase):
         ImageDraw.Draw(image).ellipse([900, 300, 1900, 1300], fill=(20, 50, 110))
         return self.save("v1-flat.png", image)
 
-    def test_a_painted_checkerboard_fails(self):
+    def test_a_painted_checkerboard_fails_332(self):
         for cell in (8, 20, 40):
             render = self.save(f"v{cell}.png", checkerboard(largest(GROK), cell))
             code, out, _ = self.check(render, "--transparent")
@@ -360,8 +349,9 @@ class Checkerboard(unittest.TestCase):
                 out,
             )
             self.assertIsNotNone(found, out)
-            # The cell comes back in whole pixels after the check's rescale: a pixel and 15% covers #332's runs, untraced.
-            self.assertLessEqual(abs(int(found[1]) - cell), 1 + cell * 0.15, out)
+            self.assertLessEqual(
+                abs(int(found[1]) - cell), CELL_SLACK_PX + cell * CELL_SLACK_SHARE, out
+            )
 
     def test_a_dark_checkerboard_fails_too(self):
         dark = checkerboard(largest(GROK), 16, ((40, 40, 40), (90, 90, 90)))
@@ -464,6 +454,28 @@ class Checkerboard(unittest.TestCase):
             self.assertEqual(out.returncode, code, out.stderr)
         self.assertIn("numpy is missing — python3 -m pip install -r", out.stderr)
 
+    def test_a_package_present_but_unimportable_exits_3_naming_it_501_paired_with_missing_numpy(
+        self,
+    ):
+        render = self.flat()
+        for package in ("PIL", "numpy"):
+            with self.subTest(package=package), tempfile.TemporaryDirectory() as shadow:
+                os.mkdir(os.path.join(shadow, package))
+                with open(os.path.join(shadow, package, "__init__.py"), "w") as fh:
+                    fh.write(f"raise ImportError('shadowed', name={package!r})\n")
+                done = subprocess.run(
+                    [sys.executable, SCRIPT, render, "--model", GROK]
+                    + ["--aspect", "16:9", "--transparent"],
+                    capture_output=True,
+                    text=True,
+                    env={**os.environ, "PYTHONPATH": shadow},
+                )
+                self.assertEqual(done.returncode, 3, done.stderr)
+                self.assertIn(
+                    f"check-render: {package} is missing — python3 -m pip install -r",
+                    done.stderr,
+                )
+
 
 class Data(unittest.TestCase):
     def test_every_image_model_on_the_roster_has_a_row_and_every_size_a_source(self):
@@ -477,8 +489,6 @@ class Data(unittest.TestCase):
             for t in re.findall(r"`([^`\s]+)`", section)
             if re.fullmatch(r"[a-z0-9-]+(/[a-z0-9.\-]+)+", t) and not t.endswith(".js")
         }
-        # The roster's table writes these two ids as `nano_banana_2` and Midjourney with no id at all, so the
-        # slash pattern misses them: a new roster model with no backticked slash id escapes this check too.
         ids |= {"nano_banana_2", "seedream_v4_5", "midjourney/v7"}
         self.assertTrue(
             {GROK, QWEN, "ideogram/v4.0", "marketing-studio/image/sunburst"} <= ids, ids

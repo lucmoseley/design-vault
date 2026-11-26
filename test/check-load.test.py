@@ -1,9 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-load.py (#170): python3 test/check-load.test.py
-
-Lose the throttling and every local page passes in a few ms; stop waiting for
-a later paint and a headline held back passes on whatever drew first.
-"""
-
 import os
 import shutil
 import sys
@@ -12,7 +6,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-load.py"
@@ -25,7 +19,7 @@ import siblings  # noqa: E402
 load = siblings.load(SCRIPTS, "check-load.py")
 
 
-# A guess for check-load.py alone: a run takes about QUIET_MS plus the load.
+# guess, #170
 RUN_TIMEOUT_S = 180
 # A script that holds the throttled load 40% past QUIET_MS; the 40% is a guess (#154).
 SLOW_LOAD_BYTES = int(load.DOWN_BYTES * load.QUIET_MS / 1000 * 1.4)
@@ -48,14 +42,13 @@ class Profile(unittest.TestCase):
 
 
 class Pages(unittest.TestCase):
-    def test_content_shown_at_once_passes_after_the_throttled_round_trip(self):
+    def test_content_shown_at_once_passes_after_the_throttled_round_trip_170(self):
         proc = run("at-once.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("the median of 3 run(s); limit 2500 ms", proc.stdout)
         ms = [int(line.split()[0]) for line in proc.stdout.splitlines()[2:]]
         self.assertEqual(len(ms), 3)
-        # One throttled round trip alone is 562.5 ms, so a lower LCP was not throttled.
-        self.assertTrue(all(562 < m < 2500 for m in ms), ms)
+        self.assertTrue(all(load.LATENCY_MS < m < 2500 for m in ms), ms)
         self.assertIn(" ms, h1#title", proc.stdout)
 
     def test_a_headline_revealed_3_s_in_fails(self):

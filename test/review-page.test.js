@@ -1,13 +1,8 @@
 "use strict";
-// The shared review page's feedback boxes and data check (plugin/review-page/review.js, #120),
-// run in-process against a store double that behaves as the real `db` store does where mmm-infra's pages failed (#90 P7):
-// it freezes every snapshot it delivers and its data(), echoes the page's own writes back, and can replay an older copy late.
-// Loosen the double and the note test passes on a broken page.
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const R = require("../plugin/review-page/review.js");
 
-// One collection of the store. Every delivery carries every document, as the real store's query snapshots do.
 function storeDouble() {
   const bodies = new Map(), listeners = new Set(), writes = [];
   const snapOf = (id, body) => Object.freeze({
@@ -37,7 +32,6 @@ function storeDouble() {
   };
 }
 
-// The page's timers, run by hand; the clock moves only when the test moves it.
 function harness(store, keys = ["v1", "v2"]) {
   const timers = new Map();
   let nextId = 1, clock = 1000;
@@ -50,21 +44,18 @@ function harness(store, keys = ["v1", "v2"]) {
   return {
     page,
     tick(ms = 1) { clock += ms; },
-    /** The pause after typing ends: every waiting note saves. */
     pause() { const due = [...timers.values()]; timers.clear(); due.forEach(fn => fn()); },
   };
 }
 
 test("a typed note survives its own echo and a stale replay (#90 P7)", async () => {
   const store = storeDouble();
-  // An answer saved on an earlier visit, so the page starts from a delivered (frozen) snapshot.
   store.seed("v1", { mark: "keep", note: "", at: 500 });
   const { page, tick, pause } = harness(store);
   assert.equal(page.answer("v1").mark, "keep");
 
   page.note("v1", "This ");
   tick(); pause();
-  // He keeps typing while the first save is still on its way back.
   page.note("v1", "This is the one");
   await page.settle();
   assert.equal(page.answer("v1").note, "This is the one", "the echo of the first save replaced what he typed after it");
@@ -76,7 +67,7 @@ test("a typed note survives its own echo and a stale replay (#90 P7)", async () 
   assert.equal(store.body("v1").mark, "keep", "saving the note dropped the mark");
 });
 
-test("a mark sticks through its echo and a stale replay, and a second click keeps it", async () => {
+test("a mark sticks through its echo and a stale replay, and a second click keeps it (#120)", async () => {
   const store = storeDouble();
   const { page, tick } = harness(store);
   page.mark("v2", "drop");
@@ -149,7 +140,6 @@ test("two saves in one millisecond both reach another open view", async () => {
 
 test("another tab's answer that lands while this page is saving is taken once the save ends", async () => {
   const store = storeDouble();
-  // This page's write reaches the store, then the other tab's newer write lands before this page hears back.
   const col = {
     doc: id => ({ async set(body) {
       await store.collection.doc(id).set(body);
@@ -216,8 +206,7 @@ test("an address on another host with no scheme is not a file beside the page (#
     assert.deepEqual(R.checkItems({ items: [{ id: "a", name: "A", image: src }] }).problems, [], src);
 });
 
-// A card's `line` may carry several lines, one per part of a candidate (design-round §3 step 3, #406).
-test("a card's line keeps its line breaks", () => {
+test("a card's line keeps its line breaks (#406)", () => {
   const html = require("node:fs").readFileSync(require("node:path").join(__dirname, "../plugin/review-page/index.html"), "utf8");
   const rule = html.match(/^\.line\s*\{([^}]*)\}/m);
   assert.ok(rule, "index.html has a .line rule");

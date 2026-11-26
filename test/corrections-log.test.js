@@ -1,8 +1,4 @@
 "use strict";
-// corrections-log.js, which refuses a malformed corrections-log row and a commit that rewrites one (#166): his words
-// once committed never change, and a row changes only by its pending ruling being answered. The row rules call
-// checkCorrectionsLog directly; --staged and the pre-commit run copies of the scripts in a throwaway repo, since
-// they read the git beside them.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
@@ -73,7 +69,7 @@ test("a line that is not one JSON object is refused, and so are the same words f
   assert.deepEqual(checkCorrectionsLog(log(trait, { ...trait, candidate: "rounds/hero-r2 v1-arches" })), [], "the same words about another candidate");
 });
 
-test("the log only grows: HEAD's rows stand, his words never change, and only a pending ruling may be answered", () => {
+test("the log only grows: HEAD's rows stand, his words never change, and only a pending ruling may be answered (#166)", () => {
   const head = log(trait, brief);
   assert.deepEqual(checkCorrectionsLog(log(trait, brief, ruled), head), [], "appending a row");
   assert.deepEqual(checkCorrectionsLog(log({ ...trait, ruling: "no rule" }, brief), head), [], "answering pending with no rule");
@@ -111,30 +107,25 @@ test("--staged judges the index's log against HEAD's, not the working tree's", (
   const { repo, git, file } = scratchRepo("corrections-log-staged-");
   const staged = () => runInProcess(path.join(repo, "corrections-log.js"), ["--staged"], { cwd: repo });
 
-  // No commit and no log yet: an empty log.
   assert.equal(staged().status, 0, staged().stderr);
 
   fs.writeFileSync(file, log(trait));
   git("add", "data");
   git("commit", "-q", "-m", "first correction");
 
-  // A reworded working-tree copy that is not staged does not reach the check.
   fs.writeFileSync(file, log({ ...trait, words: "too yellow" }));
   assert.equal(staged().status, 0, staged().stderr);
 
-  // Staged, it is refused against HEAD's row.
   git("add", "data");
   const refused = staged();
   assert.equal(refused.status, 1);
   assert.match(refused.stderr, /words: line 1 changes his words in HEAD's row for 2026-10-13 mmm-infra/);
 
-  // An answered ruling is staged clean, with a broken working-tree copy beside it.
   fs.writeFileSync(file, log({ ...trait, ruling: "no rule" }));
   git("add", "data");
   fs.writeFileSync(file, "{ half");
   assert.equal(staged().status, 0, staged().stderr);
 
-  // The plain run reads the working tree against HEAD.
   const plain = runInProcess(path.join(repo, "corrections-log.js"), [], { cwd: repo });
   assert.equal(plain.status, 1);
   assert.match(plain.stderr, /json: line 1/);
@@ -167,7 +158,6 @@ test("--staged with a path is a usage error", () => {
   assert.match(result.stderr, /--staged reads the index's and HEAD's log; it takes no paths/);
 });
 
-// A git that fails must stop the commit: read as an empty log, it would pass every rewrite.
 test("--staged outside a git repo is an error, never an empty log", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "corrections-log-nogit-"));
   scratch.push(dir);

@@ -1,15 +1,10 @@
 #!/usr/bin/env node
 /**
- * Copies data/gallery.json and data/styles.json into data/vault-data.js, a
- * script the page loads directly, so index.html opens from its folder with no
- * server: a browser refuses fetch() on a file:// page (#32).
- *
  * Usage:
  *   node bundle.js             rewrites the working tree's data/vault-data.js
  *   node bundle.js --staged    refuses a commit whose staged bundle does not match its staged JSON
  *
- * ingest.js reruns it after every image. Exit codes: 0 clean, 1 the staged
- * bundle is stale, 2 a usage error or a file that could not be read.
+ * Exit codes: 0 clean, 1 the staged bundle is stale, 2 a usage error or a file that could not be read.
  */
 "use strict";
 
@@ -19,12 +14,9 @@ const { gitIn } = require("./git-read.js");
 
 const BUNDLE = "data/vault-data.js";
 
-// The JSON goes in verbatim, so a diff of the bundle reads like the diff of the
-// file it came from. Parsing first means a malformed file fails here, loudly,
-// rather than as a syntax error on the page.
 function bundle(galleryText, stylesText) {
   const json = (text, name) => {
-    const clean = text.trim(); // trim() drops a byte-order mark too
+    const clean = text.trim();
     try {
       JSON.parse(clean);
     } catch (error) {
@@ -33,13 +25,10 @@ function bundle(galleryText, stylesText) {
     return clean;
   };
   return (
-    "// Derived from data/gallery.json and data/styles.json by `node bundle.js` — never edit it by hand (#32).\n" +
     `window.VAULT_DATA = {\n"gallery": ${json(galleryText, "data/gallery.json")},\n"styles": ${json(stylesText, "data/styles.json")}\n};\n`
   );
 }
 
-// Writes the bundle beside the gallery it came from, by temp file and rename so
-// a page opened mid-write never reads half of it.
 function writeBundle(dataDir) {
   const read = (name) => fs.readFileSync(path.join(dataDir, name), "utf8");
   const target = path.join(dataDir, "vault-data.js");
@@ -49,8 +38,6 @@ function writeBundle(dataDir) {
   return target;
 }
 
-// Reads the index, never the working tree, so the hook judges this commit's
-// bytes and not a parallel session's half-written copy.
 function checkStaged(root) {
   const git = gitIn(root);
   const staged = new Set(git("ls-files", "-z", "--", "data/gallery.json", "data/styles.json", BUNDLE).split("\0").filter(Boolean));

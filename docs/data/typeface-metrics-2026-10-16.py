@@ -1,5 +1,5 @@
-"""The #282 instrument, for docs/research/typeface-traits.md R5: read x-height, cap height, weight, lowercase average advance and fvar axes from TTF files.
-Usage: python3 -I docs/data/typeface-metrics-2026-10-16.py FONT...   (no dependencies)
+"""Reads x-height, cap height, weight, lowercase average advance and fvar axes from TTF files.
+Usage: python3 docs/data/typeface-metrics-2026-10-16.py FONT...   (run with -I; no dependencies)
 Lowercase advance = mean hmtx advance of a-z at the default instance, in em.
 """
 

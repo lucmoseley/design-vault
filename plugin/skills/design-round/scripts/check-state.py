@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""check-state.py — the driven-state checks (#312): drives a candidate page
-into the states only a visitor reaches, hover, press, a key, focus, a
-submit, an open overlay, a drag, a wheel, a pinch, the passing of time, and
-answers the rule records about what each state shows (#250).
+"""Drives a candidate page into the states only a visitor reaches, hover,
+press, a key, focus, a submit, an open overlay, a drag, a wheel, a pinch, the
+passing of time, and answers the rule records about what each state shows.
 
 USAGE
   python3 check-state.py <page> --out DIR [--parts FILE] [--part NAME=SELECTOR]…
@@ -10,11 +9,11 @@ USAGE
 
 The page is a URL or a local HTML file. Every check opens it afresh at the
 desktop viewport, under any condition its rule names (no hover, right to
-left), so one check's state never reaches another. Forms are really filled
-and submitted, so run it on a candidate, never a live site.
+left). Forms are really filled and submitted: run it on a candidate, never
+a live site.
 
 --parts is the building session's parts declaration, {"declared": {<part>:
-<its CSS selector, or null>}} (design-round §1c, #274); --part gives one
+<its CSS selector, or null>}} (design-round §1c); --part gives one
 part by hand. A line that reads a part is not judged where the part is not
 declared, and has no match where it is declared null. --handover names a
 link the project's rules file keeps a handover notice for, which the exit
@@ -174,17 +173,13 @@ ITEMS = "; "
 VIEWPORT = dict(
     zip(("width", "height"), map(int, flow.DESKTOP.split("x")), strict=True)
 )
-# How the checks drive a page, not what they judge: each a guess, stated as
-# one, at the gesture a visitor makes.
-TRACK_CLICK = 0.25  # a click a quarter along a slider's track
-TRACK_ENDS = (0.03, 0.97)  # clicks just inside a track's two ends
-DRAG_PAST = (40, 60)  # px a drag runs past the track's end, and below it
-WHEEL_MIN = 40  # px, the smallest sideways wheel turn
-PINCH_AT = 0.3  # where the fingers meet, as a share of the part's box
-PINCH_SPREAD = 0.25  # how far each finger moves, as a share of its shorter side
-PINCH_START, PINCH_STEPS = 10, 10  # px apart the fingers start; moves they take
-# Each check and the shape of its value: None for no value. A group named
-# n_… is read as a number, words as a comma list, rules as axe rule ids.
+TRACK_CLICK = 0.25  # guess, #312
+TRACK_ENDS = (0.03, 0.97)  # guess, #312
+DRAG_PAST = (40, 60)  # guess, #312
+WHEEL_MIN = 40  # guess, #312
+PINCH_AT = 0.3  # guess, #312
+PINCH_SPREAD = 0.25  # guess, #312
+PINCH_START, PINCH_STEPS = 10, 10  # guess, #312
 NUM = r"(?P<n_{}>\d+(?:\.\d+)?)"
 PART = r"part (?P<part>[a-z][a-z-]*)"
 AXE = r"axe (?P<rules>[a-z][a-z-]*(?: [a-z][a-z-]*)*)"
@@ -240,16 +235,10 @@ CHECKS = {
     + NUM.format("horizon"),
 }
 
-# The text a paste check writes to the clipboard: digits, so a number, phone
-# or code field takes it as readily as a text field.
+# guess, #312
 PASTED = "4242"
-# The keys single-key presses: every printable ASCII character and Space.
 KEYS = [chr(c) for c in range(0x21, 0x7F)] + [" "]
-# The words that name a control which shuts a dialog without acting: the
-# overlay driver's close words, for telling a toast's action from its close.
 SHUT_WORDS = ("close", "cancel", "dismiss", "done", "hide", "×")
-# The properties that show a state's look, and of them those that are not
-# colour, for a toggle whose on and off must differ by more than colour.
 SHAPE_PROPS = [
     *(
         f"border-{s}-{p}"
@@ -296,11 +285,9 @@ TAP_JS = r"""
     if (!el || !el.isConnected || el.nodeType !== 1) return false;
     if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
     const r = el.getBoundingClientRect();
-    return r.width >= 2 && r.height >= 2;  // a guess, stated as one: under 2 px no one sees it
+    return r.width >= 2 && r.height >= 2;  // guess, #312
   };
   const text = (el) => (el ? (el.innerText ?? el.textContent ?? "") : "").replace(/\s+/g, " ").trim();
-  // The accessible name's sources in their order: aria-labelledby, aria-label,
-  // a <label>, the content, title; a value last, for a button input.
   const nameOf = (el) => ((el.getAttribute("aria-labelledby") || "").split(/\s+/)
       .map((id) => document.getElementById(id)).filter(Boolean).map(text).join(" ") ||
     el.getAttribute("aria-label") || [...(el.labels || [])].map(text).join(" ") ||
@@ -355,8 +342,6 @@ TAP_JS = r"""
           for (const s of split(r.selectorText)) {
             const i = s.indexOf(":hover");
             const head = s.slice(0, i);
-            // Only a rule that goes on past :hover to another element can
-            // show something; `a:hover` alone restyles the link itself.
             const reaches = /^(:[\w-]+(\([^)]*\))?)*\s*[\s>+~]\s*\S/.test(s.slice(i + 6));
             if (i > 0 && reaches && (head.split("(").length === head.split(")").length)) {
               out.add(head.replace(/:(focus-visible|focus-within|focus|active|visited|link)\b/g, ""));
@@ -366,8 +351,6 @@ TAP_JS = r"""
         if (r.cssRules) walk(r.cssRules);
       }
     };
-    // The sheet texts read through the browser's CSS domain, which a file
-    // page's own cssRules refuse; else the sheets the page lets script read.
     if (window.__stSheets) {
       for (const text of window.__stSheets) {
         const sheet = new CSSStyleSheet();
@@ -390,7 +373,6 @@ TAP_JS = r"""
       const cs = getComputedStyle(el);
       return Object.fromEntries(props.map((p) => [p, cs.getPropertyValue(p)]));
     },
-    // A part drawn apart from its ground: its own fill, a shadow or a border.
     edged(el) {
       const cs = getComputedStyle(el);
       if (this.background(el) !== this.background(el.parentElement)) return true;
@@ -398,8 +380,6 @@ TAP_JS = r"""
       return ["Top", "Right", "Bottom", "Left"].some((s) =>
         parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== "none" && !/,\s*0\)$/.test(cs[`border${s}Color`]));
     },
-    // One element per markup signature: its tag, type, role and classes,
-    // and its parent's, which share their styles on a styled page.
     distinct(els) {
       const seen = new Set();
       const sig = (e) => [e.localName, e.type, e.getAttribute("role"), e.className, e.getAttribute("aria-pressed") !== null].join("|");
@@ -465,7 +445,7 @@ TAP_JS = r"""
     track(el) {
       if (el.localName === "input") return el;
       const r = el.getBoundingClientRect();
-      // A guess, stated as one: a box under three heights wide is a thumb.
+      // guess, #501
       return r.width < 3 * r.height ? el.parentElement : el;
     },
     liveOf: (el) => el.closest(LIVE),
@@ -497,7 +477,6 @@ TableError = rule_table.TableError
 
 
 def parse(text):
-    """The table's lines as Line records, in order, each value a dict."""
     return rule_table.parse(text, CHECKS, _line_value)
 
 
@@ -524,9 +503,6 @@ def _off_site(page_url, href):
 
 
 def guard(context, start):
-    """Answers every page load off `start`'s site in `context` with a blank
-    page, so no check reaches a live site; what a page loads from elsewhere
-    to draw itself still loads."""
 
     def answer(route):
         if route.request.is_navigation_request():
@@ -551,8 +527,6 @@ class Run:
 
     @contextlib.contextmanager
     def page(self, url=None, **cond):
-        """The page loaded afresh under `cond` (conditions.open_page's), the
-        tap loaded before its own scripts, and settled."""
         with conditions.open_page(
             self.browser,
             url or self.url,
@@ -585,7 +559,6 @@ def _items(handle):
 
 
 def elements(page, js, arg=None):
-    """The elements an in-page expression returns, as ElementHandles."""
     return [h.as_element() for h in _items(page.evaluate_handle(js, arg))]
 
 
@@ -606,7 +579,6 @@ def style(page, el, props=LOOK_PROPS):
 
 
 def quick(page):
-    """Two animation frames: long enough for a handler and its re-render."""
     page.evaluate(
         "() => new Promise((f) => requestAnimationFrame(() => requestAnimationFrame(f)))"
     )
@@ -617,15 +589,12 @@ def blur(page):
 
 
 def rest(page):
-    """The pointer off the page and focus on its body, so no part shows hover or focus."""
     page.mouse.move(0, 0)
     blur(page)
     quick(page)
 
 
 def sheets(page):
-    """Hands the page the text of every style sheet it holds, read through
-    Chromium's CSS domain, for the tap to find its :hover rules in."""
     cdp = page.context.new_cdp_session(page)
     ids = []
     cdp.on("CSS.styleSheetAdded", lambda e: ids.append(e["header"]["styleSheetId"]))
@@ -639,26 +608,22 @@ def sheets(page):
 
 
 def reload(run, page):
-    """The page loaded afresh from the run's URL, wherever the last step left it."""
     page.goto(run.url)
     pointer.settle(page)
     sheets(page)
 
 
 def gone(page, url0):
-    """Whether the page has left the document it was on."""
     from playwright.sync_api import Error as PlaywrightError
 
     try:
         return page.url != url0 or not page.evaluate("() => !!window.__st")
     except PlaywrightError as exc:
-        # An evaluate the page's own navigation cut short is it leaving (#312).
         expected(exc, "the page has left")
         return True
 
 
 def rgb(css):
-    """A computed colour as (r, g, b) in 0–255."""
     nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", css)]
     if "srgb" in css:
         return tuple(round(n * 255) for n in nums[:3])
@@ -680,7 +645,6 @@ def contrast(a, b):
 
 
 def reveals(page, el):
-    """What resting the pointer on `el` draws that was not drawn before."""
     pointer.leave(page, el)
     page.evaluate("() => __st.mark()")
     pointer.hover(page, el)
@@ -698,11 +662,6 @@ def undrawn(page, els):
 
 
 def trial(run, page, *, keep=None, before=None, after=None):
-    """Clicks each visible button that would not submit a form, on the page
-    reloaded before each, and yields (button, its info, what the click drew).
-    `keep` filters the buttons in the page; `before` runs before each click;
-    `after(page, button, drawn)`, where given, is yielded in place of what the
-    click drew, and may press on."""
     find = (
         "(keep) => __st.controls(['button']).filter((b) => b.type !== 'submit' && !b.disabled"
         " && b.getAttribute('aria-disabled') !== 'true' && !b.closest('[inert]')"
@@ -723,13 +682,9 @@ def trial(run, page, *, keep=None, before=None, after=None):
             at, drawn = info(page, button), elements(page, "() => __st.revealed()")
             got = after(page, button, drawn) if after else drawn
         except pointer.PointerError as exc:
-            # A button no visitor can reach shows them nothing to judge (#312).
             expected(exc, "nothing to judge")
             continue
         yield button, at, got
-
-
-# ---- hover --------------------------------------------------------------
 
 
 def check_reveal(run, line, ans):
@@ -739,7 +694,6 @@ def check_reveal(run, line, ans):
             try:
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -791,7 +745,6 @@ def check_persist(run, line, ans):
             try:
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -813,7 +766,6 @@ def check_persist(run, line, ans):
                             "what hover shows goes as the pointer moves onto it",
                         )
                 except pointer.PointerError as exc:
-                    # Content hover shows that the pointer cannot reach is the fault (#312).
                     expected(exc, "said as a miss")
                     ans.miss(
                         line, at, f"the pointer cannot reach what hover shows: {exc}"
@@ -861,7 +813,6 @@ def check_click_opens(run, line, ans):
                 try:
                     shown = reveals(page, el)
                 except pointer.PointerError as exc:
-                    # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                     expected(exc, "said as not judged")
                     unreached(page, line, ans, el, exc=exc)
                     continue
@@ -927,7 +878,6 @@ BOX_JS = r"""(el) => {
 
 
 def _moved(before, after, px):
-    """The largest change in any box's place or size, where above `px`."""
     worst = max(
         (
             abs(a - b)
@@ -952,7 +902,6 @@ def check_reflow(run, line, ans):
             try:
                 pointer.leave(page, el)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -960,7 +909,6 @@ def check_reflow(run, line, ans):
             try:
                 pointer.hover(page, el)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1016,7 +964,6 @@ def check_states(run, line, ans):
             try:
                 pointer.leave(page, el)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1050,7 +997,6 @@ def check_states(run, line, ans):
                     pointer.release(page)
                     blur(page)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1071,7 +1017,6 @@ def check_states(run, line, ans):
 
 
 def _inverse(page, el, lum):
-    """What is wrong with `el`'s surface, as an inverse surface, or None."""
     surface = rgb(page.evaluate("(el) => __st.background(el)", el))
     ground = rgb(page.evaluate("(el) => __st.background(el.parentElement)", el))
     ink = rgb(page.evaluate("(el) => getComputedStyle(el).color", el))
@@ -1089,7 +1034,6 @@ def check_inverse(run, line, ans):
             try:
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1118,8 +1062,6 @@ def check_inverse(run, line, ans):
                     ans.miss(line, info(page, t), f"a toast {wrong}")
                 ans.met(line)
 
-
-# ---- press, keys and focus ---------------------------------------------
 
 DEFAULT_JS = r"""(dialog) => {
   const buttons = [...dialog.querySelectorAll('button, input[type=submit], input[type=button], [role=button]')].filter(__st.drawn);
@@ -1179,7 +1121,6 @@ def check_toggle(run, line, ans):
                 pointer.leave(page, el)
                 blur(page)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1217,8 +1158,6 @@ def check_release(run, line, ans):
             acted = []
             try:
                 pointer.hover(page, el)
-                # Focused first, so what a focus or blur handler writes is not
-                # read as the press acting.
                 el.focus()
                 quick(page)
                 was, undo0 = page.evaluate(SEEN_JS), _named(page, words)
@@ -1260,7 +1199,6 @@ def check_release(run, line, ans):
             ans.met(line)
 
 
-# What a press could leave changed: the page's text and every state attribute.
 SEEN_JS = r"""() => [document.body.innerText,
   ...[...document.querySelectorAll('[aria-pressed], [aria-expanded], [aria-checked], [aria-selected], input')]
     .map((el) => [el.getAttribute('aria-pressed'), el.getAttribute('aria-expanded'),
@@ -1275,7 +1213,6 @@ def _undoes(page, undo, was):
 
 
 def _control(page, words):
-    """The first drawn button, link or box named with one of `words`, or None."""
     return page.evaluate_handle(
         """(words) => __st.controls(['button', 'link', 'box'])
           .find((c) => words.some((w) => __st.nameOf(c).toLowerCase().includes(w))) || null""",
@@ -1426,7 +1363,6 @@ def check_slider_keys(run, line, ans):
     with run.page() as page:
         url0 = page.url
         for i in range(len(elements(page, find))):
-            # A track click that left the page leaves the next slider's handle in the old one (#458).
             if gone(page, url0):
                 reload(run, page)
             found = elements(page, find)
@@ -1467,7 +1403,6 @@ def check_slider_keys(run, line, ans):
                 elif _value(page, el) >= high:
                     wrong.append("a click on its track")
             except pointer.PointerError as exc:
-                # A track the pointer cannot click is the fault (#312).
                 expected(exc, "said as a miss")
                 wrong.append("a click on its track (covered)")
             if wrong:
@@ -1491,7 +1426,6 @@ def check_direction(run, line, ans):
                     _click_track(page, el, end)
                     at_end = _value(page, el)
                 except pointer.PointerError as exc:
-                    # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                     expected(exc, "said as not judged")
                     unreached(page, line, ans, el, exc=exc)
                     continue
@@ -1537,7 +1471,6 @@ def check_drag(run, line, ans):
             try:
                 pointer.drag(page, el, (dx, dy), hold=True)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1604,7 +1537,6 @@ def check_wheel(run, line, ans):
                 if not moved(True):
                     ans.miss(line, at, "Shift with the wheel does not move it")
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
@@ -1625,7 +1557,6 @@ def check_wheel(run, line, ans):
                         try:
                             pointer.click(page, b)
                         except pointer.PointerError as exc:
-                            # A control no pointer reaches is no way to move it (#312).
                             expected(exc, "not a way to move it")
                             continue
                         now = page.evaluate("(el) => el.scrollLeft", el)
@@ -1761,7 +1692,6 @@ def check_target(run, line, ans):
             try:
                 pointer.click(page, link)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, link, exc=exc)
                 continue
@@ -1808,8 +1738,6 @@ VISITED_JS = r"""() => {
 
 
 def _ink(png):
-    """The background and the ink of a link's picture: the commonest colour,
-    and the one that contrasts with it most."""
     from PIL import Image
 
     img = Image.open(io.BytesIO(png)).convert("RGB")
@@ -1834,7 +1762,6 @@ def check_visited(run, line, ans):
                 folder, channel="chromium", viewport=VIEWPORT
             )
         except PlaywrightError as exc:
-            # A browser that will not launch leaves visited colours unread, said as not judged (#312).
             fail_open(exc, "visited colours are said as not judged")
             ans.unjudged(
                 line,
@@ -1893,15 +1820,12 @@ def check_visited(run, line, ans):
         shutil.rmtree(folder, ignore_errors=True)
 
 
-# ---- forms ----------------------------------------------------------------
-
 FORMS_JS = (
     "() => [...document.querySelectorAll('form')].filter(__st.drawn).map(__st.pathOf)"
 )
 
 
 def _checked_fields(page, sel):
-    """The text fields of the form at `sel` the browser checks, in order."""
     return [
         f
         for f in form.fields(page, sel)
@@ -1917,12 +1841,10 @@ def _checked_fields(page, sel):
 
 
 def _checked_field(page, sel):
-    """The first field of the form at `sel` the browser checks, or None."""
     return next(iter(_checked_fields(page, sel)), None)
 
 
 def _planted(page, sel, key, bad):
-    """The value fill() gives the field `key`, a planted bad one where `bad`."""
     for f in form.fill(page, sel, bad=[key] if bad else ()):
         if f.key == key:
             return f.value if isinstance(f.value, str) else None
@@ -1930,8 +1852,6 @@ def _planted(page, sel, key, bad):
 
 
 def _error(page, key, base):
-    """Whether the field `key` shows an error: aria-invalid, or the text its
-    aria-describedby or aria-errormessage names changed from `base`."""
     for f in form.read(page)["fields"]:
         if f["key"] == key:
             return f["invalid"] or f["described"] != base
@@ -2131,7 +2051,6 @@ def check_on_input(run, line, ans):
             try:
                 pointer.settle(page)
             except PlaywrightError as exc:
-                # The choice navigated mid-settle; gone() below reads it (#312).
                 expected(exc, "gone() reads the navigation")
             changed = []
             if gone(page, url0):
@@ -2175,7 +2094,6 @@ def check_enter(run, line, ans):
             try:
                 got = form.submit(page, sel, by="enter")
             except form.FormError as exc:
-                # A form Enter cannot submit is the fault (#312).
                 expected(exc, "said as a miss")
                 ans.miss(line, at, f"Enter cannot submit it: {exc}")
                 continue
@@ -2185,18 +2103,15 @@ def check_enter(run, line, ans):
 
 
 def unreached(page, line, ans, el, *, exc):
-    """Records `el` not judged, as the pointer cannot reach it."""
     ans.unjudged(
         line, info(page, el), f"the pointer cannot reach it: {flow.first_line(exc)}"
     )
 
 
 def _submit(page, sel):
-    """The form at `sel` submitted by its button, or None where it has none."""
     try:
         return form.submit(page, sel)
     except form.FormError as exc:
-        # A form with no submit button leaves its caller nothing to read (#312).
         expected(exc, "no submission to read")
         return None
 
@@ -2305,8 +2220,6 @@ LIVE_TEXT_JS = (
 
 
 def _axe(page, line, ans, at, *, el):
-    """axe's violations of the line's rules on `el`; what axe could not
-    decide goes to review, as check-markup.py puts it (#307)."""
     got = (
         markup.axe_on(
             page, line.value["rules"], page.evaluate("(el) => __st.pathOf(el)", el)
@@ -2428,9 +2341,6 @@ def check_mixed(run, line, ans):
             None,
             f"no group checkbox names its group, and no selector for the part {line.value['part']}",
         )
-
-
-# ---- overlays and live regions -------------------------------------------
 
 
 def check_submenu(run, line, ans):
@@ -2571,7 +2481,6 @@ def check_ellipsis(run, line, ans):
                 try:
                     pointer.click(page, item)
                 except pointer.PointerError as exc:
-                    # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                     expected(exc, "said as not judged")
                     unreached(page, line, ans, item, exc=exc)
                     continue
@@ -2649,8 +2558,6 @@ def check_expanded(run, line, ans):
 
 
 def _live_faults(page, found, by=None):
-    """Adds each live region at fault to `found`, named by the control
-    `by` (its info) that showed it where one did."""
     for h in _items(page.evaluate_handle("() => __st.liveFaults()")):
         region = info(page, h.get_property("0").as_element())
         what = h.get_property("1").json_value()
@@ -2663,7 +2570,10 @@ def _live_faults(page, found, by=None):
 def check_live_region(run, line, ans):
     found = {}
     with run.page() as page:
-        snap = lambda p: p.evaluate("() => __st.snapLive()")  # noqa: E731
+
+        def snap(p):
+            return p.evaluate("() => __st.snapLive()")
+
         for _, at, _ in trial(run, page, before=snap):
             _live_faults(page, found, at)
             ans.met(line)
@@ -2756,14 +2666,12 @@ def check_exit(run, line, ans):
             try:
                 pointer.click(page, link)
             except pointer.PointerError as exc:
-                # Not judged where the pointer cannot reach it, so it is never a pass (#312).
                 expected(exc, "said as not judged")
                 unreached(page, line, ans, link, exc=exc)
                 continue
             try:
                 page.wait_for_load_state()
             except PlaywrightError as exc:
-                # A load the guard's blank answer cut short still names the page reached (#312).
                 expected(exc, "the page reached is read")
             pages = [page, *run.popups]
             arrived = any(
@@ -2815,8 +2723,6 @@ PRESS_JS = r"""(name) => {
 
 
 def _timed(run, run_for, press=None, then=0):
-    """The {kind: (time, extra)} the fake clock saw, `run_for` ms after load,
-    then pressing the warning's button `press` and running `then` ms more."""
     from playwright.sync_api import Error as PlaywrightError
 
     seen = {}
@@ -2838,8 +2744,6 @@ def _timed(run, run_for, press=None, then=0):
                 seen.pop("expire", None)
                 page.clock.run_for(int(then))
         except PlaywrightError:
-            # The page leaving itself as its limit ends cuts the clock short;
-            # any other failure stops the check (#312).
             if "expire" not in seen:
                 raise
     return seen
@@ -2877,8 +2781,6 @@ RUNS = {name: globals()["check_" + name.replace("-", "_")] for name in CHECKS}
 
 
 def findings(run, table):
-    """One finding per record id, in table order: {"id", "answer", "misses",
-    "unjudged", "review"}, each entry {"check", "where", "fault", "what"}."""
     from playwright.sync_api import Error as PlaywrightError
 
     ans = rule_table.Answers(table, "where", "fault", review=True)
@@ -2887,7 +2789,6 @@ def findings(run, table):
         try:
             RUNS[line.check](run, line, ans)
         except (PlaywrightError, form.FormError) as exc:
-            # One check stopping leaves the others to run; it is said as not judged (#312).
             fail_open(exc, f"{line.check} is said as not judged")
             ans.unjudged(line, None, f"the check stopped: {flow.first_line(exc)}")
     return ans.done()

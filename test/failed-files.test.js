@@ -1,6 +1,4 @@
 "use strict";
-// test/failed-files.js, the reporter test/all.sh's node --test suite runs under (#436), and test/all.sh run on named
-// files. Loosen either and a red batch names no failing file, so workflow-core's lander can neither land it nor bisect it.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
@@ -14,8 +12,6 @@ const ALL_SH = path.join(ROOT, "test", "all.sh");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "failed-files-"));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-// A node --test run under this one would report to it, not through its own reporter; and an outer run's
-// VAULT_FAILED_FILES and VAULT_FILE_SECONDS are that run's, never these cases'.
 const env = (extra) => {
   const e = { ...process.env, ...extra };
   delete e.NODE_TEST_CONTEXT;
@@ -37,17 +33,24 @@ function scratch(name) {
   fs.mkdirSync(path.join(root, "test"), { recursive: true });
   for (const f of ["all.sh", "run-lanes.sh", "failed-files.js"]) fs.copyFileSync(path.join(ROOT, "test", f), path.join(root, "test", f));
   for (const [f, body] of Object.entries(TESTS)) fs.writeFileSync(path.join(root, "test", f), body);
-  // Names all.sh lists, so a named run finds their suites.
   fs.writeFileSync(path.join(root, "test", "palette.test.py"), "import sys\nsys.exit(1)\n");
   fs.writeFileSync(path.join(root, "test", "cutout.test.py"), "print('cutout ran')\n");
   return root;
 }
 
-// all.sh's own node --test suite, as it prints it.
+const QUIET_PS = path.join(dir, "quiet-ps");
+fs.writeFileSync(QUIET_PS, "#!/bin/sh\n", { mode: 0o755 });
+const AMPLE_MEMINFO = path.join(dir, "meminfo");
+// guess #627: past run-lanes' top rung of 4050 MB
+fs.writeFileSync(AMPLE_MEMINFO, "MemAvailable:   8192000 kB\n");
+// #627
+const idleMachineEnv = () => env({ VAULT_SUITE_LANES: "1", VAULT_PS: QUIET_PS, VAULT_MEMINFO: AMPLE_MEMINFO,
+  WFC_GATE_SEAT: "", VAULT_SUITE_BUDGET: "", VAULT_SUITE_TIMES: "" });
+
 const NODE = spawnSync("bash", [ALL_SH, "--plan"], { encoding: "utf8", env: env({}) }).stdout.match(/^RUN (node .*)$/m)[1];
 const plan = (...files) => spawnSync("bash", [ALL_SH, "--plan", ...files], { cwd: ROOT, encoding: "utf8", env: env({}) });
 
-test("a node --test run under the reporter writes each file with a failing test once, from the run's root", () => {
+test("a node --test run under the reporter writes each file with a failing test once, from the run's root (#436)", () => {
   const root = scratch("reporter");
   const named = path.join(dir, "reporter.failed");
   const r = spawnSync("bash", ["-c", `${NODE} "$@"`, "node", ...Object.keys(TESTS).map((f) => `test/${f}`)],
@@ -98,7 +101,7 @@ test("without VAULT_FAILED_FILES the reporter still prints Node's report and the
 test("all.sh on named files runs only them, .js ones in one node --test run, and prints FAIL per failing file", () => {
   const root = scratch("named");
   const r = spawnSync("bash", ["test/all.sh", "./test/red.test.js", "test/green.test.js", "test/palette.test.py"],
-    { cwd: root, encoding: "utf8", env: env({ VAULT_SUITE_LANES: "1" }) });
+    { cwd: root, encoding: "utf8", env: idleMachineEnv() });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.deepEqual(r.stderr.trim().split("\n").sort(), ["FAIL test/palette.test.py", "FAIL test/red.test.js"]);
   assert.deepEqual(r.stdout.match(/^== .*(?= \(\d+ s\)$)/gm), [
@@ -111,7 +114,7 @@ test("all.sh on named files runs only them, .js ones in one node --test run, and
 test("all.sh on named files that pass exits 0 and counts the suites it ran", () => {
   const root = scratch("green");
   const r = spawnSync("bash", ["test/all.sh", "test/green.test.js", "test/cutout.test.py"],
-    { cwd: root, encoding: "utf8", env: env({ VAULT_SUITE_LANES: "1" }) });
+    { cwd: root, encoding: "utf8", env: idleMachineEnv() });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /cutout ran/);
   assert.match(r.stdout, /^2 named suite\(s\) passed$/m);

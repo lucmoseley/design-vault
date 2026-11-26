@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""check-dom.py — the DOM family script (#310): answers the rule records
-whose answer is a DOM fact (a count, an attribute, an element's presence or
-place, a head tag), one table line or more per record, through probe.py
-(#300, #250).
+"""Answers the rule records whose answer is a DOM fact (a count, an
+attribute, an element's presence or place, a head tag), one table line or
+more per record, through probe.py.
 
 USAGE
   python3 check-dom.py <page> --out DIR [--table FILE] [--parts FILE]
@@ -73,8 +72,7 @@ are written onto it as attributes, for attr: lines to read:
   data-vault-spaced-text on the outermost element of each run whose
                          white-space keeps spaces (pre, pre-wrap or
                          break-spaces): its text as written, each space,
-                         tab and line break shown as ␠, ␉ and ␤, since
-                         probe.py squashes white space before it matches
+                         tab and line break shown as ␠, ␉ and ␤
   data-vault-heads       on a div or span drawn as a block, holding phrasing
                          text alone, outside a heading, label, control,
                          nav or element with a role, and followed by a
@@ -104,7 +102,7 @@ are written onto it as attributes, for attr: lines to read:
   data-vault-status      on the root, on the missing page: the HTTP status
 
 --parts is the building session's parts declaration, {"declared": {<part>:
-<its CSS selector, or null>}} (design-round §1c, #274); --part gives one
+<its CSS selector, or null>}} (design-round §1c); --part gives one
 part's selector and wins. A part the declaration does not name selects
 nothing, so a count of it is 0; a line reading a part declared with no
 selector is not judged, and goes to the look critics.
@@ -151,7 +149,6 @@ WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
 PAGE, RTL, MISSING = "page", "under rtl", "on missing page"
 DEFINE = re.compile(r"define (\$[\w-]+) = (.+)")
 NAME = re.compile(r"\$[\w-]+")
-# A selector no element meets: an undeclared part's.
 NOTHING = ":not(*)"
 
 Block = collections.namedtuple("Block", "load when rules")
@@ -161,7 +158,6 @@ TableError = rule_table.TableError
 
 
 def parse(text):
-    """The table's blocks, in order. Raises TableError naming the line."""
     blocks, names = [], {}
     load, when, pending = PAGE, None, []
 
@@ -205,8 +201,6 @@ def _expand(n, text, names):
 
 
 def _when(n, text):
-    """A when header's SELECTS, as a probe.py count line that holds where it
-    finds an element."""
     try:
         return probe.parse(f"when | {text} | count | >= 1")[0]
     except probe.TableError as exc:
@@ -214,14 +208,12 @@ def _when(n, text):
 
 
 def part_names(rule):
-    """The parts a rule's selections name."""
     selects = [rule.select]
     if rule.must.ref and rule.must.ref.select:
         selects.append(rule.must.ref.select)
     return {s.value for s in selects if s.source == "part"}
 
 
-# Wraps addEventListener before the page's scripts run.
 LISTEN_JS = r"""
 (() => {
   const heard = new WeakMap();
@@ -231,12 +223,13 @@ LISTEN_JS = r"""
     heard.get(this).add(String(type));
     return add.call(this, type, ...rest);
   };
+  const read = (target, key) => {
+    try { return target[key]; } catch (e) { return null; }
+  };
   window.__vaultHeard = (target) => {
     const types = new Set(heard.get(target) || []);
     for (const key in target) {
-      if (key.startsWith('on')) {
-        try { if (typeof target[key] === 'function') types.add(key.slice(2)); } catch (e) { /* a getter that throws on read: no handler to report */ }
-      }
+      if (key.startsWith('on') && typeof read(target, key) === 'function') types.add(key.slice(2));
     }
     return [...types].sort().join(' ');
   };
@@ -262,8 +255,6 @@ STAMP_JS = r"""
     if (label) return label;
     return el.labels ? squash([...el.labels].map((l) => l.textContent).join(' ')) : '';
   };
-  // An accessible name: the label, else the text, image alternatives and svg
-  // titles it holds, aria-hidden subtrees left out.
   const accessible = (el) => {
     const label = labelOf(el);
     if (label) return label;
@@ -280,7 +271,6 @@ STAMP_JS = r"""
   };
   const name = (el) => accessible(el) || squash(el.value || '');
 
-  // Listeners: the window's and the document's go on the root.
   const heard = window.__vaultHeard;
   if (heard) {
     const page = [heard(window), heard(document), heard(root)].join(' ').split(' ').filter(Boolean);
@@ -299,7 +289,6 @@ STAMP_JS = r"""
   for (const a of document.querySelectorAll('a[href]')) set(a, 'href', a.href);
   for (const c of document.querySelectorAll(CONTROLS)) set(c, 'name', name(c));
 
-  // Fields and questions.
   const SINGLE = new Set(['text', 'email', 'tel', 'url', 'search', 'password', 'number']);
   const single = (el) => el.tagName === 'INPUT' && SINGLE.has(el.type) && drawn(el);
   const asking = (el) => {
@@ -334,7 +323,6 @@ STAMP_JS = r"""
   }
   set(root, 'questions', questions);
 
-  // Icons.
   const words = (...texts) => texts.filter(Boolean).join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const fontIcon = (el) => el.children.length === 0 && /icon|symbol/i.test(el.className && el.className.baseVal === undefined ? el.className : '') && el.closest('a, button, [role=button], [role=tab], label, li');
   const icons = [];
@@ -363,8 +351,6 @@ STAMP_JS = r"""
     if (m.a * m.d - m.b * m.c < 0) flipped = !flipped;
     set(el, 'mirrored', flipped ? 1 : 0);
     if (svg) {
-      // A stroke's scale: its drawing's to the svg's own px, the viewBox's
-      // fit included and the page's transforms not.
       const scales = [];
       for (const shape of el.querySelectorAll('path, circle, rect, line, polyline, polygon, ellipse, use')) {
         const cs = getComputedStyle(shape);
@@ -422,8 +408,6 @@ STAMP_JS = r"""
     if (!outer && el.textContent.trim()) set(el, 'spaced-text', el.textContent.replace(/[ \t\n]/g, (c) => shown[c]));
   }
 
-  // Blocks drawn as headings.
-  // check-dom.table's $phrasing-only lists the same elements: change them together.
   const PHRASING = 'br, b, strong, i, em, span, a, small, sup, sub, abbr, cite, q, mark';
   const HOLDERS = 'h1, h2, h3, h4, h5, h6, [role], label, legend, caption, summary, th, dt, button, a, nav, pre, code';
   for (const el of document.body.querySelectorAll('div, span')) {
@@ -438,7 +422,6 @@ STAMP_JS = r"""
     set(el, 'next-style', after.fontStyle);
   }
 
-  // Declared parts.
   const meta = document.querySelector('meta[property="og:site_name" i], meta[name=application-name i]');
   const site = squash((meta && meta.content) || document.title.split(/\s+[|\u2013\u2014-]\s+|:\s/)[0] || '');
   const controls = (el) => [...el.querySelectorAll(CONTROLS)].filter(drawn);
@@ -520,8 +503,6 @@ def stamp(page, parts):
 
 
 def ink(png):
-    """The share of a shot its drawing covers: each pixel's distance from
-    the shot's commonest colour, over the farthest pixel's."""
     rgb = np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=float)
     flat = rgb.reshape(-1, 3)
     colours, counts = np.unique(flat, axis=0, return_counts=True)
@@ -531,8 +512,6 @@ def ink(png):
 
 
 def missing_url(url):
-    """An address on the page's site that it does not have, or None for a
-    local file."""
     parsed = urllib.parse.urlsplit(url)
     if parsed.scheme not in ("http", "https"):
         return None
@@ -542,7 +521,6 @@ def missing_url(url):
 
 
 def run(browser, url, blocks, *, parts, unset, timeout):
-    """[(width, [Result…])] in one fixed order of every block's rules."""
     named = {n for b in blocks for r in _rules(b) for n in part_names(r)}
     given = {**dict.fromkeys(named, NOTHING), **parts}
     loads = {PAGE: url, RTL: url, MISSING: missing_url(url)}
@@ -624,7 +602,6 @@ def _unjudged(rule, why):
 
 
 def block_line(block, rule):
-    """`rule` with its line prefixed by its block, as a finding names it."""
     where = (
         block.load
         if block.when is None
@@ -646,7 +623,6 @@ def report(url, found):
 
 
 def _widths(held):
-    """The widths a miss holds at: one, or both of WIDTHS."""
     if held["from"] == held["to"]:
         return f"{held['from']} px"
     return " and ".join(str(w) for w in WIDTHS) + " px"

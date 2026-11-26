@@ -22,7 +22,7 @@ class VaultHandler(SimpleHTTPRequestHandler):
         self.send_error(403, "Directory listing is disabled")
         return None
 
-    # Judged on the decoded path the file is served from, so /%2eenv is /.env (#84).
+    # #84
     def hidden(self):
         path = unquote(urlparse(self.path).path)
         return any(segment.startswith(".") for segment in path.split("/") if segment)
@@ -61,7 +61,7 @@ def make_server(root, port):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    # The seed's port (cth9191/taste-vault), which serve.bat opens and README.md gives.
+    # #501
     parser.add_argument("--port", type=int, default=4610)
     args = parser.parse_args()
     server = make_server(Path(__file__).resolve().parent, args.port)

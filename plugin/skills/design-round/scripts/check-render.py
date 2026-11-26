@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""check-render.py — the raster check for brand-art renders (design-vault#324),
-answering gate questions vault.render-size (design-vault#328) and
-vault.render-checkerboard (design-vault#332).
-
-USAGE
+"""USAGE
   python3 check-render.py <render>… [--log <higgsfield-spend.jsonl>]
         [--model <endpoint id>] [--aspect <w:h>] [--transparent]
 
 Each render's model and requested aspect ratio come from its spend-log line,
-found as spend-log.py's header says, in --log or else the log beside each
-render. --model and --aspect give either for a render made by hand, and
+in --log or else the log beside each render. --model and --aspect give either for a render made by hand, and
 override the log's where both are given.
 
 Size (vault.render-size): neither side may fall short of the same side of the
@@ -33,6 +28,7 @@ rest print on stderr.
 """
 
 import argparse
+import importlib
 import json
 import pathlib
 import re
@@ -52,39 +48,19 @@ UnreadableError = spend_log.UnreadableError
 
 PASS, FAIL, UNJUDGED = "PASS", "FAIL", "NOT JUDGED"
 
-# The checkerboard's figures, all untraced: set on #262's fixtures and on three
-# Grok Imagine 2.0 renders that painted one where transparency was asked
-# (design-vault#332), against 47 opaque renders and the vault's 106 images.
-# The long side the render is read at: at 960, cells under about 15 px on a
-# 2816 px render blurred past two tones.
-WORK_SIDE = 1920
-# The square tile the render is cut into, at that scale.
-TILE = 192
-# The cell sizes, in px at that scale, a tile is searched for: from 3, the
-# smallest whose one-cell shifts still differ, though cells under about 5 blur
-# past two tones, to a quarter of the tile, so a tile holds four cells a side.
-CELLS = range(3, TILE // 4 + 1)
-# A tile flatter than this standard deviation, in 0-255 grey, holds no grid a
-# viewer could see.
-FLAT_SD = 2
-# The autocorrelation score a grid tile reaches: Grok's painted grids 0.66-0.86,
-# no opaque render's two-tone tile above 0.49.
-GRID_SCORE = 0.65
-# The tile's two tones are found by splitting its pixels around two seeds, the
-# 10th and 90th percentiles, refined this many times.
-TONE_SEEDS = (10, 90)
-TONE_ROUNDS = 10
-# A pixel sits on a tone within this fraction of the gap between the two.
-TONE_BAND = 0.25
-# The share of a grid tile's pixels on its two tones: Grok's 0.87 or more, and
-# no opaque render's tile over GRID_SCORE.
-TWO_TONE_SHARE = 0.8
-# Grid tiles that fail a render.
-GRID_TILES = 2
+WORK_SIDE = 1920  # guess, #332
+TILE = 192  # guess, #332
+CELLS = range(3, TILE // 4 + 1)  # guess, #332
+FLAT_SD = 2  # guess, #332
+GRID_SCORE = 0.65  # guess, #332
+TONE_SEEDS = (10, 90)  # guess, #332
+TONE_ROUNDS = 10  # guess, #332
+TONE_BAND = 0.25  # guess, #332
+TWO_TONE_SHARE = 0.8  # guess, #332
+GRID_TILES = 2  # guess, #332
 
 
 def read_sizes():
-    """render-sizes.json's rows by model, each size checked for its form and source."""
     try:
         models = json.loads(SIZES.read_text(encoding="utf8"))["models"]
         for model, row in models.items():
@@ -101,8 +77,6 @@ def read_sizes():
 
 
 def requested(render, args, logs):
-    """(model, aspect, where they came from), either None where nothing gives it.
-    logs is the caller's cache of the spend logs read so far, filled here."""
     entry, where = spend_log.find_line(render, args.log, logs)
     if entry is None:
         return args.model, args.aspect, where
@@ -135,7 +109,6 @@ def check_size(size, model, aspect, sizes):
 
 
 def read_grey(image):
-    """The render in 0-255 grey over white, its long side at most WORK_SIDE, and that scale."""
     import numpy as np
     from PIL import Image
 
@@ -153,7 +126,6 @@ def read_grey(image):
 
 
 def grid_cell(tile):
-    """The cell size of the painted two-tone grid the tile holds, or None."""
     import numpy as np
 
     tile = tile - tile.mean()
@@ -182,7 +154,6 @@ def grid_cell(tile):
 
 
 def tile_starts(length):
-    """Tile origins along one side, the last flush with its end."""
     count = -(-length // TILE)
     return sorted(
         {round(i * (length - TILE) / max(count - 1, 1)) for i in range(count)}
@@ -236,16 +207,16 @@ def main(argv):
     )
     args = parser.parse_args(argv)
     try:
-        from PIL import Image
-
-        if args.transparent:
-            import numpy  # noqa: F401 — the checkerboard needs it
+        for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
+            importlib.import_module(package)
     except ImportError as err:
         print(
             f"check-render: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
             file=sys.stderr,
         )
-        return 3
+        sys.exit(3)
+    from PIL import Image
+
     if args.aspect is not None:
         args.aspect = args.aspect.replace(" ", "")
 

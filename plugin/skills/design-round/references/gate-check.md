@@ -1,6 +1,6 @@
 # The three-critic gate check
 
-design-round §4 answers every gate question this way (design-vault#170). `gate.js` is `${CLAUDE_PLUGIN_ROOT}/skills/design-round/scripts/gate.js`; its header gives the answers files' form. `look.py`, beside it, is the settle critic's view tool (§4): `zoom`, `scrub`, `measure` and `pixels`. Everything this check writes goes in the round folder's `gate/`.
+design-round §4 answers every gate question this way (design-vault#170). `gate.js` is `${CLAUDE_PLUGIN_ROOT}/skills/design-round/scripts/gate.js`; §7 gives the answers files' form. `look.py`, beside it, is the settle critic's view tool (§4): `zoom`, `scrub`, `measure` and `pixels`. Everything this check writes goes in the round folder's `gate/`.
 
 ## 1. The list
 
@@ -56,7 +56,7 @@ Exit 1 means an answers file breaks the form, each fault printed. Fix your own. 
 
 Where the question judges motion, the prompt ends `Pass --width <W> --height <H> to every look.py call.`, naming the motion window design-round §4 gives (1920x945 unless the project records its own).
 
-Under `vault.affordance` it answers each split part, and `unlisted` where a critic named a part off the key, as `gate.js`'s header gives. Each writes `gate/settle-<n>.json`. Then run the tally again with one `--settle gate/settle-<n>.json` for each, into `gate/tally.txt`: Yes passes, No is a fault, and only Unsure goes to the founder. Count the round's splits and how many the settle critics answered Yes or No, for the round log (design-round §3 step 5).
+Under `vault.affordance` it answers each split part, and `unlisted` where a critic named a part off the key, as §7 gives. Each writes `gate/settle-<n>.json`. Then run the tally again with one `--settle gate/settle-<n>.json` for each, into `gate/tally.txt`: Yes passes, No is a fault, and only Unsure goes to the founder. Count the round's splits and how many the settle critics answered Yes or No, for the round log (design-round §3 step 5).
 
 ## 5. Fix and re-check
 
@@ -78,7 +78,7 @@ The re-check critics get those renders from both `<candidate>/before-<n>/` and t
 
 **A `vault.affordance` fault is judged against both keys** (design-vault#320). Its lines number parts as the before key does, and the re-run numbers them afresh, so the critic finds each part on the new key by its text and place. The dispatch adds one line for each part a `hidden`, `false`, `dead` or off-the-key line names, and each part only on the new key: whether a visitor can act on it now, which the building session reads from both parts maps, matching parts by text and place. The critic answers Yes only where each of those parts looks as its line says, and every other part looks as actable, or not, as it did on the before key. A named part the fix removed counts as mended, and its evidence says so.
 
-Each writes its answers to `gate/recheck-<n>-a.json`, `-b` or `-c`, in the form `gate.js`'s header gives, a critic split over dispatches comma-joined in its `--critic` as in §4. Then:
+Each writes its answers to `gate/recheck-<n>-a.json`, `-b` or `-c`, in the form §7 gives, a critic split over dispatches comma-joined in its `--critic` as in §4. Then:
 
 `node gate.js recheck --asset <class> [--fact <fact>]… --before gate/before-<n>.json --answered gate/answered.json --fault <candidate>:<id>… --critic gate/recheck-<n>-a.json --critic gate/recheck-<n>-b.json --critic gate/recheck-<n>-c.json [--parts <candidate>=<candidate>/parts/parts.json --before-parts <candidate>=<candidate>/before-<n>/parts/parts.json]… <gate files> > gate/recheck-<n>.txt`, with one `--parts`, the re-run map, and one `--before-parts` for each fixed candidate where `vault.affordance` is on the list. A link the re-run map marks dead keeps a `vault.affordance` fault whatever the critics answer.
 
@@ -106,3 +106,15 @@ A split re-check answer goes to a settle critic as in §4, given both renders, a
 - each clash in `gate/list.txt`, settled by precedence or for the founder.
 
 The review strip's first line gives each gate's PASS or FAIL with its fault count, and how many questions are for the founder.
+
+## 7. The answers files
+
+Every answers file is JSON, `{ "answers": { <candidate>: { <question id>: { "answer", "evidence" } } } }`. The building session's answers are `pass`, `fail` or `cannot measure`. A gate critic's are `yes`, `no` or `unsure`, and its file adds `"clashes": [{ "candidate": <name or null>, "quotes": [<rule>, <rule>] }]`, empty where it named none.
+
+A gate critic's answer to `vault.affordance` is `{ "parts": { <part id>: { "answer", "evidence" } }, "unlisted": [<a part off the key that looks actable>] }`: one Yes, No or Unsure for each part on the candidate's parts map, `parts.json` from parts-map.py, given to the tally as `--parts <candidate>=<file>`.
+
+A re-check critic's file is `{ "answers": { <candidate>: { <fault id>: { "answer", "evidence" }, "others": { "answer", "evidence" } } } }`, answered Yes, No or Unsure. Yes to a fault id says the fault is gone; Yes to `others` says the change left every other question on the critics' list no worse. It answers each fault id whose re-run cannot measure it, or that is a look question, and `others` for each candidate fixed; nothing else.
+
+A settle critic's file is the gate critic's form with no clashes, answering only the split questions: Yes passes, No is a fault, Unsure goes to the founder. Under `vault.affordance` it answers each split part under `parts`, and, where a critic named a part off the key, `"unlisted": { "answer", "evidence" }` to "Does any part off the key look as if a visitor can act on it?", where Yes is a false part. A tally's settle file may also answer a look question the panel passed. Once any `--settle` is given, every split must be answered.
+
+`gate.js` exits 0 when every file passes (`list` with clashes too, `tally` and `recheck` whatever their verdicts), 1 with one or more faults, each printed as file:line, or file: for an answers file, and 2 on bad usage or an unreadable file.

@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""contact-sheet.py — one view of a whole motion candidate: its frames every
-0.25 s, tiled and labelled, at desktop and phone size
-(lucmoseley/mmm-infra#28, design-vault#71).
-
-USAGE
+"""USAGE
   python3 contact-sheet.py <url or file> --out DIR [--step MS] [--desktop WxH]
         [--phone WxH] [--wait SEL] [--timeout MS]
 
@@ -19,9 +15,7 @@ when others finish is refused, as check-frames.py refuses it.
 
 The phone size is a viewport width only: no touch, no mobile user agent, device
 scale 1. It writes DIR/sheet-desktop.png and DIR/sheet-phone.png, drawn at
-device scale 2 so a desktop tile keeps half its frame's pixels and a phone tile
-nearly all, each frame at full size
-as DIR/<size>/frame-<ms>.png, and DIR/sheet.json naming every tile's time,
+device scale 2, each frame at full size as DIR/<size>/frame-<ms>.png, and DIR/sheet.json naming every tile's time,
 label and box in its sheet's pixels.
 
 EXITS 0 the sheets are written / 2 the arguments are wrong / 3 Playwright or its
@@ -47,16 +41,16 @@ flow = frames.flow
 layout = siblings.load(HERE, "check-layout.py")
 UnmeasurableError = flow.UnmeasurableError
 
-# A tile's width in CSS px, by size, and the sheet's width it wraps at. A first
-# guess: a quarter of a desktop frame, near half of a phone's.
+# guess, #501
 TILE = {"desktop": 320, "phone": 180}
+# guess, #501
 SHEET_WIDTH = 1680
-# The space between tiles and around the sheet: one line of its 13 px captions
-# and a little more, so neighbouring frames read as separate.
+# guess, #501
 GAP = PAD = 16
+# guess, #501
 SHEET_SCALE = 2
 
-# The sheet's type sizes, margins and outline: picked by eye.
+# guess, #501
 SHEET_CSS = f"""
 body {{ margin: 0; padding: {PAD}px; background: #fff; color: #111; font: 13px/1.3 system-ui, sans-serif; }}
 h1 {{ margin: 0 0 12px; font-size: 14px; font-weight: 600; }}
@@ -68,9 +62,8 @@ figcaption {{ padding-top: 4px; font-variant-numeric: tabular-nums; }}
 
 
 def times(end, step):
-    """Every step from 0 to the end, and the end itself: a step under 1 ms (a
-    guess) short of the end moves onto it, so the last frame is always the end's."""
     out = [float(n * step) for n in range(int(end // step) + 1)]
+    # guess, #501
     if end - out[-1] >= 1:
         out.append(round(end, 3))
     else:
@@ -98,7 +91,6 @@ def sheet_html(title, shots, columns, width):
     )
 
 
-# Every tile's image box, in CSS px from the page's top left.
 BOXES_JS = r"""
 () => [...document.querySelectorAll('figure img')].map((img) => {
   const r = img.getBoundingClientRect();
@@ -108,7 +100,6 @@ BOXES_JS = r"""
 
 
 def shoot(browser, at, viewport):
-    """The size's frames, as (ms, PNG) in time order, and the build's end."""
     at = frames.args_with(at, viewport_size=viewport)
     context, page, prep = frames.open_page(browser, at, 1)
     try:
@@ -138,7 +129,6 @@ def tile(browser, at, size, viewport, *, shots, end):
         width,
     )
     context = browser.new_context(
-        # Any height: the shot takes the full page.
         viewport={"width": columns * (width + GAP) - GAP + 2 * PAD, "height": 200},
         device_scale_factor=SHEET_SCALE,
     )

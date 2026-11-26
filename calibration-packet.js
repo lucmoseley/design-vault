@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * calibration-packet.js — the calibration packet's builder (design-vault#167): writes the one folder a calibration
+ * calibration-packet.js — the calibration packet's builder: writes the one folder a calibration
  * run's critics may read, holding the logged rounds' candidates, briefs and gate lists, and the corrections entries
  * that name a candidate, and refuses a packet that would carry the founder's verdicts to them.
  *
@@ -8,18 +8,16 @@
  *   node calibration-packet.js --manifest <file> --out <dir> [--round-log <file>] [--corrections-log <file>]
  *
  * The manifest names each round to pack, its paths read from the manifest's own folder:
- *   { "rounds": [ { "ticket": "lucmoseley/mmm-infra#9", "round": 2, "tag": "rounds/hero-r2",
+ *   { "rounds": [ { "ticket": "<owner/repo and issue>", "round": 2, "tag": "rounds/hero-r2",
  *                   "brief": "<file>", "gate_list": "<file>", "gate_list_then": "<file>", "copy_bans": "<file>",
  *                   "candidates": { "<name>": "<file or folder>" } } ] }
  *
  * gate_list is the look questions as the gates stand now, and gate_list_then those of the round's time, which
- * calibration-score.js reads and the packet leaves out; copy_bans is the copy bans that round's critics were given
- * (#232).
+ * calibration-score.js reads and the packet leaves out; copy_bans is the copy bans that round's critics were given.
  *
  * The packet holds one folder per round, named `<project>.<slug>-r<n>` for the project its round-log row names and its
- * tag less `rounds/` (#551): brief, gate-list and copy-bans (each keeping its extension), candidates/<name>, and entries.json, the corrections entries of its project
- * naming one of its candidates as { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names, so a
- * critic asks each principle of every candidate and cannot tell which one he faulted.
+ * tag less `rounds/`: brief, gate-list and copy-bans (each keeping its extension), candidates/<name>, and entries.json, the corrections entries of its project
+ * naming one of its candidates as { entry: <their corrections-log line>, principle }. Nothing else. An entry leaves out the candidate it names.
  *
  * Refused, with the packet left unwritten:
  *   - a log its own gate refuses (round-log.js, corrections-log.js), as a usage error;
@@ -30,13 +28,8 @@
  *   - verdict-field: a verdict field name anywhere in the packet, quoted as JSON spells a key, or bare where the
  *     name holds an underscore and so is no English word (`first_pick: v2-slow` in a brief);
  *   - log-line: a row of either log, anywhere in the packet;
- *   - verdict-text: a packed round's reason or a packed entry's words, quoted in that round's own folder. A later
- *     round's brief may quote them, as its Client values quote his words, since its critic reads only its own folder;
- *   - link: a symbolic link inside a candidate folder, which would let a critic read past the packet (a source
- *     that is itself a link is copied as what it points at).
- * A later round's brief delta names the leader the founder picked in an earlier one, which no text check can tell
- * from any other candidate name: a critic re-judging an earlier round reads only that round's folder, which
- * calibration-critic.js confines it to (#168).
+ *   - verdict-text: a packed round's reason or a packed entry's words, quoted in that round's own folder;
+ *   - link: a symbolic link inside a candidate folder (a source that is itself a link is copied as what it points at).
  *
  * Exits 0 on a packet written, 1 on a packet refused, 2 on a usage error or an unreadable manifest or log. A vault
  * log that does not exist yet reads as empty; a log path given that does not exist is unreadable.
@@ -50,13 +43,10 @@ const correctionsLog = require("./corrections-log.js");
 
 const ROUND_LOG = "data/round-log.jsonl";
 const CORRECTIONS_LOG = "data/corrections-log.jsonl";
-// The founder's verdicts in each log's row: every field less what names the round, its asset class, the correction's place, and the
-// principle the critics are asked about.
 const NOT_VERDICTS = ["date", "project", "asset", "ticket", "round", "where", "candidate", "principle"];
 const VERDICT_FIELDS = [...new Set([...roundLog.FIELDS, ...correctionsLog.FIELDS])].filter((f) => !NOT_VERDICTS.includes(f));
 const VERDICT_KEY = new RegExp(`"(${VERDICT_FIELDS.join("|")})"\\s*:|\\b(${VERDICT_FIELDS.filter((f) => f.includes("_")).join("|")})\\b`);
 const TAG = /^rounds\/([\w.-]+-r([1-9]\d*))$/;
-// A candidate's name becomes a path in the packet, so it may not climb out of it.
 const NAME = /^(?!\.\.?$)[\w.-]+$/;
 const PROJECT = /^[\w-]+$/;
 
@@ -76,7 +66,6 @@ function parseArgs(argv) {
   return options;
 }
 
-/** Each round the manifest names, with its folder, logged row and the entries naming its candidates, and the faults in it. */
 function planRounds(manifest, base, roundRows, corrections) {
   const faults = [];
   const fault = (rule, message) => faults.push(`${rule}: ${message}`);
@@ -150,7 +139,6 @@ function writePacket(dir, rounds, base) {
   }
 }
 
-/** Every fault in the folder `dir` of the packet at `root`: what it holds that carries a verdict. */
 function scanPacket(root, dir, logLines, verdictTexts) {
   const faults = [];
   for (const entry of fs.readdirSync(dir, { recursive: true, withFileTypes: true })) {
@@ -169,13 +157,11 @@ function scanPacket(root, dir, logLines, verdictTexts) {
   return faults;
 }
 
-/** A log's rows, each with its raw line, once its own gate passes it; throws on a log it refuses or cannot read. */
 function readLog(file, given, { name, check }) {
   if (!given && !fs.existsSync(file)) return [];
   const text = fs.readFileSync(file, "utf8");
   const faults = check(text);
   if (faults.length) throw new Error(`${name} is refused by its gate — ${faults[0]}`);
-  // The gate has passed every line, so no fault is left to report.
   return parseRows(text, () => {}).map((row) => ({ ...row, log: name }));
 }
 
@@ -205,7 +191,6 @@ function main(argv) {
   const { rounds, faults } = planRounds(manifest, base, roundRows.map(({ row }) => row), correctionRows);
   if (faults.length) return refuse(faults);
 
-  // Written beside --out and moved there only once clean, so a refused packet never stands where a run would read it.
   fs.mkdirSync(path.dirname(out), { recursive: true });
   const staging = fs.mkdtempSync(path.join(path.dirname(out), ".calibration-packet-"));
   try {

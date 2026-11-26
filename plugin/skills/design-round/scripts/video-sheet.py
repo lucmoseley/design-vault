@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""video-sheet.py — a reference clip laid out for a technique study: ten frames
-a second and every frame either side of each cut, tiled and labelled with their
-times.
+"""Lays out a reference clip for a technique study: ten frames a second and
+every frame either side of each cut, tiled and labelled with their times.
 
 USAGE
   python3 video-sheet.py <clip> --out DIR [--fps N] [--around S] [--cut SCORE]
@@ -49,7 +48,7 @@ GAP = PAD = 16  # px; guess, #408
 COLUMNS = 5  # guess, #408
 LABEL = 16  # px; guess, #408
 LABEL_GAP = 4  # px; guess, #408
-CAPTION = LABEL_GAP + LABEL + 2 * LABEL_GAP  # one gap above the label, two below
+CAPTION = LABEL_GAP + LABEL + 2 * LABEL_GAP
 EPS = 1e-6  # s; guess, #408
 
 

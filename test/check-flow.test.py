@@ -1,11 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-flow.py (#60): python3 test/check-flow.test.py
-
-`analyse`, `sample_times` and `numbers` are tested on synthetic input, so each
-threshold is pinned without a browser; so are a morph's interpolation and
-structure check (#72), the speed step (#69), when a page has finished
-playing (#135) and the exit ladder the browser scripts share (#131).
-"""
-
 import contextlib
 import http.server
 import importlib.util
@@ -27,7 +19,7 @@ from unittest import mock
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
@@ -61,7 +53,6 @@ def linear(p):
 
 
 def sample(*moves, until, times=None):
-    """One element per move, each (start ms, end ms, easing), travelling 300 px."""
     times = times or [k * STEP for k in range(round(until / STEP) + 1)]
     elements = []
     for n, (start, end, easing) in enumerate(moves):
@@ -73,14 +64,10 @@ def sample(*moves, until, times=None):
     return {"times": times, "elements": elements}
 
 
-# These moves run 100-450 ms, where the line spans 0.8 to under 0.5: a jolt
-# line of one share at every length pins what is judged, not where the line is.
-FIXED_LINE = 0.5
+FIXED_LINE = 0.5  # guess, #297
 
 
 def jolts_at(speeds, dropped=()):
-    """(edge, frame) of each jolt in a move along x at `speeds`, px per frame at
-    60 fps, with the frame indices `dropped` undrawn, on FIXED_LINE."""
     xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
     times = [k * STEP for k in range(len(xs))]
     el = {
@@ -96,12 +83,10 @@ def jolts_at(speeds, dropped=()):
     ]
 
 
-# Speeds px per frame of a move easing in and out to 3% of its top speed.
 EASED = [1, 3, 6, 10, 10, 6, 3, 1, 0.3]
 
 
 def run_records_layout(subject):
-    """The check-layout module `subject.run_records` loads, stopped before any browser starts."""
     loaded = []
     real = siblings.load
 
@@ -141,7 +126,7 @@ class OneCopy(unittest.TestCase):
 
 
 class Pauses(unittest.TestCase):
-    def test_a_still_spell_over_the_threshold_is_a_pause(self):
+    def test_a_still_spell_over_the_threshold_is_a_pause_60(self):
         r = flow.analyse(
             sample((0, 500, ease_in_out), (800, 1300, ease_in_out), until=1300)
         )
@@ -172,8 +157,6 @@ class Pauses(unittest.TestCase):
 
 
 def creep(px_s, channel="position", view_cm=flow.VIEW_CM):
-    """check-flow's pauses for a 300 px move at about 900 px/s at its top that then
-    creeps on at `px_s` a second for 400 ms, as a settle's tail does, on `channel`."""
     times = [k * STEP for k in range(round(1000 / STEP) + 1)]
     values = []
     for t in times:
@@ -185,27 +168,22 @@ def creep(px_s, channel="position", view_cm=flow.VIEW_CM):
 
 
 class Still(unittest.TestCase):
-    def test_a_creep_seen_as_motion_is_no_pause_though_under_1_percent_of_top_speed(
+    def test_a_creep_seen_as_motion_is_no_pause_though_under_1_percent_of_top_speed_196(
         self,
     ):
-        # 3 px/s, about 4.5 minutes of arc a second at 60 cm: visible (#196).
         self.assertLess(3, flow.STILL_FRACTION * 900)
         self.assertEqual(creep(3), [])
 
     def test_a_creep_under_the_still_floor_is_still(self):
-        # One CSS px is 1.5 minutes of arc from 60 cm, so 1 a minute is 0.66 px/s:
-        # test/fall.test.js holds fall.js to the same figure.
         [(start, _)] = creep(0.6)
         self.assertAlmostEqual(start, 500, delta=2 * STEP)
         self.assertEqual(creep(0.72), [])
 
     def test_the_still_floor_grows_with_the_viewing_distance(self):
-        # One px a second is 1.5 minutes of arc from 60 cm and 0.75 from 120 cm.
         self.assertEqual(creep(1, view_cm=60), [])
         self.assertEqual(len(creep(1, view_cm=120)), 1)
 
     def test_a_channel_that_is_not_a_box_is_still_under_its_share_alone(self):
-        # A custom property's number has no visual angle, so 3 a second is still.
         self.assertEqual(len(creep(3, channel="--travel")), 1)
 
 
@@ -234,9 +212,7 @@ class Jolts(unittest.TestCase):
             [("starts", 110), ("stops", 610)],
         )
 
-    def test_a_move_starting_mid_frame_has_a_whole_first_frame(self):
-        # A loaded machine starts one 1.5 ms before a frame, where a part
-        # frame would carry its box 3 px and hide its jump (#326).
+    def test_a_move_starting_mid_frame_has_a_whole_first_frame_326(self):
         times = flow.sample_times(800, [48.5, 448.5], 60, [(48.5, 48.5)])
         self.assertEqual(times[times.index(48.5) + 1], 48.5 + STEP)
         move = (48.5, 448.5, lambda p: 1 - (1 - p) ** 3)
@@ -281,15 +257,12 @@ class Jolts(unittest.TestCase):
         self.assertTrue(all(b - a >= 1 for a, b in itertools.pairwise(times)))
         self.assertEqual(times[-1], 100)
 
-    def test_an_exact_time_within_1_ms_of_a_frame_takes_its_place(self):
-        # The frame would run 0.17 ms past the keyframe into its next speed (#126).
+    def test_an_exact_time_within_1_ms_of_a_frame_takes_its_place_126(self):
         times = flow.sample_times(800, [416.5], 60)
         self.assertIn(416.5, times)
         self.assertFalse(any(abs(t - 1000 / 60 * 25) < 1e-9 for t in times))
 
-    def test_a_start_within_1_ms_of_the_first_frame_takes_its_place(self):
-        # A load-time animation starts 0.09 ms after it; at 0 it reads as not
-        # started, so its first keyframe went unseen (#297).
+    def test_a_start_within_1_ms_of_the_first_frame_takes_its_place_297(self):
         times = flow.sample_times(400.09, [0.09, 0.4, 400.09], 60)
         self.assertEqual((times[0], times[1]), (0.4, 1000 / 60))
         self.assertEqual(flow.sample_times(400, [1.5], 60)[:2], [0, 1.5])
@@ -321,8 +294,7 @@ class Jolts(unittest.TestCase):
         self.assertNotIn("size", r["elements"][0]["channels"])
         self.assertEqual(r["jolts"], [])
 
-    def test_a_turn_inside_a_frame_is_not_a_stop_and_a_start(self):
-        # A stiff landing's sink turns within a frame, which reads as still (#151).
+    def test_a_turn_inside_a_frame_is_not_a_stop_and_a_start_151(self):
         def run(between, back=-1):
             return jolts_at(
                 [1, 3, 6, 10, 10, 10, *between, *(back * v for v in (8, 8, 8, 6, 3, 1))]
@@ -330,20 +302,15 @@ class Jolts(unittest.TestCase):
 
         self.assertEqual(run([0.01]), [])
         self.assertEqual(run([0.01, -0.01]), [])
-        # A rest of three frames is a stop and a start; going on the same way is no turn.
         self.assertEqual(run([0, 0, 0]), [("stops", 6), ("starts", 9)])
         self.assertEqual(run([0.01], back=1), [("stops", 6), ("starts", 7)])
 
-    def test_a_start_out_of_a_turn_is_judged_from_the_speed_it_turned_at(self):
-        # A small rebound after a big fall turns still for several frames under
-        # the fall's floor and starts back at 60% of its own top speed, no
-        # faster than it turned (#150).
+    def test_a_start_out_of_a_turn_is_judged_from_the_speed_it_turned_at_150(self):
         self.assertEqual(
             jolts_at([*EASED, *[0.005] * 4, -0.3, -0.5, -0.4, -0.2, -0.1]), []
         )
 
-    def test_a_move_that_starts_back_at_full_speed_after_turning_slowly_jolts(self):
-        # However short the still spell between (#150).
+    def test_a_move_that_starts_back_at_full_speed_after_turning_slowly_jolts_150(self):
         for still in (1, 2, 4):
             self.assertEqual(
                 jolts_at([*EASED, *[0.005] * still, -8, -8, -8, -6, -3, -1]),
@@ -351,23 +318,20 @@ class Jolts(unittest.TestCase):
                 still,
             )
 
-    def test_a_still_spell_longer_than_a_pause_is_a_rest_not_a_turn(self):
-        # It eases to 40% of its top speed, then rests 333 ms (#150).
+    def test_a_still_spell_longer_than_a_pause_is_a_rest_not_a_turn_150(self):
         self.assertEqual(
             jolts_at([1, 3, 6, 10, 10, 6, 4, *[0] * 20, -3, -3, -2, -1, -0.3]),
             [("starts", 27)],
         )
 
-    def test_a_dropped_frame_a_move_turned_at_hides_the_start_after_it_but_an_earlier_one_does_not(
+    def test_a_dropped_frame_a_move_turned_at_hides_the_start_after_it_but_an_earlier_one_does_not_150(
         self,
     ):
-        # The speed it turned at is unknown, so its gain is too (#150).
         speeds = [*EASED, 0.005, -8, -8, -8, -6, -3, -1]
         self.assertEqual(jolts_at(speeds, dropped=[8]), [])
         self.assertEqual(jolts_at(speeds, dropped=[7]), [("starts", 10)])
 
-    def test_a_turns_gain_and_another_channels_start_from_rest_are_told_apart(self):
-        # In one frame, its position turns back fast and its opacity starts from rest (#150 review).
+    def test_a_turns_gain_and_another_channels_start_from_rest_are_told_apart_150(self):
         speeds = [*EASED, 0.005, -8, -8, -8, -6, -3, -1]
         xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
         fade = [[min(1, max(0, (k - 10) / 4))] for k in range(len(xs))]
@@ -390,11 +354,9 @@ class Jolts(unittest.TestCase):
             got, [(10, ["position"], True, 0.96), (10, ["opacity"], False, 1)]
         )
 
-    def test_a_box_change_under_the_px_floor_is_not_motion_over_however_short_a_gap(
+    def test_a_box_change_under_the_px_floor_is_not_motion_over_however_short_a_gap_149(
         self,
     ):
-        # mmm-infra#35's still piece: its box wobbled by float32 steps of
-        # 6.1e-5 and 1.2e-4 px across a 1.9 ms gap, a rate over the noise floor (#149).
         times = [0, 100, 101.9, 200]
         for name in ("size", "position"):
             for wobble in (6.1e-5, 1.2e-4):
@@ -432,20 +394,16 @@ class Jolts(unittest.TestCase):
                 fps,
             )
             moving = r["elements"][0]["channels"]["position"]["moving"]
-            # At 120 fps its first frame, 2e-4 px, falls under the floor.
             self.assertAlmostEqual(
                 times[moving.index(True)], 100, delta=2 * 1000 / fps, msg=fps
             )
 
 
 def blend(c):
-    """A move with `c` of a linear move mixed into an ease-in-out one: its first
-    frame runs near c / (c + 1.5(1 - c)) of its top speed at any length."""
     return lambda p: c * p + (1 - c) * ease_in_out(p)
 
 
 def first_share(easing, ms):
-    """check-flow's first-frame share for one move of `ms`, on no line."""
     r = flow.analyse(sample((100, 100 + ms, easing), until=ms + 300), jolt_ratio=1e-9)
     return next(j["share"] for j in r["jolts"] if j["edge"] == "starts")
 
@@ -468,8 +426,6 @@ class JoltLine(unittest.TestCase):
     def test_material_3s_standard_curve_crosses_a_fixed_half_only_when_short_and_never_its_line(
         self,
     ):
-        # One frame's share of one curve falls as the move lengthens
-        # (docs/research/jolt-onset.md F7).
         m3 = bezier(0.2, 0, 0, 1)
         short, long = first_share(m3, 150), first_share(m3, 300)
         self.assertGreaterEqual(short, 0.5)
@@ -479,7 +435,6 @@ class JoltLine(unittest.TestCase):
             self.assertEqual([j["edge"] for j in r["jolts"]], [], ms)
 
     def test_one_start_share_passes_in_a_300_ms_move_and_jolts_in_a_1_s_one(self):
-        # The old fixed line, 0.5, passed both.
         for ms, want in ((300, []), (1000, ["starts"])):
             self.assertLess(first_share(blend(0.4), ms), 0.5)
             r = flow.analyse(sample((100, 100 + ms, blend(0.4)), until=ms + 300))
@@ -505,8 +460,6 @@ class JoltLine(unittest.TestCase):
 
 
 def first_frame(px, view_cm=flow.VIEW_CM, channel="position"):
-    """check-flow's verdict on a 1 s move along x whose first frame carries it
-    `px`, eased in from there."""
     speeds = [px, *[px * 4] * 50, *[px * 2, px, px / 2, px / 4]]
     xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
     times = [k * STEP for k in range(len(xs))]
@@ -520,7 +473,6 @@ class Jumps(unittest.TestCase):
         self.assertAlmostEqual(flow.jump_px(30), flow.jump_px(60) / 2, delta=1e-6)
 
     def test_a_first_frame_over_the_jump_is_flagged_whatever_its_share(self):
-        # A quarter of its top speed, under the 1 s line.
         r = first_frame(11)
         self.assertEqual(r["jolts"], [])
         self.assertEqual(
@@ -533,12 +485,10 @@ class Jumps(unittest.TestCase):
         self.assertEqual(first_frame(6, view_cm=60)["jumps"], [])
 
     def test_a_short_move_jumps_though_it_has_no_line(self):
-        # 300 px in 150 ms is 33 px a frame.
         r = flow.analyse(sample((100, 250, linear), until=500))
         self.assertEqual((r["jolts"], [j["at"] for j in r["jumps"]]), ([], [100]))
 
     def test_only_a_boxs_start_from_rest_jumps(self):
-        # Not a stop, not a start out of a turn, and not a channel with no px.
         self.assertEqual(first_frame(40, channel="--travel")["jumps"], [])
         speeds = [*EASED, 0.005, -40, -40, -30, -20, -10, -3, -1]
         xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
@@ -557,15 +507,13 @@ class Jumps(unittest.TestCase):
 
 
 def hidden(sample_, element, frames):
-    """`sample_` with `element` unseen at the frame indices `frames`."""
     el = sample_["elements"][element]
     el["seen"] = [k not in frames for k in range(len(sample_["times"]))]
     return sample_
 
 
 class Unseen(unittest.TestCase):
-    def test_a_start_the_viewer_never_sees_at_rest_is_listed_not_judged(self):
-        # 300 px in 400 ms, ease-out: a jolt and a jump at its start (#297).
+    def test_a_start_the_viewer_never_sees_at_rest_is_listed_not_judged_297(self):
         s = sample((100, 500, lambda p: 1 - (1 - p) ** 3), until=700)
         rest = s["times"].index(100)
         r = flow.analyse(hidden(s, 0, {rest}))
@@ -585,7 +533,6 @@ class Unseen(unittest.TestCase):
         self.assertEqual((len(r["jolts"]), len(r["jumps"]), r["unseen"]), (1, 1, []))
 
     def test_a_stop_the_viewer_never_sees_is_not_judged(self):
-        # It exits at full speed.
         s = sample((100, 500, lambda p: p**3), until=700)
         end = round(500 / STEP)
         self.assertEqual([j["edge"] for j in flow.analyse(s)["jolts"]], ["stops"])
@@ -602,7 +549,6 @@ class Unseen(unittest.TestCase):
 
 
 def fall_js(*args):
-    """fall.js's --json result for one command line."""
     out = subprocess.run(
         ["node", FALL, *map(str, args), "--json"],
         capture_output=True,
@@ -613,13 +559,10 @@ def fall_js(*args):
 
 
 def landing(drop=240, scale=800, sink=4):
-    """fall.js's result for one drop, with its easing. The defaults are any plausible
-    drop."""
     return fall_js("--drop", drop, "--scale", scale, "--sink", sink)
 
 
 def played(easing, p):
-    """Where a CSS `linear()` easing puts progress p, as a browser plays it."""
     parts = [x.split(" ") for x in easing[len("linear(") : -1].split(", ")]
     pts = [
         (
@@ -639,10 +582,7 @@ class Landing(unittest.TestCase):
         r = flow.analyse(sample((100, 347, lambda p: p * p), until=600))
         self.assertEqual([j["edge"] for j in r["jolts"]], ["stops"])
 
-    def test_the_fall_into_its_landing_does_not_jolt_or_step(self):
-        # The landing's sink stops a full-speed fall within a frame or two. One
-        # fall.js warns is shorter than a frame stops at full speed: 600 px with
-        # a 1 px sink stops at 0.48 of its top speed, over its 400 ms line (#297).
+    def test_the_fall_into_its_landing_does_not_jolt_or_step_297(self):
         for drop, sink in itertools.product((60, 240, 600), (1, 4, 12)):
             f = landing(drop=drop, sink=sink)
             r = flow.analyse(
@@ -660,13 +600,10 @@ class Landing(unittest.TestCase):
 
 
 def settled(distance=300, ms=900, damping=1):
-    """fall.js's result for one heavy settle (#105), with its easing. The defaults are
-    any plausible settle."""
     return fall_js("--settle", distance, "--ms", ms, "--damping", damping)
 
 
 def settle_flow(f):
-    """check-flow's verdict on one settle, played from 100 ms with 300 ms still after."""
     return flow.analyse(
         sample(
             (100, 100 + f["ms"], lambda p: played(f["easing"], p)), until=f["ms"] + 400
@@ -675,9 +612,6 @@ def settle_flow(f):
 
 
 def settle_then(f, fps=flow.FPS, then=None):
-    """check-flow's verdict on one settle played from 100 ms at `fps`, over its own
-    distance: the window ends where it does or, given `then`, where a 500 ms move
-    that starts `then` ms after its printed end does."""
     step, start = 1000 / fps, 100
     until = start + f["ms"] + (0 if then is None else then + 500)
     times = [k * step for k in range(int(until / step) + 1)]
@@ -709,8 +643,7 @@ def settle_then(f, fps=flow.FPS, then=None):
 
 
 class Settle(unittest.TestCase):
-    def test_a_settle_ending_the_page_has_no_pause_or_step(self):
-        # Cases #132's grid found failing (#142).
+    def test_a_settle_ending_the_page_has_no_pause_or_step_142(self):
         cases = [
             (300, 1600, 60),
             (1200, 900, 60),
@@ -730,12 +663,10 @@ class Settle(unittest.TestCase):
             self.assertEqual(
                 settle_then(settled(distance, ms), then=0)["pauses"], [], (distance, ms)
             )
-        # The harness sees a pause where there is one: the move 400 ms late.
         [pause] = settle_then(settled(300, 1600), then=400)["pauses"]
         self.assertAlmostEqual(pause["ms"], 400, delta=2 * STEP)
 
-    def test_a_critically_damped_settle_has_no_jolt_or_step(self):
-        # At 600 ms, 300 px and more start over the line, and fall.js warns (#297).
+    def test_a_critically_damped_settle_has_no_jolt_or_step_297(self):
         for distance, ms in itertools.product((100, 300, 1200), (900, 1600)):
             r = settle_flow(settled(distance, ms))
             self.assertEqual((r["jolts"], r["steps"]), ([], []), (distance, ms))
@@ -783,9 +714,6 @@ class Settle(unittest.TestCase):
 
 
 def each_frame_phase(f):
-    """(share, fps, check-flow's verdict) for a fall.js result played over its own
-    distance from 100 ms plus each quarter of a frame, at 30, 60 and 120 fps,
-    sampled as check-flow does."""
     size = f.get("drop") or f["distance"]
     for share, fps in itertools.product((0, 0.25, 0.5, 0.75), (30, 60, 120)):
         start = 100 + share * 1000 / fps
@@ -803,9 +731,7 @@ def each_frame_phase(f):
 
 
 class Defaults(unittest.TestCase):
-    def test_fall_js_defaults_pass_the_step_check(self):
-        # mmm-infra#35's stone and slab first (#151), and the 5 px drop at 800 px/m
-        # with a 1 px sink (#196).
+    def test_fall_js_defaults_pass_the_step_check_151_196(self):
         falls = [
             (24, 10, 3, 1),
             (30, 10, 3, 1),
@@ -829,9 +755,7 @@ class Defaults(unittest.TestCase):
             for share, fps, r in each_frame_phase(f):
                 self.assertEqual(r["steps"], [], (case, share, fps))
 
-    def test_a_soft_landing_stops_without_a_jolt(self):
-        # It arrives at rest at the still speed (#152); ended short of rest, its
-        # last span snapped there as a jolt (#151).
+    def test_a_soft_landing_stops_without_a_jolt_151_152(self):
         for case in ((24, 10, 1), (5, 3, 1), (24, 3, 1)):
             f = landing(*case)
             for share, fps, r in each_frame_phase(f):
@@ -839,7 +763,6 @@ class Defaults(unittest.TestCase):
 
 
 def bezier(x1, y1, x2, y2):
-    """A CSS cubic-bezier() easing."""
 
     def at(p):
         lo, hi = 0.0, 1.0
@@ -855,9 +778,7 @@ def bezier(x1, y1, x2, y2):
 
 
 def stepped(ratio, at):
-    """A move eased in and out over its first and last fifth whose speed steps
-    `ratio`-fold at progress `at`, as a crane arm that suddenly runs faster."""
-    n = 2000  # A guess at a lookup table fine enough to play smoothly.
+    n = 2000  # guess, #69
     speed = []
     for k in range(n):
         p = (k + 0.5) / n
@@ -869,8 +790,6 @@ def stepped(ratio, at):
 
 
 def phased(easing, ms, share, fps=flow.FPS):
-    """(check-flow's verdict, start) on one move of ms from 100 ms plus `share` of
-    a frame, sampled at fps as check-flow does, to 300 ms past its end."""
     start = 100 + share * 1000 / fps
     times = flow.sample_times(start + ms + 300, [start, start + ms], fps)
     return flow.analyse(
@@ -879,9 +798,7 @@ def phased(easing, ms, share, fps=flow.FPS):
 
 
 class Steps(unittest.TestCase):
-    def test_a_4x_speed_step_mid_move_is_flagged_wherever_it_falls_in_a_frame(self):
-        # The step lands at 400 ms plus a share of a frame, so the frame
-        # straddling it reads any speed between the two.
+    def test_a_4x_speed_step_mid_move_is_flagged_wherever_it_falls_in_a_frame_69(self):
         for share in (0, 0.25, 0.5, 0.75):
             r = flow.analyse(
                 sample(
@@ -916,8 +833,7 @@ class Steps(unittest.TestCase):
         self.assertEqual((st["way"], st["from"], st["to"]), ("up", 0.25, 1))
         self.assertAlmostEqual(st["at"], 9 * STEP, delta=STEP)
 
-    def test_a_frame_reading_the_slower_speed_but_for_noise_is_not_between(self):
-        # As a frame ending on the keyframe reads, from a 6-digit computed value (#126).
+    def test_a_frame_reading_the_slower_speed_but_for_noise_is_not_between_126(self):
         speeds = [10] * 8 + [10.001] + [40] * 8
         xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
         r = flow.analyse(
@@ -943,8 +859,55 @@ class Steps(unittest.TestCase):
         [st] = r["steps"]
         self.assertEqual(st["at"], round(10 * STEP))
 
+    def steps_of(self, channels):
+        built = {}
+        for name, shape in channels.items():
+            slow, between = shape if isinstance(shape, tuple) else (shape, [])
+            speeds = [10] * slow + between + [40] * 8
+            built[name] = [
+                [sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)
+            ]
+        longest = max(map(len, built.values()))
+        return flow.analyse(
+            {
+                "times": [k * STEP for k in range(longest)],
+                "elements": [
+                    {
+                        "label": "el",
+                        "channels": {
+                            name: xs + xs[-1:] * (longest - len(xs))
+                            for name, xs in built.items()
+                        },
+                    }
+                ],
+            }
+        )["steps"]
+
+    def test_a_step_channels_chain_a_frame_apart_in_any_order_is_listed_once(
+        self,
+    ):  # #623
+        [st] = self.steps_of({"position": 8, "scale": 10, "size": 9})
+        self.assertEqual(
+            (st["way"], st["at"], st["channels"]),
+            ("up", round(8 * STEP), ["position", "size", "scale"]),
+        )
+
+    def test_a_step_channels_place_with_different_spreads_is_listed_once(
+        self,
+    ):  # #623
+        [st] = self.steps_of({"position": (8, [25]), "size": 8})
+        self.assertEqual(
+            (st["at"], st["channels"]), (round(8 * STEP), ["size", "position"])
+        )
+
+    def test_steps_channels_place_two_frames_apart_are_listed_apart(self):  # #623
+        found = self.steps_of({"position": 8, "size": 10})
+        self.assertEqual(
+            [(st["at"], st["channels"]) for st in found],
+            [(round(8 * STEP), ["position"]), (round(10 * STEP), ["size"])],
+        )
+
     def test_a_step_under_a_fifth_of_top_speed_is_not_a_step(self):
-        # A 1.5x step at 1.5 of a top of 20, then a smooth climb to that top.
         speeds = (
             [1] * 8 + [1.5] * 8 + [1.5 + 18.5 * k / 40 for k in range(1, 41)] + [20] * 8
         )
@@ -957,8 +920,7 @@ class Steps(unittest.TestCase):
         )
         self.assertEqual(r["steps"], [])
 
-    def test_a_1_35x_step_up_or_down_is_flagged_at_60_fps_wherever_it_falls(self):
-        # Visible inside one motion at about 1.3x (#196).
+    def test_a_1_35x_step_up_or_down_is_flagged_at_60_fps_wherever_it_falls_196(self):
         for ratio, at, share in itertools.product(
             (1.35, 1 / 1.35), (0.3, 0.5, 0.7), (0, 0.25, 0.5, 0.75)
         ):
@@ -972,7 +934,7 @@ class Steps(unittest.TestCase):
             r, _ = phased(stepped(1.25, 0.5), 600, share, fps)
             self.assertEqual(r["steps"], [], (fps, share))
 
-    def test_smooth_easings_and_overshoots_have_no_step(self):
+    def test_smooth_easings_and_overshoots_have_no_step_69(self):
         easings = {
             "ease": bezier(0.25, 0.1, 0.25, 1),
             "ease-in": bezier(0.42, 0, 1, 1),
@@ -982,8 +944,6 @@ class Steps(unittest.TestCase):
             "quint in": lambda p: p**5,
             "overshoot": bezier(0.34, 1.56, 0.64, 1),
             "sine": lambda p: (1 - math.cos(math.pi * p)) / 2,
-            # Steep, so they changed speed 2-4x in a frame or three
-            # under a looser hold (#69 review).
             "expo in-out": bezier(0.87, 0, 0.13, 1),
             "Material decelerate": bezier(0.05, 0.7, 0.1, 1),
             "Material emphasized": bezier(0.2, 0, 0, 1),
@@ -1016,8 +976,7 @@ class Steps(unittest.TestCase):
                     return 7.5625 * (p - mid) ** 2 + top
             return 1
 
-        # Penner's easeInOutBack, whose overshoot constant this is.
-        def back_in_out(p, c=1.70158 * 1.525):
+        def ease_in_out_back(p, c=1.70158 * 1.525):
             q = 2 * p
             return (
                 q * q * ((c + 1) * q - c) / 2
@@ -1025,9 +984,7 @@ class Steps(unittest.TestCase):
                 else ((q - 2) ** 2 * ((c + 1) * (q - 2) + c) + 2) / 2
             )
 
-        # Each changes speed 2-fold or more around a turn, so only the
-        # same-way test keeps it out.
-        for easing, ms in ((bounce, 600), (back_in_out, 150)):
+        for easing, ms in ((bounce, 600), (ease_in_out_back, 150)):
             self.assertEqual(
                 flow.analyse(sample((100, 100 + ms, easing), until=ms + 300))["steps"],
                 [],
@@ -1036,8 +993,6 @@ class Steps(unittest.TestCase):
 
 
 class Values(unittest.TestCase):
-    """Computed values whose short and long forms must read as the same point."""
-
     def fade(self, prop, values):
         times = [k * STEP for k in range(len(values))]
         return flow.analyse(
@@ -1082,8 +1037,6 @@ class Values(unittest.TestCase):
 
 
 class PageQuiet(unittest.TestCase):
-    """When the page counts as done playing, from its status (#135)."""
-
     def status(self, **over):
         return {
             "now": 400,
@@ -1097,9 +1050,7 @@ class PageQuiet(unittest.TestCase):
             **over,
         }
 
-    def test_the_quiet_window_runs_from_the_first_frame(self):
-        # A busy machine delayed this page's first frame past the window, and
-        # its frame loop had written nothing yet.
+    def test_the_quiet_window_runs_from_the_first_frame_135(self):
         self.assertFalse(flow.settled(self.status(firstFrame=350), 300))
         self.assertTrue(flow.settled(self.status(now=650, firstFrame=350), 300))
 
@@ -1118,17 +1069,12 @@ class PageQuiet(unittest.TestCase):
             wait_for_timeout=lambda ms: None,
         )
         with self.assertRaisesRegex(flow.PageTimeoutError, "no frame drawn"):
-            # Any quiet and timeout: the fake page's clock already reads past both.
             flow.settle(page, types.SimpleNamespace(quiet=300, timeout=1000))
 
 
 def run(page, *extra, out=None):
-    """Runs the script on a fixture page; returns its process and, where it
-    measured, its flow.json and speed.svg. Given `out`, it writes there and
-    leaves the files for the caller."""
     with tempfile.TemporaryDirectory() as scratch:
         out = out or scratch
-        # A guess for check-flow.py alone, not taken from the other tests' timeouts: one run takes seconds here.
         proc = child.run(
             [
                 sys.executable,
@@ -1140,7 +1086,7 @@ def run(page, *extra, out=None):
                 "300",
                 *extra,
             ],
-            timeout=120,
+            timeout=120,  # guess, #181
         )
         if not os.path.exists(os.path.join(out, "flow.json")):
             return proc, None, None
@@ -1151,7 +1097,6 @@ def run(page, *extra, out=None):
 
 
 def run_page(html):
-    """Runs the script on a page written from `html`; returns its process and flow.json."""
     with tempfile.TemporaryDirectory() as d:
         path = os.path.join(d, "page.html")
         with open(path, "w", encoding="utf8") as fh:
@@ -1161,9 +1106,6 @@ def run_page(html):
 
 
 class Measured(unittest.TestCase):
-    # Time zero is the page's first frame, which the animations can follow by
-    # several frames on a busy machine (#126), so times are taken from their
-    # own start: both are made by one script.
     @classmethod
     def setUpClass(cls):
         cls.proc, cls.data, cls.svg = run("pause-and-jolt.html")
@@ -1181,15 +1123,13 @@ class Measured(unittest.TestCase):
             f"\n  {p['start']}–{p['end']} ms ({p['ms']} ms)\n", self.proc.stdout
         )
 
-    def test_the_known_jolts_are_found_and_nothing_else(self):
+    def test_the_known_jolts_are_found_and_nothing_else_126(self):
         got = [(j["element"], j["edge"], j["share"]) for j in self.data["jolts"]]
         self.assertEqual(got, [("div#dash", "starts", 1), ("div#dash", "stops", 1)])
         self.assertAlmostEqual(self.data["jolts"][0]["at"] - self.start, 1600, delta=1)
         self.assertAlmostEqual(self.data["jolts"][1]["at"] - self.start, 2400, delta=1)
 
-    def test_the_length_runs_from_the_first_move_to_the_last_animation_end(self):
-        # From the first move, not the first frame, so a font wait before it is
-        # not counted (#169 Q3 (A)).
+    def test_the_length_runs_from_the_first_move_to_the_last_animation_end_169(self):
         self.assertEqual(self.data["first_move_ms"], self.start)
         self.assertAlmostEqual(self.data["length_ms"], 2400, delta=1)
         self.assertIn(
@@ -1240,8 +1180,7 @@ class UnseenPage(unittest.TestCase):
         )
         self.assertIn("  div#fade starts at ", self.proc.stdout)
 
-    def test_the_jumps_are_printed_and_drawn(self):
-        # A start a fraction of a ms past the first frame can round to 36 px (#326).
+    def test_the_jumps_are_printed_and_drawn_326(self):
         self.assertRegex(
             self.proc.stdout,
             r"\njumps, a move from rest whose first frame carries its box 10 px \(0\.26° from 60 cm\) or more: 5\n"
@@ -1251,14 +1190,12 @@ class UnseenPage(unittest.TestCase):
         self.assertEqual(self.svg.count("<path d="), 5)
 
 
-# Holds the frame it runs in 50 ms, three frames.
+# guess, #326
 HOLD_MS = "const end = performance.now() + 50; while (performance.now() < end);"
 HOLD_FIRST_FRAME = "requestAnimationFrame(() => { " + HOLD_MS + " });\n"
 
 
 class UnseenPageHeld(UnseenPage):
-    # The first frame is held, so every animation starts after it, as a loaded
-    # machine starts them, and waits there at its first keyframe (#326).
     @classmethod
     def setUpClass(cls):
         with open(os.path.join(FIXTURES, "unseen.html"), encoding="utf8") as fh:
@@ -1270,7 +1207,6 @@ class UnseenPageHeld(UnseenPage):
             cls.proc, cls.data, cls.svg = run(path)
 
 
-# #word in a line that clips it, moved up into it from below as unseen.html's.
 WORD_PAGE = """<!doctype html><style>body { margin: 0; }
 #line { position: absolute; top: 200px; width: 200px; height: 40px; overflow: hidden; }
 #word { width: 40px; height: 40px; background: #333; }</style>
@@ -1296,17 +1232,12 @@ class WaitingStart(unittest.TestCase):
         )
         self.assertEqual(data["jumps"], [])
 
-    def test_an_animation_made_later_shows_the_style_before_it_until_then(self):
-        # #word shows in its line until a timer starts it from below the line,
-        # 500 ms in, well after the first frames, so it jumps out of sight from
-        # a seen rest (#326).
+    def test_an_animation_made_later_shows_the_style_before_it_until_then_326(self):
         proc, data = run_page(WORD_PAGE + "setTimeout(move, 500);\n</script>")
         self.assertEqual(data["unseen"], [], proc.stdout + proc.stderr)
         self.assertEqual([j["element"] for j in data["jumps"]], ["div#word"])
 
     def test_a_delay_ending_mid_frame_moves_part_of_a_frame_first(self):
-        # 300 px over 450 ms, linear: a whole frame's 11.1 px would be a jump,
-        # but the delay ends 25 ms in, so the frame drawn next carries 5.6 px.
         page = """<!doctype html><div id="box" style="width:40px;height:40px;background:#333"></div><script>
 box.animate([{ transform: "translateX(0)" }, { transform: "translateX(300px)" }],
   { duration: 450, delay: 25, fill: "forwards" });
@@ -1323,28 +1254,23 @@ class Pages(unittest.TestCase):
         self.assertIsNotNone(data, proc.stdout + proc.stderr)
         self.assertEqual([e["label"] for e in data["elements"]], ["div#waapi"])
 
-    def test_eased_moves_placed_at_their_real_starts_pass(self):
+    def test_eased_moves_placed_at_their_real_starts_pass_135(self):
         proc, data, _ = run("smooth.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(data["pauses"], [])
         self.assertEqual(data["jolts"], [])
-        # A busy machine fires the timer late, never early (#135).
         self.assertGreaterEqual(data["length_ms"], 2000 - 3 * STEP)
 
-    def test_a_wait_before_the_first_move_is_not_in_the_length(self):
-        # A headline held still 800 ms, as a font wait holds one, then a 1000 ms
-        # fade: the length is the fade's (#169 Q3 (A)).
+    def test_a_wait_before_the_first_move_is_not_in_the_length_169(self):
         page = """<!doctype html><h1 id="title">Wait</h1><script>
 title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, delay: 800, easing: "ease-in-out", fill: "both" });
 </script>"""
         proc, data = run_page(page)
-        # It exits 1 on the still start, which is #220's to rule on.
         self.assertIn(proc.returncode, (0, 1), proc.stdout + proc.stderr)
         self.assertAlmostEqual(data["length_ms"], 1000, delta=1)
         self.assertGreaterEqual(data["first_move_ms"], 800)
 
-    def test_a_reversed_animation_on_no_element_of_the_page_is_not_refused(self):
-        # One on a detached element and one with no target (#359 review).
+    def test_a_reversed_animation_on_no_element_of_the_page_is_not_refused_359(self):
         page = """<!doctype html><h1 id="title">Off</h1><script>
 document.createElement("div").animate([{ opacity: 0 }, { opacity: 1 }], 400).reverse();
 new Animation(new KeyframeEffect(null, [{ opacity: 0 }, { opacity: 1 }], 400)).reverse();
@@ -1354,8 +1280,7 @@ title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards
         self.assertNotIn("in reverse", proc.stdout)
         self.assertIsNotNone(data, proc.stdout + proc.stderr)
 
-    def test_forward_animations_that_end_between_two_frames_are_measured(self):
-        # Each is started after its frame's scans and ended by the next frame (#369).
+    def test_forward_animations_that_end_between_two_frames_are_measured_369(self):
         proc, data, _ = run("forward-gap.html")
         self.assertIsNotNone(data, proc.stdout + proc.stderr)
         self.assertEqual(
@@ -1363,9 +1288,7 @@ title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards
             ["div#a1", "div#a2", "div#box", "div#c1", "div#c2", "div#late"],
         )
 
-    def test_a_storyboard_on_a_starved_browser_is_not_a_script_loop(self):
-        # Five colour changes 300 ms apart, while every frame is held 80 ms:
-        # three frames apart, not consecutive, so not a loop (#135).
+    def test_a_storyboard_on_a_starved_browser_is_not_a_script_loop_135(self):
         page = """<!doctype html><h1 id="title">Story</h1><div id="box" style="width:40px;height:40px;background:#000"></div>
 <script>
 box.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1800, easing: "ease-in-out", fill: "forwards" });
@@ -1382,14 +1305,9 @@ requestAnimationFrame(function tick(now) {
         self.assertNotEqual(proc.returncode, 6, proc.stdout + proc.stderr)
         self.assertEqual([e["label"] for e in data["elements"]], ["div#box"])
 
-    def test_a_storyboard_sequenced_by_a_long_timer_is_measured_whole(self):
+    def test_a_storyboard_sequenced_by_a_long_timer_is_measured_whole_135(self):
         proc, data, _ = run("late.html")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
-        # The timer starts counting before the page's first frame, which a busy
-        # machine delays, and fires late there too, as on a real page, so the
-        # second beat's start is read from its own end, 500 ms before the
-        # length (#135). Missed, the length would be the first beat's 500 ms;
-        # 2500 allows a first frame up to 500 ms late.
         second = data["first_move_ms"] + data["length_ms"] - 500
         self.assertGreaterEqual(second, 2500)
         [p] = data["pauses"]
@@ -1429,8 +1347,7 @@ settled.animate([{{ transform: "none" }}, {{ transform: "translateX({f["distance
         self.assertEqual([e["label"] for e in data["elements"]], ["div#settled"])
         self.assertEqual((data["jolts"], data["steps"]), ([], []))
 
-    def test_a_jump_alone_exits_1(self):
-        # 300 px in 150 ms, too short for a jolt line (#297).
+    def test_a_jump_alone_exits_1_297_326(self):
         page = """<!doctype html><style>div { position: absolute; top: 0; width: 40px; height: 40px; background: #000; }</style>
 <div id="dash"></div>
 <script>
@@ -1439,16 +1356,12 @@ dash.animate([{ transform: "none" }, { transform: "translateX(300px)" }], { dura
         proc, data = run_page(page)
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertEqual((data["jolts"], len(data["jumps"])), ([], 1))
-        # A start a fraction of a ms past the first frame can round to 36 px (#326).
         self.assertRegex(
             proc.stdout,
             r"\n  div#dash starts at \d+ ms, 3\d(\.\d)? px in its first frame\n",
         )
 
-    def test_a_crane_arm_that_suddenly_turns_4x_faster_is_a_step_and_exits_1(self):
-        # It starts at a quarter of its top speed and eases out of it, so the
-        # step is its only finding. Its delays put its keyframes 0.67-7 ms off
-        # a frame (#126).
+    def test_a_crane_arm_that_suddenly_turns_4x_faster_is_a_step_and_exits_1_126(self):
         for delay in (5.5, 7, 16):
             with self.subTest(delay=delay):
                 self.crane_arm(delay)
@@ -1482,7 +1395,6 @@ arm.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(10deg)", offset
 
     def test_each_keyframe_inside_an_animation_is_sampled_at_its_exact_time(self):
         _, data, _ = run("keyframe-hold.html")
-        # Measured from the animation's own start, which time zero can precede.
         start = data["edges_ms"][0]
         self.assertEqual(
             [round(e - start, 3) for e in data["edges_ms"]],
@@ -1522,8 +1434,7 @@ class Refused(unittest.TestCase):
     def test_an_animation_played_in_reverse(self):
         self.refuses("reverse.html", "in reverse")
 
-    def test_a_reversed_animation_that_ends_between_two_frames(self):
-        # A reversed animation is missing from getAnimations() until it starts (#359).
+    def test_a_reversed_animation_that_ends_between_two_frames_359(self):
         self.refuses("reverse-gap.html", "in reverse")
 
     def test_an_animation_a_script_seeks_by_hand(self):
@@ -1599,10 +1510,7 @@ class Refused(unittest.TestCase):
 
 
 class GoneProcess(unittest.TestCase):
-    """A process that exits between being listed and being read has no
-    command line, children or driver (#432, #464)."""
-
-    def test_an_exited_process_reads_as_empty(self):
+    def test_an_exited_process_reads_as_empty_432_464(self):
         gone = subprocess.Popen(["true"])
         gone.wait()
         self.assertEqual(flow.process_args(gone.pid), [])
@@ -1626,8 +1534,6 @@ def raises(exc):
 
 
 class RunBrowser(unittest.TestCase):
-    """The exit ladder every design-round browser script shares (#131)."""
-
     def exits(self, work, *args):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -1653,7 +1559,7 @@ class RunBrowser(unittest.TestCase):
             ["Pillow", "av", "numpy", "playwright", "scipy"],
         )
 
-    def test_each_failure_exits_with_its_code_and_message(self):
+    def test_each_failure_exits_with_its_code_and_message_131(self):
         url = "file:///p.html"
         for exc, code, said in [
             (
@@ -1704,25 +1610,14 @@ class RunBrowser(unittest.TestCase):
             self.exits(raises(flow.UnmeasurableError(["a"])), "u")
 
 
-# These cases cross real processes and the real clock: the hang is Chromium's
-# own, and the watch reads /proc. What is tested is that the watch fires, not
-# when. The watch's windows, cut from RENDERER_GONE_S and UNANSWERED_S to keep
-# each case short: a guess, four watch polls.
-TEST_WINDOW_S = 1
-# Over TEST_WINDOW_S and a poll, so a watch that misjudged would fire.
-PAST_WINDOW_S = 2.5
-# The killer's poll: a guess, a fifth of WATCH_POLL_S, so a renderer is killed
-# before the watch's next read.
-KILL_POLL_S = 0.05
-# A case still running after this has hung: a guess, far over a browser start
-# on a loaded machine.
-CASE_LIMIT_S = 60
-# Chromium's own flag: each renderer waits at start for a debugger's signal.
+TEST_WINDOW_S = 1  # guess, #459
+PAST_WINDOW_S = 2.5  # guess, #432
+KILL_POLL_S = 0.05  # guess, #432
+CASE_LIMIT_S = 60  # guess, #432
 PAUSED_AT_START = ["--renderer-startup-dialog"]
 
 
 def renderer_pids():
-    """The renderers this process's browsers run, read from /proc."""
     return [
         pid
         for pid in flow.descendants(os.getpid())
@@ -1732,14 +1627,11 @@ def renderer_pids():
 
 @contextlib.contextmanager
 def renderers_killed():
-    """SIGTERMs each renderer this process's browsers start (#432). A browser launched with PAUSED_AT_START holds each
-    renderer at its start, so the kill lands there."""
     stop = threading.Event()
 
     def kill():
         while not stop.wait(KILL_POLL_S):
             for pid in renderer_pids():
-                # A renderer that exited since the read is already gone.
                 with contextlib.suppress(ProcessLookupError):
                     os.kill(pid, signal.SIGTERM)
 
@@ -1753,8 +1645,6 @@ def renderers_killed():
 
 
 def renderers_ended():
-    """SIGTERMs each renderer this process's browsers run, and returns once /proc
-    shows none."""
     end = time.monotonic() + CASE_LIMIT_S
     while running := renderer_pids():
         if time.monotonic() > end:
@@ -1766,19 +1656,12 @@ def renderers_ended():
 
 
 def renderers_frozen():
-    """SIGSTOPs each renderer this process's browsers run, leaving it alive and
-    never answering (#459)."""
     for pid in renderer_pids():
         os.kill(pid, signal.SIGSTOP)
 
 
 class HungCalls(unittest.TestCase):
-    """A call whose renderer dies as it starts (#432), or a resize (#459) or CDP
-    send (#464) whose live renderer never answers, waits for ever with nothing raised; the
-    launcher's watch ends it."""
-
     def exits(self, work):
-        """run_browser(work)'s result and stderr."""
         done = {}
 
         def run():
@@ -1797,11 +1680,7 @@ class HungCalls(unittest.TestCase):
             self.fail(f"still waiting after {CASE_LIMIT_S} s: the watch did not fire")
         return done["got"], done["err"]
 
-    def test_a_renderer_killed_as_it_starts_exits_7_naming_the_call(self):
-        # With PAUSED_AT_START, the kill lands while new_page waits on the
-        # renderer it starts. Landing after Playwright has sent the page's setup,
-        # it leaves new_page waiting for the watch; landing before, as a loaded
-        # machine slows the driver, it makes new_page raise (#472).
+    def test_a_renderer_killed_as_it_starts_exits_7_naming_the_call_432_472(self):
         def work():
             with flow.chromium(PAUSED_AT_START) as browser:
                 browser.new_context().new_page()
@@ -1816,9 +1695,7 @@ class HungCalls(unittest.TestCase):
             "with the browser running no renderer",
         )
 
-    def test_a_call_waiting_as_its_renderer_dies_exits_7_naming_the_call(self):
-        # The kill waits for the page's script to fetch, so it lands while the
-        # call is waiting in the renderer: nothing is raised (#432, #472).
+    def test_a_call_waiting_as_its_renderer_dies_exits_7_naming_the_call_432_472(self):
         ran = threading.Event()
 
         class Seen(http.server.BaseHTTPRequestHandler):
@@ -1858,8 +1735,7 @@ class HungCalls(unittest.TestCase):
             rf"waited {TEST_WINDOW_S} s with the browser running no renderer",
         )
 
-    def test_a_call_on_a_page_whose_renderer_died_exits_7_naming_the_call(self):
-        # Made once Playwright has heard of the crash, the call raises (#472).
+    def test_a_call_on_a_page_whose_renderer_died_exits_7_naming_the_call_472(self):
         def work():
             with flow.chromium() as browser:
                 page = browser.new_page()
@@ -1880,7 +1756,6 @@ class HungCalls(unittest.TestCase):
     def test_a_refused_load_with_its_renderer_alive_exits_5_naming_the_call(self):
         def work():
             with flow.chromium() as browser:
-                # Port 1 has no listener: the load is refused at once.
                 browser.new_page().goto("http://127.0.0.1:1/")
 
         got, err = self.exits(work)
@@ -1888,7 +1763,6 @@ class HungCalls(unittest.TestCase):
         self.assertRegex(err, r"^the browser could not draw Page\.goto")
 
     def test_a_call_after_its_browser_died_exits_5_naming_the_call(self):
-        # No renderer runs, but the browser died, closing its pages first.
         def work():
             with flow.chromium() as browser:
                 page = browser.new_page()
@@ -1906,7 +1780,6 @@ class HungCalls(unittest.TestCase):
         self.assertRegex(err, r"^the browser could not draw Page\.evaluate")
 
     def test_a_call_on_a_page_it_closed_exits_5_naming_the_call(self):
-        # No renderer runs, but none died: the script closed its own page.
         def work():
             with flow.chromium() as browser:
                 page = browser.new_page()
@@ -1937,8 +1810,7 @@ class HungCalls(unittest.TestCase):
         self.assertEqual(got, (2, None))
         self.assertRegex(err, r"^no call watch: /proc shows 0 new browser processes")
 
-    def test_a_resize_its_live_renderer_never_answers_exits_7_naming_the_call(self):
-        # The hang #459 saw: a renderer alive, never answering a resize.
+    def test_a_resize_its_live_renderer_never_answers_exits_7_naming_the_call_459(self):
         def work():
             with flow.chromium() as browser:
                 page = browser.new_page()
@@ -1954,7 +1826,6 @@ class HungCalls(unittest.TestCase):
         )
 
     def test_resizes_one_after_another_past_the_window_are_left_to_finish(self):
-        # Each resize at the one line is a new call, not one call waiting.
         def work():
             with flow.chromium() as browser:
                 page = browser.new_page()
@@ -1967,9 +1838,9 @@ class HungCalls(unittest.TestCase):
 
         self.assertEqual(self.exits(work), ((2, None), ""))
 
-    def test_a_cdp_send_its_live_renderer_never_answers_exits_7_naming_the_call(self):
-        # Its partner (#464) is the resize loop's case: both reach the watch
-        # through UNTIMED_CALLS.
+    def test_a_cdp_send_its_live_renderer_never_answers_exits_7_naming_the_call_464(
+        self,
+    ):
         def work():
             with flow.chromium() as browser:
                 page = browser.new_page()
@@ -1996,11 +1867,6 @@ class HungCalls(unittest.TestCase):
 
 
 class RendererDeath(unittest.TestCase):
-    """CallWatch.renderer_death's verdict on an error raised from a stand-in
-    Playwright package, with the browser alive and running no renderer (#472).
-    A real new_page raises only where the kill beats Playwright's page setup,
-    which no case can order."""
-
     def death(self, method, page_open):
         import greenlet
 
@@ -2016,7 +1882,6 @@ class RendererDeath(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("api", path)
         api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(api)
-        # A live process with no children stands in for the browser.
         browser = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"]
         )
@@ -2032,7 +1897,7 @@ class RendererDeath(unittest.TestCase):
         finally:
             watch.stop()
 
-    def test_new_page_raising_with_no_page_open_is_a_renderer_death(self):
+    def test_new_page_raising_with_no_page_open_is_a_renderer_death_472(self):
         self.assertRegex(
             self.death("new_page", page_open=False) or "",
             r"^BrowserContext\.new_page at check-flow\.test\.py:\d+ raised "
@@ -2077,13 +1942,11 @@ class Sweep(unittest.TestCase):
         )
 
 
-# A morph: a path whose d a script rewrites frame by frame (#72).
 FROM = "M 0 300 C 0 233 0 167 0 100 C 0 45 45 0 100 0 C 155 0 200 45 200 100 Z"
 TO = "M 0 300 C 0 283 0 267 0 250 C 0 167 67 100 150 100 C 233 100 300 167 300 250 Z"
 
 
 def between(p):
-    """FROM morphed toward TO by p, number by number, as a script writes it."""
     a, b = FROM.split(" "), TO.split(" ")
     return " ".join(
         x if x.isalpha() else f"{float(x) + (float(y) - float(x)) * p:.2f}"
@@ -2092,8 +1955,6 @@ def between(p):
 
 
 def writes(progress, frame_times):
-    """The writes a script makes at each frame time: progress(t) gives p, and a
-    frame whose d is unchanged writes nothing, as the collector sees it."""
     out, d, prev = [], FROM, None
     for t in frame_times:
         new = between(progress(t))
@@ -2117,7 +1978,6 @@ def off_the_grid(off):
 
 
 def morph_measured(w, until):
-    """analyse()'s result for one morph's writes, sampled at 60 fps."""
     s = {
         "times": flow.sample_times(until, [], 60),
         "elements": [],
@@ -2148,7 +2008,7 @@ class MorphPoints(unittest.TestCase):
         self.assertEqual([t for t, _ in pts], [0, 400 - STEP, 400])
         self.assertEqual(flow.morph_at(pts, 200), flow.morph_at(pts, 0))
 
-    def test_numbers_are_interpolated_one_by_one_and_held_at_either_end(self):
+    def test_numbers_are_interpolated_one_by_one_and_held_at_either_end_72(self):
         pts = [(100, [0, 0, 10, 0, 20, 0, 30, 0]), (200, [10, 0, 20, 0, 40, 0, 50, 0])]
         self.assertEqual(flow.morph_at(pts, 150), [5, 0, 15, 0, 30, 0, 40, 0])
         self.assertEqual(flow.morph_at(pts, 0), [0, 0, 10, 0, 20, 0, 30, 0])
@@ -2157,7 +2017,7 @@ class MorphPoints(unittest.TestCase):
     def test_compact_path_data_reads_every_number(self):
         self.assertEqual(flow.path_structure("M0,0C10-5 20,0 30 0z"), ("MCz", 8))
 
-    def test_a_change_of_command_structure_is_refused(self):
+    def test_a_change_of_command_structure_is_refused_72(self):
         w = [
             {"ms": 0, "prev_ms": None, "old": FROM, "value": between(0.5)},
             {
@@ -2193,7 +2053,6 @@ class MorphPoints(unittest.TestCase):
 
 
 def without(*gone):
-    """An eased morph's writes with the frames `gone`, by index, never drawn."""
     return writes(
         eased(0, 1000), [f for k, f in enumerate(frames(1000)) if k not in gone]
     )
@@ -2210,8 +2069,7 @@ class DroppedFrames(unittest.TestCase):
             [(round(29 * STEP), round(32 * STEP))],
         )
 
-    def test_no_step_rests_on_frames_dropped_at_a_morphs_start(self):
-        # Frames 1 and 2 go undrawn, as a page's first frames do (#126).
+    def test_no_step_rests_on_frames_dropped_at_a_morphs_start_126(self):
         s = {
             "times": flow.sample_times(1100, [], 60),
             "elements": [],
@@ -2235,11 +2093,8 @@ class DroppedFrames(unittest.TestCase):
         got = [(j["edge"], j["at"]) for j in morph_measured(w, 800)["jolts"]]
         self.assertEqual(got, [("starts", 100), ("stops", 600)])
 
-    def test_a_morph_drawn_at_a_steady_20_fps_is_found(self):
-        # Its median gap is 50 ms, so it reads as dropped against Chromium's
-        # 60 Hz frame (#126 review).
+    def test_a_morph_drawn_at_a_steady_20_fps_is_found_126_135(self):
         w = writes(eased(0, 1000), [k * 3 * STEP for k in range(21)])
-        # Every stretch touches the next, so they read as one (#135).
         self.assertEqual(flow.dropped_frames(w), [(w[0]["ms"], w[-1]["ms"])])
         self.assertEqual(
             flow.dropped_frames(
@@ -2317,7 +2172,6 @@ class MorphFlow(unittest.TestCase):
             with self.subTest(fps=fps):
                 found, times = self.steps_and_sample_times(off_the_grid(4), fps)
                 self.assertEqual(found, [])
-                # Frames 4 ms either way leave a 24.7 ms gap: 12.3 ms halves at 120 fps.
                 gaps = [b - a for a, b in itertools.pairwise(times)]
                 self.assertLessEqual(max(gaps), 1.5 * 1000 / fps)
 
@@ -2362,24 +2216,19 @@ class MorphFlow(unittest.TestCase):
 
 
 def run_morph(page):
-    """check-flow.py's process and flow.json on a morph fixture, and
-    check-curves.js's process on the morph.svg it wrote."""
     with tempfile.TemporaryDirectory() as out:
         proc, data, _ = run(page, out=out)
-        # A guess, with room to spare: check-curves.js only reads one SVG.
         curves = subprocess.run(
             ["node", CURVES, os.path.join(out, "morph.svg")],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=60,  # guess, #181
             check=False,
         )
         return proc, data, curves
 
 
 def covers_stall(data):
-    """Whether a dropped stretch is morph-stall.html's 200 ms hold, 180 ms or
-    more over 450–600 ms from the morph's first frame, where p = 0.4 falls."""
     start = data["edges_ms"][0]
     return any(
         b - a >= 180 and a - start < 600 and b - start > 450
@@ -2388,15 +2237,13 @@ def covers_stall(data):
 
 
 class MorphPages(unittest.TestCase):
-    def test_a_morph_between_matched_paths_passes_both_checkers(self):
+    def test_a_morph_between_matched_paths_passes_both_checkers_135_148(self):
         proc, data, curves = run_morph("morph.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertEqual(
             [(e["label"], list(e["channels"])) for e in data["elements"]],
             [("path#arch", ["d"])],
         )
-        # A busy machine can draw the last frame late (#135), and a frame up to
-        # 3.3 ms early already draws the final shape (#148).
         self.assertGreaterEqual(data["length_ms"], 1000 - 3 * STEP)
         self.assertIn("run check-curves.js on it", proc.stdout)
         self.assertEqual(curves.returncode, 0, curves.stdout + curves.stderr)
@@ -2410,13 +2257,11 @@ class MorphPages(unittest.TestCase):
         self.assertAlmostEqual(data["length_ms"], 1600, delta=3 * STEP)
         self.assertEqual(curves.returncode, 0, curves.stdout + curves.stderr)
 
-    def test_a_stretch_the_browser_drops_frames_over_on_every_load_is_named_not_measured(
+    def test_a_stretch_the_browser_drops_frames_over_on_every_load_is_named_not_measured_135(
         self,
     ):
         proc, data, _ = run("morph-stall.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        # A busy machine can add stretches, as at the morph's first frames, and
-        # join one to the stall's, so it is found by the time it covers (#135).
         self.assertRegex(
             proc.stdout,
             r"\nnot measured, where the browser dropped frames on the last of 3 loads, each of which dropped some; a busy machine drops frames, "
@@ -2424,7 +2269,7 @@ class MorphPages(unittest.TestCase):
         )
         self.assertTrue(covers_stall(data), data["elements"][0]["dropped"]["d"])
 
-    def test_a_morph_the_browser_draws_at_11_fps_is_measured_and_named_not_measured(
+    def test_a_morph_the_browser_draws_at_11_fps_is_measured_and_named_not_measured_148(
         self,
     ):
         proc, data, _ = run("morph-starved.html")
@@ -2433,28 +2278,22 @@ class MorphPages(unittest.TestCase):
             [(e["label"], list(e["channels"])) for e in data["elements"]],
             [("path#arch", ["d"])],
         )
-        # A frame within 3.3 ms of 1000 ms already draws the final shape to two
-        # decimals, so the last frame that changes it can land that far short (#148).
         self.assertGreaterEqual(data["length_ms"], 1000 - 4)
-        # Every frame is dropped, so one stretch covers the morph's 1000 ms.
         [(a, b)] = data["elements"][0]["dropped"]["d"]
         self.assertGreater(b - a, 900)
         self.assertEqual((data["jolts"], data["steps"]), ([], []))
 
-    def test_a_morph_held_while_the_browser_is_starved_is_measured_whole(self):
-        # Its ticks ask for the next frame, then hold the browser 110 ms (#135).
+    def test_a_morph_held_while_the_browser_is_starved_is_measured_whole_135(self):
         proc, data, _ = run("morph-hold-starved.html")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         [p] = data["pauses"]
         self.assertAlmostEqual(p["start"] - data["edges_ms"][0], 800, delta=250)
         self.assertAlmostEqual(p["end"] - data["edges_ms"][0], 1800, delta=250)
-        # Its last frame falls within one held frame, 110 ms, of 2600 ms.
         self.assertGreaterEqual(data["length_ms"], 2600 - 120)
 
     def test_a_load_that_drops_frames_is_measured_again(self):
         proc, data, _ = run("morph-stall-once.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        # A busy machine can still drop frames at the morph's start.
         self.assertFalse(covers_stall(data), proc.stdout)
 
     def test_a_morph_through_a_polygon_resample_fails_check_curves(self):

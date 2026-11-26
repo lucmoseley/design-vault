@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""check-flow.py — measures how a candidate's motion flows: the craft rule that
-motion keeps one continuous pace, or changes speed with what is happening, and
-never strings long pauses between sudden jolts (lucmoseley/mmm-infra#16,
-design-vault#60, #69).
+"""Measures how a candidate's motion flows: whether it keeps one continuous
+pace, or changes speed with what is happening, and never strings long pauses
+between sudden jolts.
 
 USAGE
   python3 check-flow.py <url or file> --out DIR [--fps N] [--pause-ms MS]
@@ -11,25 +10,22 @@ USAGE
   python3 check-flow.py <url or file> --out DIR --records [--parts FILE]
         [--table FILE] [--timeout MS] [--viewport WxH]
 
-It opens the page in the machine-wide Python Playwright, the one the vault's
-`scripts/browse.py` uses. It lets the page play until
-every animation has finished, every script timer (setTimeout) has fired and
-nothing new has started for --quiet ms since its first frame, then scrolls the
-page through once, so a storyboard sequenced by timers is measured whole. Then
-it pauses every Web Animations API animation the page made, seeks them all to
-each frame in turn, and reads the box and the animated properties of each
-moving element. It prints:
+It opens the page in the machine-wide Python Playwright. It lets the page play
+until every animation has finished, every script timer (setTimeout) has fired
+and nothing new has started for --quiet ms since its first frame, then scrolls
+the page through once. Then it pauses every Web Animations API animation the
+page made, seeks them all to each frame in turn, and reads the box and the
+animated properties of each moving element. It prints:
 
 - the pauses: spells over --pause-ms (250) after the first move where nothing
   on the page moves. A box is still below the lower of 1% of its top speed and
-  1 minute of arc a second seen from --view-cm (60) cm, the slowest speed seen
-  as motion;
+  1 minute of arc a second seen from --view-cm (60) cm;
 - the jolts: a move from rest whose first or last frame runs at or over its
   jolt line, the share of the move's top speed JOLT_BAND sets, lower for a
   longer move and absent for one under 200 ms; --jolt-ratio R sets one line at
-  every length. A move that turns back,
-  still for no longer than --pause-ms, starts from the speed it turned at, and
-  one still for two frames or fewer has not stopped;
+  every length. A move that turns back, still for no longer than --pause-ms,
+  starts from the speed it turned at, and one still for two frames or fewer
+  has not stopped;
 - the jumps: a move from rest whose first frame carries its box 0.26° of
   visual angle or more seen from --view-cm, about 10 px at 60 cm, whatever its
   share. A start or stop the viewer never sees at rest, outside the viewport,
@@ -37,36 +33,32 @@ moving element. It prints:
   is listed where it would have been a jolt or jump;
 - the speed steps: a move that holds one speed for three frames, then within
   one to three frames changes 1.3-fold or more beyond the trend of the frames
-  either side, at a fifth or more of its top speed, carrying on the same way,
-  as a crane arm that suddenly runs faster;
-- the length of the motion: from its first move to the last animation's end
-  (#169 Q3 (A)), so the wait for fonts before anything moves is not in it.
-  That wait is check-load.py's to measure.
+  either side, at a fifth or more of its top speed, carrying on the same way;
+- the length of the motion: from its first move to the last animation's end.
 
 and writes DIR/speed.svg, a speed-over-time chart for each element, and
 DIR/flow.json, every sample behind it.
 
 IT MEASURES WEB ANIMATIONS API MOTION: `element.animate()`, CSS animations and
 CSS transitions. It also measures a morph, a path whose `d` a script rewrites
-frame by frame (design-round §6, design-vault#72): it records the `d` written
-at each frame while the page plays, interpolates the numbers between frames as
-the morph does, and writes every frame's `d` to DIR/morph.svg for
-check-curves.js. A morph is known only at the frames the browser drew: where
-it drops two or more in a row, as a busy machine makes it, the page is loaded
-again, up to ATTEMPTS times in all, and then the stretch is listed as not measured and
-no jolt, jump or step rests on it. A page that also moves another way gets no list of findings,
-because an empty one would read as a pass. It says it cannot measure, and names
-why: a canvas, a video, an embedded document, SVG SMIL, shadow DOM, a
-scroll-driven timeline, an animation played in reverse or seeked by hand from a
-script, one CSS animation-play-state holds paused, an element other than a
-path's `d` that a script rewrites frame by frame, a morph that scrolling
-drives, whose command structure changes or whose frame loop never stops, or
-animations that start, or are released, when the page is scrolled, or
-keep starting. An animated GIF is not detected.
+frame by frame: it records the `d` written at each frame while the page plays,
+interpolates the numbers between frames as the morph does, and writes every
+frame's `d` to DIR/morph.svg for check-curves.js. Where the browser drops two
+or more of a morph's frames in a row, the page is loaded again, up to ATTEMPTS
+times in all, and then the stretch is listed as not measured and no jolt, jump
+or step rests on it. A page that also moves another way gets no list of
+findings. It says it cannot measure, and names why: a canvas, a video, an
+embedded document, SVG SMIL, shadow DOM, a scroll-driven timeline, an
+animation played in reverse or seeked by hand from a script, one CSS
+animation-play-state holds paused, an element other than a path's `d` that a
+script rewrites frame by frame, a morph that scrolling drives, whose command
+structure changes or whose frame loop never stops, or animations that start,
+or are released, when the page is scrolled, or keep starting. An animated GIF
+is not detected.
 
 Time zero is the page's first frame.
 
---records answers the motion rule records instead (#318): each line of
+--records answers the motion rule records instead: each line of
 check-flow.table, or --table FILE, names a record, a check of
 motion-records.py and the value from that record, and each check runs on a
 load of its own at --viewport, the carousel's also at check-layout.py's phone
@@ -91,24 +83,23 @@ it was thrown and not overshoot (vault.drag-release). Each link, button and
 menu item is hovered and pressed, and the motion it starts must end inside the
 record's time (vault.motion-frequency). Every animation and transition rule
 must sit inside @media (update: fast), and no script animation may run once
-matchMedia says the screen updates slowly, which Chromium cannot emulate
-(vault.slow-update). A record whose part the declaration does not give is not
-judged. It prints each fault with its fix, writes DIR/motion.json and exits
-0 with no fault, 1 with one.
-
+matchMedia says the screen updates slowly (vault.slow-update). A record whose
+part the declaration does not give is not judged. It prints each fault with
+its fix, writes DIR/motion.json and exits 0 with no fault, 1 with one.
 
 EXITS 0 measured, no pause, jolt, jump or step / 1 measured, one or more (each
 printed) / 2 the arguments are wrong / 3 Playwright or its browser is missing,
-or, for --records, numpy or Pillow /
-4 the page did not render in time / 5 the browser refused the page / 6 the page
-cannot be measured / 7 a call hung that would never return, or its renderer
-died. Exits 0, 1 and 6 are results and print on stdout; the rest print on stderr.
+or, for --records, numpy or Pillow / 4 the page did not render in time / 5 the
+browser refused the page / 6 the page cannot be measured / 7 a call hung that
+would never return, or its renderer died. Exits 0, 1 and 6 are results and
+print on stdout; the rest print on stderr.
 """
 
 import argparse
 import base64
 import bisect
 import contextlib
+import importlib
 import io
 import itertools
 import json
@@ -124,15 +115,8 @@ import time
 import traceback
 import typing
 
-# The craft gate's pause limit: a still spell longer than this, in ms, is a pause
-# (design-critique's motion-flow check, #60).
-PAUSE_MS = 250
-# A move's first or last 60 fps frame at the middle of this band, as a share of
-# its top speed, or more starts or stops with a jolt (#221 Q1 (B), #297): (ms,
-# low, high) at each move length, the band in which the eye first tells a start
-# from an eased one (docs/research/jolt-onset.md, derivation). Straight between
-# the lengths, held past the last; a move shorter than the first has no line.
-# Residual: the shares are 60 fps frames', so at another --fps the line is off.
+PAUSE_MS = 250  # guess, #60
+# measured: the model's thresholds in docs/research/jolt-onset.md, 0.80 of top speed at 200 ms to 0.17-0.35 at 2000 ms, #297
 JOLT_BAND = (
     (200, 0.80, 0.80),
     (250, 0.54, 0.67),
@@ -141,143 +125,50 @@ JOLT_BAND = (
     (1000, 0.19, 0.39),
     (2000, 0.17, 0.35),
 )
-# A move from rest whose first frame carries its box this many degrees of visual
-# angle or more jumps, whatever its share: the lower end of the jumps that drew
-# attention, where the two studies disagree (docs/research/jolt-onset.md F10).
-# Read on its box's position only, as the studies moved a whole object. Residual:
-# a path morph's first frame is never checked for a jump.
-JUMP_DEG = 0.26
-# A common display's refresh rate, so the sample holds the frames a viewer sees.
-FPS = 60
-# The least gap between two sample times, in ms: an exact time nearer a frame
-# takes its place (guess, #126).
-MIN_GAP_MS = 1
-# How long, in ms, nothing new may start before the page counts as done starting
-# things. A guess, unmeasured.
-QUIET_MS = 2000
-# How often, in ms, the page is asked whether it has settled: a guess, well
-# under QUIET_MS.
-POLL_MS = 100
-# The wait for a whole page, in ms: loaded and, where it moves, played out.
-# A guess, unmeasured.
-PLAY_TIMEOUT_MS = 60000
-# The wait for one load or draw, in ms: Playwright's own default.
-LOAD_TIMEOUT_MS = 30000
-# The commonest desktop screen (#183's audit §2.1), and the height Windows 11's
-# taskbar and Chromium's bars take from it, measured on one machine (#197).
-DESKTOP_SCREEN = (1920, 1080)
-DESKTOP_BARS = 135
-# The desktop viewport every design-round script renders at unless told: that
-# screen less its bars (#252). A project whose own visitors differ records its
-# screen as `projects.<key>.desktop` in the library (#196).
+JUMP_DEG = 0.26  # measured: a 0.26 deg jump drew attention in Sunny and von Muhlenen 2014 (docs/research/jolt-onset.md F10), #297
+FPS = 60  # guess, #141
+MIN_GAP_MS = 1  # guess, #126
+QUIET_MS = 2000  # guess, #141
+POLL_MS = 100  # guess, #182
+PLAY_TIMEOUT_MS = 60000  # guess, #141
+LOAD_TIMEOUT_MS = 30000  # measured: Playwright's own default, #141
+DESKTOP_SCREEN = (1920, 1080)  # measured: the commonest desktop screen, #183
+DESKTOP_BARS = 135  # measured on Windows 11 with Chromium, #197
 DESKTOP_WINDOW = (DESKTOP_SCREEN[0], DESKTOP_SCREEN[1] - DESKTOP_BARS)
 DESKTOP = f"{DESKTOP_WINDOW[0]}x{DESKTOP_WINDOW[1]}"
-# A channel slower than this share of its own top speed counts as still, so an
-# easing's long tail does not hide the pause after it. A box channel counts as
-# still only below the lower of this and STILL_ARCMIN_S (#196).
+# guess, #196
 STILL_FRACTION = 0.01
-# The slowest speed people see as motion, in minutes of arc a second: about 1-2
-# with something still in view (Leibowitz 1955, through secondary sources; #183's
-# audit §2.1). The band's lower end, a guess.
+# guess at Leibowitz 1955's 1-2 arcmin/s, #183
 STILL_ARCMIN_S = 1
-# The viewer's distance from the screen, in cm: a desktop's, about 60 (#183's
-# audit §2.1). A CSS px is 1/96 inch on a desktop. A phone's is smaller but seen
-# nearer, so there the floor reads a little over 1; pass --view-cm to hold 1.
+# guess, #183
 VIEW_CM = 60
 CSS_PX_CM = 2.54 / 96
-# A speed under this, in the channel's units per second, is float noise (#60).
-# Set for a box's 1e-5 px wobble over a gap of 1 ms or more; #149 found gaps
-# shorter and wobbles larger, which PX_NOISE now takes. For other channels a guess.
-NOISE = 0.02
-# A box change under this many px is float noise whatever the rate (#149): a
-# still box's size wobbled by float32 steps of up to 1.2e-4 px across a 1.9 ms
-# gap on mmm-infra#35's page, whose smallest real move in a frame was 1e-3 px.
-# A guess between the two, tuned on that one page; it drops the first frame of
-# a 1 px ease-in-out at 120 fps.
-PX_NOISE = 5e-4
+NOISE = 0.02  # guess, #60
+PX_NOISE = 5e-4  # measured 1.2e-4 px float wobble, 1e-3 px least move, #149
 PX_CHANNELS = ("position", "size")
 IDENTITY_3D = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
-# A speed step mid-move (#69, #196): a change of STEP_RATIO or more within
-# STEP_SPREAD frames, which is visible inside one motion (a Weber fraction of
-# 0.2-0.3: Snowden and Braddick 1991, Mateeff et al. 2000, abstracts only; #183's
-# audit 1.7). A smooth easing changes speed by 2x a frame near rest, so the
-# change is measured against the trend: the line through STEP_SIDE_FRAMES
-# frames each side, carried across to the other side's nearest frame, must miss
-# it by STEP_RATIO, both lines the same way. The slower side holds within
-# STEP_HOLD and the faster within STEP_FAST_HOLD, as the speeds behind the Weber
-# fraction were held: a speed peak as sharp as expo's or circ's changes more on
-# each side. A turn, as in an overshoot, a bounce or a landing's sink, reverses;
-# the floor keeps out a landing's last wobbles.
-# Missed: a change ramped over more than 3 frames, and a step within 3 frames
-# of a move's start or end, where the slower speed has no three frames to hold,
-# which at 30 fps is 100 ms.
-STEP_RATIO = 1.3
-STEP_SPREAD = 3
-STEP_SIDE_FRAMES = 3
-STEP_HOLD = 1.3
-STEP_FAST_HOLD = 1.5
-STEP_FLOOR = 0.2
-# A still spell of at most this many frames between two moves going opposite
-# ways is a turn inside a frame, not a stop: a stiff landing's sink turns within
-# a frame, which reads as still in the frame or two it straddles (#151). A guess.
-# Residual: a move that stops at full speed, rests that short and goes back no
-# faster is not called a jolt.
-TURN_FRAMES = 2
-# A script rewriting one element's style in this many distinct frames, within
-# REWRITE_SPAN_MS or in consecutive frames however far apart a starved browser
-# draws them (#135), is moving it frame by frame. A framework's few setup
-# writes and a storyboard's class changes a beat apart stay under it.
-# Residual: where frames come a beat or more apart, changes a beat apart land
-# in consecutive frames and are refused as a loop. A loop that ends by the
-# clock, which a stall leaves fewer frames than this, is not seen (#617).
-REWRITE_FRAMES = 5
-REWRITE_SPAN_MS = 250
-# Across two or more dropped frames in a row, as a busy machine or a page's
-# first frames leave, the straight line between the frames either side fakes a
-# jolt or step (#126). A frame is the median time between the browser's frames,
-# or headless Chromium's 60 Hz frame where that is shorter.
-DROPPED_FRAMES = 2
+STEP_RATIO = 1.3  # measured: a Weber fraction of 0.2-0.3, #196
+STEP_SPREAD = 3  # guess, #196
+STEP_SIDE_FRAMES = 3  # guess, #196
+STEP_HOLD = 1.3  # guess, #196
+STEP_FAST_HOLD = 1.5  # guess, #196
+STEP_FLOOR = 0.2  # guess, #196
+TURN_FRAMES = 2  # guess, #151
+REWRITE_FRAMES = 5  # guess, #60
+REWRITE_SPAN_MS = 250  # guess, #60
+DROPPED_FRAMES = 2  # guess, #126
 BROWSER_FRAME_MS = 1000 / 60
-# The most loads, in all, of a page whose morph keeps dropping DROPPED_FRAMES or
-# more frames in a row. A guess.
-ATTEMPTS = 3
-# How long, in seconds, a Playwright call may wait while its browser runs no
-# renderer before the call is taken as hung (#432). A renderer killed as it
-# starts can leave the call waiting for ever with nothing raised. Above the few
-# seconds a starved machine may take to start one: a guess, unmeasured.
-RENDERER_GONE_S = 10
-# Playwright calls that take no timeout and return once the renderer answers:
-# a renderer alive but never answering leaves one waiting for ever (#459).
-# Other calls with no timeout of their own, as evaluate, are not watched: a
-# page's own script can rightly keep one waiting. Residual: a CDP send that
-# awaits a page's promise, as Runtime.evaluate with awaitPromise, can rightly
-# wait past UNANSWERED_S and is killed as hung.
+ATTEMPTS = 3  # guess, #126
+RENDERER_GONE_S = 10  # guess, #432
 UNTIMED_CALLS = frozenset({"Page.set_viewport_size", "CDPSession.send"})
-# How long, in seconds, one of UNTIMED_CALLS may wait before it is taken as hung.
-# 3,600 resizes six browsers at once, at a load average of 5 to 11, took 72 ms
-# at worst (#459); a guess far above that, and for a CDP send unmeasured (#464).
-UNANSWERED_S = 30
-# How often, in seconds, the watch reads the browser's processes: a guess, well
-# under RENDERER_GONE_S.
-WATCH_POLL_S = 0.25
-# How long, in seconds, the watch waits for the processes it killed to exit: a
-# guess, far over the moment a killed browser takes on a loaded machine.
-KILLED_GONE_S = 10
-# Elements or animations a message names before it elides the rest: a guess at
-# enough to find them.
-NAMES_SHOWN = 3
-# Not a digit that is part of a name, such as the 3 in `matrix3d(`.
+UNANSWERED_S = 30  # guess above a measured 72 ms worst resize, #459
+WATCH_POLL_S = 0.25  # guess, #432
+KILLED_GONE_S = 10  # guess, #464
+NAMES_SHOWN = 3  # guess, #182
 NUMBER = re.compile(r"(?<![A-Za-z_])[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
-# In path data a number follows its command letter directly: `M0 0`.
 PATH_NUMBER = re.compile(r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 PATH_COMMAND = re.compile(r"[MmZzLlHhVvCcSsQqTtAa]")
 
-# first_line, the exception classes and size_arg follow the vault's
-# scripts/browse.py, which workflow-core owns and the plugin cannot import: keep
-# them in step with it. chromium() departs from it: an error while a script
-# builds its page is a refusal too (#131), and INSTALL_HINT names the plugin's
-# pinned requirements.txt (#254). Every design-round browser script calls
-# chromium(), run_browser() and, but check-overlay.py, page_url() from here.
 REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
 INSTALL_HINT = (
     "Playwright is a Python package installed once per machine, at the\n"
@@ -288,10 +179,6 @@ INSTALL_HINT = (
 
 
 def missing(err):
-    """Exit code 3, having named the package the ImportError `err` found missing
-    and the pinned install (#256). A script calls it where it imports numpy,
-    Pillow or scipy, before any browser starts: run_browser() reads any
-    ImportError as Playwright's."""
     script = os.path.basename(sys.argv[0])
     print(
         f"{script}: {err.name or err} is missing — python3 -m pip install -r {REQUIREMENTS}",
@@ -300,14 +187,6 @@ def missing(err):
     return 3
 
 
-# Runs before the page's own scripts. It keeps every animation the page makes,
-# because a finished fill-none animation drops out of getAnimations() but can
-# still be seeked through a held reference. It records the frames in which a
-# script rewrote a style or geometry attribute, the trace motion driven by a
-# script loop leaves where WAAPI leaves none. A path's `d` it records apart,
-# with each value written and its frame's time, so a morph can be measured; a
-# `d` write restarts the quiet window. And it tracks every pending setTimeout;
-# a timer firing restarts the quiet window, as a new animation does.
 COLLECTOR_JS = r"""
 (() => {
   const seen = new Map();
@@ -329,11 +208,7 @@ COLLECTOR_JS = r"""
     return id;
   };
   window.clearTimeout = function (id) { pending.delete(id); return clearT.call(this, id); };
-  // A frame loop that writes nothing, as a morph holding a shape does, is still
-  // running: settle() waits for it. It is known by the frame it last asked in,
-  // not a time: a tick that asks for its next frame and then holds the browser
-  // read as stopped by the clock (#135). An animation the callback makes waits
-  // in this frame, so the frame is scanned again after it (#326).
+  // #135 #326
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = function (cb) {
     state.lastPageFrame = state.frame;
@@ -348,8 +223,7 @@ COLLECTOR_JS = r"""
     state.pausedAtSweep = state.neverStarted();
     return seen.size;
   };
-  // `ended` is set once an animation reaches its end, so one the page then
-  // cancels, as on animationend, is still known to have run its course (#368).
+  // #368
   const keep = (a) => {
     if (!seen.has(a)) {
       const rec = { start: null, held: null, ended: false };
@@ -359,12 +233,7 @@ COLLECTOR_JS = r"""
     }
     return seen.get(a);
   };
-  // Also run after each frame's paint and by every read from Python, so an
-  // animation a timer started since the last frame is never missed. An animation still waiting to start in a
-  // frame is drawn at its first keyframe there, held at time 0: `held` is the
-  // first such frame's time. A loaded machine can start the page's animations
-  // a frame after its first, and seeked before its start one would show its
-  // unanimated style instead (#326).
+  // #326
   state.scan = (at) => {
     for (const a of document.getAnimations()) {
       const rec = keep(a);
@@ -372,29 +241,18 @@ COLLECTOR_JS = r"""
       else if (at !== undefined && rec.held === null && a.pending && a.playState === 'running') rec.held = at;
     }
   };
-  // An animation reverse() was called on is missing from getAnimations() until
-  // it starts, and a frame that runs late keeps the time it was due, so one
-  // queued behind a long task can start it there and the next, stamped the real
-  // time, find it ended: no scan sees a short one (#359). play(), animate() and
-  // updatePlaybackRate() leave an animation listed while it waits, so a frame's
-  // scan finds it. One on no element of the page, which no scan would list, is
-  // not the page's.
+  // #359
   const rev = Animation.prototype.reverse;
   Animation.prototype.reverse = function () {
     rev.call(this);
     const el = this.effect && this.effect.target;
     if (el && el.isConnected) keep(this);
   };
-  // A task posted in a frame runs after its paint. An animation a
-  // ResizeObserver or a style change starts after the frame's scans is drawn
-  // in that frame, and can end before the next (#369). Residual: it passes no
-  // frame time, as a page task may run before it and start an animation that
-  // frame never drew, so one still waiting is held from the next frame's scan.
+  // #369
   const afterPaint = new MessageChannel();
   afterPaint.port1.onmessage = () => state.scan();
   const collect = (now) => {
     if (state.firstFrame === null) state.firstFrame = now;
-    // Registered before any page script, so it runs first in every frame.
     state.prevFrameAt = state.frameAt;
     state.frameAt = now;
     state.frame++;
@@ -429,9 +287,6 @@ COLLECTOR_JS = r"""
 })();
 """
 
-# Shared by the page-side calls: a readable name for an element, from it and at
-# most two ancestors, each by at most two classes: a guess at enough to tell
-# elements apart in a report.
 LABEL_JS = r"""
 const label = (el, pseudo) => {
   const one = (e) => {
@@ -444,6 +299,7 @@ const label = (el, pseudo) => {
     return s;
   };
   const parts = [one(el)];
+  // guess, #501
   for (let p = el.parentElement; p && parts.length < 3 && !el.id; p = p.parentElement) {
     if (p.localName === 'body' || p.localName === 'html') break;
     parts.unshift(one(p));
@@ -468,7 +324,6 @@ const cssPaused = (a) => {
 };
 """
 
-# Whether a rewrite log shows a script moving its element frame by frame.
 LOOP_JS = r"""
 const loop = (log, frames, span) => log.some((w, i) => {
   const last = log[i + frames - 1];
@@ -487,15 +342,12 @@ STATUS_JS = (
   let running = 0;
   for (const a of f.seen.keys()) {
     const t = a.effect && a.effect.getComputedTiming();
-    // A scroll-driven animation never finishes on time; the blockers name it.
     if (a.playState === 'running' && a.timeline === document.timeline && t && t.endTime !== Infinity) running++;
   }
   const now = performance.now();
   const timers = [...f.pending.values()].map((due) => Math.max(0, due - now));
   const morphed = [...f.morphs.values()].some((log) => loop(log, frames, span));
-  // An element rewritten in this frame and each frame before it, too few yet to
-  // read as a loop, may still become one however slowly a starved browser draws
-  // (#469).
+  // #469
   const logs = [...f.rewrites.values()];
   const looped = logs.some((log) => loop(log, frames, span));
   const rewriting = logs.some((log) => {
@@ -514,7 +366,6 @@ const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, 
 const drawn = (f, { frames, span, shown, morphs }) => {
   const reasons = [];
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  // [selector, why, whether only a visible one counts]
   const kinds = [
     ['canvas', 'draws on a canvas', true],
     ['video', 'plays a video', true],
@@ -535,7 +386,6 @@ const drawn = (f, { frames, span, shown, morphs }) => {
 };
 """
 
-# Everything that moves the page some way this sampler cannot seek.
 BLOCKERS_JS = (
     r"""
 ({ before, frames, span, shown }) => {
@@ -568,8 +418,6 @@ BLOCKERS_JS = (
 """
 )
 
-# Pauses every animation and works out where each, and each morph's recorded
-# frames, sits on one timeline. Offsets keep each animation's real start.
 PREPARE_JS = (
     r"""
 () => {
@@ -583,16 +431,13 @@ PREPARE_JS = (
     if (start === null || !a.effect) continue;
     anims.push({ a, start, held: rec.held, rate: a.playbackRate });
   }
-  // A write before the page's first frame has no frame time to place it on
-  // the timeline, so it counts as setup and its shape goes unmeasured (#72).
+  // #72
   const morphs = f.morphing.map((el) => ({ el, writes: f.morphs.get(el).filter((w) => w.frameAt !== null) }));
   if (!anims.length && !morphs.length) return { anims: 0, morphs: [] };
   const t0 = Math.min(f.firstFrame === null ? Infinity : f.firstFrame, ...anims.map((x) => x.start),
     ...morphs.map((m) => m.writes[0].frameAt));
   let end = 0;
   let infinite = false;
-  // A morph moves from the frame before its first write; an animation once
-  // its delay is over, or at once where the delay is negative.
   let first = Infinity;
   const edges = [];
   const starts = [];
@@ -613,7 +458,6 @@ PREPARE_JS = (
     x.a.pause();
     const t = x.a.effect.getComputedTiming();
     const off = x.start - t0;
-    // Played on a frame; a delay can end mid-frame.
     const movesAt = off + Math.max(0, t.delay) / x.rate;
     starts.push([off, movesAt]);
     first = Math.min(first, movesAt);
@@ -626,12 +470,9 @@ PREPARE_JS = (
       edges.push(off + (t.delay + t.activeDuration) / x.rate);
     }
     edges.push(off + t.delay / x.rate);
-    // Each keyframe's time in each pass, where a move can resume mid-frame. A
-    // keyframe's offset maps straight to time only under linear effect easing,
-    // which CSS animations and most element.animate() calls use.
     if (t.easing === 'linear' && t.duration > 0) {
       const offsets = x.a.effect.getKeyframes().map((k) => k.computedOffset);
-      // At most 100 passes, a guess at a bound no finite animation a candidate plays nears.
+      // guess, #501
       const passes = Math.min(x.loops ? 1 : t.iterations, 100);
       for (let i = 0; i < passes; i++) {
         const back = t.direction === 'reverse' || (t.direction === 'alternate' && i % 2 === 1) ||
@@ -669,13 +510,6 @@ PREPARE_JS = (
 """
 )
 
-# Whether the viewer sees an element at rest (#297): its box, or a descendant's,
-# inside the viewport and every box that clips it, with nothing from it up at
-# zero opacity. An ancestor's overflow clips only what its containing block
-# chain runs through; a clip-path, a mask or paint containment clips all it
-# holds, here to its whole box. <body> and <html> clip at the viewport.
-# Residual: a clip-path or mask is read as its box, so a start it hides inside
-# its box is still judged.
 SEEN_JS = r"""
 const shown = (el) => {
   const r = el.getBoundingClientRect();
@@ -696,8 +530,7 @@ const shown = (el) => {
     }
     if (holds) pos = cs.position;
   }
-  // A box with no width or height shows on an edge; one with both shows only
-  // where it overlaps (#297).
+  // #297
   return (rt > l || (r.width === 0 && rt === l)) && (b > t || (r.height === 0 && b === t));
 };
 const seen = (el) => {
@@ -708,8 +541,6 @@ const seen = (el) => {
 };
 """
 
-# Seeks every animation to each time and reads each moving element, and
-# whether it is seen; a pseudo-element by its element.
 SAMPLE_JS = (
     r"""
 (times) => {
@@ -718,7 +549,7 @@ SAMPLE_JS = (
     + r"""
   const { anims, elements } = window.__flow.sampling;
   for (const t of times) {
-    // Held at its first keyframe from the frame it waited in (#326).
+    // #326
     for (const x of anims) x.a.currentTime = (t >= x.heldOff ? Math.max(0, t - x.off) : t - x.off) * x.rate;
     for (const e of elements) {
       const push = (n, v) => (e.channels[n] = e.channels[n] || []).push(v);
@@ -739,23 +570,7 @@ SAMPLE_JS = (
 
 
 def sample_times(end, edges, fps, starts=(), *, drawn=()):
-    """Every frame, plus each animation's exact start, end and keyframes: a move
-    that began mid-frame would otherwise show a part-speed first frame and hide
-    its jolt. An exact time within 1 ms of a frame takes that frame's place, as
-    a frame just past a keyframe reads part of the next speed (#126). The first
-    frame's too: an animation started at load starts a fraction of a ms after
-    it, and at 0 reads as not yet started, its first keyframe unshown (#297).
-    An animation starts at its timeline's time when it is ready, which a
-    document timeline advances once a frame (Web Animations Level 1, "Playing
-    an animation", its pending play task), and its frames follow it a frame
-    apart. So each of `starts`, (start, moves_at), is followed by its first
-    moving frame in the start's phase, with no frame sampled between: a loaded
-    machine starts one off the sampled frames (#326, #411). Residual: an edge
-    inside that frame still cuts it, another element's move from rest inside it
-    gets a first frame in the wrong phase, and a move from rest at a later
-    keyframe or pass keeps the sampled frames' phase.
-    `drawn` holds, per morph, the frames the browser drew it in (#612, #620).
-    In a window of 1 ms or more, no two times fall within 1 ms of each other."""
+    # #126 #297 #326 #411 #612 #620
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
@@ -795,8 +610,6 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
 
 
 def path_structure(d):
-    """A path's commands and its count of numbers: two paths with the same can
-    be morphed number by number."""
     return "".join(PATH_COMMAND.findall(d)), len(PATH_NUMBER.findall(d))
 
 
@@ -805,13 +618,6 @@ def path_numbers(d):
 
 
 def morph_points(writes):
-    """(time, numbers of d) at each frame a script wrote a path's `d`, from its
-    writes: [{ms, prev_ms, old, value}], `prev_ms` being the frame before `ms`,
-    or None. A write after frames with none holds the old `d` until the frame
-    before it, so a held shape reads as still, not as a slow move. Raises
-    ValueError where the command structure changes, so the numbers have no
-    one-to-one pairing; the shape before the first write is setup and may
-    differ."""
     points, structure = [], None
     for i, w in enumerate(writes):
         new = path_structure(w["value"])
@@ -830,8 +636,6 @@ def morph_points(writes):
 
 
 def morph_at(points, t):
-    """A morph's numbers at time t: each number interpolated between the frames
-    either side, and held before the first and after the last."""
     i = bisect.bisect_right([p[0] for p in points], t)
     if i == 0:
         return points[0][1]
@@ -843,17 +647,11 @@ def morph_at(points, t):
 
 
 def is_dropped_gap(gap, frame):
-    """Whether the browser dropped DROPPED_FRAMES or more frames in a row over a
-    gap of `gap` ms between frames `frame` ms apart, half a frame allowed for
-    jitter (a guess)."""
+    # guess, #126
     return gap > (DROPPED_FRAMES + 0.5) * frame
 
 
 def dropped_frames(writes):
-    """(from ms, to ms) of each stretch over which a morph's shape changed while
-    the browser dropped frames over, by is_dropped_gap, stretches that touch
-    joined into one. A change of command structure finds none: add_morphs
-    refuses it."""
     gaps = [w["ms"] - w["prev_ms"] for w in writes if w["prev_ms"] is not None]
     try:
         points = morph_points(writes)
@@ -874,10 +672,6 @@ def dropped_frames(writes):
 
 
 def add_morphs(sample):
-    """Adds each morph's `d` channel, at every sample time, to the element of
-    its label, with the stretches its browser dropped frames over as the
-    element's `dropped["d"]`. Raises UnmeasurableError where a morph's structure
-    changes. `sample` is the caller's accumulator for its `elements`, which this fills."""
     by_label = {e["label"]: e for e in sample["elements"]}
     for m in sample["morphs"]:
         try:
@@ -902,7 +696,6 @@ def add_morphs(sample):
 
 
 def morph_svg(morphs):
-    """Every `d` each morph's path took, one <path> per frame, for check-curves.js."""
     out = ['<svg xmlns="http://www.w3.org/2000/svg">']
     for m in morphs:
         slug = re.sub(r"[^A-Za-z0-9_-]+", "-", m["label"]).strip("-")
@@ -915,10 +708,6 @@ def morph_svg(morphs):
 
 
 def numbers(prop, value):
-    """A computed value as a vector of its numbers, so a change is a distance.
-    Forms that drop numbers are written out in full first: a missing number
-    would count as 0, and `rgb(0, 0, 0)` to `rgba(0, 0, 0, 0.99)` would read as
-    a jump of 0.99."""
     if isinstance(value, list):
         return [float(v) for v in value]
     if value is None:
@@ -944,7 +733,6 @@ def numbers(prop, value):
 
 
 def deltas(series):
-    """The change between consecutive samples, each a vector of one length."""
     out = []
     for a, b in itertools.pairwise(series):
         n = max(len(a), len(b))
@@ -960,8 +748,6 @@ def deltas(series):
 
 
 def rates(changes, times, floor=0.0):
-    """Speed between consecutive samples, in the channel's units per second,
-    from their deltas(); a change under `floor` is none."""
     out = []
     for d, (ta, tb) in zip(changes, itertools.pairwise(times), strict=True):
         dt = (tb - ta) / 1000
@@ -972,12 +758,10 @@ def rates(changes, times, floor=0.0):
 
 
 def same_way(a, b):
-    """Whether two changes point the same way."""
     return sum(x * y for x, y in zip(a, b, strict=True)) > 0
 
 
 def line_at(ts, vs, t):
-    """The least-squares line through (ts, vs), at t."""
     mt, mv = statistics.fmean(ts), statistics.fmean(vs)
     sxx = sum((x - mt) ** 2 for x in ts)
     return mv + sum((x - mt) * (y - mv) for x, y in zip(ts, vs, strict=True)) / sxx * (
@@ -986,13 +770,6 @@ def line_at(ts, vs, t):
 
 
 def steps_in(r, changes, times, *, s, e):
-    """(index, frames between, from share, to share, "up" or "down") of each
-    speed step in the run of moving intervals s..e. The step starts at sample
-    index i, the first frame off the slower speed, and the faster speed is
-    reached n frames later, as the STEP constants' comment sets out. Each side
-    holds; the faster reaches STEP_FLOOR of the run's top speed; every frame
-    moves the same way. The shares, over the run's top speed, are the speed
-    just before the step and the new speed it reaches."""
     top = max(r[s : e + 1])
     k = STEP_SIDE_FRAMES
     mids = [(a + b) / 2 for a, b in itertools.pairwise(times)]
@@ -1008,7 +785,6 @@ def steps_in(r, changes, times, *, s, e):
         back = line_at(mids[i + n : i + n + k], after, mids[i - 1])
         if ahead <= 0 or back <= 0:
             return None
-        # Curvature and a kink in a smooth easing miss the two ways at once.
         gains = (first / ahead, back / last)
         slow, fast = sorted((before, after), key=statistics.fmean)
         if (
@@ -1046,8 +822,29 @@ def steps_in(r, changes, times, *, s, e):
     return out
 
 
+# #623
+def merged_steps(label, found, times):
+    out, reach = [], None
+    for way, lo, hi, _, name, i, n, before, after in sorted(found):
+        if out and out[-1]["way"] == way and lo <= reach:
+            out[-1]["channels"].append(name)
+            reach = max(reach, hi)
+            continue
+        out.append(
+            {
+                "element": label,
+                "way": way,
+                "at": round((times[i] + times[i + n]) / 2),
+                "from": round(before, 2),
+                "to": round(after, 2),
+                "channels": [name],
+            }
+        )
+        reach = hi
+    return out
+
+
 def runs(flags):
-    """(start, end) index pairs, inclusive, of each run of True."""
     out, start = [], None
     for i, f in enumerate(flags + [False]):
         if f and start is None:
@@ -1059,18 +856,14 @@ def runs(flags):
 
 
 def still_px(view_cm):
-    """STILL_ARCMIN_S in CSS px a second, seen from view_cm."""
     return STILL_ARCMIN_S / math.degrees(60 * math.atan(CSS_PX_CM / view_cm))
 
 
 def jump_px(view_cm):
-    """JUMP_DEG in CSS px, seen from view_cm."""
     return 2 * view_cm * math.tan(math.radians(JUMP_DEG) / 2) / CSS_PX_CM
 
 
 def jolt_line(ms):
-    """The share of its top speed at which a move of `ms` starts or stops with
-    a jolt, from JOLT_BAND; None for a move too short to have one."""
     if ms < JOLT_BAND[0][0]:
         return None
     for (a, lo_a, hi_a), (b, lo_b, hi_b) in itertools.pairwise(JOLT_BAND):
@@ -1081,23 +874,14 @@ def jolt_line(ms):
 
 
 def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
-    """Pauses, jolts, jumps and speed steps from a sample: {times, elements:
-    [{label, loops, channels: {name: [value per frame]}, dropped: {name: [(from
-    ms, to ms)]}, seen: [bool per frame]}]}. Pure, so the thresholds are tested
-    without a browser. An element that `loops` forever is still moving where the
-    window cuts it, so its motion at the last frame is not a stop. No jolt, jump
-    or step rests on a frame in a dropped stretch, whose motion is unknown. A
-    move's line is jolt_line() of its length, or `jolt_ratio` at every length.
-    A start or stop where `seen` is False, the viewer never sees the element at
-    rest, so it is judged neither way and is listed `unseen` where it would have
-    been a jolt or jump (#297); an element with no `seen` is seen."""
     times = sample["times"]
     gaps = len(times) - 1
     active = [False] * gaps
     elements = []
-    steps = {}
+    steps = []
     for el in sample["elements"]:
         channels = {}
+        found = []
         for name, values in el["channels"].items():
             changes = deltas([numbers(name, v) for v in values])
             r = rates(changes, times, PX_NOISE if name in PX_CHANNELS else 0.0)
@@ -1113,11 +897,7 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                 any(ta < b and tb > a for a, b in stretches)
                 for ta, tb in itertools.pairwise(times)
             ]
-            # A move going back the other way after still for no longer than a
-            # pause has turned: its start index maps to its last frame before
-            # (#150). Residual: a move that eases to a stop, rests up to a pause
-            # and starts back gaining under its jolt line over the speed it
-            # stopped at is not called a jolt, though the same start from rest is.
+            # #150
             turns = {}
             for (_, e), (s, _) in itertools.pairwise(runs(moving)):
                 if times[s] - times[e + 1] <= pause_ms and same_way(
@@ -1136,18 +916,10 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                 for i, n, before, after, way in steps_in(r, changes, times, s=s, e=e):
                     if any(unknown[i - STEP_SIDE_FRAMES : i + n + STEP_SIDE_FRAMES]):
                         continue
-                    at = round((times[i] + times[i + n]) / 2)
-                    steps.setdefault(
-                        (el["label"], way, at),
-                        {
-                            "element": el["label"],
-                            "way": way,
-                            "at": at,
-                            "from": round(before, 2),
-                            "to": round(after, 2),
-                            "channels": [],
-                        },
-                    )["channels"].append(name)
+                    found.append(
+                        (way, i - 1, i + n, len(channels), name, i, n, before, after)
+                    )
+        steps += merged_steps(el["label"], found, times)
         elements.append(
             {
                 "label": el["label"],
@@ -1157,8 +929,7 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
             }
         )
 
-    # A still spell before the first move is no pause: the rule's sources
-    # speak only of stills between moves (house-audit-craft.md §1.5, #220).
+    # #220
     pauses = []
     for s, e in runs([not a for a in active]):
         start, end = times[s], times[e + 1]
@@ -1187,11 +958,9 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                     if jolt_ratio is not None
                     else jolt_line(times[e + 1] - times[s])
                 )
-                # A start out of a turn gains speed from the speed just before
-                # it, unless the move stopped there with a jolt (#150).
+                # #150
                 before = turns.get(s)
                 turned = before is not None and before not in jolted
-                # (edge, interval, time, gain, out of a turn, the frame at rest)
                 edges = [
                     (
                         "starts",
@@ -1215,8 +984,6 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                         and name == "position"
                         and moved >= jump_min
                     )
-                    # A stop jolts whether or not it is seen, so the start out
-                    # of its turn is judged from rest.
                     if jolt and edge == "stops":
                         jolted.add(i)
                     if not (jolt or jump):
@@ -1261,13 +1028,13 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                         }
 
     def by_time(found):
-        return sorted(found.values(), key=lambda x: (x["at"], x["element"]))
+        return sorted(found, key=lambda x: (x["at"], x["element"]))
 
     return {
         "pauses": pauses,
-        "jolts": by_time(jolts),
-        "jumps": by_time(jumps),
-        "unseen": by_time(unseen),
+        "jolts": by_time(jolts.values()),
+        "jumps": by_time(jumps.values()),
+        "unseen": by_time(unseen.values()),
         "steps": by_time(steps),
         "elements": elements,
     }
@@ -1277,13 +1044,9 @@ PALETTE = ["#2563eb", "#d97706", "#059669", "#db2777", "#7c3aed", "#0891b2", "#6
 
 
 def chart(sample, result, pause_ms):
-    """One panel per element: each channel's speed over time, scaled to its own
-    top speed, which the legend gives. Pauses shaded, jolts, jumps and steps marked."""
     times = sample["times"]
     span = max(times[-1], 1)
-    # The chart's width, margins, panel height and gaps, and the 30 px strip under the panels for the time axis,
-    # in px: picked by eye for a legible chart, not measured, as are the offsets, font sizes, marker sizes and
-    # label lengths below.
+    # guess, #501
     w, left, right, panel, gap, top = 960, 230, 20, 90, 18, 40
     plot_w = w - left - right
     els = result["elements"]
@@ -1354,7 +1117,7 @@ def chart(sample, result, pause_ms):
 
 
 def nice_step(span):
-    # The first round step that gives at most 12 ticks, else a tenth of the span: picked by eye, not measured.
+    # guess, #501
     for s in (100, 250, 500, 1000, 2000, 5000, 10000, 30000, 60000):
         if span / s <= 12:
             return s
@@ -1373,29 +1136,26 @@ def first_line(exc):
 
 
 class PageTimeoutError(Exception):
-    """The page did not render in time: exit 4."""
+    pass
 
 
 class NoBrowserError(Exception):
-    """Playwright imported but its Chromium is not downloaded: exit 3, with the
-    same install lines as an absent package."""
+    pass
 
 
 class RefusedError(Exception):
-    """The browser reached the network and got nothing usable: exit 5."""
+    pass
 
 
 class UnmeasurableError(Exception):
-    """The page moves some way this sampler cannot seek, or not at all: exit 6."""
+    pass
 
 
 class HungCallError(Exception):
-    """A call the watch took as hung, or one that raised once its renderer died:
-    exit 7."""
+    pass
 
 
 def size_arg(p, flag, value, *, number=int, example=DESKTOP):
-    """A WxH argument as a width and height, or a usage error naming `flag`."""
     try:
         w, h = (number(n) for n in value.lower().split("x", 1))
     except ValueError:
@@ -1404,7 +1164,6 @@ def size_arg(p, flag, value, *, number=int, example=DESKTOP):
 
 
 def page_url(p, url):
-    """A URL as given, or a local file's file:// URL; a missing file is a usage error."""
     if re.match(r"^[a-z]+://", url):
         return url
     path = pathlib.Path(url)
@@ -1414,7 +1173,6 @@ def page_url(p, url):
 
 
 def descendants(pid):
-    """The pids under process `pid`, read from /proc; none where it has no /proc."""
     found, todo = [], [pid]
     while todo:
         parent = todo.pop()
@@ -1436,8 +1194,6 @@ def descendants(pid):
 
 
 def process_args(pid):
-    """Process `pid`'s command line split on whitespace, empty once it has gone.
-    Chromium rewrites its own as one string, so a NUL split would keep it whole."""
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return f.read().decode(errors="replace").replace("\0", " ").split()
@@ -1447,8 +1203,6 @@ def process_args(pid):
 
 
 def browser_pids(pids):
-    """Those of `pids` that are a Chromium Playwright launched: its browser
-    process, which talks to Playwright over a pipe and has no --type= of its own."""
     return [
         pid
         for pid in pids
@@ -1458,12 +1212,9 @@ def browser_pids(pids):
 
 
 def driver_pid(browser):
-    """The Playwright driver that launched the browser at `browser`: its parent,
-    the node process every Playwright call reaches it through. None once either
-    has gone, as a browser whose driver died is the init process's child."""
     try:
         with open(f"/proc/{browser}/stat") as f:
-            # The name in brackets may hold spaces; the parent follows the state.
+            # comm may hold spaces: https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
             parent = int(f.read().rsplit(")", 1)[1].split()[1])
     except (FileNotFoundError, ProcessLookupError) as exc:  # #464
         expected(exc, "no driver")
@@ -1472,19 +1223,12 @@ def driver_pid(browser):
 
 
 class WaitingCall(typing.NamedTuple):
-    """A Playwright call a greenlet is suspended in: '<Class>.<method>', the
-    '<file>:<line>' that made it, and its frame, which tells one call from the
-    next at the same line."""
-
     name: str
     where: str
     frame: object
 
 
 def playwright_call(stack, package_dir):
-    """The WaitingCall `stack`, (frame, line) pairs outermost first, is inside:
-    the first frame in `package_dir`, Playwright's own, and the line outside it
-    that made the call; None where no frame is Playwright's."""
     for (caller, line), (frame, _) in itertools.pairwise(stack):
         if frame.f_code.co_filename.startswith(package_dir):
             owner = frame.f_locals.get("self")
@@ -1498,10 +1242,6 @@ def playwright_call(stack, package_dir):
 
 
 def waiting_call(main, package_dir):
-    """The WaitingCall the greenlet `main` is suspended in; None while it runs or
-    waits on nothing of Playwright's.
-    Read from another thread: `gr_frame` and `f_locals` of a suspended greenlet
-    are read, not changed, and a resume mid-walk at worst names the wrong call."""
     stack = []
     frame = main.gr_frame
     while frame is not None:
@@ -1512,25 +1252,10 @@ def waiting_call(main, package_dir):
 
 
 def raising_call(exc, package_dir):
-    """The WaitingCall `exc` was raised from; None where it left no Playwright
-    frame. A caller still handling it sits at its own `with` line, so each
-    frame's line is the traceback's."""
     return playwright_call(list(traceback.walk_tb(exc.__traceback__)), package_dir)
 
 
 class CallWatch:
-    """Kills the browser at `browser` and its parent, the Playwright driver,
-    once a call is taken as hung, so the call raises instead of waiting for ever;
-    `fired` then says which call and why. Killing the browser alone leaves a
-    CDPSession.send waiting (#464).
-    A call is hung once it has waited RENDERER_GONE_S with no renderer under
-    the browser (#432), or, being one of UNTIMED_CALLS, UNANSWERED_S in all
-    (#459).
-    Residual: a renderer that dies while another of the browser's lives, as
-    with two pages open on different sites, is not seen. Residual: a call that
-    waits RENDERER_GONE_S with no renderer for another reason, as new_page on a
-    machine too starved to start one, is killed and reported the same way."""
-
     def __init__(self, browser, main, package_dir):
         self.browser, self.driver = browser, driver_pid(browser)
         self.main, self.package_dir = main, package_dir
@@ -1545,9 +1270,6 @@ class CallWatch:
         )
 
     def _hung(self, call, since, began, now):
-        """Why the waiting `call` is hung, or None: `since` is when the browser
-        was last seen with no renderer, None while it has one, and `began` when
-        the watch first saw this call."""
         name, where = call.name, call.where
         if since is not None and now - since >= RENDERER_GONE_S:
             return (
@@ -1583,26 +1305,15 @@ class CallWatch:
                 driver = [self.driver] if self.driver else []
                 killed = [self.browser, *descendants(self.browser), *driver]
                 for p in killed:
-                    # A process that exited since the read is already gone.
                     with contextlib.suppress(ProcessLookupError):
                         os.kill(p, signal.SIGKILL)
-                # A browser still exiting is counted as new by the next launch
-                # (#464). A gone or dead process has no args.
+                # #464
                 end = time.monotonic() + KILLED_GONE_S
                 while any(map(process_args, killed)) and time.monotonic() < end:
                     time.sleep(WATCH_POLL_S)
                 return
 
     def renderer_death(self, exc, page_open):
-        """Why the Playwright error `exc` came of a renderer's death, or None:
-        the browser runs no renderer as it raises, and a page was open or the
-        call was opening one. A renderer killed while new_page sets its page up
-        makes it raise instead of wait (#472); a browser that died has closed
-        its pages first.
-        Residual: a call refused for another reason whose renderer then dies
-        before this reads /proc is reported as the renderer's death. Residual:
-        a call that opens a page under another name than new_page is not
-        recognised as opening one."""
         call = raising_call(exc, self.package_dir)
         if call is None or self._rendering():
             return None
@@ -1621,14 +1332,6 @@ class CallWatch:
 
 @contextlib.contextmanager
 def chromium(args=()):
-    """A launched Chromium, closed on leaving. Playwright's failures leave as
-    NoBrowserError at launch, and as PageTimeoutError or RefusedError after. A
-    call CallWatch takes as hung, or a Playwright error it puts down to a dead
-    renderer, leaves as HungCallError, whatever the script raised from it,
-    where /proc shows exactly one new browser process.
-    Residual: with no /proc, as on macOS, or with no task `children` file, as
-    in some containers, no watch runs, which it says on stderr, and the call
-    can wait for ever."""
     import greenlet
     import playwright
     from playwright.sync_api import Error as PlaywrightError
@@ -1682,16 +1385,12 @@ def chromium(args=()):
         finally:
             if watch:
                 watch.stop()
-            # With its driver killed, close would hang or raise over the hung call (#464).
+            # #464
             if not (watch and watch.fired):
                 browser.close()
 
 
 def run_browser(work, timeout, url=None, unmeasurable=None):
-    """work()'s result and None, or None and the exit code of the failure it
-    raised, printed: 3 no Playwright or no Chromium, 5 a refused load, 4 a
-    timeout, 7 a hung call or a dead renderer, and 6 an UnmeasurableError,
-    its reasons on stdout between the two lines of `unmeasurable`. With no `url`, a refusal names what failed to draw."""
     try:
         return work(), None
     except ImportError:
@@ -1718,9 +1417,6 @@ def run_browser(work, timeout, url=None, unmeasurable=None):
         )
         return None, 4
     except HungCallError as exc:
-        # The watch already killed the browser and its driver, or the renderer
-        # had died; its message names the call and why, and exit 7 is the
-        # result (#432, #459, #464, #472).
         print(exc, file=sys.stderr)
         return None, 7
     except UnmeasurableError as exc:
@@ -1734,10 +1430,6 @@ def run_browser(work, timeout, url=None, unmeasurable=None):
 
 
 def settled(s, quiet):
-    """Whether a page's status shows its motion over, or a frame loop it will be
-    refused for. The quiet window runs from its first frame at the earliest: a
-    busy machine can delay that frame past --quiet, and a frame loop has
-    written nothing before it (#135)."""
     return s["looped"] or (
         s["firstFrame"] is not None
         and s["running"] == 0
@@ -1783,9 +1475,7 @@ def settle(page, at):
         waited += POLL_MS
 
 
-# One scroll step a frame, so a scroll handler writes in consecutive frames
-# however slowly a busy machine draws them (#135). Through the collector's own
-# requestAnimationFrame, which the page's frame loop is not judged by.
+# #135
 SWEEP_JS = r"""
 async (stops) => {
   for (const y of stops) {
@@ -1797,14 +1487,10 @@ async (stops) => {
 
 
 def sweep(page):
-    """Scroll to the bottom in small steps and back, so motion that starts on
-    scroll, or that a scroll handler drives, shows itself before the sampler
-    trusts the page."""
     height = page.evaluate("() => document.documentElement.scrollHeight - innerHeight")
     if height <= 0:
         return
-    # At most forty steps of at least 100 px, and a 300 ms rest at the top for what the
-    # sweep started: guesses, unmeasured.
+    # guess, #501
     step = max(100, height / 40)
     stops = [min(height, step * k) for k in range(1, math.ceil(height / step) + 1)]
     page.evaluate(SWEEP_JS, stops + stops[-2::-1] + [0])
@@ -1824,8 +1510,6 @@ def measure(at):
             page.goto(at.url, wait_until="load")
             if at.wait:
                 page.wait_for_selector(at.wait)
-            # A page refused for its frame loop is not scrolled, so nothing it
-            # starts or morphs meanwhile is put down to a scroll.
             looped = settle(page, at)["looped"]
             before = None
             if not looped:
@@ -1965,65 +1649,26 @@ TABLE = os.path.join(HERE, "check-flow.table")
 records = siblings.load(HERE, "motion-records.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
 
-# --records' working figures, none a record's value. No run has measured
-# where any of the caps or waits below starts to miss a fault, so each is a
-# guess unless its line gives a derivation; each cap bounds the run's length,
-# and what lies past it is not read.
-# The elements the parallax sweep reads: a guess, ample for a landing page.
-TRACK_CAP = 400
-# The parallax sweep's scroll stops: at the table's 100 px step, a page 8000 px
-# tall; a guess.
-STOP_CAP = 80
-# The controls the hover and press reads take: a guess, a page's header,
-# hero and first sections.
-CONTROL_CAP = 30
-# The screens the flash watch films: 6 at 768 px tall is 4608 px of page, and
-# at the table's 2 s a screen, 12 s of film; a guess.
-SCREEN_CAP = 6
-# The CSS px a film cell averages: finer than WCAG's 0.1° fine-pattern limit
-# at 96 ppi (about 4 px at 60 cm), so a fine pattern blurs out as WCAG
-# exempts it.
-CELL_PX = 4
-# How long a page may take to end its finite animations, and a scroll to
-# come to rest: a guess.
-SETTLE_MS = 3000
-# The clock step a carousel is read at, and so the slack its holds are read
-# to: a guess.
-CLOCK_STEP_MS = 100
-# How long a scrolled page or released part must hold still to have settled:
-# 18 frames at 60 Hz; a guess.
-STILL_MS = 300
-# The slow drags that find a part's snap points, in px: a short and a long
-# one each way; and the short one first tried, to learn whether the part
-# moves at all. Guesses.
-SLOW_DRAGS = (-200, -80, 80, 200)
+TRACK_CAP = 400  # guess, #318
+STOP_CAP = 80  # guess, #318
+CONTROL_CAP = 30  # guess, #318
+SCREEN_CAP = 6  # guess, #318
+CELL_PX = 4  # guess under WCAG's 0.1° fine-pattern limit, about 4 px at 60 cm, #318
+SETTLE_MS = 3000  # guess, #318
+CLOCK_STEP_MS = 100  # guess, #318
+STILL_MS = 300  # guess, #318
+SLOW_DRAGS = (-200, -80, 80, 200)  # guess, #318
 PROBE_DRAG = -80
-# How long a released part may take to settle: a guess, six times the 0.5 s
-# perceptual duration of a SwiftUI spring by default (WWDC 2023, "Animate
-# with springs"), which settles fully somewhat later.
-PATH_CAP_MS = 3000
-# The fling: 40 px over 3 frames, about 830 px/s, which the record's 0.998
-# deceleration projects about 415 px on, past the slow drags' 200 px reach;
-# a guess.
-FLING_PX = 40
+PATH_CAP_MS = 3000  # guess, #318
+FLING_PX = 40  # guess, #318
 FLING_FRAMES = 3
-# The moves a touch scroll is sent in, 160 ms at a frame each: a guess.
-TOUCH_MOVES = 10
-# A frame's length: 16 ms at 60 Hz.
-DRAG_FRAME_MS = 16
-# The moves before a release its velocity is read from: Android's
-# VelocityTracker reads the 100 ms before its newest sample (AOSP
-# frameworks/native, include/input/VelocityTracker.h, HORIZON of its default
-# least-squares strategy).
-RELEASE_HORIZON_MS = 100
-# How many flings a part gets before one is fast enough for its projection
-# to pick another snap point than where it was let go: a guess.
-FLING_TRIES = 3
+TOUCH_MOVES = 10  # guess, #318
+DRAG_FRAME_MS = 16  # guess, #318
+RELEASE_HORIZON_MS = 100  # measured: Android VelocityTracker's 100 ms HORIZON, #478
+FLING_TRIES = 3  # guess, #478
 
 
 class Opener:
-    """Fresh loads of the page, each in its own context, closed together."""
-
     def __init__(self, browser, at):
         self.browser, self.at, self.contexts = browser, at, []
 
@@ -2051,7 +1696,6 @@ def _settle(page):
 
 
 def _touch_point(page, v):
-    """Where the touch drag starts: the window's middle, half a drag low."""
     size = page.viewport_size
     return size["width"] / 2, size["height"] / 2 + v["wheel"] / 2
 
@@ -2062,8 +1706,6 @@ def _scroll_once(page, name, v):
     elif name == "key":
         page.keyboard.press("PageDown")
     else:
-        # Chromium's synthesized scroll gesture scrolls nothing
-        # headless, so the touches are sent one by one.
         x, y = _touch_point(page, v)
         cdp = page.context.new_cdp_session(page)
 
@@ -2079,8 +1721,6 @@ def _scroll_once(page, name, v):
 
 
 def native_scroll_check(open_page, at, values, phone):
-    """native-scroll's answer, from one scroll by each input. A touch drag is
-    left out where the part under it pans itself, as a map does."""
     v = values["native-scroll"]
     got = {}
     for name in records.SCROLL_INPUTS:
@@ -2108,7 +1748,6 @@ def native_scroll_check(open_page, at, values, phone):
 
 
 def parallax_check(open_page, at, values, phone):
-    """parallax's and replay's answers, from one page swept down, up and down."""
     v = values["parallax"]
     page = open_page(at.viewport_size)
     _settle(page)
@@ -2133,8 +1772,6 @@ def parallax_check(open_page, at, values, phone):
 
     started = time_ms()
     tops = sweep(stops, "down")
-    # As long again at rest, so motion that starts by the clock, not the
-    # scroll, is known and left out of the replays.
     page.evaluate("(p) => { window.__phase = p; window.__ran.idle = {}; }", "idle")
     page.wait_for_timeout(time_ms() - started)
     sweep(stops[::-1], "up")
@@ -2160,8 +1797,6 @@ def time_ms():
 
 
 def _watch(page, sel, ms):
-    """The carousel's frame changes over `ms` of the page's clock, each the
-    page's time of it in ms and the frame."""
     changes, last = [], page.evaluate(records.FRAME_JS, sel)
     for _ in range(math.ceil(ms / CLOCK_STEP_MS)):
         page.clock.run_for(CLOCK_STEP_MS)
@@ -2224,8 +1859,6 @@ def carousel_check(open_page, at, values, phone):
 
 
 def _film(page, cdp, seconds):
-    """The window's frames over `seconds`, from Chromium's screencast: each
-    frame's time in s and its pixels averaged into CELL_PX cells, sRGB in [0, 1]."""
     import numpy as np
     from PIL import Image
 
@@ -2306,17 +1939,12 @@ def flash_check(open_page, at, values, phone):
 
 
 def _rest(page, sel, axis):
-    """The part's path, one position a frame, until it holds still."""
     page.evaluate(records.PATH_JS, [sel, axis, STILL_MS, PATH_CAP_MS])
     page.wait_for_function("() => window.__path")
     return page.evaluate("() => window.__path")
 
 
 def _fling(page, sel, axis, *, way, along):
-    """Flings the part `way` along `axis` and lets go: where it was let go,
-    the velocity the page was handed at the release, and its path after.
-    Each event carries the time it would have had a frame apart, so the page
-    is handed the same throw however late the machine sends it."""
     dx, dy = along
     x0, y0 = page.evaluate(records.CENTRE_JS, [sel, False])
     page.evaluate(
@@ -2325,8 +1953,6 @@ def _fling(page, sel, axis, *, way, along):
     )
     cdp = page.context.new_cdp_session(page)
     frame = DRAG_FRAME_MS / 1000
-    # Stamped so the release's time is now, and no event is stamped later
-    # than it is sent.
     t0 = time.time() - (FLING_FRAMES + 1) * frame
 
     def send(kind, i, buttons):
@@ -2422,7 +2048,6 @@ def frequent_check(open_page, at, values, phone):
                 page.mouse.down()
             started = page.evaluate(records.STARTED_JS, i)
             if state == "press":
-                # Let go off the control, so the press clicks nothing.
                 page.mouse.move(0, 0)
                 page.mouse.up()
             if started["motion"] != records.NO_MOTION:
@@ -2444,8 +2069,6 @@ def slow_update_check(open_page, at, values, phone):
     return {"slow-update": records.Answer(faults, got["any"], None)}
 
 
-# Each check's run, taking every line's value and giving the answer of each
-# check it reads: parallax's run answers replay too.
 RUNS = {
     "native-scroll": native_scroll_check,
     "parallax": parallax_check,
@@ -2459,7 +2082,6 @@ RUNS = {
 
 
 def run_records(at):
-    """Each table line's check's Answer."""
     layout = siblings.load(HERE, "check-layout.py")
     phone = (layout.PHONE_WIDTH, layout.HEIGHTS[0], layout.PHONE)
     values = {line.mode: line.value for line in at.lines}
@@ -2482,14 +2104,10 @@ def run_records(at):
 
 
 def records_main(at):
-    # The flash film needs numpy and Pillow; they are checked before the
-    # browser starts, since run_browser() reads any ImportError as
-    # Playwright's.
     try:
-        import numpy  # noqa: F401 - imported only to learn it is installed
-        import PIL  # noqa: F401 - imported only to learn it is installed
+        importlib.import_module("numpy")
+        importlib.import_module("PIL")
     except ImportError as err:
-        # Exit 3, naming the package and its pinned install (#256, #477).
         sys.exit(missing(err))
     got, code = run_browser(lambda: run_records(at), at.timeout, at.url)
     if code:
@@ -2657,7 +2275,6 @@ def main(argv):
         with open(morph_path, "w", encoding="utf8") as fh:
             fh.write(morph_svg(sample["morphs"]))
     else:
-        # An earlier run's file would be checked as this page's.
         pathlib.Path(morph_path).unlink(missing_ok=True)
         morph_path = None
     print(
