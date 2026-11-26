@@ -140,9 +140,7 @@ test("a script's cannot measure is tallied from the look critics", () => {
   assert.match(out, /script: v2-water\/access\/access\.json, exit 6: the hero text sits on video/);
 });
 
-test("check-frames.py's exit 6 sends the vault's end-frame and drafts-kept to the look critics, who answer them", () => {
-  // #613: a canvas or scripted build check-frames.py cannot check is answered cannot measure, never judged by eye by
-  // the session that built it. On the vault's own gate, so a record moving either question off check-frames shows here.
+test("check-frames.py's exit 6 sends the vault gate's end-frame and drafts-kept to the gate critics, who answer them (#613)", () => {
   const rules = path.join(__dirname, "..", "plugin", "skills", "design-critique", "rules");
   const args = ["--asset", "motion", "--fact", "has-motion", "--fact", "has-brand-motion"];
   const ids = (out, head) => [...out.slice(out.indexOf(head)).split("\n\n")[1].matchAll(/^\d+\. (\S+?)[ :]/gm)].map((m) => m[1]);

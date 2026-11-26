@@ -37,6 +37,7 @@ STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
 SLOW_CANVAS = os.path.join(HERE, "fixtures", "look", "slow-canvas.html")
+SLOW_CANVAS_END_MS = 4500  # END_MS in slow-canvas.html
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
@@ -192,11 +193,14 @@ class Page(unittest.TestCase):
             self.assertEqual(shot.convert("RGB").getpixel((100, 50)), (0, 0, 0))
 
     def test_zoom_after_waits_out_a_canvas_build_longer_than_the_settle(self):
-        # A canvas build a seek cannot reach is shot once it ends (#613): the
-        # default wait catches it mid-build, --after past its end does not.
+        # Crosses the real clock: --after is a real wait, and the default run
+        # proves the build outlasts SETTLE_MS (#613).
         with tempfile.TemporaryDirectory() as d:
             shots = {}
-            for name, extra in (("default", ()), ("after", ("--after", "5500"))):
+            for name, extra in (
+                ("default", ()),
+                ("after", ("--after", str(SLOW_CANVAS_END_MS + 1000))),
+            ):
                 out = os.path.join(d, f"{name}.png")
                 proc = run(
                     "zoom",
