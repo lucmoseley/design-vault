@@ -707,6 +707,7 @@ class TimedChange(Browsed):
     def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_own_watch(
         self,
     ):
+        # #154: pause_answer watches the page's own clock, so the windows are real time.
         faults, unmeasured = self.pause_answer(
             "carousel.html?every=20000", carousels=[".slides", "main > div"]
         )
@@ -715,7 +716,9 @@ class TimedChange(Browsed):
             r"main > div\.slides held still from ([\d.]+) s to ([\d.]+) s after the page's load while the page "
             r"still ran a timer, so a slower rotation cannot be ruled out"
         )
-        windows = [tuple(map(float, held.fullmatch(u).groups())) for u in unmeasured]
+        matches = [held.fullmatch(u) for u in unmeasured]
+        self.assertTrue(all(matches), unmeasured)
+        windows = [tuple(map(float, m.groups())) for m in matches]
         self.assertEqual(len(windows), 2, unmeasured)
         (start1, end1), (start2, end2) = sorted(windows)
         self.assertGreaterEqual(start1, 5)
