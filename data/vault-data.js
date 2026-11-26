@@ -1,4 +1,3 @@
-// Derived from data/gallery.json and data/styles.json by `node bundle.js` — never edit it by hand (#32).
 window.VAULT_DATA = {
 "gallery": {
   "schema_version": 3,

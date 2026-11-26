@@ -1,11 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/drive-overlay.py (#303): python3 test/drive-overlay.test.py
-
-Lose the settle and the fading panel reads shut while it opens; lose the trial and a dialog only a script
-opens is never found. One browser serves the module and each test opens a
-fresh page in it, so no test sees another's open overlay; the driver's trial cache does outlive a test, so a
-test that watches the trial clears it first.
-"""
-
 import inspect
 import os
 import pathlib
@@ -43,7 +35,6 @@ import siblings  # noqa: E402
 flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 overlay = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 
-# trigger id: (kind, whether markup names its target, the close control's id, or None for none)
 TRIGGERS = {
     "drawer-button": ("disclosure", True, "drawer-button"),
     "side-button": ("disclosure", True, "side-button"),
@@ -103,7 +94,7 @@ class Driver(unittest.TestCase):
             else None
         )
 
-    def test_find_lists_each_trigger_once_then_what_opened_by_itself(self):
+    def test_find_lists_each_trigger_once_then_what_opened_by_itself_303(self):
         got = {i: (ov.kind, ov.declared) for i, ov in self.found.items()}
         self.assertEqual(
             got,

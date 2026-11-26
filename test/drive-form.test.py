@@ -1,11 +1,3 @@
-"""Pins drive-form.py (#302): python3 test/drive-form.test.py
-
-Loosen the driver and a check that judges what a form does with bad input
-reads the page before its errors show, reads a good value where a bad one was
-meant, or misses that a submit went on to the next page: the state family's
-checks (#312) and the cross-page probe (#306) then judge the wrong state.
-"""
-
 import contextlib
 import http.server
 import os
@@ -17,7 +9,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 
 FLOW = os.path.join(
@@ -79,7 +71,6 @@ class Fields(OnThePage):
         by_key = {f.key: f for f in driver.fields(self.page, "#book")}
         self.assertEqual(by_key["#tel"].token, "section-stay home tel")
         self.assertEqual((by_key["#guests"].min, by_key["#guests"].max), (1, 8))
-        # The disabled placeholder is no choice, and the select stands on it.
         self.assertEqual(by_key["#room"].options, ["dorm", "private"])
         self.assertEqual(by_key["#room"].value, "")
         self.assertTrue(by_key['input[name="contact"]'].required)
@@ -164,8 +155,6 @@ class Fill(OnThePage):
 
 
 class BadSubmit(OnThePage):
-    """#book shows its errors 100 ms after the submit."""
-
     def setUp(self):
         super().setUp()
         driver.fill(self.page, "#book", bad=["#email"], values={"#ref": "AB1234"})
@@ -177,7 +166,7 @@ class BadSubmit(OnThePage):
         self.assertEqual(self.settled.submits, 1)
         self.assertEqual(self.settled.url, PAGE)
 
-    def test_the_error_state_is_readable(self):
+    def test_the_error_state_is_readable_302(self):
         email = self.field(self.state, "#email")
         self.assertTrue(email["invalid"])
         self.assertFalse(email["valid"])
@@ -222,8 +211,6 @@ class GoodSubmit(OnThePage):
 
 
 class BrowserChecks(OnThePage):
-    """#native leaves its checks to the browser, which stops the submit."""
-
     def test_a_blocked_submit_fires_no_submit_event_and_focuses_the_first_bad_field(
         self,
     ):
@@ -271,10 +258,6 @@ class Enter(OnThePage):
 
 
 class Late(http.server.SimpleHTTPRequestHandler):
-    """Serves the fixtures, and answers #remote's POST twice the quiet window
-    late, from a thread of its own, so only the request in flight keeps the
-    driver waiting."""
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=os.path.dirname(PAGE_FILE), **kwargs)
 
@@ -309,15 +292,13 @@ class Unsettled(OnThePage):
     def test_a_page_that_never_settles_times_out(self):
         from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
-        # Three quiet windows: a page that settles at all settles well inside them.
+        # guess, #501
         limit = 3 * driver.QUIET_MS
         with self.assertRaisesRegex(PlaywrightTimeout, f"did not settle in {limit} ms"):
             driver.submit(self.page, "#busy", timeout=limit)
 
 
 class Values(OnThePage):
-    """The value fill() picks for each rule, on #values."""
-
     def setUp(self):
         super().setUp()
         self.good = {t.key: t for t in driver.fill(self.page, "#values")}

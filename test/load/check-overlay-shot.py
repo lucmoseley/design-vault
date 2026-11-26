@@ -1,14 +1,10 @@
-"""#136's loop: check-overlay's screenshot under induced load. Run by hand, never by the gate:
+"""check-overlay's screenshot under induced load. Run by hand, never by the gate:
     python3 test/load/check-overlay-shot.py [runs=30] [busy=16]
 
 Runs check-overlay's own main() in-process on the arch pair (a mark shifted 1 px off its source on white,
 which exits 1), beside <busy> CPU busy loops at the lowest priority. During every page.screenshot() call it
-stops the page's renderer once, for 1.5 s, starting 0 to 120 ms into the call. The stall is the hypothesis,
-a renderer descheduled on a loaded machine; nothing ties the 13 Oct gate's reds to it beyond their message
-and their falling on the first file drawn. Prints the exit counts (5 is the bug) and each screenshot's outcome.
-
-With the retry removed (SHOTS = 1), 1 of 60 runs exited 5 on 14 Oct, so a batch of 30 can show none; #147
-has the counts. With the loops at normal priority it was 1 run in 8 to 1 in 4 (#136).
+stops the page's renderer once, for 1.5 s, starting 0 to 120 ms into the call. Prints the exit counts (5 is
+the bug) and each screenshot's outcome.
 """
 
 import collections
@@ -43,21 +39,15 @@ spec = importlib.util.spec_from_file_location(
 tests = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tests)
 
-# s. On 13 Oct 2026 an unstalled screenshot took 39-149 ms, and only a stall starting inside one gave the
-# message. Stalls of 0.3 to 4 s each gave it at times, so STALL is a first guess among them.
+# guess, #136
 STALL, EARLIEST, LATEST = 1.5, 0, 0.12
-# s each run may take before the busy loops end themselves, so a run killed past its finally leaves none
-# spinning beyond runs * RUN_CEILING. A first guess: on 14 Oct a run here took 4.5 s, and sibling-shots.py's
-# sheet, the slower of the two of its targets timed, about 20 s. Residual: a batch that outlasts it runs on
-# unloaded, which loop() prints.
+# guess, #147
 RUN_CEILING = 60
-# The default batch, kept from #136, where it first reproduced the stall (7 of 30 runs without the retry): a
-# first guess, 16 busy loops being twice this machine's 8 cores.
+# guess, #136
 RUNS, BUSY = 30, 16
 
 
 def renderers():
-    """This process's Chromium renderers. Chromium rewrites its argv as one string."""
     kids = {}
     for pid in filter(str.isdigit, os.listdir("/proc")):
         try:
@@ -65,7 +55,7 @@ def renderers():
                 kids.setdefault(int(fh.read().rsplit(")", 1)[1].split()[1]), []).append(
                     int(pid)
                 )
-        except OSError:  # the process exited after listdir
+        except OSError:
             continue
     found, todo = [], [os.getpid()]
     while todo:
@@ -89,8 +79,6 @@ real_screenshot = Page.screenshot
 
 
 def stalled(self, *args, **kwargs):
-    """page.screenshot() with the stall, counted by its caller's line, by whether it is the page's first
-    shot, and by whether the stall landed: a shot done inside the 0-120 ms wait is never stalled."""
     caller = sys._getframe(1)
     where = f"{os.path.basename(caller.f_code.co_filename)}:{caller.f_lineno}"
     first = self not in shot_pages
@@ -102,9 +90,7 @@ def stalled(self, *args, **kwargs):
             return
         try:
             for pid in pids:
-                with contextlib.suppress(
-                    ProcessLookupError
-                ):  # a closed context's renderer, gone since listed
+                with contextlib.suppress(ProcessLookupError):
                     os.kill(pid, signal.SIGSTOP)
                     stopped.append(pid)
             time.sleep(STALL)
@@ -130,8 +116,6 @@ def stalled(self, *args, **kwargs):
 
 
 def loop(call, expected, runs, busy):
-    """Calls call() <runs> times beside <busy> busy loops with every screenshot stalled, and prints each run
-    that did not exit <expected> with the tail of its output, then the exit and screenshot counts."""
     Page.screenshot = stalled
     ceiling = runs * RUN_CEILING
     print(
@@ -139,7 +123,6 @@ def loop(call, expected, runs, busy):
         f"({runs} runs); other sessions' suites and commits run slower meanwhile.",
         flush=True,
     )
-    # nice 19, so other sessions' commits keep the CPU (#147).
     loops = [
         subprocess.Popen(
             [

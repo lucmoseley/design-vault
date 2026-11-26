@@ -1,13 +1,3 @@
-"""palette.py's verdicts on a palette against a client's fixed colours, and the colour maths beneath it (#175):
-python3 test/palette.test.py
-
-colour_space.py is a library, so its maths is called in-process against Sharma, Wu & Dalal 2005's published pairs.
-palette.py is a program, so it is run as one and only its output and exit code are read. The expected figures are
-mmm-infra's, measured by a separate script in docs/research/brand-palette.md §4.3 and the #178 grey ruling. Loosen one
-and a project's rules file records a near-miss of the client's logo colour as fine, or a ground the logo cannot sit
-on as one it can, and the client-fit gate's colour question passes a candidate that recolours the client's grey.
-"""
-
 import os
 import subprocess
 import sys
@@ -17,13 +7,13 @@ HERE = os.path.dirname(__file__)
 SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-project", "scripts")
 SCRIPT = os.path.join(SCRIPTS, "palette.py")
 sys.path.insert(0, SCRIPTS)
-import colour_space  # noqa: E402 - palette.py imports it by this name, so one copy serves both
+import colour_space  # noqa: E402
 
 LOGO = ["--logo", "blue=#0070C0", "--logo", "grey=#404040"]
 
 
 def run(*args):
-    # A guess, not measured: the script does arithmetic only and returns at once.
+    # guess, #175
     return subprocess.run(
         [sys.executable, SCRIPT, *args],
         capture_output=True,
@@ -34,7 +24,6 @@ def run(*args):
 
 
 def row(out, pair):
-    """The ΔE00 table's row for `pair`, its cells without the pair."""
     for line in out.splitlines():
         if line.startswith(f"| {pair} |"):
             return [c.strip() for c in line.strip("|").split("|")][1:]
@@ -43,7 +32,7 @@ def row(out, pair):
 
 class ColourSpace(unittest.TestCase):
     def test_de2000_matches_every_published_pair_to_four_places(self):
-        # Eight of the test pairs in Sharma, Wu & Dalal 2005, Table 1, one per branch of the hue mean and difference.
+        # Sharma, Wu & Dalal 2005, Table 1: https://hajim.rochester.edu/ece/sites/gsharma/ciede2000/
         cases = [
             ((50, 2.6772, -79.7751), (50, 0, -82.7485), 2.0425),
             ((50, 0, 0), (50, -1, 2), 2.3669),
@@ -74,7 +63,7 @@ class ColourSpace(unittest.TestCase):
 
 
 class NearMiss(unittest.TestCase):
-    def test_mmm_infra_round_one_greys_fail_as_near_misses_of_the_logo_grey(self):
+    def test_mmm_infra_round_one_greys_fail_as_near_misses_of_the_logo_grey_175(self):
         proc = run(
             *LOGO,
             "--colour",
@@ -163,7 +152,9 @@ class NearMiss(unittest.TestCase):
 
 
 class SurfaceGreys(unittest.TestCase):
-    def test_two_grey_surfaces_take_the_line_at_3_and_one_surface_alone_does_not(self):
+    def test_two_grey_surfaces_take_the_line_at_3_and_one_surface_alone_does_not_178(
+        self,
+    ):
         args = ["--colour", "page=#FFFFFF", "--colour", "card=#E6E6E6"]
         self.assertEqual(
             row(run(*args).stdout, "page / card")[:3], ["5.2", "10", "near-miss"]
@@ -176,7 +167,6 @@ class SurfaceGreys(unittest.TestCase):
     def test_a_grey_tinted_within_the_house_range_takes_the_grey_line_and_a_coloured_surface_does_not(
         self,
     ):
-        # #D6ECFF and #C8E3FC are OKLCH C 0.035 and 0.045, inside the house tint; #FFD2B5 is 0.064, a colour.
         tinted = run(
             "--colour",
             "a=#D6ECFF",

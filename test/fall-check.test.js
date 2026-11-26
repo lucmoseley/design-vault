@@ -1,9 +1,3 @@
-/**
- * Tests fall.js --check (#333), gate question vault.fall-script: it reads a timeline table in design-round §6's
- * form and recomputes every fall in it. Driven from outside, by exit code and printed findings, on tables with each
- * fault present and absent. Break it and a hand-tuned or stale fall, a cue cut to the wrong length, or a landing
- * the motion brief did not pick passes the gate.
- */
 "use strict";
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -54,7 +48,7 @@ function run(text, ...extra) {
 }
 const fails = (r) => r.stdout.split("\n").filter((l) => l.startsWith("FAIL "));
 
-test("a matching spring sink and thud pass, and with no --landing each fall's landing is listed for the founder", () => {
+test("a matching spring sink and thud pass, and with no --landing each fall's landing is listed for the founder (#333)", () => {
   const r = run(table());
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.deepEqual(fails(r), []);
@@ -97,7 +91,6 @@ test("a cue whose length is not its fall's fails and is named, for each landing 
   const thudOff = run(table({ thudS: "0.905" }));
   assert.equal(thudOff.status, 1);
   assert.deepEqual(fails(thudOff), ['FAIL cue "slab falls 40 px and thuds" (line 7) lasts 0.905 s, but its fall, thud, lasts 0.903 s; set it to that']);
-  // The thud's √(2 · drop / g) is 903.2 ms, written to 1 ms 0.903; 0.904 is 0.8 ms off.
   const near = run(table({ thudS: "0.904" }));
   assert.equal(near.status, 1);
   assert.match(fails(near).join("\n"), /lasts 0\.904 s, but its fall, thud, lasts 0\.903 s/);
@@ -176,14 +169,12 @@ test("bad usage and a table it cannot read exit 2, naming why", () => {
 });
 
 test("a fall whose arguments break fall.js's own bounds fails, even where its curve and length agree with them", () => {
-  // A negative drop puts t² and the curve together at 0 px apart and its length out of reach of any cue.
   const negative = run(table({ thudName: "thud (drop -40, scale 10)", thudCss: "cubic-bezier(0.23, 1, 0.32, 1)", thudS: "5.000" }));
   assert.equal(negative.status, 1, negative.stdout);
   assert.deepEqual(fails(negative), ["FAIL thud: --drop wants a number above 0, so it is no fall fall.js computes"]);
   const underdamped = run(table().replace("| stone (drop 24, scale 10, sink 3) |", "| stone (drop 24, scale 10, sink 3, damping 0.5) |"));
   assert.equal(underdamped.status, 1, underdamped.stdout);
   assert.deepEqual(fails(underdamped), ["FAIL stone: --damping wants 1 (critical) or more; under 1 the landing bounces, so it is no fall fall.js computes"]);
-  // The bound's edge: a damping of 1 is the critical landing fall.js prints by default, so it passes.
   const critical = run(table().replace("| stone (drop 24, scale 10, sink 3) |", "| stone (drop 24, scale 10, sink 3, damping 1) |"));
   assert.equal(critical.status, 0, critical.stdout);
 });

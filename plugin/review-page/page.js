@@ -1,11 +1,8 @@
 'use strict';
-// The review page's DOM (#120): draws one card per item in items.json and wires its boxes to review.js,
-// which owns every rule about saving and taking answers. Nothing here keeps an answer of its own.
 (function () {
   const R = window.ReviewPage;
   const $ = id => document.getElementById(id);
   const STATUS = { saving: 'Saving…', saved: 'Saved' };
-  // Store refusals that pass with time; any other code will refuse every retry (db.d.ts, DbErrorCode).
   const PASSING = new Set(['unavailable', 'resource_exhausted']);
   const pickLabel = data => data.pick.label || 'Leader';
   const noPickLabel = data => data.pick.none || 'No leader';
@@ -76,7 +73,6 @@
       if (tone) c.dataset.markTone = tone; else delete c.dataset.markTone;
     }
     const box = $(`note-${key}`);
-    // Only a changed note is written in, so typing keeps its caret; review.js never hands over a copy while an edit is unsaved.
     if (box.value !== (answer.note || '')) box.value = answer.note || '';
     $('done').textContent = data.items.filter(i => answers.answer(i.id).mark).length;
   }

@@ -1,8 +1,4 @@
-// Every suite test/all.sh tags `chromium` runs its tests through test/child.py's main(), which runs once more a test
-// earlyoom broke (#438). Loosening this test lets a new Chromium suite fail the gate red whenever earlyoom kills one of
-// its renderers.
-// A node test, since the gate runs every one on each commit: a commit touching only that suite still meets this.
-// full-sweep-only: it reads every suite all.sh tags `chromium`, a list it takes from all.sh at run time.
+// full-sweep-only: #438
 "use strict";
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -10,7 +6,6 @@ const path = require("node:path");
 const { test } = require("node:test");
 
 const ROOT = path.join(__dirname, "..");
-// child.test.py's renderers are stand-ins, and it pins main() itself.
 const EXEMPT = new Set(["test/child.test.py"]);
 
 const listed = fs.readFileSync(path.join(ROOT, "test", "all.sh"), "utf8").match(/^registry='([^']*)'$/m)[1];
@@ -26,7 +21,7 @@ test("the registry is read: a suite known to start Chromium is among those tagge
 });
 
 for (const suite of chromium) {
-  test(`${suite} runs its tests through child.main()`, () => {
+  test(`${suite} runs its tests through child.main() (#438)`, () => {
     const text = fs.readFileSync(path.join(ROOT, suite), "utf8");
     assert.match(text, /\n {4}child\.main\(/);
     assert.doesNotMatch(text, /unittest\.main\(/);

@@ -1,12 +1,3 @@
-"""Pins check-dom.py (#310): python3 test/check-dom.test.py
-
-Loosen the DOM family script and a page carrying a fault a table line
-catches, each planted in the fixtures, passes the gate unseen.
-
-The fixture pages are served over a local HTTP site, since only a site
-answers a missing address with a status; one browser serves every test.
-"""
-
 import collections
 import contextlib
 import glob
@@ -51,14 +42,11 @@ OPEN = contextlib.ExitStack()
 BROWSER = None
 SITES = {}
 SWEPT = {}
-# How long one check-dom.py run may take, in s: about twelve times the fault page's run, 5.1-5.3 s over three runs at
-# load average 9.9 on this machine (#454).
+# measured: 5.1-5.3 s a fault-page run at load 9.9, #454
 PROGRAM_S = 60
 
 
 def site(page, missing, status):
-    """Serves `page` at / and the fixtures folder's files beside it, and
-    `missing` with `status` for any other address."""
 
     class Handler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *a, **k):
@@ -113,7 +101,6 @@ def found(url, blocks=BLOCKS, parts=PARTS, unset=UNSET):
 
 
 def faults(*pages):
-    """How many faults the pages plant for each record: `fault: <id>:`."""
     return collections.Counter(
         m for p in pages for m in re.findall(r"fault: (vault\.\S+?):", p.read_text())
     )
@@ -209,7 +196,6 @@ def local(folder, body, head=""):
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>t</title>'
         f"{head}</head><body>{body}</body></html>"
     )
-    # Named by its content, so found()'s cache never serves another page's sweep.
     path = pathlib.Path(folder, hashlib.sha1(html.encode()).hexdigest() + ".html")
     path.write_text(html)
     return path.as_uri()
@@ -220,7 +206,6 @@ def table(text):
 
 
 def stamped(body, parts=None, head=""):
-    """The page's data-vault- attributes after stamping, by element id."""
     with tempfile.TemporaryDirectory() as d:
         url = local(d, body, head)
         with dom.conditions.open_page(
@@ -237,7 +222,6 @@ def stamped(body, parts=None, head=""):
 
 
 def records_naming(script):
-    """{id: answered-by} for each rule record whose script field names `script`."""
     out = {}
     for path in glob.glob(os.path.join(RULES, "*.md")):
         text = pathlib.Path(path).read_text(encoding="utf8")
@@ -249,8 +233,6 @@ def records_naming(script):
 
 
 def program(*argv):
-    """Runs check-dom.py as its own process: its sync browser cannot open
-    inside this module's, which is already running."""
     return child.run(
         [sys.executable, os.path.join(SCRIPTS, "check-dom.py"), *argv],
         timeout=PROGRAM_S,
@@ -284,7 +266,7 @@ class TheFixtures(unittest.TestCase):
             [],
         )
 
-    def test_every_record_fails_on_the_fault_page(self):
+    def test_every_record_fails_on_the_fault_page_310(self):
         got = found(SITES["fault"])
         self.assertEqual(
             {r: f["answer"] for r, f in got.items()}, dict.fromkeys(RECORDS, "fail")
@@ -370,7 +352,6 @@ class TheBlocks(unittest.TestCase):
             url = local(
                 d, "<script>addEventListener('devicemotion', () => {})</script>"
             )
-            # An undeclared part is absent: the page listens and shows no control.
             self.assertEqual(found(url, blocks, {}, set())["vault.x"]["answer"], "fail")
             self.assertEqual(
                 found(url, blocks, {}, {"motion-control"})["vault.x"]["answer"],
@@ -433,7 +414,6 @@ class TheStamps(unittest.TestCase):
             (got["a"]["field"], got["b"]["field"], got["m"]["field"]),
             ("next", "next", "last"),
         )
-        # a, s, b, the fieldset once and the radio group once; the search forms none.
         self.assertEqual(got["root"]["questions"], "5")
 
     def test_an_icon_gets_its_name_whether_it_is_mirrored_and_its_stroke_scale(self):
@@ -472,7 +452,6 @@ class TheStamps(unittest.TestCase):
             f'<a href="/a"><svg id="r"{ring[4:]}A</a></nav>'
         )
         self.assertGreater(float(got["f"]["ink-lead"]), 1.5)
-        # The current icon is no member of the set it is measured against.
         self.assertEqual(
             float(got["f"]["ink-lead"]),
             round(float(got["f"]["ink"]) / float(got["r"]["ink"]), 4),
@@ -519,7 +498,6 @@ class TheStamps(unittest.TestCase):
             (got["l"]["link-name"], got["l"]["link-site"]), ("Sea Hostel home", "1")
         )
         self.assertTrue(got["l"]["link-href"].endswith("/"))
-        # aria-hidden subtrees are left out; an aria-label wins over the text.
         self.assertEqual((got["b"]["said"], got["n"]["said"]), ("4 unread", "Nine new"))
         self.assertEqual(
             (got["o"]["link-name"], got["o"]["link-site"]), ("Home page", "0")

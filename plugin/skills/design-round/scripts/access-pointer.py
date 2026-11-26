@@ -1,30 +1,3 @@
-"""access-pointer.py — check-access.py's --pointer mode (#317): answers
-vault.coarse-target, whether targets are sized for the pointer in use. Its
-only I/O is the browser and conditions.py its caller hands run().
-
-At each of check-access.py's widths the page is opened twice through
-conditions.py, once under a coarse pointer and once under a fine one:
-
-- coarse: every target check-access.py's vault.target-size measures must
-  measure THE COARSE FLOOR or more each way. Exempt are links set in running
-  text and a Tab stop hidden at rest, as there; WCAG 2.5.8's spacing and
-  user-agent exceptions do not apply. A
-  control inside its own label is measured by the label's box, which a tap
-  on works it too;
-- fine: no target may be smaller than it is with every pointer and hover media
-  rule switched off, `(pointer)`, `(any-pointer)`, `(hover)` and
-  `(any-hover)` in an @media rule, an @import or a <link> media, read with
-  transitions off. A style sheet from another
-  site cannot be read, so its rules stay on, and a note names it. A size a
-  script sets by matchMedia is not seen. The fine pointer's floor itself is
-  vault.target-size's, which check-access.py's own run answers.
-
-THE COARSE FLOOR is read from the table, check-access-pointer.table beside
-this script or check-access.py's --pointer-table FILE: the line `vault.coarse-target | coarse |
-<n>px`. A project's rules file may set its own, never under vault.target-size's
-floor.
-"""
-
 import json
 import os
 import sys
@@ -37,7 +10,6 @@ import siblings  # noqa: E402
 
 rule_table = siblings.load(HERE, "rule-table.py")
 
-# The --pointer coarse floor, from vault.coarse-target's record.
 TABLE = os.path.join(HERE, "check-access-pointer.table")
 SEP = " | "
 FLOOR = re.compile(r"(\d+(?:\.\d+)?)px")
@@ -51,8 +23,6 @@ TableError = rule_table.TableError
 
 
 def parse_table(text, least):
-    """The coarse floor in px from the table's one line, vault.coarse-target's,
-    `least` px or more."""
     found = None
     for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
@@ -141,8 +111,6 @@ return { faults, unread };
 
 
 def judged(page, pointer, script, answering):
-    """One page's Judged for vault.coarse-target under `pointer`, `script`
-    making a page function of a body."""
     if pointer == "coarse":
         return answering.Judged(page.evaluate(script(COARSE_JS)), [], [], [])
     got = page.evaluate(script(FINE_JS))
@@ -154,8 +122,6 @@ def judged(page, pointer, script, answering):
 
 
 def run(browser, at, viewports, *, conditions, layout, page_js, answering):
-    """[(width name, {question id: Judged})], each width's two pointers
-    merged, and how many looping animations never finished."""
     consts = f"const FLOOR = {json.dumps(at.pointer_floor)};\n"
 
     def script(body):

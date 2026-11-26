@@ -1,11 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/look.py (#170): python3 test/look.test.py
-
-A settle critic answers a split by zooming, scrubbing and measuring (#169
-Q1 (A)). Break the default height and its zooms frame a different first
-screen than the packet's shots (#169's 720 against 900); break measure or
-pixels and it settles on a wrong number.
-"""
-
 import os
 import re
 import subprocess
@@ -37,7 +29,7 @@ STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
 SLOW_CANVAS = os.path.join(HERE, "fixtures", "look", "slow-canvas.html")
-SLOW_CANVAS_END_MS = 4500  # END_MS in slow-canvas.html
+SLOW_CANVAS_END_MS = 4500
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
@@ -47,13 +39,11 @@ look = siblings.load(SCRIPTS, "look.py")
 
 
 def run(*args):
-    # A guess for look.py alone: a run here takes about SETTLE_MS plus a launch.
+    # guess, #501
     return child.run([sys.executable, SCRIPT, *args], timeout=120)
 
 
-# Runs argv[2:] as a script once argv[1] is made unimportable. Such a run stops
-# before any browser starts; its timeout, in s, is a guess, unmeasured.
-BLOCKED_RUN_S = 60
+BLOCKED_RUN_S = 60  # guess, #501
 BLOCKED = (
     "import runpy, sys; sys.modules[sys.argv[1]] = None; sys.argv = sys.argv[2:]; "
     "runpy.run_path(sys.argv[0], run_name='__main__')"
@@ -61,7 +51,6 @@ BLOCKED = (
 
 
 def without(package, *args):
-    """The script run with `package` unimportable, as on a machine that lacks it (#256)."""
     return subprocess.run(
         [sys.executable, "-c", BLOCKED, package, SCRIPT, *args],
         capture_output=True,
@@ -77,7 +66,9 @@ class Siblings(unittest.TestCase):  # #558
 
 
 class Height(unittest.TestCase):
-    def test_a_zoom_or_measure_frames_check_layouts_first_screen_at_that_width(self):
+    def test_a_zoom_or_measure_frames_check_layouts_first_screen_at_that_width_169(
+        self,
+    ):
         for cmd in (
             ["measure", PAGE, "--at", "1,1"],
             ["zoom", PAGE, "--clip", "0,0,1,1", "--out", "x.png"],
@@ -168,7 +159,7 @@ class Arguments(unittest.TestCase):
 
 
 class Page(unittest.TestCase):
-    def test_measure_names_the_part_its_font_and_colour(self):
+    def test_measure_names_the_part_its_font_and_colour_170(self):
         proc = run("measure", PAGE, "--at", "50,50")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn('"element": "h1#title"', proc.stdout)
@@ -189,12 +180,9 @@ class Page(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             shot = Image.open(out)
             self.assertEqual(shot.size, (200, 100))
-            # The fade has finished: the box is black.
             self.assertEqual(shot.convert("RGB").getpixel((100, 50)), (0, 0, 0))
 
-    def test_zoom_after_waits_out_a_canvas_build_longer_than_the_settle(self):
-        # Crosses the real clock: --after is a real wait, and the default run
-        # proves the build outlasts SETTLE_MS (#613).
+    def test_zoom_after_waits_out_a_canvas_build_longer_than_the_settle_613(self):
         with tempfile.TemporaryDirectory() as d:
             shots = {}
             for name, extra in (
@@ -229,7 +217,6 @@ class Page(unittest.TestCase):
                 for f in sorted(os.listdir(d))
             ]
             self.assertEqual(grey[0], 255)
-            # Half of a linear fade, give or take the rounding of an 8-bit grey.
             self.assertAlmostEqual(int(grey[1]), 128, delta=3)
             self.assertEqual(grey[2], 0)
 
@@ -239,7 +226,6 @@ def first_dark_x(png, row) -> int | None:
     return int(dark[0]) if dark.size else None
 
 
-# The rows through #a and #b: each box's top plus half its 40 px height.
 ROW_A, ROW_B = 60, 140
 # 100 ms of staggered.html's half-px-a-ms move, a guess at a timer's lateness, #547.
 STAGGER_PX = 50

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""check-overlay.py — measures how far a candidate's mark strays from its source
-(design-vault#73), answering the trace half of gate question
-vault.curves-script.
+"""check-overlay.py — measures how far a candidate's mark strays from its source,
+answering the trace half of gate question vault.curves-script.
 
 USAGE
   python3 check-overlay.py <mark> <source> [--size WxH] [--scale N] [--out DIR]
@@ -16,7 +15,7 @@ hole in a source on white. It then reports the largest
 offset between the two edges, in the source's px, either way: a source edge
 with no candidate edge near it, or a candidate edge with none of the source's.
 Over 0.5 px fails against a raster source, and over 0.1 px against an SVG
-source (design-vault#195).
+source.
 
 The source's size is its pixel size, or an SVG's width and height, or else its
 viewBox; --size draws both at another. The mark is fitted to that box as an
@@ -28,7 +27,7 @@ between pixels by its coverage, and the offset reads a little high: up to
 0.05 px at 8x and 0.08 px at 4x. Only the outline against the ground is
 compared: an edge between two of the mark's own colours is not.
 
-It prints no overlap ratio: an IoU is no evidence of a curve (design-vault#94).
+It prints no overlap ratio.
 With --out it writes DIR/overlay.png at the measured scale: both ink grey, the
 source's alone red, the mark's alone blue.
 
@@ -67,42 +66,20 @@ first_line, PageTimeoutError, RefusedError = (
     flow.RefusedError,
 )
 
-# The largest edge offset vault.curves-script allows, in px at the source's size,
-# and the source's kind as the report names it, by whether the source is an SVG
-# that draws no raster image.
-# Against a raster, half a pixel: a standard tracer's criterion (potrace, Selinger
-# 2003 §2.2), since the source's own edge is known to no better. Against an SVG,
-# this script's resolution, the reading error measured below, since the founder
-# asked for a match "no matter how finely one zooms in" (lucmoseley/mmm-infra#9;
-# docs/research/house-audit-craft.md §1.1). The error reads high, so at 4x a mark
-# 0.02 px off can fail.
-LIMITS = {True: (0.1, "an SVG"), False: (0.5, "a raster")}
-# The SVG elements that draw a raster: an image, a filter's image, or HTML holding one.
+LIMITS = {
+    True: (0.1, "an SVG"),
+    False: (0.5, "a raster"),
+}  # measured 0.08 px read error at 4x; potrace's 0.5 px, #195
 RASTER_TAGS = {"image", "feImage", "foreignObject"}
-# Measured on a 120x80 arch shifted 0 to 1 px (#73 review): the offset read
-# up to 0.05 px high at 8x, 0.08 at 4x, 0.18 at 2x and 0.30 at 1x, so below 4x
-# a mark 0.3 px off can fail.
-MAX_SCALE, MIN_SCALE = 8, 4
-# The longest side drawn, in device px. A first guess: one 4096 px square
-# frame is 64 MB of RGBA and about 200 MB more as floats, two frames a run.
-MAX_SIDE = 4096
-# How far, in source px, a pixel looks for the strongest ink near it: past a
-# raster's anti-aliased edge, which the browser's upscale spreads over about a
-# source pixel. A first guess.
-NEAR = 2
-# The weakest ink counted, as a share of the strongest: above a JPEG's noise in
-# its ground, below a #e6e6e6 part on white. A first guess.
-FLOOR = 0.1
-# Screenshots of one draw before the pair is refused. On a loaded machine Chromium
-# answered a fresh page's screenshot with UNCAPTURED and the same page's next one
-# drew it (#136). Residual: a renderer stalled through both still exits 5, and
-# each shot has the whole --timeout, so the longest wait doubles.
-SHOTS = 2
+MAX_SCALE, MIN_SCALE = 8, 4  # measured 0.05 px high at 8x, 0.30 at 1x, #73
+MAX_SIDE = 4096  # guess, #501
+NEAR = 2  # guess, #501
+FLOOR = 0.1  # guess, #501
+SHOTS = 2  # guess, #136
 UNCAPTURED = "Unable to capture screenshot"
 
 
 def px(value):
-    """An SVG width or height in px, or None for a percentage or another unit."""
     m = re.fullmatch(
         r"\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(px)?\s*", value or ""
     )
@@ -110,9 +87,6 @@ def px(value):
 
 
 def read(path):
-    """A file as {path, data, mime, size, viewbox, vector}: size is its own,
-    viewbox whether it can be drawn at another, vector whether it is an SVG
-    that draws no raster image."""
     with open(path, "rb") as fh:
         data = fh.read()
     if path.lower().endswith(".svg"):
@@ -165,7 +139,6 @@ def read(path):
 
 
 def draw(page, f, box):
-    """f drawn at box CSS px, as RGBA at the page's device scale."""
     from playwright.sync_api import Error as PlaywrightError
 
     src = f"data:{f['mime']};base64,{base64.b64encode(f['data']).decode()}"
@@ -185,14 +158,6 @@ def draw(page, f, box):
 
 
 def ink(drawn, scale):
-    """Each image's ink coverage, 0 to 1 a pixel, on one ground for both:
-    deciding each image's ground alone failed a matching mark by 20 px where one
-    file was opaque and the other see-through (#73 review). Coverage is a
-    pixel's difference from the ground over the largest difference near it, so
-    a light or faint part has an edge of its own, not one cut at half the
-    darkest part's strength (#73 review).
-    Residual: a ground whose top-left pixel is ink is misread, and so is a part
-    fainter than FLOOR."""
     clear = {role: (rgba[..., 3] < 255).any() for role, rgba in drawn.items()}
     out = {}
     for role, rgba in drawn.items():
@@ -214,8 +179,6 @@ def ink(drawn, scale):
 
 
 def edge(cov):
-    """Where coverage crosses one half between two neighbouring pixels, as
-    (x, y) points interpolated between their centres."""
     c = np.pad(cov, 1)
     points = []
     for c0, c1, step in ((c[:, :-1], c[:, 1:], (1, 0)), (c[:-1, :], c[1:, :], (0, 1))):
@@ -226,9 +189,6 @@ def edge(cov):
 
 
 def stray(a, b):
-    """For each edge point of a, its distance to b's edge: to the segment
-    between b's two nearest points where they are neighbours on one edge
-    (crossings sit at most √2 apart along an edge), else to the nearest."""
     d, i = cKDTree(b).query(a, k=2)
     p, q = b[i[:, 0]], b[i[:, 1]]
     pq = q - p
@@ -249,8 +209,6 @@ def ink_box(cov, scale):
 
 
 def measure(mark, source, scale, limit):
-    """The largest edge offset, where it is, and each edge's share over limit, in
-    the source's px."""
     source_edge, mark_edge = edge(source), edge(mark)
     source_off = stray(source_edge, mark_edge) / scale
     mark_off = stray(mark_edge, source_edge) / scale
@@ -269,8 +227,7 @@ def measure(mark, source, scale, limit):
 
 
 def overlay(mark, source):
-    # Red for the source alone, blue for the mark alone, grey where both draw:
-    # picked by eye.
+    # guess, #501
     mark, source = mark >= 0.5, source >= 0.5
     out = np.full(mark.shape + (3,), 255, np.uint8)
     out[source & ~mark] = (220, 30, 30)
@@ -344,15 +301,12 @@ def run(at):
         context.set_default_timeout(at.timeout)
         page = context.new_page()
         drawn = {}
-        # Mapped here, not by chromium(), so a failure names the file it drew.
         for role, f in at.files.items():
             try:
                 drawn[role] = draw(page, f, at.box)
             except PlaywrightTimeout as exc:
                 raise PageTimeoutError(first_line(exc)) from exc
-            except (
-                PlaywrightError
-            ) as exc:  # an image that will not decode rejects decode()
+            except PlaywrightError as exc:
                 raise RefusedError(f"{f['path']}: {first_line(exc)}") from exc
         return drawn
 
@@ -363,7 +317,7 @@ def report(at, masks, m):
         f"check-overlay: {at.mark} against {at.source}, at {w:g}x{h:g} px, measured at {at.scale}x"
     ]
     ar = [f["size"][0] / f["size"][1] for f in (at.files["mark"], at.files["source"])]
-    # Aspect ratios within 0.1% count as equal: a guess at room for rounding in a file's own size.
+    # guess, #501
     if abs(ar[0] - ar[1]) > 1e-3 * ar[1]:
         lines.append(
             f"the mark's aspect ratio is {ar[0]:.4g} and the source's {ar[1]:.4g}, so the mark is fitted inside the box"

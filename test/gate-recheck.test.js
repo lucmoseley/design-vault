@@ -1,9 +1,4 @@
 "use strict";
-// gate.js recheck, which tallies three fresh critics' re-check of the faults a building session fixed (#193). It
-// borrows the tally and affordance suites' gates, since a re-check re-asks the questions a tally answered. Loosen it
-// and one critic's Yes clears a fault three critics raised, a fix that broke another question goes on being fixed, a
-// split stops fixing before a settle critic has looked closer, three Yes clear a link the re-run parts map says goes
-// nowhere, or a fix aimed at another fault clears though it left a link going nowhere.
 const assert = require("node:assert/strict");
 const { gateScratch, refusedWithout, runGate } = require("./gate-files.js");
 const path = require("node:path");
@@ -21,7 +16,6 @@ const { writeSettle, writeText, buildBrokenCopy } = gateScratch("gate-recheck-")
 const recheck = ({ answered = ANSWERED, before = BEFORE, critics = CRITICS, faults = FAULTS, settles = [] } = {}) =>
   runGate("recheck", "--asset", "web-surface", ...(before ? ["--before", before] : []), "--answered", answered, ...faults.flatMap((f) => ["--fault", f]), ...critics.flatMap((c) => ["--critic", c]), ...settles.flatMap((s) => ["--settle", s]), GATE);
 
-// { "<candidate> <id>": "cleared" or the stop signals' numbers, "1,3" } from recheck's output.
 function parseOutcomes(out) {
   const found = {};
   let current;
@@ -41,7 +35,7 @@ function parseOutcomes(out) {
 const allCritics = (edit) => CRITICS.map((c) => buildBrokenCopy(c, edit));
 const refused = refusedWithout(/^Re-check of/m);
 
-test("a fixed fault clears only on three Yes that it is gone and three Yes that nothing else got worse", () => {
+test("a fixed fault clears only on three Yes that it is gone and three Yes that nothing else got worse (#193)", () => {
   const r = recheck();
   assert.equal(r.status, 0, r.out + r.err);
   const o = parseOutcomes(r.out);
@@ -103,7 +97,6 @@ test("a script or code question the candidate passed before the fix and fails af
   const r = recheck({ answered: broke });
   assert.equal(parseOutcomes(r.out)["v1-arches vault.tone-look"], "1", "three Yes from the critics do not outweigh the re-run");
   assert.match(r.out, /3\. vault\.contrast \(script re-run\): passed before the fix, fails now\n {5}v1-arches\/access\/access\.json, exit 1/);
-  // v2-water's proof failed before the fix, so its pass now is the fix, and a fail would be the same fault again.
   const v2 = buildBrokenCopy(ANSWERED, (d) => (d.answers["v2-water"]["vault.proof"].answer = "fail"));
   assert.equal(parseOutcomes(recheck({ answered: v2 }).out)["v2-water vault.proof"], "2");
 });
@@ -141,14 +134,11 @@ test("a re-check takes three critics and at least one --fault, or it is bad usag
   assert.match(none.err, /^recheck needs each fault fixed, --fault <candidate>:<id>/);
 });
 
-// The affordance suite's gate and answers, where vault.affordance is on the list: its clean candidate's p1 links to #rooms.
 const AFFORDANCE = path.join(__dirname, "fixtures", "gate", "affordance");
 const AFFORDANCE_ANSWERED = path.join(AFFORDANCE, "answered.json");
 const CLEAN_PARTS = path.join(AFFORDANCE, "parts-clean.json");
 const DEAD_PARTS = buildBrokenCopy(CLEAN_PARTS, (d) => (d.parts[0].dead = "#rooms"));
 
-// A re-check of the clean candidate's `fault`, given its re-run map and the map from before the fix, where each critic
-// answers `answer` that the fault is gone and Yes that nothing else got worse.
 function recheckAffordance({ fault = "vault.affordance", parts = [`clean=${CLEAN_PARTS}`], before = [`clean=${DEAD_PARTS}`], answer = "Yes", settles = [] } = {}) {
   const critics = ["a", "b", "c"].map((x) => writeText(`recheck-${x}.json`, JSON.stringify({ answers: { clean: {
     [fault]: { answer, evidence: `the fault looks gone: ${answer}` },
@@ -189,7 +179,6 @@ test("a fix aimed at another fault that leaves a link going nowhere stops on the
   assert.equal(parseOutcomes(broke.out)["clean vault.edge-look"], "1", "three Yes to others do not outweigh a link the map says the fix killed");
   assert.match(broke.out, /^ {2}1\. vault\.affordance \(re-run parts map\): a link going nowhere since the fix\n {5}p1 "Rooms": dead, it goes to #rooms, which nothing on the page carries$/m);
   assert.equal(parseOutcomes(edge(DEAD_PARTS, DEAD_PARTS).out)["clean vault.edge-look"], "cleared", "a link dead before the fix is not one the fix broke");
-  // parts-map.py numbers parts afresh, and a fix may reword them.
   const renumbered = buildBrokenCopy(DEAD_PARTS, (d) => {
     d.parts.unshift({ id: "p0", actable: false, href: null, text: "Welcome." });
     d.parts.forEach((p, i) => (p.id = `p${i + 1}`));

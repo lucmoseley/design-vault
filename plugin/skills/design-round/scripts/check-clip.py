@@ -1,27 +1,21 @@
 #!/usr/bin/env python3
-"""check-clip.py — the check for a generated clip (design-vault#324), answering
-gate questions vault.length and vault.clip-loop
-(design-vault#336). Standard library only: no decoder reads the clip's frames
-(#262).
-
-USAGE
+"""USAGE
   python3 check-clip.py <clip.mp4>… [--range MIN-MAX] [--log <higgsfield-spend.jsonl>]
 
 Length (vault.length), with --range, the motion brief's range in seconds: the
-clip's duration over its timescale, from the MP4 header's `moov`/`mvhd` box
-(ISO/IEC 14496-12 §8.2.2, versions 0 and 1), lies inside the range, its ends
-included (untraced: the plain reading of a brief's range). With no --range, the length is printed and NOT JUDGED. A header that
+clip's duration over its timescale, from the MP4 header's `moov`/`mvhd` box,
+lies inside the range, its ends included. With no --range, the length is printed and NOT JUDGED. A header that
 gives no duration, a fragmented clip's, is NOT JUDGED.
 
-Loop (vault.clip-loop): the clip's spend-log line, found as spend-log.py's
-header says, in --log or else the log beside each clip, sent the same still as
+Loop (vault.clip-loop): the clip's spend-log line, in --log or else the log
+beside each clip, sent the same still as
 the model's start frame and its end frame, as one URL, the fields read from
 references/loop-fields.json with their source. A model with no row there, or a
 clip with no log line, is NOT JUDGED, never passed.
 
 EXITS 0 every clip passes / 1 a clip fails / 2 the arguments are wrong, or a
 clip, the log or loop-fields.json cannot be read / 6 no clip fails but one cannot be judged. It
-never exits 3: it needs nothing past the standard library. Exits 0, 1 and 6 are
+never exits 3. Exits 0, 1 and 6 are
 results and print on stdout; the rest print on stderr.
 """
 
@@ -49,7 +43,6 @@ RANGE = re.compile(r"(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)")
 
 
 def read_fields():
-    """loop-fields.json's rows by endpoint id, each checked for its two fields and source."""
     try:
         models = json.loads(FIELDS.read_text(encoding="utf8"))["models"]
         for model, row in models.items():
@@ -64,7 +57,6 @@ def read_fields():
 
 
 def boxes(f, start, end):
-    """(type, payload start, payload end) of each box from start to end."""
     at = start
     while at + 8 <= end:
         f.seek(at)
@@ -83,7 +75,6 @@ def boxes(f, start, end):
 
 
 def read_length(clip):
-    """The clip's length in seconds from its mvhd box, or None where it gives none."""
     try:
         with open(clip, "rb") as f:
             end = f.seek(0, 2)
@@ -100,9 +91,6 @@ def read_length(clip):
     except struct.error as err:
         raise UnreadableError(f"{clip} ends inside a box header") from err
     version = body[0] if body else None
-    # After version and flags: creation and modification times, timescale and
-    # duration, the times and duration 32-bit in version 0 and 64-bit in
-    # version 1, where all ones means unknown.
     layout = {0: (">IIII", 0xFFFFFFFF), 1: (">QQIQ", 0xFFFFFFFFFFFFFFFF)}.get(version)
     if layout is None:
         raise UnreadableError(f"{clip}'s mvhd is version {version}, not 0 or 1")
@@ -156,8 +144,6 @@ def check_loop(entry, where, fields):
             FAIL,
             f"the request sent no end frame, {end_field}: render it again with {end_field} set to {start_field}'s still",
         )
-    # One still is one URL: the builder uploads it once and --sets that URL in
-    # both fields. The same picture under two URLs fails.
     if start != end:
         return (
             FAIL,

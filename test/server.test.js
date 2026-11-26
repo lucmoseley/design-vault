@@ -1,7 +1,4 @@
 "use strict";
-// server.py, the vault's one access boundary (#84): run against a copy
-// in a scratch vault, with a secret beside the vault and one in each kind of hidden path inside it.
-// Loosen one and a server that hands out .env, .git or a file beside the vault, or answers off this machine, passes.
 const assert = require("node:assert/strict");
 const { after, before, test } = require("node:test");
 const { spawn } = require("node:child_process");
@@ -36,7 +33,6 @@ after(() => {
   fs.rmSync(scratch, { recursive: true, force: true });
 });
 
-// The path is sent as written: no client-side normalising of `..` or percent-escapes.
 const request = (target, { method = "GET", host = "127.0.0.1" } = {}) => new Promise((resolve, reject) => {
   const req = http.request({ host, port, path: target, method }, res => {
     let body = "";
@@ -83,7 +79,6 @@ test("a path that climbs out of the vault serves nothing outside it", async () =
   }
 });
 
-// Every 127.x.x.x address reaches this machine, so a server bound to more than 127.0.0.1 answers on 127.0.0.2.
 test("the server binds to 127.0.0.1 only", async () => {
   await assert.rejects(request("/page.txt", { host: "127.0.0.2" }), { code: "ECONNREFUSED" });
 });

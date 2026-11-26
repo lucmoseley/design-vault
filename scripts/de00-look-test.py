@@ -1,18 +1,9 @@
 #!/usr/bin/env python3
-"""de00-look-test.py — a review page of grey pairs at set ΔE00 gaps.
-
-For each ΔE00 in TARGETS it moves two greys in lightness (the mmm-infra logo
-grey lighter, a pale panel grey darker), and draws every pair large and small.
-
-Every ΔE00 it reports is measured from the rounded hex, never the target.
-CIELAB and CIEDE2000 come from design-project's colour_space.py, which
-test/palette.test.py checks against Sharma, Wu & Dalal 2005's test pairs.
-
-USAGE
+"""USAGE
   python3 scripts/de00-look-test.py OUT_DIR
 Writes OUT_DIR/items.json and OUT_DIR/img/*.png for plugin/review-page, and
-prints the measured pairs and the key from card id to ΔE00, which the page
-withholds. Exits 1 if a pair lands more than TOLERANCE
+prints the measured pairs, each ΔE00 measured from the rounded hex, and the key
+from card id to ΔE00, which the page withholds. Exits 1 if a pair lands more than TOLERANCE
 from its target. The small cards' words need DejaVu Sans Bold at FONT.
 """
 
@@ -35,13 +26,13 @@ sys.path.insert(
 )
 from colour_space import D65_WHITE, de2000, lab
 
-# The steps #178 names, which put one on each side of both house numbers.
+# guess, #178
 TARGETS = (4, 7, 10, 13, 16)
-# A first guess, and stated as one: well under the 3 between targets, and every pair lands inside it.
+# guess, #178
 TOLERANCE = 0.15
-# Card order per size, lettered A-E as shown, so neither the page nor a card id tells him which gap he is marking.
+# #178
 SHOWN = {"large": (13, 4, 16, 7, 10), "small": (7, 16, 10, 4, 13)}
-# (row name, base hex, L* direction): mmm-infra's logo grey, and a pale grey of the kind a border or panel uses.
+# guess, #178
 BASES = (("dark", "#404040", 1), ("pale", "#D9D9D9", -1))
 GROUND = (255, 255, 255)
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -51,7 +42,7 @@ def unlin(c):
     return 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
 
 
-# The sRGB (IEC 61966-2-1) matrix from XYZ, under D65.
+# sRGB's XYZ-to-RGB matrix under D65: http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
 M_INV = (
     (3.2404542, -1.5371385, -0.4985314),
     (-0.9692660, 1.8760108, 0.0415560),
@@ -64,8 +55,6 @@ def hex_to_rgb(h):
 
 
 def lab_to_hex(l_star, a, b):
-    """The nearest sRGB hex, or None where the colour is out of gamut."""
-
     def finv(t):
         return t**3 if t > 6 / 29 else 3 * (6 / 29) ** 2 * (t - 4 / 29)
 
@@ -76,27 +65,24 @@ def lab_to_hex(l_star, a, b):
         D65_WHITE[2] * finv(fy - b / 200),
     )
     rgb = [unlin(sum(m * c for m, c in zip(row, xyz, strict=True))) for row in M_INV]
-    if any(
-        c < -0.5 / 255 or c > 1 + 0.5 / 255 for c in rgb
-    ):  # past half a step, rounding cannot bring it back
+    if any(c < -0.5 / 255 or c > 1 + 0.5 / 255 for c in rgb):
         return None
     return "#" + "".join(f"{round(min(max(c, 0), 1) * 255):02X}" for c in rgb)
 
 
 def moved(base, sign, t):
-    """base's Lab with L* moved by t, up for sign 1 and down for -1."""
     lightness, a, b = lab(base)
     return (lightness + sign * t, a, b)
 
 
 def pair_at(base, sign, target):
-    """(hex, measured ΔE00) for the in-gamut colour nearest target from base, moving L* by sign."""
+    # guess, #501
     lo, hi = (
         0.0,
         60.0,
-    )  # 60 L* is far past ΔE00 16 from either grey, so the bisection always brackets a target
+    )
 
-    # 60 halvings of a 60 L* bracket end far finer than a hex step.
+    # guess, #501
     for _ in range(60):
         mid = (lo + hi) / 2
         h = lab_to_hex(*moved(base, sign, mid))
@@ -104,7 +90,6 @@ def pair_at(base, sign, target):
             hi = mid
         else:
             lo = mid
-    # Rounding to hex moves the value, so both ends of the bisection are measured.
     found = [
         (h, de2000(lab(base), lab(h)))
         for h in (lab_to_hex(*moved(base, sign, t)) for t in (lo, hi))
@@ -113,12 +98,11 @@ def pair_at(base, sign, target):
     return min(found, key=lambda f: abs(f[1] - target))
 
 
-S = 4  # drawn at 4x and reduced by box averaging, so each mark's inside stays its exact colour
+S = 4
 
 
 def draw_large(rows):
-    """Every row's pair as two large fields on white."""
-    # The sheet's size and gaps, in px: picked by eye.
+    # guess, #501
     w, h, gap = 1200, 900, 24
     img = Image.new("RGB", (w * S, h * S), GROUND)
     pen = ImageDraw.Draw(img)
@@ -132,12 +116,10 @@ def draw_large(rows):
 
 
 def draw_small(rows):
-    """Every row's pair as two dots, two thin rules and two words on white, at the size the page shows them."""
     w, h = 288, 216
     img = Image.new("RGB", (w * S, h * S), GROUND)
     pen = ImageDraw.Draw(img)
-    # A 12 px dot, a 3 px rule and a 13 px word, and the gaps between them: picked
-    # by eye as small marks of the kind a page shows, not measured.
+    # guess, #501
     font = ImageFont.truetype(FONT, 13 * S)
     for r, (a, b) in enumerate(rows):
         cy = h * (2 * r + 1) // (2 * len(rows))

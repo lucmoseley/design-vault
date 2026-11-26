@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""check-layout.py — sweeps a web candidate across every width from 320 to
-1920 px, and at 2560 px, for the layout faults a critic would otherwise find one width at a
-time (design-vault#78), answering gate questions vault.reflow and vault.layout,
-with --text spacing vault.text-spacing (#305), with --records the tier 0
-and 1 layout records (#311) and with --focal vault.focal-crop (#334), and
-takes the screenshots the critic is given.
-
-USAGE
+"""USAGE
   python3 check-layout.py <url or file> --out DIR [--cta SELECTOR] [--step PX]
         [--widths LOW-HIGH] [--heights PHONE,TABLET,DESKTOP] [--timeout MS]
         [--text spacing|zoom|size]… [--table FILE]
@@ -39,7 +32,7 @@ range of widths it holds over:
 - the first screen, with --cta: no element the selector matches lies wholly
   within the first screen at that width;
 - the art's focal box, with --focal SELECTOR=X,Y,W,H, the box the art's brief
-  declares in the art file's own pixels (#334): the part of it the page shows
+  declares in the art file's own pixels: the part of it the page shows
   is less than all of it. That part is worked out from an <img>'s object-fit
   and object-position within its content box, or from a box's one background
   image's background-size, -position, -origin and -clip, then cut to the
@@ -101,7 +94,7 @@ each not-judged record lacks and the fault ranges.
 
 The screen is --heights px tall: 664 at phone widths (320–767 px), 921 at
 tablet (768–1023) and 633 at desktop (1024–2560), each a common screen less
-the browser's own bars (HEIGHTS says which). Pass the project's own where it
+the browser's own bars. Pass the project's own where it
 has them. At phone widths the browser has a touch screen, so a page's
 `(pointer: coarse)` and `(hover: none)` rules apply there.
 
@@ -114,8 +107,7 @@ how many loop.
 It writes full-page screenshots at 320, 390, 768, 1024, 1536, 1920 and 2560 px, those
 in the swept span, to DIR/layout-<width>-<run time>.png, and DIR/layout.json,
 every width's findings, deleting any an earlier run left there. The run time in
-each name, UTC, is what a critic compares with the candidate's last change
-(design-round §4).
+each name, UTC, is what a critic compares with the candidate's last change.
 
 A fault the brief chose, such as a heading set across an image's edge, is
 still reported: say so beside it in the round folder.
@@ -148,58 +140,27 @@ records = siblings.load(HERE, "layout-records.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
 
-# 320 is WCAG 1.4.10's reflow width, a 1280 px desktop at 400% zoom. 2560 is
-# the widest common desktop (#197). Above STEPPED only HIGH is loaded: a page
-# built for 1920 mostly fails wider by stretching, which shows widest. A fault
-# held only between the two is not seen.
-LOW, STEPPED, HIGH = 320, 1920, 2560
-# The widest step that still finds a fault a few px wide (#78: "at most 5 px").
-GATE_STEP = 5
-# Bands split at Tailwind's md and lg breakpoints.
-BANDS = (("phone", 320, 767), ("tablet", 768, 1023), ("desktop", 1024, HIGH))
+# WCAG 2.2 reflow is judged at 320 CSS px wide: https://www.w3.org/WAI/WCAG22/Understanding/reflow.html
+LOW = 320
+STEPPED, HIGH = 1920, 2560  # guess, #197
+GATE_STEP = 5  # guess, #78
+BANDS = (
+    ("phone", 320, 767),
+    ("tablet", 768, 1023),
+    ("desktop", 1024, HIGH),
+)  # guess, #501
 PHONE_MAX = BANDS[0][2]
-# Each band's first screen (#197). Phone: Safari on a 390x844 iPhone 13 or 14,
-# 390x664 in Playwright's device list. Desktop: Chromium maximised on Windows
-# 11 on a 1366x768 screen, its taskbar and bars measured. Tablet: a 768x1024
-# iPad less 103 px of status bar and Safari's address and tab bars, as one
-# developer read them on an iPad Air 3 under iPadOS 16.5.1
-# (developer.apple.com/forums/thread/735055, #252). Unmeasured here or on
-# iPadOS 26.
-HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)
+HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)  # measured 390x664, 768x921, #252
 MOTION_HEIGHTS = (*HEIGHTS[:2], flow.DESKTOP_WINDOW[1])
-# A common phone's width and the commonest desktop's (StatCounter Sept 2026),
-# the widths the other checks render a page at.
-PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]
-# The band edges, the widths above, the next commonest desktop and the widest.
-SHOT_WIDTHS = (320, PHONE_WIDTH, 768, 1024, 1536, DESKTOP_WIDTH, HIGH)
-# A phone's touch screen, through the phone band (#190). Not Playwright's
-# is_mobile, which lays the page out by its viewport meta and swaps in
-# DevTools' mobile theme. The meta is judged apart, on a page loaded as MOBILE
-# (#229). A page a phone would zoom out is laid out wider than the phone, a
-# viewport fault, or overflows it, a scroll fault, so the checks' shots at
-# scale 1 misread only a page that already fails vault.reflow.
-#
-# The theme is left out, so vault.focus judges at phone width the ring Chrome
-# on Android draws (#229). Chrome sets its focus ring to rgb(16, 16, 16) on
-# every platform but the Mac (chrome/browser/renderer_preferences_util.cc), on
-# the theme Blink has then. Android's own theme takes it. The mobile theme,
-# switched on only by DevTools' emulation (core/inspector/dev_tools_emulator.cc),
-# never gets it, so it draws Blink's fallback rgb(229, 151, 0), 2.40:1 on white
-# (core/layout/layout_theme.cc). Read in Chromium's source, not on a device.
-# Residuals: an app's in-app browser, Android WebView, sets no ring
-# (android_webview/browser/aw_settings.cc) and so draws that fallback, which
-# WCAG exempts from 3:1 as the browser's own (Understanding 1.4.11); and the
-# tablet band is not laid out by the meta, though a tablet's browser may read it.
-PHONE = {"has_touch": True}
+PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]  # guess, #197
+SHOT_WIDTHS = (320, PHONE_WIDTH, 768, 1024, 1536, DESKTOP_WIDTH, HIGH)  # guess, #501
+PHONE = {"has_touch": True}  # #229
 MOBILE = {**PHONE, "is_mobile": True}
-# W3C ACT rule b4f0c3: zoom must reach 200%. Values that are not numbers pass
-# only as these.
+# Zoom must reach 200%: https://www.w3.org/WAI/standards-guidelines/act/rules/b4f0c3/
 ZOOM = 2
-# A shown scale this far from 1 still counts as 1, for rounding. A guess.
-SCALE_SLACK = 0.01
+SCALE_SLACK = 0.01  # guess, #501
 SCALABLE_WORDS = ("yes", "device-width", "device-height")
 MAX_SCALE_WORDS = ("device-width", "device-height")
-# `fails`: whether a finding of the kind fails its question.
 Kind = collections.namedtuple("Kind", "key title question fails", defaults=(True,))
 KINDS = (
     Kind("scroll", "sideways scroll", "vault.reflow"),
@@ -208,43 +169,29 @@ KINDS = (
     Kind("viewport", "not laid out at the phone's width", "vault.reflow"),
     Kind("zoom", "zoom blocked on a phone", "vault.reflow"),
     Kind("cta", "call to action off the first screen", "vault.layout"),
-    # Wholly visible at every width: untraced, the plain reading of #262's
-    # "keeps the focal element" (#334).
     Kind("crop", "focal box not wholly in view", "vault.focal-crop"),
-    # An art the check cannot see is unjudged, neither passed nor failed
-    # (#334): it exits 6, so a caller that reads only 0 as a pass does not
-    # pass it.
     Kind("unshown", "art not shown, so not judged", "vault.focal-crop", False),
     Kind("unmeasured", "art not measured", "vault.focal-crop", False),
 )
 QUESTIONS = tuple(dict.fromkeys(k.question for k in KINDS))
 CTA_QUESTION = next(k.question for k in KINDS if k.key == "cta")
 FOCAL_QUESTION = next(k.question for k in KINDS if k.key == "crop")
-# The flag a question is not checked without.
 OPTIONAL = {CTA_QUESTION: "--cta", FOCAL_QUESTION: "--focal"}
-# What a --text mode reports, beside the 100% page at the same width.
 TEXT_KINDS = (
     Kind("cut", "text cut off at the screen's edge", None),
     Kind("overlap", "overlap", None),
     Kind("clip", "text a box hides past its edge", None),
     Kind("reveal", "text hidden in a link or beside a control", None, False),
-    # A reading for the records that judge text size (#311), not a loss.
     Kind("grow", "text that grows less than the rest", None, False),
 )
 SPACING_QUESTION = "vault.text-spacing"
 REVEAL_QUESTION = "vault.text-spacing-reveal"
-# Hidden text counts as more hidden than at 100% only once this much more of
-# its area is hidden. A guess: a 2 px sliver of a 16 px line is an eighth.
-HIDDEN_MORE = 0.05
-# A computed size this short of the factor still counts as grown, for px
-# rounding. A guess.
-GROW_SLACK = 0.01
+HIDDEN_MORE = 0.05  # guess, #501
+GROW_SLACK = 0.01  # guess, #501
 TABLE = os.path.join(HERE, "check-layout.table")
 SEP = " | "
 NUMBER = r"(\d+(?:\.\d+)?)"
-# --focal's value: a selector, then the focal box's left, top, width and height.
 FOCAL_ARG = re.compile(rf"(.+)={NUMBER},{NUMBER},{NUMBER},{NUMBER}")
-# Each --text mode and the shape of its table value.
 MODES = {
     "spacing": re.compile(
         rf"line-height {NUMBER}, after-paragraph {NUMBER}, letter-spacing {NUMBER}, word-spacing {NUMBER}"
@@ -254,22 +201,18 @@ MODES = {
 }
 Mode = collections.namedtuple("Mode", "id name value")
 RECORD_KINDS = tuple(Kind(name, name, None) for name in records.CHECKS)
-# The record checks read on their own loads, not by records.READ_JS.
 APART = ("fluid-zoom", "tabs-narrow", "popover-sheet", "line-length", "phone-width")
 UNREAD = "a style sheet from another origin cannot be read"
 
 
 class BadSelectorError(Exception):
-    """A --cta or --focal selector the browser does not accept: exit 2. Its
-    args are the flag, the selector and the browser's message."""
+    pass
 
 
 TableError = rule_table.TableError
 
 
 def parse_table(text):
-    """{mode: Mode} from the table's lines; a spacing value is its four
-    numbers by property, a zoom or size value the factor text is enlarged by."""
     out = {}
     for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
@@ -316,9 +259,6 @@ def parse_table(text):
     return out
 
 
-# Lets the page finish arriving: its fonts, and its entrance animations run to
-# their end state. A looping animation throws on finish() and is measured
-# mid-loop, by design (#78).
 SETTLE_JS = r"""
 async () => {
   await document.fonts.ready;
@@ -330,17 +270,11 @@ async () => {
 }
 """
 
-# One width's faults, as {kind, subject, detail}, and the --focal arts'
-# files and placement. Geometry is read at scroll 0.
 MEASURE_JS = (
     flow.LABEL_JS
     + r"""
 async ({ cta, focal }) => {
-  // Guesses, unmeasured: 1 px of slack at an edge for rounding, an overlap only
-  // past 2 px each way, text hidden by a box only past 2 px, as glyphs'
-  // side bearings and rounding reach about that far, a text box under half a px empty, and an image under
-  // 4 px a side a rule or spacer, not a picture.
-  const EDGE = 1, CROSS = 2, HIDDEN = 2, EMPTY = 0.5, MIN_IMAGE = 4;
+  const EDGE = 1, CROSS = 2, HIDDEN = 2, EMPTY = 0.5, MIN_IMAGE = 4; // guess, #501
   const vw = document.documentElement.clientWidth, vh = innerHeight;
   const css = (el) => getComputedStyle(el);
   const faults = [];
@@ -349,13 +283,9 @@ async ({ cta, focal }) => {
   const html = css(document.documentElement), body = css(document.body);
   const hides = (v) => v === 'hidden' || v === 'clip';
   const visible = (v) => v === 'visible';
-  // Body's overflow clips the page whether it reaches the viewport or not.
   const rootClips = hides(html.overflowX) || hides(body.overflowX);
   const rootHidesY = hides(html.overflowY) || hides(body.overflowY);
 
-  // A box clipped to nothing, by clip or an inset clip-path, or 1x1 px or
-  // smaller with its overflow clipped: the visually-hidden pattern, text kept
-  // for a screen reader alone (#220).
   const toPx = (v, size) => (v.endsWith('%') ? (parseFloat(v) / 100) * size : parseFloat(v));
   const clipRectGone = (cs, box) => {
     const m = /^rect\((.*)\)$/.exec(cs.clip);
@@ -381,24 +311,15 @@ async ({ cta, focal }) => {
     if (!el || el.nodeType !== 1) return true;
     if (shownCache.has(el)) return shownCache.get(el);
     const cs = css(el);
-    // checkVisibility() is false under a content-visibility: hidden ancestor,
-    // which is how Chromium hides a closed <details>' content (#418), and for
-    // display: contents, which has no box but draws its children.
-    // Residual: content-visibility: auto content off screen still counts as shown.
     const seen = cs.display === 'contents' || el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
     const v = seen && !clippedAway(el, cs) && shown(el.parentElement);
     shownCache.set(el, v);
     return v;
   };
   const rect = (r) => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
-  // The elements a selector matches, or the browser's message refusing it.
   const matching = (selector) => { try { return [...document.querySelectorAll(selector)]; } catch (e) { return String(e.message || e); } };
   const intersect = (a, b) => ({ left: Math.max(a.left, b.left), top: Math.max(a.top, b.top),
     right: Math.min(a.right, b.right), bottom: Math.min(a.bottom, b.bottom) });
-  // The part of the viewport an element's ancestors let it paint in, below
-  // body: a scroll container or a clipping box. Null where none clips it. A
-  // fixed box escapes every ancestor's clip, and an absolute one those below
-  // its positioned ancestor; a transform's containing block is not modelled.
   const isRoot = (e) => !e || e === document.body || e === document.documentElement;
   const clipCache = new Map();
   const clipOf = (el) => {
@@ -415,10 +336,6 @@ async ({ cta, focal }) => {
     clipCache.set(p, box);
     return box;
   };
-  // The boxes that hide an element's overflow rather than scroll it, each
-  // with the padding box it shows, unbounded on an axis it does not hide or
-  // on which a box between them scrolls.
-  // The containing-block walk is clipOf's.
   const hiderCache = new Map();
   const hidersOf = (el) => {
     const pos = css(el).position;
@@ -453,7 +370,6 @@ async ({ cta, focal }) => {
     return v;
   };
 
-  // Sideways scroll, by the outermost elements past the right edge.
   const all = [...document.body.querySelectorAll('*')];
   const place = new Map(all.map((e, i) => [e, i]));
   if (!rootClips && document.documentElement.scrollWidth > vw + EDGE) {
@@ -463,8 +379,6 @@ async ({ cta, focal }) => {
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0 && r.right > vw + EDGE) past.add(el);
     }
-    // The outermost is the subject; a flex or grid item stretched by its
-    // content is outermost, so the innermost inside it names the likely cause.
     const outer = [...past].filter((el) => { for (let p = el.parentElement; p; p = p.parentElement) if (past.has(p)) return false; return true; });
     const innermost = (el) => [...past].find((e) => el.contains(e) && ![...e.children].some((c) => past.has(c)));
     const by = document.documentElement.scrollWidth - vw;
@@ -476,17 +390,12 @@ async ({ cta, focal }) => {
     }
   }
 
-  // Every visible line of text, trimmed to its line-height and to what its
-  // clipping ancestors show.
   const blockOf = (el) => {
     for (let e = el; e; e = e.parentElement) { const d = css(e).display; if (d !== 'inline' && d !== 'contents') return e; }
     return document.body;
   };
   const texts = [];
-  // Each text's element by its place among body's elements, its label and font size in px.
   const sizes = new Map();
-  // Text a box hides past its edge, by block: the most px hidden, the box,
-  // and the block's text area in all and shown.
   const hidden = new Map(), area_ = new Map();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
@@ -523,7 +432,6 @@ async ({ cta, focal }) => {
     }
   }
 
-  // Text past an edge no one can scroll to, by the part its ancestors show.
   const cutOff = new Map();
   for (const t of texts) {
     const right = t.r.right - vw, left = -t.r.left;
@@ -540,7 +448,6 @@ async ({ cta, focal }) => {
       place: place.get(block), share: all ? 1 - seen / all : 0 });
   }
 
-  // Images: replaced elements and boxes with a background image.
   const images = [];
   for (const el of all) {
     const tag = el.localName;
@@ -558,7 +465,6 @@ async ({ cta, focal }) => {
   const pairs = new Map();
   const note = (subject, detail) => { if (!pairs.has(subject) || detail.startsWith('hidden')) pairs.set(subject, detail); };
 
-  // Text over text, between different blocks.
   const sorted = texts.slice().sort((a, b) => a.r.top - b.r.top);
   for (let i = 0; i < sorted.length; i++) {
     const a = sorted[i];
@@ -570,8 +476,6 @@ async ({ cta, focal }) => {
     }
   }
 
-  // Text against images: crossing an edge always; wholly inside, only when
-  // the image is drawn over it, which the stack at that point shows.
   const stackCheck = [];
   for (const t of texts) {
     for (const im of images) {
@@ -581,9 +485,6 @@ async ({ cta, focal }) => {
       else stackCheck.push({ t, im, subject });
     }
   }
-  // elementsFromPoint skips pointer-events: none, common on decorative
-  // layers, so every element takes pointer events while the stack is read.
-  // A point off the screen's side cannot be read; that text is cut off anyway.
   const probe = document.createElement('style');
   probe.textContent = '* { pointer-events: auto !important }';
   document.head.append(probe);
@@ -591,7 +492,6 @@ async ({ cta, focal }) => {
     const c = intersect(t.r, im.r);
     const x = (c.left + c.right) / 2, y = (c.top + c.bottom) / 2;
     if (x < 0 || x >= vw || y < 0) continue;
-    // Rects were read at scroll 0; a fixed box's stay put as the page scrolls.
     const top = t.fixed || y < vh ? 0 : y - vh / 2;
     scrollTo({ top, left: 0, behavior: 'instant' });
     const stack = document.elementsFromPoint(x, y - scrollY).filter((e) => !fixed(e) || t.fixed);
@@ -603,7 +503,6 @@ async ({ cta, focal }) => {
   scrollTo({ top: 0, left: 0, behavior: 'instant' });
   for (const [subject, detail] of pairs) add('overlap', subject, detail);
 
-  // The first screen.
   if (cta !== null) {
     const matched = matching(cta);
     if (typeof matched === 'string') return { badSelector: ['--cta', cta, matched] };
@@ -617,13 +516,7 @@ async ({ cta, focal }) => {
     }
   }
 
-  // The art's focal boxes (#334). A layer that repeats is judged by the one
-  // tile its position places.
   const layers = (v) => v.split(/,(?![^(]*\))/).map((s) => s.trim());
-  // One axis of a computed position, as px from the area's start, where
-  // `free` is the area less the art; null for a form it cannot read.
-  // Chromium computes a keyword, and a keyword with an offset, to a
-  // percentage or calc(P% ± Npx).
   const along = (v, free) => {
     let m;
     if ((m = /^(-?[\d.]+)%$/.exec(v))) return (m[1] / 100) * free;
@@ -631,7 +524,6 @@ async ({ cta, focal }) => {
     if ((m = /^calc\((-?[\d.]+)% ([+-]) ([\d.]+)px\)$/.exec(v))) return (m[1] / 100) * free + (m[2] === '-' ? -m[3] : +m[3]);
     return null;
   };
-  // object-position's two axes, x first.
   const axes = (v) => {
     const t = v.match(/(?:[^\s(]+|\([^)]*\))+/g) || [];
     return t.length === 2 ? t : [null, null];
@@ -643,17 +535,12 @@ async ({ cta, focal }) => {
     return { 'border-box': border, 'padding-box': padding, 'content-box': inset(padding, sides((s) => `padding${s}`)) };
   };
   const everywhere = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
-  // An art file's own size in px. An img's natural size is divided by its
-  // srcset density, and its w descriptor's density follows the width, so
-  // the file is loaded afresh.
   const fileSize = async (src) => {
     const file = new Image();
     file.src = src;
     try { await file.decode(); } catch (e) { return null; }
     return file.naturalWidth && file.naturalHeight ? [file.naturalWidth, file.naturalHeight] : null;
   };
-  // The art's file size, where it is placed and the part of the page it may
-  // paint, or why it cannot be measured.
   const artOf = async (el) => {
     const cs = css(el);
     if (cs.transform !== 'none') return { unmeasured: `is transformed (${cs.transform}), which this check does not model` };
@@ -661,7 +548,6 @@ async ({ cta, focal }) => {
     if (el.localName === 'img') {
       const size = el.complete && el.naturalWidth && el.naturalHeight && (await fileSize(el.currentSrc));
       if (!size) return { unmeasured: 'has not loaded its art' };
-      // Its natural size, not the file's, sets how object-fit scales it.
       const iw = el.naturalWidth, ih = el.naturalHeight, c = b['content-box'];
       const cw = w(c), ch = h(c), contain = Math.min(cw / iw, ch / ih);
       const s = { fill: null, contain, cover: Math.max(cw / iw, ch / ih), none: 1, 'scale-down': Math.min(1, contain) }[cs.objectFit];
@@ -670,7 +556,6 @@ async ({ cta, focal }) => {
       const [ax, ay] = axes(cs.objectPosition);
       const ox = ax === null ? null : along(ax, cw - pw), oy = ay === null ? null : along(ay, ch - ph);
       if (ox === null || oy === null) return { unmeasured: `has an object-position, ${cs.objectPosition}, this check cannot read` };
-      // Chromium's own stylesheet clips an img to its content box.
       const paint = visible(cs.overflowX) && visible(cs.overflowY) ? everywhere : rect(c);
       return { natural: size, placed: { left: c.left + ox, top: c.top + oy, width: pw, height: ph }, paint };
     }
@@ -720,8 +605,6 @@ async ({ cta, focal }) => {
       const sx = p.width / iw, sy = p.height / ih;
       const f = { left: p.left + x * sx, top: p.top + y * sy, right: p.left + (x + fw) * sx, bottom: p.top + (y + fh) * sy };
       if (w(f) <= 0 || h(f) <= 0) { add('crop', subject, 'draws its art at no size'); continue; }
-      // A box that scrolls lets the visitor reach its art; one that hides its
-      // overflow does not.
       const screen = { left: 0, top: 0, right: vw, bottom: fixed(el) || rootHidesY ? vh : Infinity };
       const v = [art.paint, screen, ...hidersOf(el)].reduce(intersect, f);
       const cut = [['left', v.left - f.left, sx], ['right', f.right - v.right, sx], ['top', v.top - f.top, sy], ['bottom', f.bottom - v.bottom, sy]]
@@ -738,8 +621,6 @@ async ({ cta, focal }) => {
 )
 
 
-# Every viewport meta's content, the last being the one Chromium obeys, and the
-# width it lays the page out at with the scale it shows it at.
 VIEWPORT_JS = r"""
 () => ({
   metas: [...document.querySelectorAll('meta[name="viewport" i]')].map((m) => m.getAttribute('content') || ''),
@@ -747,9 +628,6 @@ VIEWPORT_JS = r"""
 })
 """
 
-# WCAG 1.4.12's overrides, set on every element as inline !important, which
-# outranks the page's own !important in any stylesheet or cascade layer. The
-# spacing after paragraphs goes on <p>, as Understanding 1.4.12 names it.
 SPACING_JS = r"""
 (v) => {
   for (const el of [document.documentElement, ...document.querySelectorAll('body, body *')]) {
@@ -761,7 +639,6 @@ SPACING_JS = r"""
 }
 """
 
-# The browser's default text sizes in px, proportional and monospace.
 DEFAULT_SIZES_JS = r"""
 () => {
   const code = document.createElement('code');
@@ -774,15 +651,11 @@ DEFAULT_SIZES_JS = r"""
 
 
 def leading_number(value):
-    """The decimal number `value` starts with, or None. An exponent is not
-    read, as no viewport meta value needs one."""
     m = re.match(r"[-+]?(\d+\.?\d*|\.\d+)", value)
     return float(m[0]) if m else None
 
 
 def zoom_blocks(content):
-    """The viewport meta's properties, as key=value, that keep a phone from
-    zooming to ZOOM times: user-scalable off, or a maximum-scale under ZOOM."""
     pairs = re.sub(r"\s*=\s*", "=", (content or "").lower())
     blocks = []
     for item in re.split(r"[,;\s]+", pairs):
@@ -800,9 +673,6 @@ def zoom_blocks(content):
 
 
 def viewport_faults(width, got):
-    """The faults in a phone's reading of the page at `width`, from VIEWPORT_JS:
-    a layout width or shown scale not the phone's, by the last meta, and a zoom
-    limit in any meta, as the ACT rule tests each."""
     faults, subject = [], "the viewport meta"
     laid, scale = got["laidWidth"], got["scale"]
     if laid != width or abs(scale - 1) > SCALE_SLACK:
@@ -821,7 +691,6 @@ def viewport_faults(width, got):
 
 
 def sweep_widths(step, low=LOW, high=HIGH):
-    """Every `step` px from `low` up to STEPPED, then STEPPED and `high`."""
     widths = list(range(low, min(high, STEPPED) + 1, step)) or [low]
     for end in (min(high, STEPPED), high):
         if widths[-1] < end:
@@ -841,14 +710,10 @@ def is_phone(width):
 
 
 def device(width):
-    """The browser context options for a screen `width` px wide."""
     return PHONE if is_phone(width) else {}
 
 
 def ranges(found, kinds=KINDS):
-    """found: [(width, [fault…])] in sweep order. Each (kind, subject) held over
-    consecutive widths becomes one range, with its detail at its first width,
-    ordered by `kinds`."""
     out, open_ = [], {}
     for i, (width, faults) in enumerate(found):
         here = set()
@@ -890,8 +755,6 @@ def stamp(when):
 
 
 def load(page, url, width, heights, *, view=None):
-    """Loads the page afresh at one width, in a viewport of `view` (width,
-    height) CSS px where given; returns how many animations loop."""
     w, h = view or (width, height_at(width, heights))
     page.set_viewport_size({"width": w, "height": h})
     page.goto(url, wait_until="load")
@@ -899,11 +762,6 @@ def load(page, url, width, heights, *, view=None):
 
 
 def text_faults(base, got, *, grow=None):
-    """The faults `got` holds, of TEXT_KINDS, that the 100% page `base` at the
-    same width does not: hidden text by its element, a share of its area
-    hidden more than HIDDEN_MORE over base's, the rest by kind and subject. With `grow` the factor,
-    each text that grows by less, read against base's size. A zoomed page's
-    sizes are given already multiplied by the zoom."""
     kinds = {k.key for k in TEXT_KINDS}
     seen = {(f["kind"], f["subject"]) for f in base["faults"]}
     hid = {f["place"]: f["share"] for f in base["faults"] if "place" in f}
@@ -933,8 +791,6 @@ def text_faults(base, got, *, grow=None):
 
 
 def zoomed(width, height, factor):
-    """The CSS viewport browser zoom by `factor` gives a screen `width` by
-    `height` px, or None where it is narrower than LOW, reflow's own floor."""
     w, h = round(width / factor), round(height / factor)
     return (w, h) if w >= LOW else None
 
@@ -947,7 +803,6 @@ def measure(page, cta, focal=()):
 
 
 def spaced_at(page, at, width, base):
-    """--text spacing's faults at `width`, on the page the base was read on."""
     load(page, at.url, width, at.heights)
     page.evaluate(SPACING_JS, at.modes["spacing"].value)
     page.evaluate(SETTLE_JS)
@@ -955,7 +810,6 @@ def spaced_at(page, at, width, base):
 
 
 def zoomed_at(page_as, at, width, base):
-    """--text zoom's faults at `width`, or None on a screen under its floor."""
     factor = at.modes["zoom"].value
     view = zoomed(width, height_at(width, at.heights), factor)
     if not view:
@@ -968,17 +822,12 @@ def zoomed_at(page_as, at, width, base):
 
 
 def sized_at(page_as, at, width, base, *, raised):
-    """--text size's faults at `width`, the default sizes `raised`."""
     page = page_as(device(width), raised)
     load(page, at.url, width, at.heights)
     return text_faults(base, measure(page, None), grow=at.modes["size"].value)
 
 
 class Records:
-    """--records' scripts and what the sweep gathers for them: each width's
-    faults by width, the checks that found something, and the notes the
-    checks read across widths."""
-
     def __init__(self, at):
         self.checks = at.checks
         self.read = records.with_label(records.READ_JS, flow.LABEL_JS)
@@ -993,13 +842,10 @@ class Records:
         self.found = collections.defaultdict(list)
         self.seen = set()
         self.notes = []
-        # Checks the page itself kept from judging, and why.
         self.unmet = {}
         self.phone_under = at.checks["phone-width"].value["under"]
 
     def phone(self, width):
-        """Whether the phone-only checks judge at `width`: under the records'
-        phone bound, the table's phone-width line."""
         return width < self.phone_under
 
     def add(self, width, faults, seen=()):
@@ -1007,7 +853,6 @@ class Records:
         self.seen.update(seen)
 
     def lines(self, only=None):
-        """The table values READ_JS takes, `only` those named."""
         return {
             name: m.value
             for name, m in self.checks.items()
@@ -1016,11 +861,6 @@ class Records:
 
 
 def read_records(page, at, width, rec, *, page_as, raised, safe):
-    """--records' reads at `width`, on the sweep's page and the loads its
-    checks need: zoomed and with the default text size raised for
-    vault.fluid-zoom, raised for vault.label-value-stack, and with a bottom
-    inset on a phone for vault.bottom-safe-area. Adds what it finds to `rec`,
-    the sweep's accumulator."""
     args = {
         "parts": at.parts,
         "brief": at.brief,
@@ -1097,10 +937,6 @@ def read_records(page, at, width, rec, *, page_as, raised, safe):
 
 
 def records_after(browser, at, rec, page_as):
-    """The record checks read once the sweep ends: across its widths
-    (vault.card-media-stack, vault.logo-version), and at narrow widths the
-    tab panels with script on and off (vault.tabs-narrow) and each popover
-    and menu opened (vault.popover-sheet). Adds what it finds to `rec`."""
     checks = rec.checks
     widths = [w for w, _ in rec.notes]
 
@@ -1178,10 +1014,6 @@ def run(at, when):
         pages = {}
 
         def page_as(options, sizes=None):
-            """One page per set of context options, as touch, is_mobile and
-            the scale factor are fixed per context; `sizes` sets the
-            browser's default text sizes, proportional and monospace, which
-            hold for every later load in that page (docs/practice/browser-testing-and-accessibility.md)."""
             key = (tuple(sorted(options.items())), sizes)
             if key not in pages:
                 context = browser.new_context(**options)
@@ -1229,10 +1061,6 @@ def run(at, when):
             looping = max(looping, load(page, at.url, width, at.heights))
             base = measure(page, at.cta, at.focal)
             arts.append((width, base["arts"]))
-            # Text a box hides at 100% is a carousel's next slide or a
-            # truncated label, a loss only once spacing or size hides more;
-            # Residual: text cut off at 100% with no way to show it is
-            # reported by nothing.
             faults = [f for f in base["faults"] if "place" not in f]
             if is_phone(width):
                 mobile = page_as(MOBILE)
@@ -1271,11 +1099,6 @@ def run(at, when):
 
 
 def settle_focal(found, arts, focal):
-    """`found` with what one width cannot tell about a --focal art: one whose
-    file's size changes between widths (a srcset or image-set) leaves the
-    focal box's pixels naming no one file, so its crops give way to a not
-    measured finding at every width; so do the readings of an art shown at
-    no width."""
     sizes = collections.defaultdict(dict)
     for width, got in arts:
         for art in got:
@@ -1317,8 +1140,6 @@ def gating(at):
 
 
 def answers(at, runs, text_runs):
-    """Each gate question's answer, pass, fail or, for the focal box's,
-    cannot measure, or None for one not checked."""
     failed = {
         k.question for k in KINDS if any(r["kind"] == k.key for r in failing(runs))
     }
@@ -1339,13 +1160,11 @@ def answers(at, runs, text_runs):
 
 
 def failing(runs, kinds=KINDS):
-    """The ranges of a kind in `kinds` that fails its question."""
     passing = {k.key for k in kinds if not k.fails}
     return [r for r in runs if r["kind"] not in passing]
 
 
 def condition(mode):
-    """How a --text mode changes the page, in words."""
     if mode.name == "spacing":
         v = mode.value
         return (
@@ -1406,8 +1225,6 @@ def report(at, widths, runs, shots, *, text_runs, verdicts, looping, when, json_
 
 
 def record_report(at, runs, verdicts):
-    """--records' report lines: each record's answer, and its checks' faults
-    by the ranges of widths they hold over."""
     lines = [f"records, by {at.table}'s lines:"]
     modes = {**at.checks, **{n: at.modes[n] for n in at.unmet}}
     for record, verdict in verdicts.items():
@@ -1425,7 +1242,6 @@ def record_report(at, runs, verdicts):
 
 
 def listed(kinds, runs):
-    """Each kind's count and its ranges, as report lines."""
     lines = []
     for kind in kinds:
         mine = [r for r in runs if r["kind"] == kind.key]
@@ -1553,8 +1369,6 @@ def parse(argv):
             p.error(f"cannot read --parts {at.parts_file}: {exc.strerror}")
         except probe.DeclarationError as exc:
             p.error(f"--parts {at.parts_file} {exc}")
-    # Each record check the table gives, less those the round has not given
-    # what they need, which answer not judged.
     at.checks, at.unmet = {}, {}
     if at.records:
         for name, mode in at.modes.items():
@@ -1589,7 +1403,6 @@ def main(argv):
     p, at = parse(argv)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     os.makedirs(at.out, exist_ok=True)
-    # An earlier run's screenshots or report would reach the critic as this run's.
     for old in [
         *pathlib.Path(at.out).glob("layout-*-*.png"),
         pathlib.Path(at.out, "layout.json"),

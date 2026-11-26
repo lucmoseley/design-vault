@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""parts-txt.py <parts.json> <out.txt> — the parts map as the critic reads it, with file paths reduced to what a link points at."""
+"""python3 parts-txt.py <parts.json> <out.txt> — the parts map as the critic reads it, with file paths reduced to what a link points at."""
 
 import json
 import sys

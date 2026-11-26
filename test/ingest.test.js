@@ -1,7 +1,4 @@
 "use strict";
-// ingest.js (#4): screenshots from outside the vault ingested by the program itself, run from a fixture copy inside a
-// throwaway vault seeded from the validator's green fixture, with a stand-in claude at WFC_CLAUDE_BIN, so no model is called.
-// Loosen one and a run can lose images it already saved, leave gallery.json broken, or write a verdict the founder never gave.
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
@@ -11,7 +8,6 @@ const { after, test } = require("node:test");
 const { runInProcess } = require("./core-run-in-process.js");
 
 const ROOT = path.join(__dirname, "..");
-// The programs a vault copy runs: ingest.js and everything it loads.
 const PROGRAMS = ["ingest.js", "bundle.js", "validate.js", "git-read.js"];
 const SHOTS = path.join(__dirname, "fixtures", "ingest");
 const STAND_IN = path.join(SHOTS, "claude.js");
@@ -26,17 +22,11 @@ after(() => {
   for (const dir of scratch) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-// WFC_CLAUDE_BIN must name an executable; a shim written here runs the stand-in, so it needs no exec bit of its own.
 const bin = fs.mkdtempSync(path.join(os.tmpdir(), "fake-claude-"));
 scratch.push(bin);
 const CLAUDE = path.join(bin, "claude");
 fs.writeFileSync(CLAUDE, `#!${process.execPath}\nrequire(${JSON.stringify(STAND_IN)});\n`, { mode: 0o755 });
 
-/**
- * A throwaway vault seeded from the validator's green fixture, with copies of the programs beside its data/ and
- * images/; the screenshots are ingested from test/fixtures, a path outside it. `edit(gallery)`, where given, changes
- * the seeded gallery before any run.
- */
 function makeVault(edit) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ingest-")));
   scratch.push(dir);
@@ -55,9 +45,7 @@ function makeVault(edit) {
   const answersPath = path.join(dir, "answers.json");
   const callsPath = path.join(dir, "calls.jsonl");
   const env = { ...process.env, WFC_CLAUDE_BIN: CLAUDE, FAKE_CLAUDE_ANSWERS: answersPath, FAKE_CLAUDE_CALLS: callsPath };
-  // The stand-in's records of what each call was given, this run's only.
   const calls = () => (fs.existsSync(callsPath) ? fs.readFileSync(callsPath, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)) : []);
-  /** Hands the stand-in `answers`, one a call, and forgets the last run's calls. */
   const answer = (answers) => {
     fs.writeFileSync(answersPath, JSON.stringify(answers));
     fs.rmSync(callsPath, { force: true });
@@ -71,7 +59,6 @@ function makeVault(edit) {
     calls,
     read: () => JSON.parse(fs.readFileSync(galleryPath, "utf8")),
     images: () => fs.readdirSync(imagesDir).sort(),
-    /** `node ingest.js <args>` in the vault, the stand-in answering each call from `answers`: { status, stdout, stderr, calls }. */
     run: (args, answers = [extraction("Shot")]) => {
       answer(answers);
       const result = runInProcess(path.join(dir, "ingest.js"), args, { cwd: dir, env });
@@ -99,7 +86,7 @@ const shot = (name) => path.join(SHOTS, name);
 const expectedImages = (...added) => [...fs.readdirSync(FIXTURE_IMAGES), ...added].sort();
 const out = (result) => `${result.stdout}\n${result.stderr}`;
 
-test("a PNG, a JPEG and a WebP from outside the vault land under their sniffed extensions and pass the validator with fit absent", () => {
+test("a PNG, a JPEG and a WebP from outside the vault land under their sniffed extensions and pass the validator with fit absent (#4)", () => {
   const vault = makeVault();
   const run = vault.run([shot("shot.png"), shot("shot.jpg"), shot("shot.webp")], ["Shot png", "Shot jpg", "Shot webp"].map((t) => extraction(t)));
   assert.equal(run.status, 0, out(run));
@@ -158,8 +145,6 @@ test("gallery.json is rewritten after each image, so a failed extraction on imag
 test("a run killed during image 3 of 3 leaves images 1 and 2 in a gallery.json that still parses and validates, and the next run deletes the stray copy", () => {
   const vault = makeVault();
   vault.answer([extraction("Shot"), extraction("Shot"), { kill: true }]);
-  // A real spawn, not runInProcess (base §X3): the stand-in SIGKILLs the process that called it, which in process
-  // would be this test's own.
   const child = spawnSync(process.execPath, [path.join(vault.dir, "ingest.js"), shot("shot.png"), shot("shot.jpg"), shot("shot.webp")], {
     cwd: vault.dir,
     env: vault.env,
@@ -181,7 +166,6 @@ test("a run killed during image 3 of 3 leaves images 1 and 2 in a gallery.json t
 
 test("a holding copy whose run is still alive is left alone", () => {
   const vault = makeVault();
-  // This process is alive, so it stands in for a run still going.
   const live = path.join(vault.imagesDir, `ingest-${process.pid}-1.png`);
   fs.copyFileSync(shot("shot.png"), live);
   const run = vault.run([shot("shot.jpg")]);
@@ -325,8 +309,6 @@ test("--project keeps every image in the run for that project alone, drops Manta
   assert.equal(result.status, 0, result.stderr);
 });
 
-// The stand-in bills a versioned id built from the --model it was given, so the test sees which model reached
-// the call and which the log names, without a paid run.
 test("--model reaches the claude -p call for every image, and a run without it asks for sonnet", () => {
   const vault = makeVault();
   const haiku = vault.run(["--model", "haiku", shot("shot.png"), shot("shot.jpg")]);

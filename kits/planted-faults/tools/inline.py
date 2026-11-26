@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""inline.py <in.html> <out.html> <origin> <assets dir> — makes a snapshot stand alone: stylesheets inlined, fonts and images saved beside it."""
+"""python3 kits/planted-faults/tools/inline.py <in.html> <out.html> <origin> <assets dir> — makes a snapshot stand alone: stylesheets inlined, fonts and images saved beside it."""
 
 import hashlib
 import os
@@ -20,9 +20,7 @@ def fetch(u):
     return cache[u]
 
 
-ASSETS = sys.argv[
-    4
-]  # folder the assets are written to; pages reference them as ../<basename of ASSETS>/<file>
+ASSETS = sys.argv[4]
 
 
 def data_uri(u):

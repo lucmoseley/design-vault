@@ -1,7 +1,6 @@
 """The coverage ledger's stop numbers per area, by docs/coverage-ledger-method.md §5. Run: python3 ledger-stop-numbers.py
 
 Prints one line per area: area, rows, observed over Chao2 estimate, saturation median, sample coverage.
-Only a re-scan runs it, so it lives here rather than in the method doc everyone filling the ledger reads (#352); the method is #215's.
 """
 
 import json
@@ -37,10 +36,9 @@ def coverage(rows, t):
 
 
 ledger = json.load(open(Path(__file__).parent / "docs/coverage-ledger.json"))
-# #215's 2,000 orders and seed: the fixed seed lets a re-run reproduce the numbers stored in the ledger's areas.
+# #215
 rng = random.Random(215)
 by_area = defaultdict(list)
-# VG-NEW rows came from VG, the held-out source (§1): it checks the search, so it is not one of its sources.
 for r in ledger["rows"]:
     if not r["key"].startswith("VG-NEW"):
         by_area[r["area"]].append(set(r["incidence"]))

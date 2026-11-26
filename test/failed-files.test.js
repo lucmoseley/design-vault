@@ -1,6 +1,4 @@
 "use strict";
-// test/failed-files.js, the reporter test/all.sh's node --test suite runs under (#436), and test/all.sh run on named
-// files. Loosen either and a red batch names no failing file, so workflow-core's lander can neither land it nor bisect it.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
@@ -14,8 +12,6 @@ const ALL_SH = path.join(ROOT, "test", "all.sh");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "failed-files-"));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-// A node --test run under this one would report to it, not through its own reporter; and an outer run's
-// VAULT_FAILED_FILES and VAULT_FILE_SECONDS are that run's, never these cases'.
 const env = (extra) => {
   const e = { ...process.env, ...extra };
   delete e.NODE_TEST_CONTEXT;
@@ -37,17 +33,15 @@ function scratch(name) {
   fs.mkdirSync(path.join(root, "test"), { recursive: true });
   for (const f of ["all.sh", "run-lanes.sh", "failed-files.js"]) fs.copyFileSync(path.join(ROOT, "test", f), path.join(root, "test", f));
   for (const [f, body] of Object.entries(TESTS)) fs.writeFileSync(path.join(root, "test", f), body);
-  // Names all.sh lists, so a named run finds their suites.
   fs.writeFileSync(path.join(root, "test", "palette.test.py"), "import sys\nsys.exit(1)\n");
   fs.writeFileSync(path.join(root, "test", "cutout.test.py"), "print('cutout ran')\n");
   return root;
 }
 
-// all.sh's own node --test suite, as it prints it.
 const NODE = spawnSync("bash", [ALL_SH, "--plan"], { encoding: "utf8", env: env({}) }).stdout.match(/^RUN (node .*)$/m)[1];
 const plan = (...files) => spawnSync("bash", [ALL_SH, "--plan", ...files], { cwd: ROOT, encoding: "utf8", env: env({}) });
 
-test("a node --test run under the reporter writes each file with a failing test once, from the run's root", () => {
+test("a node --test run under the reporter writes each file with a failing test once, from the run's root (#436)", () => {
   const root = scratch("reporter");
   const named = path.join(dir, "reporter.failed");
   const r = spawnSync("bash", ["-c", `${NODE} "$@"`, "node", ...Object.keys(TESTS).map((f) => `test/${f}`)],

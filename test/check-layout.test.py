@@ -1,23 +1,3 @@
-"""Pins check-layout.py's detectors to exact width ranges (#78): python3 test/check-layout.test.py
-
-`ranges`, the sweep's widths and the viewport meta's faults are tested on
-synthetic input. Each detector is
-run end to end on a fixture whose fault holds over a known range of widths,
-swept over a window around it so the suite stays quick. It is a suite of the
-commit gate (test/all.sh): loosening a range or a message here lets a builder's
-sweep pass a layout fault to the critic again.
-
-The --text modes (#305) are pinned the same way: `text_faults`, `zoomed` and
-the table on synthetic input, then text-spacing-fault.html, whose every plant
-names the record it fails, and text-spacing-clean.html, which must report
-nothing.
-
-The --records checks (#311) are pinned on synthetic input where they merge
-widths or judge numbers, then end to end: tier01-fault.html, where each plant
-carries the records it fails and the run must fail each on its plant, and
-tier01-clean.html, where every record must pass with no fault.
-"""
-
 import argparse
 import concurrent.futures
 import datetime
@@ -48,16 +28,12 @@ layout = siblings.load(SCRIPTS, "check-layout.py")
 SCRATCH = tempfile.TemporaryDirectory()
 TEXT = ["--widths", "620-700", "--step", "40"]
 ALL_MODES = ["--text", "spacing", "--text", "zoom", "--text", "size"]
-# A table whose values change nothing on the fault page (no plant there sets a
-# line height under 1): every mode must then report nothing.
 NO_CHANGE = os.path.join(SCRATCH.name, "no-change.table")
 pathlib.Path(NO_CHANGE).write_text(
     "vault.text-spacing | spacing | line-height 1, after-paragraph 0, letter-spacing 0, word-spacing 0\n"
     "vault.fluid-type | zoom | 1\n"
     "vault.fluid-type | size | 1\n"
 )
-# Five widths across the phone, tablet and desktop bands, both sides of each
-# record's bounds on the tier01 pages.
 RECORDS = ["--widths", "390-1400", "--step", "310", "--records"]
 RECORD_FACTS = [
     "--parts",
@@ -65,9 +41,7 @@ RECORD_FACTS = [
     "--brief",
     "kind=site",
 ]
-# The focal box focal-art.svg draws, in its own pixels.
 FOCAL_BOX = "1100,350,200,200"
-# name: (fixture, extra arguments)
 RUNS = {
     "overflow": ("overflow.html", ["--widths", "320-620"]),
     "nested": ("nested.html", ["--widths", "320-620"]),
@@ -195,8 +169,9 @@ RUNS = {
         ],
     ),
 }
-# Each run is a browser; four at once keeps the commit gate quick on a shared machine.
-PARALLEL = 4
+PARALLEL = 4  # guess, #501
+SWEEP_S = 600  # guess, #501
+REFUSED_S = 120  # guess, #501
 DONE = {}
 
 
@@ -211,10 +186,9 @@ def setUpModule():
 def sweep(name):
     fixture, extra = RUNS[name]
     out = os.path.join(SCRATCH.name, name)
-    # A guess at the slowest sweep, with room to spare: it loads the page once per viewport.
     r = child.run(
         [sys.executable, SCRIPT, os.path.join(FIXTURES, fixture), "--out", out, *extra],
-        timeout=600,
+        timeout=SWEEP_S,
     )
     found = None
     if os.path.exists(os.path.join(out, "layout.json")):
@@ -244,7 +218,7 @@ class Ranges(unittest.TestCase):
     def fault(self, kind, subject, detail="d"):
         return {"kind": kind, "subject": subject, "detail": detail}
 
-    def test_consecutive_widths_join_and_a_gap_splits(self):
+    def test_consecutive_widths_join_and_a_gap_splits_78(self):
         a = self.fault("scroll", "div.a")
         found = [(320, [a]), (325, [a]), (330, []), (335, [a])]
         self.assertEqual(
@@ -291,8 +265,6 @@ class Ranges(unittest.TestCase):
 
 
 class Zoom(unittest.TestCase):
-    """What keeps a phone from zooming, read from the viewport meta as W3C ACT rule b4f0c3 reads it."""
-
     def test_each_value_is_judged_as_the_act_rule_judges_it(self):
         cases = {
             None: [],
@@ -339,8 +311,7 @@ class Scale(unittest.TestCase):
 
 
 def run_it(*args):
-    # A guess, with room to spare: a refused argument exits before any browser starts.
-    return child.run([sys.executable, SCRIPT, *map(str, args)], timeout=120)
+    return child.run([sys.executable, SCRIPT, *map(str, args)], timeout=REFUSED_S)
 
 
 class Arguments(unittest.TestCase):
@@ -409,7 +380,6 @@ class Arguments(unittest.TestCase):
 
 class Detectors(unittest.TestCase):
     def fault(self, name, kind):
-        """The run's one range of this kind, once the run exited 1 and printed it."""
         code, stdout, stderr, found, _ = DONE[name]
         self.assertEqual(code, 1, stdout + stderr)
         [held] = [r for r in found["ranges"] if r["kind"] == kind]
@@ -735,7 +705,6 @@ class TextFaults(unittest.TestCase):
             "faults": [
                 self.fault("clip", "a", 1, 0.53),
                 self.fault("clip", "b", 2, 0.4),
-                # The same label as a, but another element.
                 self.fault("clip", "a", 3, 0.2),
                 self.fault("reveal", "e", 4, 0.3),
                 self.fault("overlap", "b"),
@@ -852,7 +821,7 @@ class Table(unittest.TestCase):
 
 
 class TextModes(unittest.TestCase):
-    def test_the_fault_page_names_every_plant_and_fails_text_spacing(self):
+    def test_the_fault_page_names_every_plant_and_fails_text_spacing_305(self):
         code, stdout, stderr, found, _ = DONE["spacing-fault"]
         self.assertEqual(code, 1, stdout + stderr)
         page = pathlib.Path(FIXTURES, "text-spacing-fault.html").read_text()
@@ -958,7 +927,6 @@ class TextModes(unittest.TestCase):
             {"spacing": [], "zoom": [], "size": []},
         )
         self.assertIn("at 100% browser zoom", stdout)
-        # Chromium's own defaults, 16 px and 13 px, times each table's factor.
         self.assertEqual(found["text"]["size"]["default_sizes"], [16, 13])
         self.assertEqual(
             DONE["spacing-fault"][3]["text"]["size"]["default_sizes"], [32, 26]
@@ -977,7 +945,6 @@ records = layout.records
 
 
 def record_modes():
-    """{record: [mode…]} from the table's record lines."""
     out = {}
     for m in layout.parse_table(pathlib.Path(layout.TABLE).read_text()).values():
         if m.name in records.CHECKS:
@@ -1047,13 +1014,10 @@ class RecordUnits(unittest.TestCase):
             def text(rid):
                 return re.search(rf"### {re.escape(rid)}\n((?:- .*\n)*)", rules)[1]
 
-            # A record whose applies-when takes its widths from another, as
-            # vault.side-pane from vault.panes-by-width, reads that one's too.
             record = text(fields[0])
             applies = re.search(r"- applies-when: (.*)", record)[1]
             record += "".join(text(r) for r in re.findall(r"vault\.[a-z-]+", applies))
             for n in map(float, re.findall(r"\d+(?:\.\d+)?", fields[2])):
-                # As written, as a percentage (1.25 as 125), or in words.
                 said = any(
                     re.search(rf"(?<![\d.]){re.escape(f'{x:g}')}(?![\d])", record)
                     for x in (n, n * 100)
@@ -1080,7 +1044,7 @@ class RecordUnits(unittest.TestCase):
         self.assertEqual(records.missing("nav-place", {}, {}), "no --brief kind= given")
         self.assertIsNone(records.missing("card-media", {"card": ".card"}, {}))
 
-    def test_each_record_takes_fail_then_not_judged_then_pass_then_no_match(self):
+    def test_each_record_takes_fail_then_not_judged_then_pass_then_no_match_311(self):
         mode = layout.Mode
         lines = {
             "fold": mode("vault.a", "fold", None),
@@ -1118,13 +1082,13 @@ class RecordUnits(unittest.TestCase):
             }
 
         blocks = [
-            block(6, 16, 60),  # body, in range
-            block(6, 16, 45),  # body, short of 50
-            block(6, 16, 45),  # in columns: 40-50
-            block(6, 16, 45),  # fills its screen: no floor
-            block(4, 32, 76),  # large: 75 or fewer
-            block(3, 16, 81),  # short passage: 80 or fewer
-            block(6, 16, 30, full=False),  # a last line short is no fault
+            block(6, 16, 60),
+            block(6, 16, 45),
+            block(6, 16, 45),
+            block(6, 16, 45),
+            block(4, 32, 76),
+            block(3, 16, 81),
+            block(6, 16, 30, full=False),
         ]
         facts = [
             {"columns": c, "fills": f}
@@ -1223,7 +1187,6 @@ class RecordUnits(unittest.TestCase):
 
 
 def plants(fixture):
-    """{record: [plant id…]} from a fixture's data-record marks."""
     planted = {}
 
     class Plants(html.parser.HTMLParser):
@@ -1260,7 +1223,6 @@ class Records(unittest.TestCase):
         self.assertEqual(sorted(planted), sorted(record_modes()))
         got = self.assert_each_plant_fails("records-fault", planted)
         self.assertEqual(got["answers"], {r: "fail" for r in record_modes()})
-        # Phone-only checks judge under the records' 600 px, not the 767 px phone band.
         self.assertEqual(
             [(r["from"], r["to"]) for r in got["ranges"] if r["kind"] == "visible-nav"],
             [(390, 390)],

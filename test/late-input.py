@@ -1,25 +1,12 @@
-"""check-flow.py, with each pointer event reaching the page late: a press
-LATE_PRESS_MS, any other LATE_MOVE_MS; and with the page's main thread held
-BUSY_RELEASE_MS at each release, before the page's own handler runs:
-python3 test/late-input.py <check-flow args>
-
-check-flow-records.test.py runs the clean page's drag-release through it.
-Playwright's mouse and the DevTools protocol's mouse events are
-both delayed here, in the driver, since what a load costs a fling is the
-time between the events it sends; slowing the page's own CPU (DevTools'
-CPU throttling) would delay its handlers, not when the throw reaches it.
-"""
-
 import os
 import sys
 import time
 
 from playwright.sync_api import CDPSession, Mouse
 
-# The pause after a press, in ms: the 400 ms that reproduced #478's fault
-# line; a guess at what a load average of 17 cost.
+# measured 400 ms reproduced the fault line, #478
 LATE_PRESS_MS = 400
-# The pause after any other pointer event, in ms: a guess.
+# guess, #478
 LATE_MOVE_MS = 60
 # measured: turned the clean card back in 10 of 10 flings before the fix (#510)
 BUSY_RELEASE_MS = 40

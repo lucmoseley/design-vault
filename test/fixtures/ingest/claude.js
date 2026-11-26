@@ -1,12 +1,4 @@
 "use strict";
-// Test support for test/ingest.test.js: a stand-in for `claude -p`, reached through WFC_CLAUDE_BIN, so no model is
-// called. Each call appends a record of what it was given to the JSON-lines file FAKE_CLAUDE_CALLS — its argv, the
-// --model, the prompt, the image path the prompt names and whether that file existed, and the entry ids then in
-// data/gallery.json under its cwd, the vault root — and answers with the next entry of the JSON array FAKE_CLAUDE_ANSWERS,
-// the last one again once they run out. An answer is an extraction, sent as `claude -p` sends one and billed to
-// `claude-<model>-9`; `{ "fail": "<message>" }`, said on stderr with exit 1; or `{ "kill": true }`, which SIGKILLs
-// the process that called it.
-// node --test with no arguments also loads this file as a test file; with FAKE_CLAUDE_ANSWERS unset it does nothing.
 const fs = require("node:fs");
 const path = require("node:path");
 

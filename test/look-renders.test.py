@@ -1,15 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/look-renders.py (#228): python3 test/look-renders.test.py
-
-The gate critics answer vault.contacts-look and vault.curves-look from these
-renders. Drop a scale, crop off the contact, or magnify by drawing again
-rather than repeating pixels, and a critic judges a render the question did
-not ask for; lose the bend and it judges the wrong part of the curve. Lose
-#259's cases and a chained build is rendered only to its first link, and a
-staged one at a different moment at each scale. Lose #331's round trip, on a
-page or on a bare SVG file (#354), and check-curves.js --contacts hands this
-script a contact it refuses or crops somewhere else.
-"""
-
 import json
 import os
 import shlex
@@ -23,7 +11,7 @@ from PIL import Image
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look-renders.py"
@@ -43,12 +31,11 @@ SIZE = 16
 
 
 def run(*args):
-    # A guess: the contacts run loads the fixture six times at three scales.
+    # guess, #501
     return child.run([sys.executable, SCRIPT, *args], timeout=180)
 
 
-# Runs argv[2:] as a script once argv[1] is made unimportable. Such a run stops
-# before any browser starts; its timeout, in s, is a guess, unmeasured.
+# guess, #501
 BLOCKED_RUN_S = 60
 BLOCKED = (
     "import runpy, sys; sys.modules[sys.argv[1]] = None; sys.argv = sys.argv[2:]; "
@@ -57,7 +44,6 @@ BLOCKED = (
 
 
 def without(package, *args):
-    """The script run with `package` unimportable, as on a machine that lacks it (#256)."""
     return subprocess.run(
         [sys.executable, "-c", BLOCKED, package, SCRIPT, *args],
         capture_output=True,
@@ -108,7 +94,7 @@ class Contacts(unittest.TestCase):
     def setUp(self):
         self.assertEqual(self.proc.returncode, 0, self.proc.stdout + self.proc.stderr)
 
-    def test_every_contact_is_cropped_at_every_scale_and_frame_magnified_4x(self):
+    def test_every_contact_is_cropped_at_every_scale_and_frame_magnified_4x_228(self):
         for name in ("gap", "clean", "round", "moving"):
             for ms in ("0", "1000"):
                 for scale in (1, 2, 3):
@@ -121,7 +107,6 @@ class Contacts(unittest.TestCase):
         for scale in (1, 2, 3):
             gap = pixels(os.path.join(self.out, f"gap-0ms-{scale}x.png"))
             centre = SIZE * scale * 4 // 2
-            # The gap is the one CSS px left of the contact, so it ends at the centre.
             self.assertEqual(
                 white_columns(gap), list(range(centre - scale * 4, centre)), scale
             )
@@ -134,7 +119,6 @@ class Contacts(unittest.TestCase):
             h, w, _ = img.shape
             blocks = img.reshape(h // 4, 4, w // 4, 4, 3)
             self.assertTrue((blocks == blocks[:, :1, :, :1]).all(), scale)
-            # The circles' edges are anti-aliased, so a repeat is not a flat crop.
             self.assertGreater(
                 len(np.unique(blocks[:, 0, :, 0].reshape(-1, 3), axis=0)), 4
             )
@@ -163,12 +147,12 @@ class Contacts(unittest.TestCase):
                 self.assertLessEqual(-(-w // 28) * -(-h // 28), 1568, name)
 
 
-# check-curves.js --contacts starts no browser; its timeout, in s, is a guess, unmeasured.
+# guess, #501
 CURVES_RUN_S = 60
 
 
 class ContactsFromCheckCurves(unittest.TestCase):
-    def test_each_printed_contact_is_taken_unchanged_and_cropped_at_the_gap(self):
+    def test_each_printed_contact_is_taken_unchanged_and_cropped_at_the_gap_331(self):
         self.round_trip(os.path.join(FIXTURES, "drawn-contacts.html"), 945)
 
     def test_a_contact_on_a_bare_svg_file_is_cropped_there_too(self):  # #354
@@ -183,7 +167,6 @@ class ContactsFromCheckCurves(unittest.TestCase):
             check=False,
         )
         self.assertEqual(listed.returncode, 1, listed.stdout + listed.stderr)
-        # Each contact line ends with its --contact as one shell word.
         words = [
             shlex.split(line.rsplit(" --contact ", 1)[1])
             for line in listed.stdout.splitlines()
@@ -201,8 +184,6 @@ class ContactsFromCheckCurves(unittest.TestCase):
             for scale in (1, 2, 3):
                 crop = pixels(os.path.join(out, f"{name}-0ms-{scale}x.png"))
                 gap = white_columns(crop)
-                # One CSS px of white, magnified 4x, within a CSS px of the centre:
-                # the clip rounds a half-pixel centre at 1x.
                 self.assertEqual(len(gap), 4 * scale, scale)
                 self.assertEqual(gap, list(range(gap[0], gap[0] + 4 * scale)), scale)
                 middle = (gap[0] + gap[-1] + 1) / 2
@@ -238,13 +219,12 @@ class Bends(unittest.TestCase):
             with open(os.path.join(out, "renders.json"), encoding="utf8") as fh:
                 bends = json.load(fh)["bends"]
             self.assertEqual(len(bends), 1, bends)
-            # Within 0.05 CSS px, a twentieth of the 1 px a gap at 1x is.
+            # guess, #501
             self.assertAlmostEqual(bends[0]["at"][0], 160, delta=0.05)
             self.assertAlmostEqual(bends[0]["at"][1], 60, delta=0.05)
             self.assertAlmostEqual(bends[0]["radius"], 5, delta=0.05)
             shot = os.path.join(out, bends[0]["file"])
             self.assertEqual(size(shot), (32 * 8, 32 * 8))
-            # The vertex's stroke crosses the shot's centre column.
             self.assertLess(pixels(shot)[:, 128].min(), 64)
 
     def test_every_shape_that_curves_gets_its_bend_where_the_page_draws_it(self):
@@ -273,8 +253,6 @@ class Bends(unittest.TestCase):
                     bends[shape]["radius"], radius, delta=0.05, msg=shape
                 )
             self.assertIn(bends["ellipse#oval"]["at"], ([130, 50], [170, 50]))
-            # Stretched twice as far across as down: a uniform scale puts the
-            # radius at 3.54.
             self.assertEqual(bends["path#parabola"]["at"], [410, 155])
             self.assertEqual(bends["polyline#run"]["at"], [79.5, 153.5])
             self.assertEqual(bends["polyline#run"]["segments"], 5)
@@ -337,11 +315,9 @@ class Times(unittest.TestCase):
 
 
 class StagedBuilds(unittest.TestCase):
-    """#259: a build carried on by finish events, or started in stages."""
-
     FRAMES = os.path.join(HERE, "fixtures", "frames")
 
-    def test_a_staggered_start_is_drawn_at_one_place_at_every_scale(self):
+    def test_a_staggered_start_is_drawn_at_one_place_at_every_scale_259(self):
         with tempfile.TemporaryDirectory() as out:
             proc = run(
                 "contacts", os.path.join(self.FRAMES, "staggered.html"),

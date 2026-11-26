@@ -1,16 +1,3 @@
-"""Tests check-flow.py --records and motion-records.py (#318): python3 test/check-flow-records.test.py
-
-Each record check's judgement and the flash analysis are tested on synthetic
-readings, so each threshold is pinned without a browser; then one run over
-test/fixtures/flow/tier01-fault.html names every planted fault, one per
-record, and one over tier01-clean.html names none. vault.pause, which
-check-access.py answers, is run on both pages through its own pause_answer.
---records with numpy or Pillow shadowed by a package that will not import
-exits 3 before any browser starts, naming it.
-A break here means a design round's motion records answer wrongly: a page
-that scrolljacks, strobes or replays its parallax passes, or a clean one fails.
-"""
-
 import concurrent.futures
 import contextlib
 import io
@@ -25,7 +12,7 @@ import numpy as np
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 FLOW = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
@@ -48,13 +35,12 @@ with open(flow.TABLE, encoding="utf8") as fh:
 V = {line.mode: line.value for line in LINES}
 
 
-# How long a --records run that exits before any browser starts may take, in
-# s: a guess, far past the under 1 s it takes on this machine (2026-11-20).
+# guess, #477
 SHADOWED_TIMEOUT_S = 60
 
 
 class Table(unittest.TestCase):
-    def test_every_check_has_a_line_and_a_run(self):
+    def test_every_check_has_a_line_and_a_run_318(self):
         self.assertEqual({line.mode for line in LINES}, set(records.CHECKS))
         self.assertEqual(set(flow.RUNS), set(records.CHECKS))
 
@@ -107,8 +93,6 @@ class Table(unittest.TestCase):
     def test_records_without_numpy_or_pillow_exit_3_naming_it_and_its_install_477(
         self,
     ):
-        # #477 (run_browser() read the ImportError as Playwright's); its
-        # positive pair is the Pages runs, which find both installed.
         for package in ("numpy", "PIL"):
             with self.subTest(package=package):
                 done = self.shadowed(package)
@@ -118,9 +102,6 @@ class Table(unittest.TestCase):
                 )
 
     def shadowed(self, package):
-        """check-flow.py --records run with `package` shadowed on PYTHONPATH by
-        one that will not import: an installed package cannot be removed for
-        one test, so the shadow stands in for its absence."""
         with tempfile.TemporaryDirectory() as shadow:
             os.mkdir(os.path.join(shadow, package))
             with open(os.path.join(shadow, package, "__init__.py"), "w") as fh:
@@ -241,7 +222,6 @@ class Judgements(unittest.TestCase):
     def test_a_layer_smoothing_its_own_scroll_motion_is_no_replay(self):
         both = {"a": ["transform", "translate", "top"]}
         self.assertEqual(records.replay_faults(both, both, ["a"]), [])
-        # An opacity first run on the second sweep is no replay of the first.
         later = {"a": ["transform", "opacity"]}
         self.assertEqual(records.replay_faults(both, later, ["a"]), [])
 
@@ -341,10 +321,8 @@ class Judgements(unittest.TestCase):
         self.assertEqual(records.release_velocity(still, "top", 100), 0)
 
     def test_release_velocity_reads_only_the_horizon_before_the_release(self):
-        # A press held 400 ms, then a quick throw: the press is past the horizon.
         release = {"at": 460, "moves": [[0, 0, 0], [400, 0, 0], [450, 50, 0]]}
         self.assertEqual(records.release_velocity(release, "left", 100), 1000)
-        # Let go 200 ms after the last move: the pointer had stopped.
         late = {"at": 650, "moves": release["moves"]}
         self.assertEqual(records.release_velocity(late, "left", 100), 0)
 
@@ -356,8 +334,6 @@ class Judgements(unittest.TestCase):
         self.assertTrue(records.picks_another_snap([300], slow, 0.998))
 
     def test_a_slow_fling_still_names_a_bounce_but_not_where_it_settles(self):
-        # Let go at 260 px at 10 px/s: the projection picks 300, the snap
-        # point it was let go nearest, so settling at 0 is not judged.
         self.assertEqual(self.drag(0, [260, 200, 0], velocity=-10), [])
         bounce = self.drag(300, [260, 320, 300], velocity=10)
         self.assertEqual(len(bounce), 1)
@@ -414,7 +390,6 @@ class Judgements(unittest.TestCase):
         self.assertEqual(
             got, {"r1": "fail", "r2": "not judged", "r3": "pass", "r4": "no match"}
         )
-        # A record with one check seen and one that could not judge is not judged.
         both = [
             records.Line("r5", "parallax", None),
             records.Line("r5", "replay", None),
@@ -443,7 +418,6 @@ class Flash(unittest.TestCase):
     v = V["flash"]
 
     def test_three_flashes_a_second_pass_and_more_fail(self):
-        # 3.5 a second is seven transitions in each window: the first count over three flashes.
         for hz, fails in ((3, False), (3.5, True), (10, True)):
             with self.subTest(hz=hz):
                 self.assertEqual(
@@ -461,7 +435,6 @@ class Flash(unittest.TestCase):
     def test_a_saturated_red_flash_with_little_luminance_change_fails_as_a_red_flash(
         self,
     ):
-        # Red and blue: far apart in u′v′, under 0.1 apart in luminance.
         rgb, t = strobe(10, colours=((0.8, 0, 0), (0, 0, 0.8)))
         self.assertEqual(
             {f["kind"] for f in records.flash_faults(rgb, t, 16, self.v)}, {"red"}
@@ -480,8 +453,6 @@ class Flash(unittest.TestCase):
 
 
 def table_of(where, *checks):
-    """A table of check-flow.table's own lines for `checks` alone, so a test of
-    one check runs only that one."""
     path = os.path.join(where, "-".join(checks) + ".table")
     with (
         open(flow.TABLE, encoding="utf8") as src,
@@ -498,14 +469,11 @@ def table_of(where, *checks):
     return path
 
 
-# How long one page's run may take, in s: a guess, about three times the
-# fault page's whole-table run on this machine (81 s, 2026-11-19).
+# guess, #318
 RUN_TIMEOUT_S = 240
 
 
 def run(page, out, *extra, script=FLOW, parts="tier01-parts.json"):
-    """check-flow.py --records on `page` as a child, or `script` standing in
-    for it: its exit code, its records and its stdout."""
     done = child.run(
         [
             sys.executable,
@@ -524,7 +492,6 @@ def run(page, out, *extra, script=FLOW, parts="tier01-parts.json"):
         return done.returncode, json.load(fh)["records"], done.stdout
 
 
-# Each record's plant on the fault page, by the subject its fault names.
 PLANTS = {
     "vault.native-scroll": ["the page"],
     "vault.parallax": ["h2.drift", "div.layer.reveal"],
@@ -536,8 +503,6 @@ PLANTS = {
 }
 
 
-# Each record's way out for its plants on the fault page, as its output
-# prints it.
 FIXES = {
     "vault.native-scroll": ["drop the handler's preventDefault()"],
     "vault.parallax": [
@@ -552,8 +517,6 @@ FIXES = {
         "stop auto-advancing once the visitor changes frame",
     ],
     "vault.flash-limit": ["flash at most 3 times in any second"],
-    # Which of the card's faults its fling meets turns on the fling's speed,
-    # so their fixes are pinned in Judgements.
     "vault.drag-release": [],
     "vault.motion-frequency": ["end it under 150 ms, or drop it"],
     "vault.slow-update": ["move it inside @media (update: fast)"],
@@ -563,8 +526,6 @@ FIXES = {
 class Pages(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Every page's run, two at a time: each spends most of its time
-        waiting on the page's own clock, not on the machine."""
         cls.tmp = tempfile.TemporaryDirectory()
         where = cls.tmp.name
         runs = {
@@ -672,23 +633,22 @@ class Pages(unittest.TestCase):
             with self.subTest(record=rid):
                 self.assertEqual(got[rid]["answer"], "pass", out)
 
-    def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own(self):
-        """#478: the fault card moves only along its width. Its pair is the clean page's
-        drag-release, judged along both axes in
-        test_the_clean_page_names_nothing."""
+    def test_scrolling_a_card_under_the_pointer_is_no_move_of_its_own_478_paired_with_the_clean_page_names_nothing(
+        self,
+    ):
         _, got, out = self.fault
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
-    def test_late_input_is_not_read_into_the_clean_pages_fling(self):
-        """#478, #510. Its pair is the fault
-        page's drag-release, failed in test_the_fault_page_names_every_plant."""
+    def test_late_input_is_not_read_into_the_clean_pages_fling_478_510_paired_with_the_fault_page_names_every_plant(
+        self,
+    ):
         code, got, out = self.runs["late"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
 
-    def test_a_settle_from_rest_on_the_projected_snap_passes_the_script(self):
-        """#428. Its pair is the fault page's .card, failed in
-        test_the_fault_page_names_every_plant."""
+    def test_a_settle_from_rest_on_the_projected_snap_passes_the_script_428_paired_with_the_fault_page_names_every_plant(
+        self,
+    ):
         code, got, out = self.runs["rest"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
@@ -763,7 +723,7 @@ class Pages(unittest.TestCase):
 
 
 class Pause(unittest.TestCase):
-    def test_check_access_answers_the_pause_plant(self):
+    def test_check_access_answers_the_pause_plant_545(self):
         access = siblings.load(SCRIPTS, os.path.basename(ACCESS))
         from playwright.sync_api import sync_playwright
 
@@ -785,8 +745,6 @@ class Pause(unittest.TestCase):
             [f["subject"] for f in faults],
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
         )
-        # Its live dot blinks forever and its carousel turns on a timer, neither
-        # declared, so past 5 s neither can be measured (#545).
         tried = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
         self.assertEqual(
             got["clean"],

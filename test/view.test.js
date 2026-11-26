@@ -1,7 +1,4 @@
 "use strict";
-// test/view.test.js — what the library page shows and copies (view.js, #84): filters and counts, sort, view hash
-// and the copied briefs, run in-process on a small made-up library so each case names the references it expects.
-// Loosen one and a page that hides references, miscounts, loses a shared link or drops a brief line passes.
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { compile } = require("../search.js");
@@ -47,7 +44,7 @@ test("a reference kept for another project is left out of the library", () => {
   assert.deepEqual(ids(V.visibleEntries(view({ project: "acme" }))), ["d", "b", "c", "a"]);
 });
 
-test("each pick narrows the view, and picks in different ways combine", () => {
+test("each pick narrows the view, and picks in different ways combine (#84)", () => {
   assert.deepEqual(ids(V.visibleEntries(view({ pick: { look: "flat" } }))), ["c", "a"]);
   assert.deepEqual(ids(V.visibleEntries(view({ pick: { part: "footer" } }))), ["b", "c"]);
   assert.deepEqual(ids(V.visibleEntries(view({ pick: { motion: "scroll" } }))), ["b"]);

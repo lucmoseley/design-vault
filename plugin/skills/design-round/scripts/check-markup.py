@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""check-markup.py — the markup-semantics adapter (#307): runs the vendored
-axe-core in a rendered page and answers each rule record its table maps to
-axe rule ids, as #250 ruled for this family.
+"""python3 check-markup.py <page> --out DIR [--table FILE] [--parts FILE] [--part NAME=SELECTOR]
 
-The page is loaded afresh at phone and
-desktop width, as check-layout.py loads it, and axe runs on it at each.
+Runs the vendored axe-core in a rendered page and answers each rule record its
+table maps to axe rule ids. The page is loaded afresh at phone and desktop
+width, and axe runs on it at each.
 
 THE TABLE, by default check-markup.table beside this script, gives each line
 as fields split by " | ". Blank lines and lines starting with # are skipped.
@@ -20,7 +19,7 @@ as fields split by " | ". Blank lines and lines starting with # are skipped.
 A rule id axe does not know is refused before any record is answered. Rules axe
 tags experimental run where a line names them.
 
---parts is the building session's parts declaration (design-round §1c, #274); --part gives one
+--parts is the building session's parts declaration (design-round §1c); --part gives one
 part's selector and wins. A part: line whose part has no selector is not
 judged, and goes to the look critics.
 
@@ -29,7 +28,7 @@ width, else not judged where its part has no selector, else no match where
 none of its rules passed or failed anything on the page, else pass. What axe
 could not decide ("incomplete", its needs-review list) is printed under its
 record as review and kept in the JSON, and never changes an answer and
-never goes to a critic (#250). DIR/markup.json holds every
+never goes to a critic. DIR/markup.json holds every
 finding; an earlier run's is deleted.
 
 EXITS 0 no miss / 1 a miss (each printed) / 2 the arguments or the table are
@@ -67,10 +66,7 @@ WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
 RULE_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 PART = re.compile(r"part:(\S+)")
 
-# How much of each node's markup a finding keeps: a guess, enough to show its
-# opening tag and attributes.
-HTML_CHARS = 200
-# A part: line's result where the part has no selector to read.
+HTML_CHARS = 200  # guess, #501
 NO_PART = object()
 
 Line = collections.namedtuple("Line", "id rules part text")
@@ -148,8 +144,6 @@ def known(page):
 
 
 def run_axe(page, rules, selector):
-    """axe's result for `rules` on the loaded page, or None where `selector`
-    selects nothing."""
     return page.evaluate(
         RUN_JS,
         {"rules": list(rules), "selector": selector, "htmlChars": HTML_CHARS},
@@ -157,8 +151,6 @@ def run_axe(page, rules, selector):
 
 
 def axe_on(page, rules, selector):
-    """run_axe() on a page the vendored axe may not yet be loaded in, for a
-    script that drives the page into a state first (#312)."""
     if not page.evaluate("() => !!window.axe"):
         with open(AXE, encoding="utf8") as fh:
             page.evaluate(fh.read())
@@ -166,8 +158,6 @@ def axe_on(page, rules, selector):
 
 
 def sweep(browser, url, *, table, parts, source, timeout):
-    """The loaded axe's version, and {width: {record id: run_axe()'s result,
-    or NO_PART}} at each width."""
     page = browser.new_page()
     page.set_default_timeout(timeout)
     out = {}
@@ -190,9 +180,6 @@ def sweep(browser, url, *, table, parts, source, timeout):
 
 
 def findings(table, swept):
-    """One finding per record id, in table order; a miss or review entry's
-    why and summary are axe's one-line help, then what it says to fix on
-    that node."""
     out = []
     for line in table.lines:
         f = {

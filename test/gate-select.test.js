@@ -1,8 +1,4 @@
 "use strict";
-// gate.js list as the selector (#273): each reader is handed only the records for its asset, the candidate's parts and its
-// stage. Loosen it and the builder is handed treatment rules for parts it never drew, a staged record reaches an agent
-// before its load test, a rule whose script is owed reaches nobody, or a gate critic is handed a list past the length
-// where recall falls.
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { test } = require("node:test");
@@ -16,7 +12,6 @@ const { writeText, buildCopy } = gateScratch("gate-select-");
 const WALK = "design-critique/references/house-principles.md#the-function-walk";
 const ORDER = "design-critique/references/house-principles.md#dependency-order";
 
-/** One record in rules.md's form, from a compact spec; a project's record with no stage gives the eight fields alone. */
 function record(id, { by, stage, when = "web-surface", status = "live", script, parts, reasons = WALK }) {
   const owner = id.slice(0, id.indexOf("."));
   const lines = [
@@ -60,7 +55,6 @@ const GATE = gateFile("gate.md", [
 ]);
 
 const list = (args, files = [GATE]) => run("list", ...args, ...files);
-// The ids a printout numbers, in its order.
 const ids = (out) => [...out.matchAll(/^\d+\. (\S+?)(?: \([^)]*\))?:/gm)].map((m) => m[1]);
 const ok = (r) => {
   assert.equal(r.status, 0, r.out + r.err);
@@ -76,7 +70,7 @@ const PARTS_MAP = writeText("parts.json", JSON.stringify({
 }));
 const builder = (stage, ...args) => ["--asset", "web-surface", "--reader", "builder", "--stage", stage, ...args];
 
-test("the gate list keeps its look, script and code split, and a record whose script is owed joins the look questions marked script owed", () => {
+test("the gate list keeps its look, script and code split, and a record whose script is owed joins the look questions marked script owed (#273)", () => {
   const out = ok(list(["--asset", "web-surface"]));
   assert.deepEqual(ids(out), ["vault.walk-look", "vault.radius-look", "vault.measure-owed", "vault.walk-code", "vault.contrast-script", "vault.focus-script", "vault.reflow-script"]);
   assert.match(out, /^3\. vault\.measure-owed \(script owed\): Does vault\.measure-owed hold\?$/m);
@@ -176,29 +170,24 @@ test("the script reader gives every record a script answers with its script, an 
   assert.match(out, /^4\. vault\.measure-owed \(script owed\): /m);
 });
 
-// A gate of `function` function or role look questions and `treatment` treatment or owed value ones.
 const longGate = (functionCount, treatmentCount) => gateFile("long.md", [
   ...Array.from({ length: functionCount }, (_, i) => [`vault.coarse-${i}`, { by: "look", stage: i % 2 ? "role" : "function" }]),
   ...Array.from({ length: treatmentCount }, (_, i) => [`vault.fine-${i}`, i % 2 ? { by: "script", stage: "value", script: "owed" } : { by: "look", stage: "treatment" }]),
 ]);
 
-// longGate()'s ids from `prefix` in the order a pass asks them: its first stage's, the even ones, then its second's.
 const passOrder = (prefix, count) => {
   const all = Array.from({ length: count }, (_, i) => `vault.${prefix}-${i}`);
   return [...all.filter((_, i) => i % 2 === 0), ...all.filter((_, i) => i % 2)];
 };
 
-// A directory of gate files, one per area as the vault's store keeps them, from { <area>: [[id, spec], ...] }; its path.
 function areaGate(areas) {
   const [first, ...rest] = Object.entries(areas);
   const dir = path.dirname(gateFile(`${first[0]}.md`, first[1]));
   for (const [area, records] of rest) fs.writeFileSync(path.join(dir, `${area}.md`), gateText(area, records));
   return dir;
 }
-// `count` look records at `stage` in one area, named `<area>-<stage>-<i>`.
 const looks = (area, stage, count) => Array.from({ length: count }, (_, i) => [`vault.${area}-${stage}-${i}`, { by: "look", stage }]);
 const named = (area, stage, count) => looks(area, stage, count).map(([id]) => id);
-// Each pass of a printout as { label, ids }, in order.
 const passesOf = (out) => out.split(/^Pass \d+, /m).slice(1).map((p) => ({ label: p.slice(0, p.indexOf(":\n")), ids: ids(p) }));
 
 test("a list of 21 look questions runs in 2 passes, its function and role questions before its treatment and value ones, and 20 stay one pass", () => {
@@ -210,7 +199,6 @@ test("a list of 21 look questions runs in 2 passes, its function and role questi
     { label: "function and role: function: long; role: long; no stage: project", ids: [...passOrder("coarse", 11), "demo.unstaged"] },
     { label: "treatment and value, once the function and role passes' fixes land: treatment: long; value: long", ids: passOrder("fine", 9) },
   ]);
-  // 21 in one stage and area: two passes, as even as they can be.
   const one = ok(list(["--asset", "web-surface", "--look"], [areaGate({ walk: looks("walk", "function", 21) })]));
   assert.deepEqual(passesOf(one).map((p) => p.ids), [named("walk", "function", 21).slice(0, 10), named("walk", "function", 21).slice(10)]);
   const twenty = ok(list(["--asset", "web-surface", "--look"], [longGate(11, 9)]));
@@ -229,10 +217,8 @@ test("a list of 40 look questions in one phase is cut at the area its stage chan
     { label: "function and role: function: a, b", ids: [...named("a", "function", 12), ...named("b", "function", 8)] },
     { label: "function and role: role: a, b", ids: [...named("a", "role", 12), ...named("b", "role", 8)] },
   ]);
-  // Where every cut but the evenest goes through an area, the cut goes at an area's edge, however uneven.
   const edged = ok(list(["--asset", "web-surface", "--look"], [areaGate({ a: looks("a", "function", 5), b: looks("b", "function", 15), c: looks("c", "function", 5) })]));
   assert.deepEqual(passesOf(edged).map((p) => p.ids), [named("a", "function", 5), [...named("b", "function", 15), ...named("c", "function", 5)]]);
-  // Between a cut at an area's edge and one at a stage's, as even as each other, the stage's wins.
   const staged = ok(list(["--asset", "web-surface", "--look"], [areaGate({ a: looks("a", "function", 12), b: looks("b", "function", 6), c: looks("c", "role", 12) })]));
   assert.deepEqual(passesOf(staged).map((p) => p.ids), [[...named("a", "function", 12), ...named("b", "function", 6)], named("c", "role", 12)]);
 });
@@ -240,7 +226,6 @@ test("a list of 40 look questions in one phase is cut at the area its stage chan
 test("a list of 200 look questions runs in the fewest passes of at most 20, every function and role pass first, each in stage then area order", () => {
   const AREAS = ["a", "b", "c", "d", "e"];
   const STAGES = ["function", "role", "treatment", "value"];
-  // Each area's file gives its stages out of order, so only the cut puts them in order.
   const gate = areaGate(Object.fromEntries(AREAS.map((area) => [area, [...STAGES].reverse().flatMap((stage) => looks(area, stage, 10))])));
   const out = ok(list(["--asset", "web-surface", "--look"], [gate]));
   assert.match(out, /^Gate list for web-surface: 200 question\(s\)\.$/m);
@@ -279,7 +264,6 @@ test("list --pass prints one pass alone, cut on a list of any length, and is ref
   assert.deepEqual(ids(first), passOrder("coarse", 11));
   const second = ok(list(["--asset", "web-surface", "--look", "--pass", "2"], [long]));
   assert.deepEqual(ids(second), passOrder("fine", 10));
-  // A treatment pass whose fixes left 20 questions or fewer still asks only its own stages.
   const shrunk = ok(list(["--asset", "web-surface", "--look", "--pass", "2"], [longGate(11, 4)]));
   assert.deepEqual(ids(shrunk), passOrder("fine", 4));
   const r = list(["--asset", "web-surface", "--look", "--pass", "3"], [long]);
@@ -409,7 +393,6 @@ test("check refuses parts on a record that is not a treatment record, and a part
 test("the parts vocabulary is the one rules.md lists, and every part it takes from a parts map is a role parts-map.py gives", () => {
   const rules = fs.readFileSync(path.join(__dirname, "..", "plugin", "skills", "design-critique", "rules.md"), "utf8");
   const line = rules.split("\n").find((l) => l.startsWith("- `parts`"));
-  // Every bare word the line sets in code but the field's name and its stage.
   const named = [...line.matchAll(/`([a-z-]+)`/g)].map((m) => m[1]).filter((w) => !["parts", "treatment"].includes(w));
   assert.deepEqual(named, PARTS);
   const partsMap = fs.readFileSync(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "parts-map.py"), "utf8");

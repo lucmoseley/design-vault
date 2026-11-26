@@ -1,14 +1,6 @@
-"""Tests plugin/skills/design-round/scripts/check-logo.py (#330): python3 test/check-logo.test.py
-
-Drives the check from outside, by exit code and printed lines, on #262's
-fixtures, drawn here: a 200x120 logo (a navy #142878 bar and a red #dc3c28 disc
-on a transparent ground) placed on artboards and on pages. Broken, it passes a
-recolour pixelmatch and looks-same miss at their defaults (blue +6, ΔE00 1.03
-and 1.41), a logo on a ground under 3:1, or an opaque file compared as logo.
-"""
-
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,23 +9,22 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-logo.py"
 )
 NAVY, RED, CREAM = (20, 40, 120), (220, 60, 40), (245, 240, 230)
 BOX = (300, 140, 200, 120)
+TIMEOUT_S = 180  # guess, #501
 
 
 def run(*args):
-    # A guess for check-logo.py alone: one page run takes a few seconds here.
-    out = child.run([sys.executable, SCRIPT, *args], timeout=180)
+    out = child.run([sys.executable, SCRIPT, *args], timeout=TIMEOUT_S)
     return out.returncode, out.stdout, out.stderr
 
 
 def logo(recolour=0, keyline=False, ground=None):
-    """The fixture logo; `recolour` adds to the blue channel of every logo pixel."""
     image = Image.new("RGBA", (200, 120), ground or (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     if keyline:
@@ -65,7 +56,6 @@ class Fixtures(unittest.TestCase):
         return self.path(name)
 
     def artboard(self, placed, ground=CREAM, size=None, box=BOX):
-        """An 800x400 artboard on `ground` (a colour, or an image) with `placed` pasted into `box`."""
         board = (
             ground.copy()
             if isinstance(ground, Image.Image)
@@ -78,6 +68,26 @@ class Fixtures(unittest.TestCase):
 
 
 class OnAnArtboard(Fixtures):
+    def test_an_unimportable_pillow_exits_3_naming_it_501_paired_with_an_exact_placement_passes_both(
+        self,
+    ):
+        shadow = self.path("shadow")
+        os.makedirs(os.path.join(shadow, "PIL"))
+        with open(os.path.join(shadow, "PIL", "__init__.py"), "w") as fh:
+            fh.write("raise ImportError('shadowed', name='PIL')\n")
+        out = subprocess.run(
+            [sys.executable, SCRIPT, "--logo", self.save("logo.png", logo())]
+            + [self.artboard(logo()), "--box", "300,140,200,120"],
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_S,
+            env={**os.environ, "PYTHONPATH": shadow},
+        )
+        self.assertEqual(out.returncode, 3, out.stderr)
+        self.assertIn(
+            "check-logo: PIL is missing — python3 -m pip install -r", out.stderr
+        )
+
     def test_an_exact_placement_passes_both(self):
         code, out, err = run(
             "--logo",
@@ -102,7 +112,7 @@ class OnAnArtboard(Fixtures):
         self.assertEqual(code, 0, out + err)
         self.assertIn("edge band 4 px", out)
 
-    def test_a_recolour_under_2_de00_fails(self):
+    def test_a_recolour_under_2_de00_fails_330(self):
         code, out, _ = run(
             "--logo",
             self.save("logo.png", logo()),
@@ -280,7 +290,6 @@ class OnAnArtboard(Fixtures):
             sorted(os.listdir(out_dir)), ["expected.png", "ground.png", "unchanged.png"]
         )
         with Image.open(os.path.join(out_dir, "unchanged.png")) as marked:
-            # Inside the bar: the box's (58,58) plus the band and the ring (4 + 4).
             self.assertEqual(marked.getpixel((66, 66)), (255, 0, 0))
         with Image.open(os.path.join(out_dir, "ground.png")) as marked:
             self.assertEqual(marked.getpixel((66, 66))[:3], (20, 40, 126))
@@ -319,7 +328,6 @@ class OnAnArtboard(Fixtures):
                 self.assertIn(says, err)
 
     def test_a_thin_accent_under_3_to_1_fails_though_it_is_under_the_blend_share(self):
-        # A small yellow dot on the bar's top edge: under MIN_SHARE of the edge, but no mix of navy and red.
         mark = logo()
         ImageDraw.Draw(mark).ellipse((58, 30, 61, 33), fill=(240, 224, 96, 255))
         code, out, _ = run(
@@ -335,7 +343,6 @@ class OnAnArtboard(Fixtures):
         )
 
     def test_a_thin_colour_past_the_end_of_a_mix_of_two_logo_colours_is_judged(self):
-        # Greys 60 and 110 with a thin 170 strip: on their line, but past 110, so no blend of the two.
         mark = Image.new("RGBA", (200, 120), (0, 0, 0, 0))
         draw = ImageDraw.Draw(mark)
         draw.rectangle((10, 20, 95, 100), fill=(60, 60, 60, 255))
@@ -354,7 +361,6 @@ class OnAnArtboard(Fixtures):
         )
 
     def test_a_seam_between_two_colours_inside_the_logo_is_banded(self):
-        # Navy and red halves meeting mid-logo, placed by another filter: the seam differs, and is banded.
         mark = Image.new("RGBA", (200, 120), (0, 0, 0, 0))
         draw = ImageDraw.Draw(mark)
         draw.rectangle((10, 10, 99, 109), fill=(*NAVY, 255))
@@ -378,8 +384,6 @@ class OnAnArtboard(Fixtures):
     def test_a_blend_where_two_logo_colours_meet_the_outline_is_not_judged_as_a_colour(
         self,
     ):
-        # Black and white halves drawn at 4x and reduced: their seam leaves opaque greys on the outline,
-        # which on a mid-grey ground would fall under 3:1, though black and white each clear it.
         big = Image.new("RGBA", (800, 480), (0, 0, 0, 0))
         draw = ImageDraw.Draw(big)
         draw.rectangle((40, 80, 401, 400), fill=(0, 0, 0, 255))
@@ -397,7 +401,6 @@ class OnAnArtboard(Fixtures):
         self.assertRegex(out, r"#ffffff .*at least")
 
     def test_shades_of_one_colour_are_judged_as_that_colour(self):
-        # Navy with each channel stirred by up to 3 steps: 64 shades, each under MIN_SHARE of the edge alone.
         noisy = logo()
         noisy.putdata(
             [
@@ -514,7 +517,6 @@ class OnAPage(Fixtures):
     def test_an_svg_stroke_thinner_than_a_placed_pixel_is_judged_at_the_file_resolution(
         self,
     ):
-        # A yellow stroke half a pixel wide at --scale 1: no pixel of it is opaque at the placed size.
         mark = self.path("stroke.svg")
         with open(mark, "w", encoding="utf8") as f:
             f.write(

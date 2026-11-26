@@ -1,7 +1,4 @@
 "use strict";
-// validate.js, which refuses a malformed library before it commits (#1, --staged's group check #4): run on fixtures that
-// each break green.json once, and a fixture on disk with no refusal asserted fails the run; --staged runs in a throwaway repo.
-// Loosen one and a broken gallery.json, or a reference still carrying an unreviewed Manta group, reaches the library.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
@@ -33,14 +30,12 @@ after(() => {
 const runFixture = (name) =>
   run(["--gallery", path.join(FIXTURES, `${name}.json`), "--images", path.join(FIXTURES, "images"), "--styles", STYLES]);
 
-test("the green fixture passes", () => {
+test("the green fixture passes (#1)", () => {
   const result = runFixture("green");
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /valid schema v3 library — 3 entries/);
 });
 
-// Each fixture is green.json with one malformation, so it must draw exactly
-// that one refusal.
 const refusals = {
   "schema-version": /^schema-version: schema_version is 2 — expected 3$/,
   "dna-constants-missing": /^dna-shape: dna\.constants is missing/,
@@ -110,7 +105,6 @@ for (const [name, message] of Object.entries(refusals))
     assert.match(result.faults[0], message);
   });
 
-/** Runs the validator on green.json after `mutate` has changed a copy of it. */
 const runMutated = (mutate) => {
   const gallery = JSON.parse(fs.readFileSync(path.join(FIXTURES, "green.json"), "utf8"));
   mutate(gallery);
@@ -244,9 +238,7 @@ test("a Style guide that is not JSON, or holds no styles list, is refused", () =
   }
 });
 
-// The ingest's draft passes the working-tree check, so the founder can validate
-// mid-review, but a commit carrying its group proposal is refused.
-test("--staged alone refuses an entry still carrying proposed_manta_groups", () => {
+test("--staged alone refuses an entry still carrying proposed_manta_groups (#4)", () => {
   const repo = tempDir("validate-proposal-");
   const git = (...args) => execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], { cwd: repo, stdio: "pipe" });
   fs.copyFileSync(VALIDATE, path.join(repo, "validate.js"));
@@ -267,8 +259,6 @@ test("--staged alone refuses an entry still carrying proposed_manta_groups", () 
   assert.match(staged.stderr, /draft-proposal: entries\[0\] .*carries proposed_manta_groups — delete it, or promote it into fit\.manta/);
 });
 
-// --staged is the hook's mode: it must judge the index, not the working tree,
-// which can hold a parallel session's half-written copy.
 test("--staged reads the gallery and images from the index, not the working tree", () => {
   const repo = tempDir("validate-staged-");
   const git = (...args) => execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], { cwd: repo, stdio: "pipe" });
@@ -284,12 +274,10 @@ test("--staged reads the gallery and images from the index, not the working tree
   git("add", "data", "images/");
   const staged = () => runInProcess(path.join(repo, "validate.js"), ["--staged"], { cwd: repo });
 
-  // A broken working-tree copy and a deleted working-tree image do not reach the staged check.
   fs.writeFileSync(galleryPath, "{ half-written");
   fs.rmSync(path.join(repo, "images", "porcelain.png"));
   assert.equal(staged().status, 0, staged().stderr);
 
-  // A staged Style guide without a linked style is refused even with a good working-tree copy.
   const stylesPath = path.join(repo, "data", "styles.json");
   fs.writeFileSync(stylesPath, JSON.stringify({ styles: [{ id: "cinematic-dark", name: "Cinematic Dark" }] }));
   git("add", "data/styles.json");
@@ -297,13 +285,11 @@ test("--staged reads the gallery and images from the index, not the working tree
   assert.match(staged().stderr, /unknown-style: .*"quiet-luxury"/);
   git("add", "data/styles.json");
 
-  // A bad staged gallery is refused even with a good working-tree copy.
   fs.writeFileSync(galleryPath, fs.readFileSync(path.join(FIXTURES, "schema-version.json"), "utf8"));
   git("add", "data/gallery.json");
   fs.writeFileSync(galleryPath, green);
   assert.match(staged().stderr, /schema-version: schema_version is 2/);
 
-  // An image removed from the index is missing, even while it sits on disk.
   git("add", "data/gallery.json");
   fs.copyFileSync(path.join(FIXTURES, "images", "porcelain.png"), path.join(repo, "images", "porcelain.png"));
   git("rm", "-q", "--cached", "images/porcelain.png");
@@ -311,7 +297,6 @@ test("--staged reads the gallery and images from the index, not the working tree
   assert.equal(result.status, 1);
   assert.match(result.stderr, /missing-image: .*"porcelain\.png"/);
 
-  // A site still removed from the index is missing too, even while it sits on disk.
   git("add", "images/porcelain.png");
   git("rm", "-q", "--cached", "images/site-layers.png");
   const still = staged();
@@ -319,7 +304,6 @@ test("--staged reads the gallery and images from the index, not the working tree
   assert.match(still.stderr, /missing-still: .*"site-layers\.png"/);
   assert.doesNotMatch(still.stderr, /missing-image/);
 
-  // So is a site recording removed from the index.
   git("add", "images/site-layers.png");
   git("rm", "-q", "--cached", "images/site-layers.webm");
   const capture = staged();

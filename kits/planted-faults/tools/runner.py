@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""runner.py — runs the planted-fault kit's critics as confined headless children (built for #224, moved by #238).
+"""Usage: python3 kits/planted-faults/tools/runner.py <mode> …
 
   runner.py packets                                           render each candidate's packet into the work folder
   runner.py critics --runs 1,2,3 --critics W,W2,... [--cands c05,...] [--jobs 3]
@@ -9,13 +9,9 @@
   runner.py usage                                             token totals of every finished child
 
 Inputs come from the kit (fixtures/, prompts/, packets/); everything a run writes goes to the work folder, $KIT_WORK
-or .claude/tmp/planted-faults/. Each critic runs in its own folder, runs/r<k>/<critic>/<cid>/, holding only brief.md,
-shots/, parts.txt, rules/ (its own subset) and, for W3, overview.png, for C2 and C3, settled.md. A gate critic answers
-for up to 6 candidates at once, in runs/r<k>/<load>/p<pass>-<a|b|c>/g-<ids>/, holding look.txt and a folder per
-candidate with brief.md, shots/ and the parts key. The folder is named by
-the neutral id, so nothing in it names a planted copy. A child is confined by calibration-critic.js's flags (canary
-held on Claude Code 2.1.300, canary-224.json). Finished children are skipped, so a rerun resumes. A usage-limit reply
-stops the run.
+or .claude/tmp/planted-faults/. Each critic runs in its own folder, runs/r<k>/<critic>/<cid>/; a gate critic answers
+for up to 6 candidates at once, in runs/r<k>/<load>/p<pass>-<a|b|c>/g-<ids>/. Finished children are skipped, so a
+rerun resumes. A usage-limit reply stops the run.
 """
 
 import argparse
@@ -35,7 +31,6 @@ VAULT = ROOT.parents[1]
 sys.path.append(str(VAULT / "plugin/skills/design-round/scripts"))
 from fail_open import expected, fail_open  # noqa: E402
 
-# Whoever runs the kit sets KIT_WORK by hand, to keep a test's runs apart from another's (#238).
 WORK = pathlib.Path(
     os.environ.get("KIT_WORK") or VAULT / ".claude/tmp/planted-faults"
 ).resolve()
@@ -54,7 +49,7 @@ CONFINED = [
 ]
 READ_ONLY = ["--tools", "Read,Glob,Grep", "--permission-mode", "dontAsk"]
 TIMEOUT = 40 * 60
-# The fixer only reads and replies with edits, which fix_job applies, so its folder may sit under .claude/ (#238).
+# #238
 FIXROOT = WORK / "chain-work"
 META = json.load(open(ROOT / "packets/meta.json"))
 CID = META["ids"]
@@ -84,12 +79,6 @@ RULES = {
     "WV0": None,
     "WV1": None,
 }
-# A load-change test's loads: each one's rule files, made by store-refs.py from the rule store, in its own folder.
-# #292: WL is W1 with today's house-principles.md, the old load beside TT1; WS and TS, whole-page and type with tier 0's
-# staged records made live, the new one. All run under W1's and TT1's prompts. #293: WT is WS with tier 1's whole-page
-# records made live; the type load does not change, so TS serves both. #294: WN is WT with the tone lens and tone.md,
-# its records cut from #293's store with #294's wording; TN is TS. Both read brief-tone.md, the brief with its tone
-# lines, where WT and TS read brief.md. WM is WN with the lens asking only for the scales a candidate sits off.
 REFS = {
     "W0": "refs-268/old",
     "W1": "refs-268/new-w",
@@ -114,20 +103,14 @@ PROMPT = {
     "WV1": "WM",
 }
 BRIEF = {c: "brief-tone.md" for c in ("WN", "TN", "WM", "WV0", "WV1")}
-# #415: the gate trio on the look list cut from the rule store with the live records alone (G-old) and with the held
-# records too (G-new), each pass to a fresh trio, as gate-check.md runs it. `gate-lists` freezes both lists in
-# prompts/gate-415/, so a later change to the store does not change what a test's runs were asked.
+# #415
 GATE = {"G-old": [], "G-new": ["--staged"]}
-# One fact set for every page, so both loads ask each candidate the same list. has-cta, as every kit page but
-# manta-rank carries a call to action its brief names.
 GATE_FACTS = ["has-cta"]
 GATE_LISTS = ROOT / "prompts/gate-415"
 GATE_CRITICS = ("a", "b", "c")
-# gate.js's LOOK_LIMIT: a list over it runs in passes.
 LOOK_LIMIT = 20
-# Seconds a render may take: one hangs, rather than fails, when the browser stalls.
+# guess, #415
 RENDER_TIMEOUT = 300
-# gate-check.md §3: at most 6 candidates a dispatch.
 GATE_GROUP = 6
 GATE_SCRIPTS = VAULT / "plugin/skills/design-round/scripts"
 STORE = VAULT / "plugin/skills/design-critique/rules"
@@ -163,7 +146,6 @@ def prompt_for(critic, cand):
 
 
 def fill(folder, critic, packet):
-    """Copies a packet's files and the critic's rules into its folder."""
     folder.mkdir(parents=True, exist_ok=True)
     shutil.copy(packet / BRIEF.get(critic, "brief.md"), folder / "brief.md")
     shutil.copy(packet / "parts.txt", folder / "parts.txt")
@@ -191,8 +173,6 @@ def fence(text):
 
 
 def run_child(folder, prompt, flags, expect, *, valid=None):
-    """Runs one child in `folder`; writes transcript.jsonl and result.json. True on a parsed reply, one `valid` finds
-    nothing missing from where it is given."""
     done = folder / "result.json"
     if done.exists() and json.load(open(done)).get("parsed") is not None:
         return True
@@ -287,7 +267,6 @@ def findings_of(run, critic, cid):
 
 
 def render(page_dir, packet, parts=True):
-    """Renders a page into a packet: shots, overview and, where `parts`, the parts map and parts.txt."""
     packet.mkdir(parents=True, exist_ok=True)
     if (packet / "overview.png").exists():
         return
@@ -339,8 +318,6 @@ def render(page_dir, packet, parts=True):
 
 
 def require_canary():
-    """Exits unless <work>/canary.json held on the installed Claude Code. Confinement is what keeps the plant key, the
-    founder's verdicts and the id maps out of every child's reach (#238)."""
     f = WORK / "canary.json"
     installed = subprocess.run(
         ["claude", "--version"], capture_output=True, text=True
@@ -354,8 +331,6 @@ def require_canary():
 
 
 def tone_brief(name):
-    """#294's brief for a candidate: brief.md with a Tone line in the dispatch and, for a round's brief, in the brief
-    and on every direction card, from packets/tone-294.json."""
     tone = json.load(open(ROOT / "packets/tone-294.json"))
     brief = (ROOT / "packets" / name / "brief.md").read_text()
     project = tone[META["project"][name]]
@@ -381,11 +356,6 @@ def tone_brief(name):
 
 
 def render_packets():
-    """Each candidate's packet in the work folder: the kit's brief.md and parts.txt, #294's brief-tone.md made from
-    them, and the page rendered afresh.
-
-    The kit keeps the #224 test's parts.txt rather than re-reading it, so a later parts-map.py does not change what
-    the critics are told."""
     for name in sorted(CID):
         packet = WORK / "packets" / name
         packet.mkdir(parents=True, exist_ok=True)
@@ -414,7 +384,6 @@ def settled_text(passes):
 
 
 def fix_job(chain, step, findings):
-    """The building session fixes one pass's findings in chain/fix<step>/page/index.html."""
     folder = chain / f"fix{step}"
     page = folder / "page"
     if not (folder / "result.json").exists():
@@ -435,7 +404,6 @@ def fix_job(chain, step, findings):
             open(folder / "result.json", "w"),
         )
         return True, []
-    # The fixer is read-only, as the critics are: it replies with edits, and they are applied here.
     ok = run_child(folder, (ROOT / "prompts/fixer.md").read_text(), READ_ONLY, "fixes")
     if ok:
         res = json.load(open(folder / "result.json"))
@@ -463,7 +431,6 @@ def chain_job(run, cid):
     chain.mkdir(parents=True, exist_ok=True)
     start = chain / "start.html"
     if not start.exists():
-        # The plants' marker comments name the fault; the fixer would read them, so they go.
         html = (ROOT / "fixtures" / name / "index.html").read_text()
         start.write_text(
             re.sub(r"/\*\s*(?:v1p|v3p|v5p|v7p|mhp|mcp)-[FGTCR]\s*\*/\s*", "", html)
@@ -503,7 +470,6 @@ def chain_job(run, cid):
 
 
 def gate_lists():
-    """Cuts each load's look list from the rule store into prompts/gate-415/<load>/look-<pass>.txt."""
     for load, flags in GATE.items():
         out = GATE_LISTS / load
         out.mkdir(parents=True, exist_ok=True)
@@ -540,8 +506,6 @@ def gate_passes(load):
 
 
 def pass_plan(loads, spec):
-    """{load: its passes to run}: every pass of each load, save those --passes names, as `G-new:3,G-new:4`.
-    Raises ValueError on a load or pass the lists do not hold."""
     plan = {load: gate_passes(load) for load in loads}
     for load in loads:
         if load not in GATE:
@@ -557,19 +521,14 @@ def pass_plan(loads, spec):
 
 
 def gate_questions(look):
-    """{question id: its wording} in a look list."""
     return dict(QUESTION.findall(look.read_text()))
 
 
 def source(name):
-    """The clean page a candidate was copied from: gate-plants.py records its own, and #224's planted copies drop a
-    trailing `p`."""
     return META.get("sources", {}).get(name) or re.sub(r"-?p$", "", name)
 
 
 def gate_groups(cids):
-    """The dispatches: each project's candidates, in as few even groups of at most GATE_GROUP as hold them, and no two
-    copies of one page in a group, since a critic comparing a page with its planted copy would find every plant."""
     by = {}
     for cid in sorted(cids):
         by.setdefault(META["project"][NAME[cid]], {}).setdefault(
@@ -584,7 +543,6 @@ def gate_groups(cids):
                 max(-(-size // GATE_GROUP), *(len(f) for f in families.values()))
             )
         ]
-        # Largest family first, each member to the emptiest group, puts a family's members in different groups.
         for family in sorted(families.values(), key=lambda f: (-len(f), f)):
             for cid in family:
                 min(mine, key=len).append(cid)
@@ -596,7 +554,6 @@ def gate_groups(cids):
 
 
 def parts_key(name):
-    """parts-map.py's key for a candidate, in its packet's pm/: what the gate critics answer vault.affordance on."""
     pm = WORK / "packets" / name / "pm"
     if not (pm / "key.txt").exists():
         subprocess.run(
@@ -622,8 +579,6 @@ def part_ids(name):
 
 
 def gate_unanswered(parsed, group, qids):
-    """Each candidate and question a gate critic's reply leaves unanswered, or answers outside Yes, No and Unsure:
-    under vault.affordance, each part on the candidate's key."""
     answers = parsed.get("answers") if isinstance(parsed.get("answers"), dict) else {}
     missing = []
     for cid in group:

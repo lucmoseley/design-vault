@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """A project's client originals: one byte-exact file per item, the best held.
 
-Files live in private/client-originals/ (gitignored, outside any swept
-scratch). The manifest, docs/brand/client-originals.json, is tracked, so git
-remembers each file's source, bytes, pixel size and hash even if the files are
-lost. Generalised from mmm-infra scripts/photo_best.py (design-vault#108).
-The rules:
+Files live in private/client-originals/; the manifest, docs/brand/client-originals.json,
+records each file's source, bytes, pixel size and hash. The rules:
 
 - Each file goes in with add as it arrives, before a review page or edit uses it.
 - A review page, crop or edit reads from the store and writes elsewhere.
-- Anything sent to the client is built with send, which checks it byte for
-  byte; a folder built any other way passes check before it goes.
+- Anything sent to the client is built with send; a folder built any other
+  way passes check before it goes.
 - A worse copy never replaces a held one. A replaced file moves to
   superseded/ and stays listed under its item; nothing is deleted.
 
+python3 client-originals.py <command>, from the project's root:
   init                         make the folder and manifest; refuse an unignored folder
   add <id> <file> --status exact|degraded --source <url or note> [--note ..]
       [--supersede "<why this file beats the held one>"]
@@ -46,12 +44,12 @@ from fail_open import expected  # noqa: E402
 STORE = "private/client-originals"
 MANIFEST = "docs/brand/client-originals.json"
 SUPERSEDED = "superseded"
+SUPERSEDED_SHA_CHARS = 8  # guess, #501
 
 
 def sha256(path):
     h = hashlib.sha256()
     with open(path, "rb") as f:
-        # Read 1 MiB at a time: a guess, any size gives the same digest.
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
@@ -120,7 +118,6 @@ def cmd_init(a):
 
 
 def cmd_add(a):
-    # No '.' in an id, so two ids never share a stored name (id + extension).
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", a.id):
         print(f"REFUSED {a.id}: an id is letters, digits, '_' and '-'")
         return 1
@@ -147,8 +144,6 @@ def cmd_add(a):
             print(f"REFUSED {a.id}: this file is already held as {other}")
             return 1
     if old:
-        # Bytes cannot tell an original from a re-save or an upscale, so a
-        # replacement is a judgement the caller states, never a size test.
         if d["w"] and old["w"] and d["w"] * d["h"] < old["w"] * old["h"]:
             print(
                 f"REFUSED {a.id}: {d['w']}x{d['h']} has fewer pixels than the held {old['w']}x{old['h']}"
@@ -182,14 +177,12 @@ def cmd_add(a):
         return 1
     history = []
     if old:
-        kept = None  # the held file was already lost; its record stays
+        kept = None
         if held:
             os.makedirs(os.path.join(a.store, SUPERSEDED), exist_ok=True)
-            # Eight hex digits of the old sha: a guess at enough to keep each
-            # superseded file's name apart from the rest.
             kept = os.path.join(
                 SUPERSEDED,
-                f"{a.id}-{old['sha256'][:8]}{os.path.splitext(old['file'])[1]}",
+                f"{a.id}-{old['sha256'][:SUPERSEDED_SHA_CHARS]}{os.path.splitext(old['file'])[1]}",
             )
             os.replace(os.path.join(a.store, old["file"]), os.path.join(a.store, kept))
         history = old.get("superseded", []) + [
@@ -221,7 +214,7 @@ def cmd_verify(a):
     bad = 0
     for item, e in m.items():
         for entry in [e] + e.get("superseded", []):
-            if entry["file"] is None:  # superseded after it was lost
+            if entry["file"] is None:
                 continue
             listed.add(os.path.normpath(entry["file"]))
             p = os.path.join(a.store, entry["file"])

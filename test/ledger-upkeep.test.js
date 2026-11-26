@@ -1,7 +1,4 @@
 "use strict";
-// ledger-upkeep.js, the coverage ledger's re-scan warning and method-miss check (#267), run on small fixture ledgers.
-// Loosen the warning and the yearly re-scan is missed, or nags early; loosen the check and a founder lead is logged
-// without the source family or issue that would fix the method.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -17,8 +14,6 @@ after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 
 const MISS = { date: "2026-11-02", lead: "Text wrapping on headings: balance or pretty", family: "web platform", issue: "#227" };
 
-// A ledger file holding only what the script reads, with `meta` laid over the defaults; `misses: null` leaves the
-// list out.
 let written = 0;
 function ledger({ meta = {}, misses = [] } = {}) {
   const file = path.join(scratch, `ledger-${written++}.json`);
@@ -127,7 +122,7 @@ test("the check accepts a whole method miss and an empty list", () => {
   }
 });
 
-test("the check refuses a method miss missing any field, naming it", () => {
+test("#267: the check refuses a method miss missing any field, naming it", () => {
   for (const field of Object.keys(MISS)) {
     for (const value of [undefined, " "]) {
       const miss = { ...MISS, [field]: value };

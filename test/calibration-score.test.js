@@ -1,8 +1,4 @@
 "use strict";
-// calibration-score.js, which scores a calibration run's critics against the founder's verdicts and writes its
-// calibration-log row (#168). Loosen a count and the agreement figure he reads is wrong; loosen a refusal and a
-// critic that ran unconfined, or answered half the questions, is scored. A run judges the rounds since the last and at
-// least the last ten (#209): loosen that window and a run due on a model or gate change logs a figure on no round.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -20,8 +16,6 @@ after(() => {
   for (const dir of scratch) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-// Entry 1 is the fixture log's pending gold note on v1-arches; entry 3 a ruling that made vault.proof the rule on it,
-// built from entry 1 so it carries every field the corrections gate asks of a row.
 const ruled = {
   ...JSON.parse(fs.readFileSync(fixture("corrections-log.jsonl"), "utf8").split("\n")[0]),
   where: "https://github.com/lucmoseley/mmm-infra/issues/9#issuecomment-2",
@@ -33,8 +27,6 @@ const ruled = {
 const FOLDER = { "hero-r1": "mmm-infra.hero-r1", "hero-r2": "mmm-infra.hero-r2" };
 const run = { model: "claude-opus-5-5", claude_code: "2.1.299", round: FOLDER["hero-r1"] };
 const say = (answer) => ({ answer, evidence: `seen: ${answer}` });
-// His verdicts: v2-slow passes vault.proof (his first pick), v1-arches fails it (entry 2), v1-arches breaks both
-// entries' principles. Critic a agrees with all; b and c each disagree twice on answers and b once on the pick.
 const critics = {
   a: { proof: ["no", "yes"], v1: ["no", "no"], leader: "v2-slow" },
   b: { proof: ["yes", "unsure"], v1: ["yes", "no"], leader: "v1-arches" },
@@ -57,8 +49,6 @@ const PACKED = {
     candidates: { "v2a-still": fixture("hero-r2", "v2a-still.html") } },
 };
 
-// The fixture round log's rows the run reads (by default hero-r1's alone), the rounds the manifest judges, entry 1's
-// stance and gold ruling, the settle counts hero-r1's row gains, and hero-r1's gate list of its round's time, by default its gate list.
 function setUp({ canary = { held: true, verdict: "held", model: run.model, claude_code: run.claude_code }, change = {}, roundRows = 1, rounds = ["hero-r1"], firstPick, stance = "rejected", goldRuling, settle, then } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "calibration-score-"));
   scratch.push(dir);
@@ -87,7 +77,7 @@ function setUp({ canary = { held: true, verdict: "held", model: run.model, claud
   return { dir, score, calibrationLog, row: () => JSON.parse(fs.readFileSync(path.join(dir, "row.jsonl"), "utf8")) };
 }
 
-test("each critic's answers are counted against his verdicts, and every disagreement is listed with what it turned on", () => {
+test("each critic's answers are counted against his verdicts, and every disagreement is listed with what it turned on (#168)", () => {
   const { score, row } = setUp();
   const result = score();
   assert.equal(result.status, 0, result.stderr);
@@ -128,14 +118,12 @@ test("an entry ruled onto a rules-file line is reported as that rule, not as an 
   assert.match(result.stdout, /\(corrections-log line 1, rule: rules\.md §2 accent gold stays muted\)/);
 });
 
-// hero-r1's then-list words vault.proof otherwise, or holds no question: his first pick v2-slow is no Yes on it.
 test("a question added or reworded since the round counts no Yes on his first pick, and its answers there are counted apart", () => {
   for (const then of [fixture("hero-r1", "gate-list-reworded.md"), fixture("hero-r1", "gate-list-empty.md")]) {
     const { score, row } = setUp({ then });
     const result = score();
     assert.equal(result.status, 0, result.stderr);
     const r = row();
-    // Only entry 3's No on v1-arches is left of his verdicts on vault.proof; critic b's Yes disagrees with it.
     assert.deepEqual(r.questions, { "vault.proof": { agree: 2, of: 3, unsure: 0 } });
     assert.deepEqual(r.new_questions, { "vault.proof": { yes: 1, no: 1, unsure: 1 } });
     assert.deepEqual(r.disagreements.filter((d) => d.kind === "question").map((d) => [d.critic, d.candidate]), [["b", "v1-arches"]]);
@@ -161,7 +149,7 @@ test("a manifest round naming no gate list of its round's time is refused, namin
   assert.match(result.stderr, /lucmoseley\/mmm-infra#9 r1: the manifest names no gate_list_then/);
 });
 
-test("the settle step's rate is summed from the rounds' log rows, saying how many rounds carried the counts", () => {
+test("the settle step's rate is summed from the rounds' log rows, saying how many rounds carried the counts, a zero count included (#234)", () => {
   const counted = setUp({ settle: { splits: 5, settled: 4 } });
   const result = counted.score();
   assert.equal(result.status, 0, result.stderr);
@@ -171,7 +159,6 @@ test("the settle step's rate is summed from the rounds' log rows, saying how man
   const plain = none.score();
   assert.deepEqual(none.row().settles, { splits: 0, settled: 0 });
   assert.match(plain.stdout, /Settle step: no split logged in these rounds\. 0 of 1 round\(s\) carried the counts\./);
-  // A zero count is carried, not skipped (#234).
   const zero = setUp({ settle: { splits: 0, settled: 0 } }).score();
   assert.match(zero.stdout, /Settle step: no split logged in these rounds\. 1 of 1 round\(s\) carried the counts\./);
 });
@@ -195,20 +182,18 @@ test("a manifest that leaves out a round logged since the last run, or packs no 
   assert.match(unpacked.stderr, /his first pick v3-gone is not one of the packet's candidates/);
 });
 
-// The last run, which judged both fixture rounds on another model: round-log.js calls the next one due on the model alone.
 function lastRunOnAnotherModel() {
   const { score, row } = setUp({ roundRows: 2, rounds: ["hero-r1", "hero-r2"] });
   assert.equal(score().status, 0);
   return { ...row(), model: "claude-opus-5-1" };
 }
 
-// A round log of `count` rows: the fixture's two, then copies of r2 as r3, r4 and on.
 function roundLogOf(count) {
   const [r1, r2] = fs.readFileSync(fixture("round-log.jsonl"), "utf8").trim().split("\n");
   return [r1, r2, ...Array.from({ length: count - 2 }, (_, k) => JSON.stringify({ ...JSON.parse(r2), round: k + 3 }))].join("\n") + "\n";
 }
 
-test("a run due on a change of model, with no round logged since the last run, re-judges the last ten logged and writes a row the log takes", () => {
+test("a run due on a change of model, with no round logged since the last run, re-judges the last ten logged and writes a row the log takes (#209)", () => {
   const last = lastRunOnAnotherModel();
   const { score, calibrationLog, row } = setUp({ roundRows: 2, rounds: ["hero-r1", "hero-r2"] });
   fs.writeFileSync(calibrationLog, `${JSON.stringify(last)}\n`);
@@ -239,7 +224,6 @@ test("a manifest that leaves out one of the last ten rounds, or one since the la
 });
 
 test("past ten rounds, a run owes every round since the last, and no round older than both", () => {
-  // Twelve new rounds: all twelve are owed, not just the last ten.
   const fresh = setUp();
   fs.writeFileSync(path.join(fresh.dir, "round-log.jsonl"), roundLogOf(12));
   const twelve = fresh.score();
@@ -247,7 +231,6 @@ test("past ten rounds, a run owes every round since the last, and no round older
   assert.match(twelve.stderr, /leaves out lucmoseley\/mmm-infra#9 r2, logged since the last run/);
   assert.match(twelve.stderr, /leaves out lucmoseley\/mmm-infra#9 r12, logged since the last run/);
 
-  // Twelve rounds, none new: the last ten are owed, and r1, older than both, is not.
   const stale = setUp({ roundRows: 2, rounds: ["hero-r2"] });
   fs.writeFileSync(path.join(stale.dir, "round-log.jsonl"), roundLogOf(12));
   fs.writeFileSync(stale.calibrationLog, `${JSON.stringify({ ...lastRunOnAnotherModel(), round_log_rows: 12 })}\n`);

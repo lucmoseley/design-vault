@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""build-packets.py — brief.md, overview.png and the neutral ids for each candidate packet (#224; kept by #238).
-
-The record of how packets/*/brief.md and packets/meta.json were made: it reads the round sources in src/, which the
-kit does not keep, and Manta's PRODUCT.md and DESIGN.md as they stood on 15 Oct 2026. runner.py packets renders
-packets from the kit instead."""
-
 import json
 import random
 import pathlib

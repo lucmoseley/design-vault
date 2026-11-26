@@ -1,8 +1,4 @@
 "use strict";
-// Tests plugin/skills/design-project/scripts/client-originals.py (#108): node --test test/client-originals.test.js
-// It pins that a held original is never lost, overwritten or swapped for a worse
-// copy, and that a send folder holds only held bytes; a gap here lets a client be
-// sent re-saved files again, as design-vault#90 P8 did.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
@@ -21,7 +17,6 @@ const run = (...args) => spawnSync("python3", [SCRIPT, "--root", repo, ...args],
 const manifest = () => JSON.parse(fs.readFileSync(path.join(repo, "docs/brand/client-originals.json"), "utf8"));
 const store = (...p) => path.join(repo, "private/client-originals", ...p);
 
-// Writes a w x h JPEG at the given quality; the same seed draws the same picture.
 function jpeg(name, w, h, quality, seed = 1) {
   const out = path.join(scratch, name);
   execFileSync("python3", ["-c", `
@@ -68,7 +63,7 @@ test("a file with no pixel size, such as an SVG logo, is held with none", () => 
   assert.deepEqual([manifest().logo.w, manifest().logo.h], [null, null]);
 });
 
-test("a copy with fewer pixels never replaces the held file, even with --supersede", () => {
+test("a copy with fewer pixels never replaces the held file, even with --supersede (#108)", () => {
   assert.equal(run("add", "p", jpeg("big.jpg", 40, 30, 95), "--source", "s", "--status", "exact").status, 0);
   const before = fs.readFileSync(store("p.jpg"));
   const r = run("add", "p", jpeg("small.jpg", 20, 15, 95), "--source", "s", "--status", "exact", "--supersede", "newer");

@@ -1,11 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-clip.py (#336): python3 test/check-clip.test.py
-
-Drives the check from outside, by exit code and printed lines, on MP4 headers
-the test builds into a scratch round folder `r1` beside its spend log. Broken,
-it lets a clip that runs long or short pass vault.length, a loop never asked
-for pass vault.clip-loop, or a model it cannot read pass unjudged.
-"""
-
 import json
 import os
 import re
@@ -51,7 +43,6 @@ def mvhd(timescale, duration, version=0):
         times = struct.pack(">IIII", 1, 2, timescale, duration)
     else:
         times = struct.pack(">QQIQ", 1, 2, timescale, duration)
-    # The rest of a real mvhd: rate, volume, matrix, pre-defined, next track id.
     return box(b"mvhd", bytes([version, 0, 0, 0]) + times + bytes(80))
 
 
@@ -86,7 +77,6 @@ class Round(unittest.TestCase):
         return path
 
     def logged(self, *lines):
-        """Writes the round's spend log afresh: one line per (candidate, model, input)."""
         with open(self.log, "w", encoding="utf8") as f:
             for candidate, model, given in lines:
                 f.write(
@@ -95,14 +85,13 @@ class Round(unittest.TestCase):
                 )
 
     def looped(self, *stems, model=KLING, end="last_image_url"):
-        """Writes the spend log afresh with a line per stem sending STILL as both frames."""
         self.logged(
             *((f"r1/{s}", model, {"image_url": STILL, end: STILL}) for s in stems)
         )
 
 
 class Length(Round):
-    def test_a_length_inside_the_range_passes_in_mvhd_versions_0_and_1(self):
+    def test_a_length_inside_the_range_passes_in_mvhd_versions_0_and_1_336(self):
         self.looped("v1-zero", "v2-one")
         for stem, version in (("v1-zero", 0), ("v2-one", 1)):
             path = self.clip(stem, mp4(12800, 64000, version=version))
@@ -137,7 +126,6 @@ class Length(Round):
 
     def test_a_64_bit_duration_past_32_bits_is_read_whole(self):
         self.looped("v1-wide")
-        # 2^32 + 5000 ticks at a timescale of 2^30: 4.0000047 s, where its low 32 bits alone give 0.0000047 s.
         path = self.clip("v1-wide", mp4(2**30, 2**32 + 5000, version=1))
         code, out, _ = run(path, "--range", "4.000001-4.1")
         self.assertEqual(code, 0, out)
@@ -327,7 +315,6 @@ class Loop(Round):
         self.assertIn(f"cannot read {other}.missing", err)
 
     def test_a_missing_or_broken_fields_file_exits_2(self):
-        # A copy of the check in a scratch plugin tree, so loop-fields.json beside it can be broken.
         scripts = os.path.join(self.tmp.name, "plugin", "scripts")
         references = os.path.join(self.tmp.name, "plugin", "references")
         os.makedirs(scripts)

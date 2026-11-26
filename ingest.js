@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 /**
- * The vault's one write path: screenshots in, draft entries out
- * (lucmoseley/mantahostels#3631 step 4, lucmoseley/mantahostels#3538).
- *
  * Usage:
  *   node ingest.js [--model <model>] [--project <key>] [--source <url>] <image> [[--source <url>] <image> ...]
  *
@@ -13,15 +10,8 @@
  * address there also becomes the entry's `site_url`, the page's "Visit site"
  * link; without it the entry says "screenshot, site unrecorded" for the review to fill.
  *
- * For each image, in order:
- *   1. copies it into images/ under a holding name with the sniffed extension —
- *      copying first is what lets `claude -p` read a screenshot from outside the vault;
- *   2. extracts the entry's fields through one `claude -p` call on the copy;
- *   3. renames the copy to <slug>.<ext> and rewrites data/gallery.json by temp
- *      file and rename, so a run killed part-way keeps every image already done;
- *   4. rebuilds data/vault-data.js, so the page opened from its folder shows the
- *      new entry on refresh (#32); a failure there is logged, never counted
- *      against an image already saved.
+ * Each image is copied into images/ as <slug>.<ext> and its entry written to data/gallery.json as it lands, then
+ * data/vault-data.js is rebuilt; a failure there is logged, never counted against an image already saved.
  *
  * Nothing commits. The uncommitted tree is the draft the founder reviews.
  * `proposed_manta_groups` is a proposal only: the review drops it, or promotes
@@ -35,7 +25,7 @@ const { writeBundle } = require("./bundle");
 const { isWebAddress } = require("./validate");
 
 const ROOT = __dirname;
-// #4's cap, as the spec it builds (lucmoseley/mantahostels#3631 step 4) gave it.
+// lucmoseley/mantahostels#3631
 const MAX_IMAGE = 20 * 1024 * 1024;
 const DEFAULTS = {
   origin: "third-party",
@@ -44,10 +34,7 @@ const DEFAULTS = {
 };
 const COLLECTION_KEYS = ["id", "name", "description", "deployFor", "vocabulary", "risk", "accent", "imageStyle"];
 
-// SCHEMA and buildPrompt's text are carried verbatim from the spec's step 4;
-// only the prompt's four lists are templated. The page-part line and its list
-// are #29 Q1 and Q4's; the groups carry their names because each is Manta's own
-// use, not the page part its id resembles (#40).
+// lucmoseley/mantahostels#3631
 const SCHEMA = JSON.stringify({
   type: "object",
   required: ["title", "collection", "page_parts", "description", "note", "keywords", "vocabulary", "proposed_manta_groups"],
@@ -67,7 +54,7 @@ const SCHEMA = JSON.stringify({
   additionalProperties: false,
 });
 
-// Its counts, 1-4 keywords and 5-8 vocabulary terms, are the spec's prompt (lucmoseley/mantahostels#3631 step 4, #4).
+// lucmoseley/mantahostels#3631
 function buildPrompt(gallery, imagePath) {
   const ids = (items) => (items ?? []).map((item) => item.id).join(" | ");
   const parts = (gallery.page_parts ?? []).map((part) => `${part.id} (${part.gloss})`).join(" | ");
@@ -91,15 +78,13 @@ You are an expert UI designer cataloguing a personal design inspiration library 
 Rules: keywords must come from the list given, nothing else. vocabulary must be objective and promptable. Only use NEW + new_collection if the screenshot genuinely fits none of the existing collections. Return raw JSON only.`;
 }
 
-/** The one paid call, and the seam the tests replace; claude is read from WFC_CLAUDE_BIN where set (base §N7, #124). */
 function claudeExtract(prompt, model = "sonnet", log = console.log) {
   let out;
   try {
+    // guess, #501
     out = execFileSync(
       process.env.WFC_CLAUDE_BIN || "claude",
       ["-p", prompt, "--model", model, "--output-format", "json", "--json-schema", SCHEMA, "--tools", "Read", "--max-turns", "4"],
-      // Guesses, not measurements (#4): four turns to read the screenshot and answer, five minutes for one
-      // screenshot's extraction, and 16 MiB for its JSON answer.
       { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 300000, maxBuffer: 16 * 1024 * 1024 },
     );
   } catch (error) {
@@ -107,17 +92,15 @@ function claudeExtract(prompt, model = "sonnet", log = console.log) {
     throw new Error(`claude -p failed (${error.signal ?? `exit ${error.status}`}): ${said || "no output"}`);
   }
   const result = JSON.parse(out);
-  // A failed answer is quoted to 300 characters: a guess at enough to name the fault.
+  // guess, #501
   if (result.is_error || !result.structured_output)
     throw new Error(`claude -p returned no structured output (${result.subtype ?? "no subtype"}): ${String(result.result ?? "").slice(0, 300)}`);
-  // The alias passed is not the model billed, so the line names what answered.
   const answered = Object.keys(result.modelUsage ?? {}).join(", ") || model;
-  // To a tenth of a cent: a guess at enough to tell one call's cost from another's.
+  // guess, #501
   if (typeof result.total_cost_usd === "number") log(`  cost $${result.total_cost_usd.toFixed(3)} on ${answered}`);
   return result.structured_output;
 }
 
-/** The image type by its first bytes; null for anything else. */
 function sniff(bytes) {
   if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
   if (bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return "jpg";
@@ -135,7 +118,7 @@ function readHead(file) {
   }
 }
 
-// Forty characters at most: carried from the seed (cth9191/taste-vault), which gives no reason.
+// guess, #501
 function slugify(s) {
   return String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "") || "entry";
 }
@@ -152,10 +135,6 @@ function localDate() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-/**
- * Picks the extraction's collection: `{ id }`, plus `block` where it is new.
- * A new one is a draft block: its eight keys, blanks where the model gave none.
- */
 function resolveCollection(gallery, result, log) {
   const known = (id) => gallery.collections.some((c) => c.id === id);
   if (result.collection !== "NEW" && known(result.collection)) return { id: result.collection };
@@ -214,8 +193,6 @@ function buildEntry(gallery, result, { id, file, collection, source, project, lo
 
 const HOLDING = /^ingest-(\d+)-\d+\.(png|jpg|webp)$/;
 
-// A run killed mid-extraction leaves its holding copy behind, which no
-// validator sees; the next run deletes any whose run is no longer alive.
 function sweepHoldingCopies(imagesDir, log) {
   for (const name of fs.readdirSync(imagesDir)) {
     const pid = Number(name.match(HOLDING)?.[1]);
@@ -231,12 +208,6 @@ function sweepHoldingCopies(imagesDir, log) {
   }
 }
 
-/**
- * Ingests `items` ([{ path, source? }]) into the library at `galleryPath` and
- * `imagesDir`. `extract(imagePath)` defaults to the paid call on `model`,
- * prompted from the library as it stands before each image. Returns the number
- * that failed.
- */
 function ingest(items, options = {}) {
   const galleryPath = options.galleryPath ?? path.join(ROOT, "data", "gallery.json");
   const imagesDir = options.imagesDir ?? path.join(ROOT, "images");

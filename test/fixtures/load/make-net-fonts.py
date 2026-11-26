@@ -1,19 +1,8 @@
-"""Writes the fixture fonts check-load-files.test.py reads for check-load.py's
---files mode (#313), each in a different file format so every reader runs:
+"""Usage, from a scratch environment after `pip install fonttools brotli`:
 
-  good.woff2  "Net Good": I serifed, l tailed, 1 flagged; every figure one
-              advance (tabular by default); é; GSUB smcp, c2sc, ss01
-  plain.ttf   "Net Plain": I and l the same bar; figures of two advances;
-              no GSUB
-  flex.woff   "Net Flex": Net Good's outlines and é, variable on wght 100–900
-              (400) and opsz 8–144 (14); no glyph changes along either
+  python make-net-fonts.py <this directory>
 
-Every glyph is drawn from rectangles in 1000 units: capitals and figures
-700 high, lowercase 500, small capitals 560.
-
-It needs fontTools and brotli, which the vault does not depend on: run it
-from a scratch environment, `pip install fonttools brotli`, then
-`python make-net-fonts.py <this directory>`.
+Writes good.woff2, plain.ttf and flex.woff into that directory.
 """
 
 import pathlib
@@ -65,7 +54,6 @@ def bar(advance, height, left=None):
 
 
 def outlines(*, distinct, tabular, accent):
-    """Each glyph's (advance, rectangles)."""
     out = {".notdef": (500, []), "space": (250, [])}
     for i, c in enumerate(CAPS):
         w = 560 + (i % 4) * 40

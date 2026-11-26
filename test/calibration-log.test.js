@@ -1,7 +1,4 @@
 "use strict";
-// calibration-log.js, which refuses a malformed calibration-log row and a commit that rewrites one (#168). --staged's
-// reading of git is log-gate.js's, which round-log.test.js covers. Loosen one and a run's figures disagree with the
-// disagreements listed under them, or "calibration due" counts from a row no count can read.
 require("./no-git-env");
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
@@ -126,7 +123,7 @@ test("a disagreement that names no rule, round or critic of the run, or agrees a
   assert.deepEqual(checkCalibrationLog(log(swap({ ...pickMiss, founder: null }))), [], "a round he named no leader in");
 });
 
-test("the log only grows: HEAD's rows stand unchanged, and no run counts fewer round-log rows than the one before", () => {
+test("the log only grows: HEAD's rows stand unchanged, and no run counts fewer round-log rows than the one before (#168)", () => {
   const head = log(run);
   assert.deepEqual(checkCalibrationLog(log(run, later), head), [], "appending a run");
   assert.deepEqual(rules(checkCalibrationLog(log({ ...run, where: "session f521adbb, 2026-10-14" }, later), head)), ["rewrite"]);

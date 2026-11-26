@@ -1,7 +1,4 @@
 "use strict";
-// search.js, the library page's search rule (#42): run in-process, the matching on bare strings and the fields on one
-// made-up reference whose every field holds its own name, so each case says which fields search reads and which it must not.
-// Loosen one and the box misses the founder's words, or matches a project's take, another project's groups or the image-prompt fields.
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { compile, searchable, matches, entryTexts } = require("../search.js");
@@ -9,7 +6,7 @@ const { compile, searchable, matches, entryTexts } = require("../search.js");
 const WORDS = [{ word: "hero", means: ["opening screen", "Top Section"] }];
 const finds = (query, text, words = WORDS) => matches(compile(query, words), searchable([text]));
 
-test("every typed word must appear, in any order", () => {
+test("every typed word must appear, in any order (#42)", () => {
   assert.ok(finds("screen opening", "a bold opening screen"));
   assert.ok(!finds("opening footer", "a bold opening screen"));
 });
@@ -25,7 +22,6 @@ test("a design word also finds the words the data uses for it, whatever their ca
   assert.ok(finds("hero", "the top section of the page"));
   assert.ok(finds("HERO", "the hero"));
   assert.ok(!finds("hero", "a bold opening screen", []));
-  // The list is looked up by the whole typed word, not its start.
   assert.ok(!finds("her", "a bold opening screen"));
 });
 
@@ -64,7 +60,7 @@ test("search reads the founder's words, the plain parts of motion, the look, the
   assert.ok(!text.includes("what the group is for"), "a group is searched by its short name");
 });
 
-test("search never reads the take, the AI fields or motion's measurements, nor another project's groups", () => {
+test("search never reads the take, the AI fields or motion's measurements, nor another project's groups (#27)", () => {
   const text = entryTexts(ENTRY, GALLERY, "manta").join(" ");
   for (const word of ["take-text", "acme-take", "Acme-Group", "acme-group", "composition-text", "recipe-text", "mood-text", "range-text",
     "from-to-text", "duration-text", "easing-text", "evidence-text", "capture-text"])

@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""check-logo.py — compares a placed client logo with the client's logo file
-(design-vault#324), answering gate questions vault.logo-unchanged and
-vault.logo-ground-script (design-vault#330). It exists because a recolour of
-about 1 ΔE00 gets past an eye and past pixelmatch and looks-same at their
-defaults, and palette.py never reads the ground a logo was rendered on (#262).
-
-USAGE
+"""USAGE
   python3 check-logo.py --logo <logo file> <page> --at SELECTOR
         [--scale N] [--viewport WxH] [--wait SEL] [--timeout MS] [--out DIR]
   python3 check-logo.py --logo <logo file> <image> --box X,Y,W,H [--out DIR]
@@ -28,11 +22,10 @@ against all the rendered ground: the box's pixels where the file is clear, and
 a ring outside the box, both past the edge band.
 
 A translucent part of the logo, under full alpha, is never compared and never
-judged against its ground. An embedded ICC profile is not read: Chromium applies
-it on a page and Pillow does not, so a profiled raster can fail against itself.
+judged against its ground. An embedded ICC profile is not read, so a profiled
+raster can fail against itself.
 
-A logo file with no transparent pixel is refused: its own ground would be
-compared as logo. palette.py keeps the check on declared colours.
+A logo file with no transparent pixel is refused.
 
 --out DIR writes expected.png (the resampled logo), unchanged.png and
 ground.png (the placed region, faults in red).
@@ -47,6 +40,7 @@ stdout; the rest print on stderr.
 
 import argparse
 import base64
+import importlib
 import math
 import os
 import pathlib
@@ -65,53 +59,26 @@ colour_space = siblings.load(
     HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
 
-# A placed pixel is unchanged within one 8-bit step a resample rounds to on each
-# channel. No ΔE00 line can stand in: one step reaches 1.22 ΔE00 at #191919,
-# more than the 1.03 of the smallest recolour #262 found two diff tools miss,
-# and brand guidelines fix a logo's colours exactly (vault.logo-colour's
-# sources). Measured: colour_space.de2000 over a ±1 step at every 5th sRGB value.
-# A step on all three channels at once reaches 2.34 ΔE00 there, so a pixel must
-# also lie under SAME_COLOUR_DE00.
-CHANNEL_STEP = 1
-# Two colours under this are one colour (W3C CSS Color 4 §14.2.1, as
-# design-critique's brand-palette.md cites it): neighbours this far apart make
-# a colour edge, and the ground check takes the logo's colours this far apart.
-SAME_COLOUR_DE00 = 2
-# WCAG 2.2 SC 1.4.11's level for graphical objects, borrowed for a logo on its
-# ground, as brand-palette.md cites it; WCAG's Understanding docs take a
-# background image at its point of least contrast, so every ground pixel counts.
-GROUND_RATIO = 3
-# The edge band, in device pixels. Pillow's LANCZOS is Lanczos-3, a support of
-# 3 source pixels, so a resampled edge spreads over 3 pixels times the scale
-# when enlarged and 3 when reduced; a vector edge's anti-aliasing shades the
-# one pixel it crosses. Placing the logo off the pixel grid moves an edge under
-# one more. Untraced: no source measures how far a browser's own filter spreads.
+CHANNEL_STEP = 1  # measured 1.22 ΔE00 per step at worst, #330
+SAME_COLOUR_DE00 = 2  # guess, #330
+GROUND_RATIO = 3  # guess, #501
+# Pillow's LANCZOS has a support of 3 source pixels:
+# https://github.com/python-pillow/Pillow/blob/main/src/libImaging/Resample.c
 LANCZOS_SUPPORT = 3
-ANTIALIAS_PX = 1
-OFFSET_PX = 1
-# The ring of ground read outside the box, past the edge band. Untraced.
-RING_PX = 4
-# A logo colour meets the ground where an alpha-0 pixel lies this near. Untraced.
-BORDER_REACH_PX = 2
-# A colour making less of that border than this, and lying on the mix of two
-# colours that make more, is the blend where they meet at the outline, not a
-# colour of the logo. Untraced.
-MIN_SHARE = 0.02
-# How far, on each channel, a blend may sit off the straight mix. Untraced.
-BLEND_STEPS = 2
-# An SVG's own resolution is its placed size times this. Untraced.
-SVG_READ_SCALE = 4
-# The default device scale on a page: a 2x screen draws the logo at twice its
-# CSS size, so more of it lies past the edge band. Untraced.
-PAGE_SCALE = 2
-# An SVG's root opens within its prolog, which this head of the file covers. Untraced.
-SNIFF_BYTES = 512
+ANTIALIAS_PX = 1  # guess, #330
+OFFSET_PX = 1  # guess, #330
+RING_PX = 4  # guess, #330
+BORDER_REACH_PX = 2  # guess, #330
+MIN_SHARE = 0.02  # guess, #330
+BLEND_STEPS = 2  # guess, #330
+SVG_READ_SCALE = 4  # guess, #330
+PAGE_SCALE = 2  # guess, #330
+SNIFF_BYTES = 512  # guess, #330
 
 PASS, FAIL, UNJUDGED = "PASS", "FAIL", "NOT JUDGED"
 FAULT_RED = (255, 0, 0)
 
-# An animation that never ends throws on finish() (Web Animations 1 §4.4.12),
-# and is counted, so the logo is never read mid-motion unsaid.
+# finish() throws on an animation that never ends: https://developer.mozilla.org/en-US/docs/Web/API/Animation/finish
 FINISH_JS = """async () => {
   await document.fonts.ready;
   let endless = 0;
@@ -137,8 +104,6 @@ def hexof(rgb):
 
 
 class Colours:
-    """ΔE00 and contrast by colour, each colour's CIELAB worked out once."""
-
     def __init__(self):
         self.labs = {}
 
@@ -155,7 +120,6 @@ class Colours:
 
 
 def read_logo(path):
-    """("svg", text) or ("raster", an RGBA image)."""
     from PIL import Image
 
     try:
@@ -181,14 +145,12 @@ def refuse_opaque(image, path):
 
 
 def render_svg(browser, text, size, scale):
-    """The SVG drawn by Chromium into a box of `size` device pixels at `scale`."""
     from PIL import Image
     import io
 
     w, h = size
     page = browser.new_page(
         viewport={
-            # One spare CSS pixel, so the clip never runs past the viewport.
             "width": math.ceil(w / scale) + 1,
             "height": math.ceil(h / scale) + 1,
         },
@@ -220,7 +182,6 @@ def band_px(kind, source_size, box_size):
 
 
 def dilate(mask, size, reach):
-    """The pixels within `reach` (Chebyshev) of a set pixel in a flat 0/1 list."""
     from PIL import Image, ImageFilter
 
     if reach <= 0:
@@ -244,8 +205,6 @@ def neighbours(i, width, height):
 
 
 def check_unchanged(grid, colours, out_marks):
-    """(verdict, detail). Compares the logo's opaque pixels past the edge band,
-    adding each fault to the caller's `out_marks`."""
     w, h, band = grid["w"], grid["h"], grid["band"]
     alpha, logo, placed = grid["alpha"], grid["logo"], grid["placed"]
     edge = [a < 255 for a in alpha]
@@ -289,8 +248,6 @@ def check_unchanged(grid, colours, out_marks):
 
 
 def edge_colours(own, colours):
-    """The logo file's colours that meet its transparent ground, as [(rgb, share)],
-    and the blends set aside, as is_blend() finds them."""
     pixels = list(own.get_flattened_data())
     clear = [p[3] == 0 for p in pixels]
     near = dilate(clear, own.size, BORDER_REACH_PX)
@@ -318,7 +275,6 @@ def edge_colours(own, colours):
 
 
 def is_blend(rgb, main):
-    """Whether `rgb` lies within BLEND_STEPS of a straight mix of two of `main`."""
     for k, a in enumerate(main):
         for b in main[k + 1 :]:
             span = [q - p for p, q in zip(a, b, strict=True)]
@@ -333,8 +289,6 @@ def is_blend(rgb, main):
 
 
 def check_ground(grid, own, colours, out_marks):
-    """(verdict, lines). Holds each edge colour of `own` to GROUND_RATIO against
-    the ground pixels, adding each one under it to the caller's `out_marks`."""
     w, h, band = grid["w"], grid["h"], grid["band"]
     alpha, placed = grid["alpha"], grid["placed"]
     near = dilate([a > 0 for a in alpha], (w, h), band)
@@ -382,8 +336,6 @@ def check_ground(grid, own, colours, out_marks):
 
 
 def build_grid(placed_image, box, logo_image, band):
-    """The box and a ring RING_PX past the band, as flat lists: the logo's alpha
-    and colour (alpha 0 outside the box), and the placed colour, None off the image."""
     bx, by, bw, bh = box
     pad = band + RING_PX
     w, h = bw + 2 * pad, bh + 2 * pad
@@ -503,7 +455,6 @@ def read_page(browser, args):
 
 
 def drawn_logo(browser, kind, logo, size, *, scale):
-    """The logo at the placed size, and at its own resolution."""
     from PIL import Image
 
     if kind == "svg":
@@ -597,13 +548,13 @@ def parse(argv):
 def main(argv):
     args = parse(argv)
     try:
-        import PIL  # noqa: F401
+        importlib.import_module("PIL")
     except ImportError as err:
         print(
             f"check-logo: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
             file=sys.stderr,
         )
-        return 3
+        sys.exit(3)
     try:
         kind, logo = read_logo(args.logo)
         if kind == "raster":

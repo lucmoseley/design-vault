@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 /**
- * calibration-score.js — scores a calibration run's three critics against the founder's verdicts and writes the
- * run's calibration-log row (design-vault#168).
- *
  * Usage:
  *   node calibration-score.js --manifest <file> --packet <dir> --answers <dir> --where <text> --row <file>
  *                             [--round-log <file>] [--corrections-log <file>] [--calibration-log <file>]
@@ -11,19 +8,17 @@
  * packet, critic-a.json, critic-b.json and critic-c.json, all as calibration-critic.js writes them. Each critic must
  * have run on the model and Claude Code version the canary held on. The manifest must hold every round logged since
  * the last run's round_log_rows and, where fewer than ten were, the last ten logged (every round, where fewer are
- * logged), each with his first pick among its candidates: a run due on a change of model or gate re-judges those
- * (#209).
+ * logged), each with his first pick among its candidates.
  *
- * The critics answer the look questions as the gates stand now, each round's gate_list (#232 Q1 (A)). His verdicts,
+ * The critics answer the look questions as the gates stand now, each round's gate_list. His verdicts,
  * from the logs: a round's first pick, which each critic's leader agrees with or not; a gate question worded as in
  * the round's gate_list_then is a Yes on the candidate he picked first, and a No on a candidate an entry names whose ruling is that question's
  * rule; an entry's principle is a Yes on the candidate it names where he kept the trait, a No where he rejected it. Each critic's answer where his verdict is known is
  * counted: agreeing, Unsure, or a disagreement, listed with the question, lens or unlanded rule it turned on. A
  * question added or reworded since the round tests the rule, not the critic: the critics' answers on his first pick
  * are counted apart, in new_questions, and each No is printed as a pick of his the new rule would fail. The row also
- * sums the rounds' splits and settled from the round log, how often the settle step settled a split (#170), and the
- * report says how many of the rounds carried those counts, which a row older than round-log.js's SETTLES_FROM may lack
- * (#234).
+ * sums the rounds' splits and settled from the round log, how often the settle step settled a split, and the
+ * report says how many of the rounds carried those counts.
  *
  * Prints the result for the founder and writes the row to --row, once calibration-log.js passes it after the
  * calibration log's rows; the session appends it there. Exits 0 on a row written, 1 on answers or a row refused, 2 on
@@ -40,7 +35,6 @@ const { checkCalibrationLog, CRITICS } = require("./calibration-log.js");
 
 const CALIBRATION_LOG = "data/calibration-log.jsonl";
 const RULE = /^rule: (\S+)$/;
-// A round as the logs and the calibration row name it, "owner/repo#n r<k>", from a manifest round or a round-log row.
 const roundName = ({ ticket, round }) => `${ticket} r${round}`;
 
 function parseArgs(argv) {
@@ -58,10 +52,6 @@ function parseArgs(argv) {
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 const figure = () => ({ agree: 0, of: 0, unsure: 0 });
 
-/**
- * Counts one critic's `answer` against his `expected` one; returns true on a disagreement.
- * @param fig accumulator: the figure { agree, of, unsure } the answer is counted into.
- */
 function count(fig, answer, expected) {
   fig.of++;
   if (answer === expected) fig.agree++;
@@ -90,7 +80,6 @@ function score(rounds) {
       if (rule && asked.questions.includes(rule[1])) know(e.candidate, rule[1], e.expected);
     }
     for (const q of asked.questions) questions[q] ??= figure();
-    // A new or reworded question on his first pick, where no entry of his rules on it.
     const ruleTests = row.first_pick === null ? [] : asked.questions.filter((q) => !unchanged.includes(q) && !known.some((k) => k.candidate === row.first_pick && k.q === q));
     given.forEach((data, i) => {
       const critic = CRITICS[i];
@@ -126,7 +115,6 @@ function score(rounds) {
   return { figures: { pick, questions, entries, new_questions: newQuestions, critics, disagreements }, failedPicks };
 }
 
-/** The Wilson 95% interval of `agree` in `of`, as whole percentages. */
 function wilson(agree, of) {
   const z = 1.96;
   const p = agree / of;
@@ -135,10 +123,6 @@ function wilson(agree, of) {
   return `${Math.round(100 * Math.max(0, centre - half))}–${Math.round(100 * Math.min(1, centre + half))}%`;
 }
 
-/**
- * What the founder is told: the row's figures and disagreements, `failedPicks`, each first pick of his a new question
- * fails, and `counted`, how many of the rounds' rows carried the settle counts.
- */
 function report(row, failedPicks, counted) {
   const sum = (figs) => Object.values(figs).reduce((t, f) => ({ agree: t.agree + f.agree, of: t.of + f.of, unsure: t.unsure + f.unsure }), figure());
   const line = (what, { agree, of, unsure }) =>
@@ -203,7 +187,6 @@ function main(argv) {
         faults.push(`${name}: the manifest names no gate_list_then, the look questions of the round's time, which his first pick is scored on (#232)`);
       else {
         const then = questionTexts(fs.readFileSync(path.resolve(path.dirname(options.manifest), r.gate_list_then), "utf8"));
-        // Residual: wording is compared exactly, so a question whose punctuation alone changed loses his Yes too.
         unchanged = asked.questions.filter((q) => then.get(q) === asked.texts.get(q));
       }
       const entries = corrections
