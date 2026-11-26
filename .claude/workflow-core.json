@@ -339,6 +339,7 @@
 	"pythonRoutes": {
 		"server.py": "program",
 		"ledger-stop-numbers.py": "program",
+		"plugin/skills/design-project/scripts/colour_space.py": "library",
 		"plugin/skills/design-round/scripts/access-pixels.py": "library",
 		"plugin/skills/design-round/scripts/access-answers.py": "library",
 		"plugin/skills/design-round/scripts/access-boxes.py": "library",
