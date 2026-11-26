@@ -1,0 +1,15 @@
+<!doctype html>
+<html><body style="margin:0;background:#fff">
+<canvas id="c" width="100" height="100" style="display:block"></canvas>
+<script>
+const ctx = document.getElementById("c").getContext("2d");
+const END_MS = 4500;
+const start = performance.now();
+function frame(now) {
+  ctx.fillStyle = now - start >= END_MS ? "#000" : "#fff";
+  ctx.fillRect(0, 0, 100, 100);
+  if (now - start < END_MS) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body></html>

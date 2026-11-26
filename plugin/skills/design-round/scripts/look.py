@@ -5,9 +5,11 @@ closer rather than guessing (design-vault#169 Q1 (A), #170).
 
 USAGE
   python3 look.py zoom <url or file> --clip X,Y,W,H --out FILE.png [--scale 4]
-        [--width W] [--height H]
+        [--width W] [--height H] [--after MS]
       The settled page, the clip (CSS px, page coordinates) shot at --scale
-      times its pixels: 4, or 8 for the tightest bend of a curve.
+      times its pixels: 4, or 8 for the tightest bend of a curve. --after
+      waits MS in place of SETTLE_MS, for motion a seek cannot reach (a
+      canvas, a script's frames) that runs longer.
   python3 look.py scrub <url or file> --out DIR [--step 50] [--until 2500]
         [--wait SEL] [--width W] [--height H]
       The first screen, every --step ms of the page's timeline to --until, one
@@ -119,6 +121,7 @@ def parse(argv):
     # 2500 ms cover vault.length's 1.6 s of motion after a short wait.
     pages["zoom"].add_argument("--scale", type=int, default=4)
     pages["zoom"].add_argument("--out", required=True)
+    pages["zoom"].add_argument("--after", type=int, default=SETTLE_MS)
     pages["scrub"].add_argument("--out", required=True)
     pages["scrub"].add_argument("--step", type=int, default=50)
     pages["scrub"].add_argument("--until", type=int, default=2500)
@@ -140,6 +143,7 @@ def parse(argv):
         ("scale", 1),
         ("step", 1),
         ("until", 0),
+        ("after", 0),
         ("height", 1),
         ("width", 1),
     ):
@@ -170,7 +174,7 @@ def settled_page(browser, args, scale=1):
 
 def zoom(browser, args):
     page = settled_page(browser, args, args.scale)
-    page.wait_for_timeout(SETTLE_MS)
+    page.wait_for_timeout(args.after)
     x, y, w, h = args.clip
     page.screenshot(
         path=args.out, clip={"x": x, "y": y, "width": w, "height": h}, full_page=True

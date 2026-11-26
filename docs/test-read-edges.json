@@ -1767,6 +1767,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/look/slow-canvas.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/look/staggered.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
