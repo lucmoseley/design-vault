@@ -1554,8 +1554,11 @@ def pause_answer(context, url, carousels, spans):
         )
         since = page.evaluate("() => performance.now()")
         for c in declared:
-            moved = keys.change(page, c[1], keys.ROTATE_MS) is not None
-            (turning if moved else stilled).append(c)
+            start = page.evaluate("() => performance.now()")
+            if keys.change(page, c[1], keys.ROTATE_MS) is None:
+                stilled.append((c[0], start, page.evaluate("() => performance.now()")))
+            else:
+                turning.append(c)
         page.wait_for_timeout(
             max(0, since + keys.ROTATE_MS - page.evaluate("() => performance.now()"))
         )
@@ -1635,9 +1638,9 @@ def pause_answer(context, url, carousels, spans):
         for k, subject in enumerate(others)
         if k not in held_others
     ] + [
-        f"{subject} held still from {LONG_MS / 1000:g} s to {(LONG_MS + keys.ROTATE_MS) / 1000:g} s after the page's load "
+        f"{subject} held still from {start / 1000:.1f} s to {end / 1000:.1f} s after the page's load "
         "while the page still ran a timer, so a slower rotation cannot be ruled out"
-        for subject, _, _ in stilled
+        for subject, start, end in stilled
     ]
     # #603
     return found, sorted(unmeasured)

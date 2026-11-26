@@ -439,7 +439,7 @@ const lookWriting = (id, stage, writes, { strength = "house judgement", yields =
     .replace("- yields-to: none", `- yields-to: ${yields}`);
 const clashLine = (out, a, b) => out.split("\n").find((l) => l.startsWith("- ") && l.includes(` ${a} and `) && l.includes(` ${b} both`));
 
-test("a clash between two stages is settled by the dependency order, the earlier standing over any level unless whether it yields is unread; within a stage, or with no stage, the level decides (#549)", () => {
+test("a clash between two stages, the records not both one project's, is settled by the dependency order, the earlier standing over any level where it does not give way; one project's own clash, or an earlier record that gives way to an unread one, goes to the founder; within a stage, or with no stage, the level decides (#549)", () => {
   const vault = writeText("vault.md", `# vault\n\n${[
     lookWriting("vault.edge-style", "function", "part-edge"),
     lookWriting("vault.law-gap", "value", "gap", { strength: "law: a made-up statute" }),
@@ -448,7 +448,11 @@ test("a clash between two stages is settled by the dependency order, the earlier
     lookWriting("vault.early-fill", "function", "fill"),
     lookWriting("vault.late-fill", "treatment", "fill", { yields: "level 4" }),
     lookWriting("vault.tone", "treatment", "tone"),
+    lookWriting("vault.early-pad", "function", "pad", { yields: "vault.late-pad" }),
+    lookWriting("vault.late-pad", "treatment", "pad", { yields: "level 4" }),
     lookWriting("vault.pace", "role", "pace"),
+    lookWriting("vault.early-rim", "function", "rim", { yields: "vault.late-rim" }),
+    lookWriting("vault.late-rim", "treatment", "rim", { yields: "vault.early-rim" }),
   ].join("\n\n")}\n`);
   const project = writeText("acme.md", `# acme\n\n${[
     lookWriting("acme.edge-style", "treatment", "part-edge"),
@@ -465,7 +469,9 @@ test("a clash between two stages is settled by the dependency order, the earlier
   assert.match(clashLine(out, "vault.law-gap", "acme.gap"), /\(the dependency order .*; acme\.gap stands\.$/);
   assert.match(clashLine(out, "vault.tone", "acme.tone"), /^- Settled by precedence \(within one step, the project beats .*; acme\.tone stands\.$/);
   assert.match(clashLine(out, "vault.pace", "acme.pace"), /^- Settled by precedence \(within one step, the project beats .*; acme\.pace stands\.$/);
-  assert.match(clashLine(out, "acme.early-gap", "acme.late-gap"), /\(the dependency order .*; acme\.early-gap stands\.$/);
+  assert.match(clashLine(out, "acme.early-gap", "acme.late-gap"), /^- For the founder \(both are acme's own\)/);
+  assert.match(clashLine(out, "vault.early-pad", "vault.late-pad"), /^- For the founder \(it turns on a vault level the rule records do not record\)/);
+  assert.match(clashLine(out, "vault.early-rim", "vault.late-rim"), /\(the dependency order .*; vault\.early-rim stands\.$/);
   assert.match(clashLine(out, "vault.early-fill", "vault.late-fill"), /\(the dependency order .*; vault\.early-fill stands\.$/);
   assert.match(clashLine(out, "vault.early-edge", "vault.late-edge"), /^- For the founder \(it turns on a vault level the rule records do not record\)/);
 });
