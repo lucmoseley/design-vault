@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- A canvas build that ends 4.5 s after load, past look.py's SETTLE_MS: a box drawn black once it ends. -->
+<html><body style="margin:0;background:#fff">
+<canvas id="c" width="100" height="100" style="display:block"></canvas>
+<script>
+const ctx = document.getElementById("c").getContext("2d");
+const start = performance.now();
+function frame(now) {
+  ctx.fillStyle = now - start >= 4500 ? "#000" : "#fff";
+  ctx.fillRect(0, 0, 100, 100);
+  if (now - start < 4500) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body></html>

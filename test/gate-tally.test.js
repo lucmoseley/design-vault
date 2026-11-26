@@ -140,6 +140,36 @@ test("a script's cannot measure is tallied from the look critics", () => {
   assert.match(out, /script: v2-water\/access\/access\.json, exit 6: the hero text sits on video/);
 });
 
+test("check-frames.py's exit 6 sends the vault's end-frame and drafts-kept to the look critics, who answer them", () => {
+  // #613: a canvas or scripted build check-frames.py cannot check is answered cannot measure, never judged by eye by
+  // the session that built it. On the vault's own gate, so a record moving either question off check-frames shows here.
+  const rules = path.join(__dirname, "..", "plugin", "skills", "design-critique", "rules");
+  const args = ["--asset", "motion", "--fact", "has-motion", "--fact", "has-brand-motion"];
+  const ids = (out, head) => [...out.slice(out.indexOf(head)).split("\n\n")[1].matchAll(/^\d+\. (\S+?)[ :]/gm)].map((m) => m[1]);
+  const unmeasured = ["vault.end-frame", "vault.drafts-kept"];
+  const scripted = ids(run("list", ...args, rules).out, "Script and code questions");
+  assert.ok(unmeasured.every((id) => scripted.includes(id)), scripted.join(", "));
+  const exit6 = { answer: "cannot measure", evidence: "v1-build/frames/out.txt, exit 6: a visible canvas" };
+  const answered = writeText(
+    "frames-answered.json",
+    JSON.stringify({ answers: { "v1-build": Object.fromEntries(scripted.map((id) => [id, unmeasured.includes(id) ? exit6 : said("pass")])) } }),
+  );
+  const listed = run("list", ...args, "--look", "--answered", answered, rules);
+  assert.equal(listed.status, 0, listed.out + listed.err);
+  for (const id of unmeasured) assert.match(listed.out, new RegExp(`^\\d+\\. ${id.replace(".", "\\.")} \\(script cannot measure it for v1-build\\):`, "m"));
+  const looked = ids(listed.out, "Look questions");
+  const critic = (n) =>
+    writeText(
+      `frames-critic-${n}.json`,
+      JSON.stringify({ answers: { "v1-build": Object.fromEntries(looked.map((id) => [id, said(id === "vault.end-frame" ? "No" : "Yes")])) }, clashes: [] }),
+    );
+  const r = run("tally", ...args, "--answered", answered, ...[1, 2, 3].flatMap((n) => ["--critic", critic(n)]), rules);
+  assert.equal(r.status, 0, r.out + r.err);
+  const v = parseVerdicts(r.out)["v1-build"];
+  assert.deepEqual(v["vault.end-frame"], { by: "script cannot measure it, so look", verdict: "fault" });
+  assert.deepEqual(v["vault.drafts-kept"], { by: "script cannot measure it, so look", verdict: "pass" });
+});
+
 test("every clash a critic named is printed for the reveal, and None where none was", () => {
   const { out } = tally();
   const clashes = out.slice(out.indexOf("Clashes the critics named")).split("\n").filter((l) => l.startsWith("- "));
