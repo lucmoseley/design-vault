@@ -73,9 +73,16 @@ ROW_SHARE = 0.5
 # to find them, short enough to read.
 EXAMPLES = 3
 
+CAROUSEL_CONTROLS_JS = r"""
+const nameOf = (e) => [e.getAttribute('aria-label'), e.title, e.textContent, e.value].filter(Boolean).join(' ').trim();
+const step = /\b(prev|previous|next|back|forward)\b|^\s*[‹›←→<>]\s*$/i, ahead = /\b(next|forward)\b|^\s*[›→>]\s*$/i;
+"""
+
 # The composite widgets the APG keeps to one Tab stop, each with the items arrows move between, and the arrow
 # that moves to the next item where aria-orientation does not say.
-COMPOSITES_JS = r"""
+COMPOSITES_JS = (
+    CAROUSEL_CONTROLS_JS
+    + r"""
 const COMPOSITE = {
   tablist: ['[role=tab]', 'ArrowRight'],
   radiogroup: ['[role=radio], input[type=radio]', 'ArrowDown'],
@@ -102,8 +109,8 @@ const current = () => {
 };
 const tabbable = (e) => e.tabIndex >= 0 && shown(e) && !disabled(e) && !e.closest('[inert]') && !empty(box(e.getBoundingClientRect()));
 const rotation = /\b(pause|stop|play|start|resume)\b/i;
-const nameOf = (e) => [e.getAttribute('aria-label'), e.textContent, e.title].filter(Boolean).join(' ');
 """
+)
 
 # Before the walk: each declared carousel's tab stops, and the elements holding text a screen reader reads,
 # that lie outside its box at rest, as on a slide out of view.
@@ -296,8 +303,6 @@ DRIVE_JS = (
 (selectors) => {
   const d = window.__drive = { groups: groups(), carousels: selectors.flatMap((s) => [...document.querySelectorAll(s)]) };
   document.addEventListener('submit', (e) => e.preventDefault(), true);
-  // Each carousel's previous and next buttons, by their names or an arrow alone.
-  const step = /\b(prev|previous|next|back|forward)\b|^\s*[‹›←→<>]\s*$/i;
   d.steps = d.carousels.map((c) => [...c.querySelectorAll(TARGET)].filter((e) => tabbable(e) && !rotation.test(nameOf(e)) && step.test(nameOf(e))));
   return {
     groups: d.groups.map((g) => ({ subject: label(g), items: itemsOf(g).length, arrow: arrowOf(g) })),
@@ -671,18 +676,20 @@ def _menus(page, js):
     return faults
 
 
-# The box, opacity and visibility of carousel e's first `limit` descendants, as one string: what a slide
-# moving or fading changes, and a focus ring, a hover colour or the page scrolling does not. Boxes are read
-# from the carousel's own corner.
+# The box, opacity, visibility and image of carousel e and its first `limit` elements, as one string: what a
+# slide moving, fading or swapping its image changes, and a focus ring, a hover colour or the page scrolling
+# does not. Boxes are read from the carousel's own corner.
 SIG_JS = r"""
   const sig = () => {
     const o = e.getBoundingClientRect();
-    return [...e.querySelectorAll('*')].slice(0, limit).map((d) => {
+    return [e, ...e.querySelectorAll('*')].slice(0, limit).map((d) => {
       const r = d.getBoundingClientRect(), s = getComputedStyle(d);
-      return [r.left - o.left, r.top - o.top, r.width, r.height].map(Math.round).join(',') + ',' + s.opacity + ',' + s.visibility;
+      return [r.left - o.left, r.top - o.top, r.width, r.height].map(Math.round).join(',')
+        + `,${s.opacity},${s.visibility},${d.currentSrc || ''},${s.backgroundImage}`;
     }).join(';');
   };
 """
+SHOWN_JS = "(e, limit) => {" + SIG_JS + "  return sig();\n}"
 # Watches a carousel on every frame until told to stop, setting e.__watch.moved once SIG_JS differs from the
 # first frame's.
 WATCH_JS = (

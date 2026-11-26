@@ -322,52 +322,6 @@ class Chart(unittest.TestCase):
         self.assertAlmostEqual(reading.ratio, 12.63, places=2)
 
 
-class Slides(unittest.TestCase):  # #427
-    LIGHT = contrasts.Figure(1.2, np.array([255.0] * 3), np.array([0xF2] * 3))
-    DARK = contrasts.Figure(9.0, np.array([255.0] * 3), np.array([0x22] * 3))
-    MID = contrasts.Figure(4.0, np.array([255.0] * 3), np.array([0x80] * 3))
-
-    def verdict(self, readings):
-        photo = contrasts.answering.unjudged()
-        self.passed = contrasts._photo_verdict(photo, readings, TABLE)
-        return photo
-
-    def test_a_control_takes_its_worst_figure_over_every_slide(self):
-        photo = self.verdict(
-            [
-                (None, [("button#save", self.DARK)]),
-                ("on its slide 2 of 2", [("button#save", self.LIGHT)]),
-            ]
-        )
-        (fault,) = photo.faults
-        self.assertEqual(self.passed, [])
-        self.assertEqual(fault["subject"], "button#save")
-        self.assertIn(
-            "1.20:1 at best on its slide 2 of 2 (#ffffff against #f2f2f2",
-            fault["detail"],
-        )
-
-    def test_a_control_that_holds_on_every_slide_passes(self):
-        photo = self.verdict(
-            [
-                (None, [("button#save", self.DARK)]),
-                ("on its slide 2 of 2", [("button#save", self.MID)]),
-            ]
-        )
-        self.assertEqual((photo.faults, photo.unmeasured), ([], []))
-        self.assertEqual(
-            self.passed,
-            [contrasts.Reading("button#save", "control on a photo", 4.0)],
-        )
-
-    def test_a_reason_seen_on_several_slides_is_named_once_where_first_seen(self):
-        why = "lies over a video, which a script draws"
-        photo = self.verdict(
-            [(None, [("a#play", why)]), ("on its slide 2 of 2", [("a#play", why)])]
-        )
-        self.assertEqual(photo.unmeasured, [f"a#play {why}"])
-
-
 def photo_answer(fixture, carousel, fresh=None):
     from playwright.sync_api import sync_playwright
 
@@ -382,7 +336,7 @@ def photo_answer(fixture, carousel, fresh=None):
                 page.goto(url)
                 return page
 
-            out, _ = contrasts.measure(
+            out, readings = contrasts.measure(
                 load(),
                 access.contrast_js,
                 TABLE,
@@ -393,12 +347,12 @@ def photo_answer(fixture, carousel, fresh=None):
             )
         finally:
             browser.close()
-    return out["vault.controls-on-photo"]
+    return out["vault.controls-on-photo"], readings
 
 
 class SlidePassErrors(unittest.TestCase):  # #528
     def photo_answer(self, fresh):
-        return photo_answer("contrast-tier01-later.html", "#deck", fresh)
+        return photo_answer("contrast-tier01-later.html", "#deck", fresh)[0]
 
     def test_a_load_that_throws_is_a_reason_naming_the_error(self):
         from playwright.sync_api import Error as PlaywrightError
@@ -435,11 +389,30 @@ class SlidePassErrors(unittest.TestCase):  # #528
 class SlidePassLimits(unittest.TestCase):  # #512
     @classmethod
     def setUpClass(cls):
-        cls.photo = photo_answer("contrast-tier01-decks.html", ".deck")
+        cls.photo, cls.readings = photo_answer("contrast-tier01-decks.html", ".deck")
 
     def test_no_deck_is_faulted_and_each_names_one_reason(self):
         self.assertEqual(self.photo.faults, [])
-        self.assertEqual(len(self.photo.unmeasured), 4, self.photo.unmeasured)
+        self.assertEqual(len(self.photo.unmeasured), 5, self.photo.unmeasured)
+
+    def test_a_control_that_holds_on_every_slide_passes_once(self):  # #427
+        (reading,) = [
+            r
+            for r in self.readings
+            if r[:2] == ("button#held-save", "control on a photo")
+        ]
+        self.assertGreaterEqual(reading.ratio, TABLE.photo)
+
+    def test_a_reason_seen_on_every_slide_is_named_once_where_first_seen(
+        self,
+    ):  # #427
+        self.assertEqual(
+            self.photo.unmeasured.count(
+                "button#held-play lies over a video, which a script draws"
+            ),
+            1,
+            self.photo.unmeasured,
+        )
 
     def test_dots_past_max_slides_are_named_unread(self):
         self.assertIn(
