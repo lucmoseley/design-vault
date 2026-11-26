@@ -28,13 +28,13 @@ const ran = (staged) => {
 const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/video-sheet.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
-  const shardOf = (k, n) => {
+  const readShard = (k, n) => {
     const r = allSh(["--plan", `--shard=${k}/${n}`]);
     assert.equal(r.status, 0, r.stderr);
     return parseRuns(r.stdout);
   };
   const n = JSON.parse(fs.readFileSync(path.join(ROOT, ".claude", "workflow-core.json"), "utf8")).fullTestShards;
-  const shards = Array.from({ length: n }, (_, i) => shardOf(i + 1, n));
+  const shards = Array.from({ length: n }, (_, i) => readShard(i + 1, n));
   assert.deepEqual(shards.flat().sort(), [...SUITES].sort());
   shards.forEach((shard, i) => assert.deepEqual(shard, SUITES.filter((_, j) => j % n === i)));
 });
