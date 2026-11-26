@@ -1114,6 +1114,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/script-loop-late.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/script-loop-starved.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
