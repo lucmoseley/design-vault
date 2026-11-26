@@ -666,7 +666,7 @@ class TimedChange(Browsed):
     ):
         access = siblings.load(SCRIPTS, "check-access.py")
         long_s, rotate_s = access.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
-        # #611: past both watches of ROTATE_MS, plus one spare; guess
+        # guess, #154
         every = access.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
             f"carousel.html?every={every}", carousels=[".slides", "main > div"]
