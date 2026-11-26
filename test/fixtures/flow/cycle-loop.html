@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- WAAPI motion beside a frame loop that never ends and rewrites one of four
+     bars each frame, so no one bar reads as moved frame by frame (#469). -->
+<html><body>
+<div id="waapi" style="width:40px;height:40px;background:#333"></div>
+<div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+<script>
+document.getElementById("waapi").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+const bars = document.querySelectorAll(".bar");
+let frame = 0;
+requestAnimationFrame(function tick() {
+  bars[frame % bars.length].style.height = `${10 + (frame % 7) * 5}px`;
+  frame++;
+  requestAnimationFrame(tick);
+});
+</script>
+</body></html>
