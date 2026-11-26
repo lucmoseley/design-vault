@@ -1095,7 +1095,7 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
     gaps = len(times) - 1
     active = [False] * gaps
     elements = []
-    steps = {}
+    steps = []
     for el in sample["elements"]:
         channels = {}
         for name, values in el["channels"].items():
@@ -1136,18 +1136,40 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                 for i, n, before, after, way in steps_in(r, changes, times, s=s, e=e):
                     if any(unknown[i - STEP_SIDE_FRAMES : i + n + STEP_SIDE_FRAMES]):
                         continue
-                    at = round((times[i] + times[i + n]) / 2)
-                    steps.setdefault(
-                        (el["label"], way, at),
-                        {
-                            "element": el["label"],
-                            "way": way,
-                            "at": at,
-                            "from": round(before, 2),
-                            "to": round(after, 2),
-                            "channels": [],
-                        },
-                    )["channels"].append(name)
+                    # The intervals from the last on the slower speed to the
+                    # first on the faster: channels whose spans overlap found
+                    # one step (#623).
+                    lo, hi = i - 1, i + n
+                    group = next(
+                        (
+                            g
+                            for g in steps
+                            if g["step"]["element"] == el["label"]
+                            and g["step"]["way"] == way
+                            and g["lo"] <= hi
+                            and lo <= g["hi"]
+                        ),
+                        None,
+                    )
+                    if group is None:
+                        group = {
+                            "lo": lo,
+                            "hi": hi,
+                            "step": {
+                                "element": el["label"],
+                                "way": way,
+                                "at": round((times[i] + times[i + n]) / 2),
+                                "from": round(before, 2),
+                                "to": round(after, 2),
+                                "channels": [],
+                            },
+                        }
+                        steps.append(group)
+                    group["lo"], group["hi"] = (
+                        min(group["lo"], lo),
+                        max(group["hi"], hi),
+                    )
+                    group["step"]["channels"].append(name)
         elements.append(
             {
                 "label": el["label"],
@@ -1261,14 +1283,14 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                         }
 
     def by_time(found):
-        return sorted(found.values(), key=lambda x: (x["at"], x["element"]))
+        return sorted(found, key=lambda x: (x["at"], x["element"]))
 
     return {
         "pauses": pauses,
-        "jolts": by_time(jolts),
-        "jumps": by_time(jumps),
-        "unseen": by_time(unseen),
-        "steps": by_time(steps),
+        "jolts": by_time(jolts.values()),
+        "jumps": by_time(jumps.values()),
+        "unseen": by_time(unseen.values()),
+        "steps": by_time(g["step"] for g in steps),
         "elements": elements,
     }
 

@@ -943,6 +943,31 @@ class Steps(unittest.TestCase):
         [st] = r["steps"]
         self.assertEqual(st["at"], round(10 * STEP))
 
+    def test_one_step_channels_place_a_frame_apart_each_is_one_step(self):  # #623
+        # Each channel's step is a frame on from the last, so the first and
+        # third overlap only through the second.
+        def xs(slow):
+            speeds = [10] * slow + [40] * 8
+            moved = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
+            return moved + moved[-1:] * (10 - slow)
+
+        r = flow.analyse(
+            {
+                "times": [k * STEP for k in range(len(xs(8)))],
+                "elements": [
+                    {
+                        "label": "el",
+                        "channels": {"position": xs(8), "size": xs(9), "scale": xs(10)},
+                    }
+                ],
+            }
+        )
+        [st] = r["steps"]
+        self.assertEqual(
+            (st["way"], st["at"], st["channels"]),
+            ("up", round(8 * STEP), ["position", "size", "scale"]),
+        )
+
     def test_a_step_under_a_fifth_of_top_speed_is_not_a_step(self):
         # A 1.5x step at 1.5 of a top of 20, then a smooth climb to that top.
         speeds = (
