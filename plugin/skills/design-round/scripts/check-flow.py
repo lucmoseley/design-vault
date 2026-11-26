@@ -752,8 +752,6 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
     inside that frame still cuts it, another element's move from rest inside it
     gets a first frame in the wrong phase, and a move from rest at a later
     keyframe or pass keeps the sampled frames' phase.
-    Each of `drawn`, a frame the browser drew a morph in, takes the place of
-    every frame within half a frame of it.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
