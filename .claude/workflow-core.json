@@ -13,6 +13,8 @@
 	},
 	"fullTestShards": 4,
 	"landingTester": "local",
+	"sessionMeanMb": 698,
+	"sessionSigmaMb": 683,
 	"corpus": [
 		"lucmoseley/design-vault-tracker",
 		"lucmoseley/workflow-core-tracker",
