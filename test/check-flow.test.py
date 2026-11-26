@@ -6,6 +6,7 @@ import itertools
 import json
 import math
 import os
+import random
 import shutil
 import signal
 import subprocess
@@ -245,12 +246,6 @@ class Jolts(unittest.TestCase):
     def test_a_delay_ending_within_1_ms_of_its_frame_has_a_whole_first_frame(self):
         times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
         self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
-
-    def test_a_drawn_frame_takes_the_place_of_frames_within_half_a_frame(self):
-        times = flow.sample_times(100, [12.7, 37.3], 60, drawn=[[12.7, 37.3]])
-        self.assertEqual(
-            [round(t, 1) for t in times], [0, 12.7, 37.3, 50, 66.7, 83.3, 100]
-        )
 
     def test_no_two_sample_times_fall_within_1_ms(self):
         times = flow.sample_times(100, [16.9, 50, 99.5], 60)
@@ -1496,6 +1491,14 @@ class Refused(unittest.TestCase):
         )
         self.assertNotIn("seeks by hand", proc.stdout)
 
+    def test_a_reveal_css_holds_paused_names_each_held_element_once_and_its_pseudo_element_apart(
+        self,
+    ):  # #615
+        self.refuses(
+            "held-pair.html",
+            "holds 3 animation(s) CSS animation-play-state keeps paused (div#pair, div#pair::before)",
+        )
+
     def test_a_timer_due_past_the_timeout(self):
         self.refuses("long-timer.html", "past --timeout", "--timeout", "3000")
 
@@ -1977,14 +1980,33 @@ def off_the_grid(off):
     return [[0] + [k * STEP + off * (-1) ** k for k in range(1, 60)] + [1000]]
 
 
-def morph_measured(w, until):
+OFF_GRID_MS = 8  # measured, #624: 1 fake step in 200 seeded runs at 120 fps
+
+
+def morph_sample(ws, until, fps=60, edges=()):
     s = {
-        "times": flow.sample_times(until, [], 60),
+        "times": flow.sample_times(until, list(edges), fps),
         "elements": [],
-        "morphs": [{"label": "path#arch", "writes": w}],
+        "morphs": [{"label": f"path#m{i}", "writes": w} for i, w in enumerate(ws)],
     }
     flow.add_morphs(s)
-    return flow.analyse(s)
+    return s
+
+
+def morph_measured(w, until):
+    return flow.analyse(morph_sample([w], until))
+
+
+def doubles(t):
+    return min(1, t / 1500 if t < 500 else 1 / 3 + (t - 500) / 750)
+
+
+def jittered(rng):
+    return (
+        [0]
+        + [k * STEP + rng.uniform(-OFF_GRID_MS, OFF_GRID_MS) for k in range(1, 60)]
+        + [1000]
+    )
 
 
 class MorphPoints(unittest.TestCase):
@@ -2069,13 +2091,11 @@ class DroppedFrames(unittest.TestCase):
             [(round(29 * STEP), round(32 * STEP))],
         )
 
-    def test_no_step_rests_on_frames_dropped_at_a_morphs_start_126(self):
-        s = {
-            "times": flow.sample_times(1100, [], 60),
-            "elements": [],
-            "morphs": [{"label": "path#arch", "writes": without(1, 2)}],
-        }
-        flow.add_morphs(s)
+    def test_no_step_rests_on_frames_dropped_beside_it_126(self):
+        w = writes(
+            doubles, [f for k, f in enumerate(frames(1000)) if k not in (27, 28)]
+        )
+        s = morph_sample([w], 1000)
         self.assertEqual(flow.analyse(s)["steps"], [])
         del s["elements"][0]["dropped"]
         self.assertTrue(flow.analyse(s)["steps"])
@@ -2144,63 +2164,217 @@ class MorphFlow(unittest.TestCase):
         self.assertAlmostEqual(p["start"], 400, delta=2 * STEP)
         self.assertAlmostEqual(p["end"], 800, delta=2 * STEP)
 
-    def steps_and_sample_times(self, drawn, fps, progress=None, *, given=True):
-        progress = progress or eased(0, 1000)
-        s = {
-            "times": flow.sample_times(
-                1000,
-                [t for own in drawn for t in own],
-                fps,
-                drawn=drawn if given else (),
+    def morph_steps(self, drawn, fps, progress=None):
+        ws = [writes(progress or eased(0, 1000), own) for own in drawn]
+        edges = [t for own in drawn for t in own]
+        return flow.analyse(morph_sample(ws, 1000, fps, edges))["steps"]
+
+    def test_a_morphs_d_is_measured_only_at_its_own_drawn_frames_624(self):
+        own = off_the_grid(6)[0]
+        s = morph_sample([writes(eased(0, 1000), own)], 1000, 120)
+        self.assertEqual(s["elements"][0]["times"]["d"], own)
+
+    def test_a_morph_drawn_off_the_grid_has_no_step_at_each_fps(self):  # #624
+        for fps in (30, 60, 120):
+            for off in (4, 6, OFF_GRID_MS):
+                with self.subTest(fps=fps, off=off):
+                    self.assertEqual(self.morph_steps(off_the_grid(off), fps), [])
+
+    def test_a_morph_jittered_off_the_grid_has_no_step_in_200_runs_624(self):
+        rng = random.Random(624)
+        for run in range(200):
+            with self.subTest(run=run):
+                self.assertEqual(self.morph_steps([jittered(rng)], 120), [])
+
+    def test_two_morphs_out_of_phase_have_no_step_at_120_fps_624(self):
+        drawn = [[k * STEP for k in range(61)], [3 + k * STEP for k in range(60)]]
+        self.assertEqual(self.morph_steps(drawn, 120), [])
+
+    def test_a_step_is_still_found_in_each_no_step_case_above(self):  # #624
+        rng = random.Random(624)
+        cases = [
+            *(
+                (f"fps={fps} off={off}", fps, off_the_grid(off))
+                for fps in (30, 60, 120)
+                for off in (4, 6, OFF_GRID_MS)
             ),
-            "elements": [],
+            *((f"jittered run={run}", 120, [jittered(rng)]) for run in range(20)),
+            (
+                "out of phase",
+                120,
+                [[k * STEP for k in range(61)], [3 + k * STEP for k in range(60)]],
+            ),
+        ]
+        for name, fps, drawn in cases:
+            with self.subTest(name):
+                found = self.morph_steps(drawn, fps, doubles)
+                self.assertEqual(sorted({round(st["at"] / STEP) for st in found}), [30])
+
+    def test_another_element_is_sampled_every_frame_over_a_morphs_late_frame_624(self):
+        late = [k * STEP for k in range(61)]
+        late[30] += 6
+        s = sample(
+            (0, 1000, ease_in_out), until=1000, times=flow.sample_times(1000, [], 120)
+        )
+        s["morphs"] = [{"label": "path#m", "writes": writes(eased(0, 1000), late)}]
+        flow.add_morphs(s)
+        [el, _] = flow.analyse(s)["elements"]
+        times = el["channels"]["position"]["times"]
+        self.assertEqual(times, s["times"])
+        self.assertLessEqual(
+            max(b - a for a, b in itertools.pairwise(times)), 1000 / 120 + 1e-9
+        )
+
+    def test_a_morphs_start_the_viewer_never_sees_at_rest_is_listed_not_judged(self):
+        w = writes(lambda t: min(1, max(0, (t - 100) / 500)), frames(800))
+        s = morph_sample([w], 800, 120)
+        s["elements"][0]["seen"] = [t > 100 for t in s["times"]]
+        r = flow.analyse(s)
+        self.assertEqual([(j["edge"], j["at"]) for j in r["jolts"]], [("stops", 600)])
+        self.assertEqual([(u["edge"], u["at"]) for u in r["unseen"]], [("starts", 100)])
+
+    def test_a_morphs_frame_takes_the_sight_of_the_nearest_sample_624(self):
+        w = writes(
+            lambda t: min(1, max(0, (t - 107) / 500)), [7 + k * STEP for k in range(48)]
+        )
+        s = morph_sample([w], 800, 120)
+        s["elements"][0]["seen"] = [t < 605 for t in s["times"]]
+        r = flow.analyse(s)
+        self.assertEqual([(j["edge"], j["at"]) for j in r["jolts"]], [("starts", 107)])
+        self.assertEqual([(u["edge"], u["at"]) for u in r["unseen"]], [("stops", 607)])
+
+    def test_a_step_a_morph_and_another_channel_share_is_listed_once_624(self):
+        times = flow.sample_times(1000, [], 120)
+        position = [[300 * doubles(t), 0] for t in times]
+        s = {
+            "times": times,
+            "elements": [{"label": "path#m0", "channels": {"position": position}}],
             "morphs": [
-                {"label": f"path#m{i}", "writes": writes(progress, own)}
-                for i, own in enumerate(drawn)
+                {"label": "path#m0", "writes": writes(doubles, off_the_grid(4)[0])}
             ],
         }
         flow.add_morphs(s)
-        return flow.analyse(s)["steps"], s["times"]
+        [st] = flow.analyse(s)["steps"]
+        self.assertEqual(sorted(st["channels"]), ["d", "position"])
 
-    def test_a_morph_drawn_4_ms_off_the_sampled_frames_has_no_step(self):  # #612
-        drawn = [[0, STEP - 4, 2 * STEP + 4] + [k * STEP for k in range(3, 61)]]
-        self.assertEqual(self.steps_and_sample_times(drawn, 60)[0], [])
-        self.assertTrue(self.steps_and_sample_times(drawn, 60, given=False)[0])
+    def analyse_morph_and_position(
+        self, position_from, *, seen=None, ease=linear, px=300, opacity_from=None, **at
+    ):
+        times = flow.sample_times(800, [], 60)
 
-    def test_a_morph_drawn_4_ms_off_the_grid_has_no_step_at_each_fps(self):  # #620
-        for fps in (30, 60, 120):
-            with self.subTest(fps=fps):
-                found, times = self.steps_and_sample_times(off_the_grid(4), fps)
-                self.assertEqual(found, [])
-                gaps = [b - a for a, b in itertools.pairwise(times)]
-                self.assertLessEqual(max(gaps), 1.5 * 1000 / fps)
+        def go(t):
+            return ease(min(1, max(0, (t - position_from) / 500)))
 
-    def test_a_morph_drawn_6_ms_off_the_grid_has_no_step_at_120_fps(self):  # #620
-        drawn = off_the_grid(6)
-        found, times = self.steps_and_sample_times(drawn, 120)
-        self.assertEqual(found, [])
-        self.assertGreater(len(times), 1.5 * len(drawn[0]))
+        s = {
+            "times": times,
+            "elements": [
+                {
+                    "label": "path#m0",
+                    "channels": {"position": [[px * go(t), 0] for t in times]}
+                    | (
+                        {
+                            "opacity": [
+                                str(min(1, max(0, (t - opacity_from) / 500)))
+                                for t in times
+                            ]
+                        }
+                        if opacity_from is not None
+                        else {}
+                    ),
+                }
+                | ({"seen": [seen(t) for t in times]} if seen else {})
+            ],
+            "morphs": [
+                {
+                    "label": "path#m0",
+                    "writes": writes(
+                        lambda t: min(1, max(0, (t - 107) / 500)),
+                        [7 + k * STEP for k in range(48)],
+                    ),
+                }
+            ],
+        }
+        flow.add_morphs(s)
+        return flow.analyse(s, **at)
 
-    def test_a_step_in_a_morph_drawn_off_the_grid_is_still_found(self):  # #620
-        def doubles(t):
-            return min(1, t / 1500 if t < 500 else 1 / 3 + (t - 500) / 750)
-
-        for fps, off in ((30, 4), (60, 4), (120, 4), (120, 6)):
-            with self.subTest(fps=fps, off=off):
-                found, _ = self.steps_and_sample_times(off_the_grid(off), fps, doubles)
-                self.assertEqual([round(st["at"] / STEP) for st in found], [30])
-
-    def test_two_morphs_out_of_phase_leave_sampling_at_the_fps(self):  # #620
-        drawn = [[k * STEP for k in range(61)], [3 + k * STEP for k in range(60)]]
-        _, times = self.steps_and_sample_times(drawn, 120)
-        self.assertLessEqual(
-            max(b - a for a, b in itertools.pairwise(times)), 1000 / 120
+    def test_a_morph_and_another_channel_starting_together_jolt_once_632(self):
+        got = [
+            (j["edge"], j["at"], j["channels"])
+            for j in self.analyse_morph_and_position(100)["jolts"]
+        ]
+        self.assertEqual(
+            got, [("starts", 100, ["position", "d"]), ("stops", 600, ["position", "d"])]
         )
 
-    def test_frames_a_morph_dropped_are_still_sampled_at_the_fps(self):  # #620
-        drawn = [k * STEP for k in range(7)] + [12 * STEP, 13 * STEP]
-        times = flow.sample_times(13 * STEP, drawn, 60, drawn=[drawn])
-        self.assertEqual(len([t for t in times if 6 * STEP < t < 12 * STEP]), 5)
+    def test_a_morph_and_another_channel_unseen_together_are_listed_once_632(self):
+        r = self.analyse_morph_and_position(100, seen=lambda t: t < 300)
+        self.assertEqual(
+            [(u["edge"], u["at"], u["channels"]) for u in r["unseen"]],
+            [("stops", 600, ["position", "d"])],
+        )
+
+    def test_one_jolt_both_channels_find_takes_the_higher_share_632(self):
+        r = self.analyse_morph_and_position(100, ease=lambda p: p**1.2, jolt_ratio=0.3)
+        start = r["jolts"][0]
+        self.assertEqual(
+            (start["edge"], start["channels"]), ("starts", ["position", "d"])
+        )
+        self.assertEqual(start["share"], 1.0)
+
+    def test_one_unseen_start_both_channels_find_names_all_it_would_be_632(self):
+        r = self.analyse_morph_and_position(100 + STEP, seen=lambda t: t > 300, px=600)
+        self.assertEqual(
+            [(u["edge"], u["channels"], u["would_be"]) for u in r["unseen"]],
+            [("starts", ["d", "position"], ["jolt", "jump"])],
+        )
+
+    def test_edges_join_only_within_a_frame_of_their_first_632(self):
+        got = [
+            (j["at"], j["channels"])
+            for j in self.analyse_morph_and_position(100, opacity_from=100 + STEP)[
+                "jolts"
+            ]
+            if j["edge"] == "starts"
+        ]
+        self.assertEqual(got, [(100, ["position", "d"]), (117, ["opacity"])])
+
+    def edge(self, name, share=1.0, line=0.5):
+        return {"channels": [name], "share": share, "line": line}
+
+    def test_edges_on_adjacent_frames_stay_apart_at_every_frame_632(self):
+        for k in range(1, 200):
+            found = [
+                ("k", k * STEP, self.edge("position")),
+                ("k", (k + 1) * STEP, self.edge("opacity")),
+            ]
+            self.assertEqual(len(flow.merged_edges(found, flow.FPS)), 2, k)
+
+    def test_one_channel_is_never_joined_to_itself_632(self):
+        found = [("k", 100, self.edge("d")), ("k", 105, self.edge("d"))]
+        self.assertEqual(len(flow.merged_edges(found, flow.FPS)), 2)
+
+    def test_a_joined_jolt_takes_the_line_of_its_higher_share_632(self):
+        found = [
+            ("k", 100, self.edge("position", 0.5, 0.4)),
+            ("k", 105, self.edge("d", 0.9, 0.6)),
+        ]
+        [j] = flow.merged_edges(found, flow.FPS)
+        self.assertEqual((j["share"], j["line"]), (0.9, 0.6))
+
+    def test_a_morph_and_another_channel_two_frames_apart_jolt_apart_632(self):
+        got = [
+            (j["edge"], j["at"], j["channels"])
+            for j in self.analyse_morph_and_position(100 + 2 * STEP)["jolts"]
+        ]
+        self.assertEqual(
+            got,
+            [
+                ("starts", 107, ["d"]),
+                ("starts", 133, ["position"]),
+                ("stops", 607, ["d"]),
+                ("stops", 633, ["position"]),
+            ],
+        )
 
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {
@@ -2229,7 +2403,7 @@ def run_morph(page):
 
 
 def covers_stall(data):
-    start = data["edges_ms"][0]
+    start = data["first_move_ms"]
     return any(
         b - a >= 180 and a - start < 600 and b - start > 450
         for a, b in data["elements"][0]["dropped"]["d"]
@@ -2247,6 +2421,12 @@ class MorphPages(unittest.TestCase):
         self.assertGreaterEqual(data["length_ms"], 1000 - 3 * STEP)
         self.assertIn("run check-curves.js on it", proc.stdout)
         self.assertEqual(curves.returncode, 0, curves.stdout + curves.stderr)
+
+    def test_a_morphs_frames_stay_off_the_shared_sample_times_624(self):
+        _, data, _ = run_morph("morph.html")
+        off = [t for t in data["times"][1:-1] if abs(t / STEP - round(t / STEP)) > 1e-6]
+        self.assertEqual(off, [])
+        self.assertNotEqual(data["elements"][0]["times"]["d"], data["times"])
 
     def test_a_morph_held_longer_than_the_quiet_window_is_measured_whole(self):
         proc, data, curves = run_morph("morph-hold.html")
@@ -2287,8 +2467,8 @@ class MorphPages(unittest.TestCase):
         proc, data, _ = run("morph-hold-starved.html")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         [p] = data["pauses"]
-        self.assertAlmostEqual(p["start"] - data["edges_ms"][0], 800, delta=250)
-        self.assertAlmostEqual(p["end"] - data["edges_ms"][0], 1800, delta=250)
+        self.assertAlmostEqual(p["start"] - data["first_move_ms"], 800, delta=250)
+        self.assertAlmostEqual(p["end"] - data["first_move_ms"], 1800, delta=250)
         self.assertGreaterEqual(data["length_ms"], 2600 - 120)
 
     def test_a_load_that_drops_frames_is_measured_again(self):

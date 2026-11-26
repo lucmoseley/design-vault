@@ -44,7 +44,7 @@ const AMPLE_MEMINFO = path.join(dir, "meminfo");
 // guess #627: past run-lanes' top rung of 4050 MB
 fs.writeFileSync(AMPLE_MEMINFO, "MemAvailable:   8192000 kB\n");
 // #627
-const idleMachineEnv = () => env({ VAULT_SUITE_LANES: "1", VAULT_PS: QUIET_PS, VAULT_MEMINFO: AMPLE_MEMINFO,
+const isolatedEnv = () => env({ VAULT_SUITE_LANES: "1", VAULT_PS: QUIET_PS, VAULT_MEMINFO: AMPLE_MEMINFO,
   WFC_GATE_SEAT: "", VAULT_SUITE_BUDGET: "", VAULT_SUITE_TIMES: "" });
 
 const NODE = spawnSync("bash", [ALL_SH, "--plan"], { encoding: "utf8", env: env({}) }).stdout.match(/^RUN (node .*)$/m)[1];
@@ -79,6 +79,17 @@ test("the reporter writes each file's own wall seconds once, its module load cou
   assert.ok(took["test/slow-load.test.js"] >= LOAD_MS / 1000, `${took["test/slow-load.test.js"]} s`);
 });
 
+test("the reporter's seconds are the runner's own duration for the file, never the reporter's clock (#626)", () => {
+  const seconds = path.join(dir, "runner.tsv");
+  const feed = `const complete = (name, ms) => ({ type: "test:complete",
+      data: { file: require("node:path").resolve("test/a.test.js"), name, nesting: 0, details: { duration_ms: ms } } });
+    (async () => { for await (const _ of require(${JSON.stringify(path.join(__dirname, "failed-files.js"))})(
+      [complete("inner", 1), complete("test/a.test.js", 2), complete("test/a.test.js", 1234)])); })();`;
+  const r = spawnSync(process.execPath, ["-e", feed], { cwd: dir, encoding: "utf8", env: env({ VAULT_FILE_SECONDS: seconds }) });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(fs.readFileSync(seconds, "utf8"), "test/a.test.js\t1.234\n");
+});
+
 test("without VAULT_FAILED_FILES the reporter still prints Node's report and the run's red", () => {
   const root = scratch("unset");
   const r = spawnSync("bash", ["-c", `${NODE} test/red.test.js`],
@@ -90,7 +101,7 @@ test("without VAULT_FAILED_FILES the reporter still prints Node's report and the
 test("all.sh on named files runs only them, .js ones in one node --test run, and prints FAIL per failing file", () => {
   const root = scratch("named");
   const r = spawnSync("bash", ["test/all.sh", "./test/red.test.js", "test/green.test.js", "test/palette.test.py"],
-    { cwd: root, encoding: "utf8", env: idleMachineEnv() });
+    { cwd: root, encoding: "utf8", env: isolatedEnv() });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.deepEqual(r.stderr.trim().split("\n").sort(), ["FAIL test/palette.test.py", "FAIL test/red.test.js"]);
   assert.deepEqual(r.stdout.match(/^== .*(?= \(\d+ s\)$)/gm), [
@@ -103,7 +114,7 @@ test("all.sh on named files runs only them, .js ones in one node --test run, and
 test("all.sh on named files that pass exits 0 and counts the suites it ran", () => {
   const root = scratch("green");
   const r = spawnSync("bash", ["test/all.sh", "test/green.test.js", "test/cutout.test.py"],
-    { cwd: root, encoding: "utf8", env: idleMachineEnv() });
+    { cwd: root, encoding: "utf8", env: isolatedEnv() });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /cutout ran/);
   assert.match(r.stdout, /^2 named suite\(s\) passed$/m);
