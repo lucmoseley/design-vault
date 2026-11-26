@@ -42,7 +42,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 records = siblings.load(SCRIPTS, "motion-records.py")
-flow = siblings.load(SCRIPTS, "check-flow.py")
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 with open(flow.TABLE, encoding="utf8") as fh:
     LINES = records.parse_table(fh.read())
 V = {line.mode: line.value for line in LINES}

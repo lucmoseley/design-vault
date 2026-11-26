@@ -40,7 +40,7 @@ SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-flow = siblings.load(SCRIPTS, "check-flow.py")
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 overlay = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 
 # trigger id: (kind, whether markup names its target, the close control's id, or None for none)

@@ -31,7 +31,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 driver = siblings.load(SCRIPTS, os.path.basename(DRIVER))
-flow = siblings.load(SCRIPTS, "check-flow.py")
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 PAGE_FILE = pathlib.Path(HERE, "fixtures", "drivers", "form.html").resolve()
 PAGE = PAGE_FILE.as_uri()
 OPEN = contextlib.ExitStack()

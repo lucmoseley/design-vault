@@ -34,7 +34,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 conditions = siblings.load(SCRIPTS, os.path.basename(CONDITIONS))
-flow = siblings.load(SCRIPTS, "check-flow.py")
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 STACK = contextlib.ExitStack()
 BROWSER = None
 

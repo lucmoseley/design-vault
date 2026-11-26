@@ -28,7 +28,7 @@ SCRIPTS = os.path.dirname(FLOW)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-flow = siblings.load(SCRIPTS, "check-flow.py")
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
 pointer = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 OPEN = contextlib.ExitStack()
 BROWSER = None
