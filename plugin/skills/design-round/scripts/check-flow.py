@@ -752,8 +752,15 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
     inside that frame still cuts it, another element's move from rest inside it
     gets a first frame in the wrong phase, and a move from rest at a later
     keyframe or pass keeps the sampled frames' phase.
-    Each of `drawn`, a frame the browser drew a morph in, takes the place of
-    every frame within half a frame of it.
+    Between the first and last of `drawn`, the frames the browser drew a morph
+    in, the sampled frames give way to each gap between drawn frames split
+    evenly, into as many parts as sampled frames fit in the morph's median
+    frame: a sampled frame splitting a drawn one unevenly, or splitting some
+    and not others, makes a step from nothing (#612, #620). A gap of over
+    DROPPED_FRAMES + 0.5 median frames takes those parts per frame it spans. A
+    sampled frame within half a frame outside them goes. Residual: in a shorter
+    gap, up to 2.5 frames, another element is sampled coarser than `fps`; and
+    at 120 fps frames drawn 8 ms off the grid still make a step 1 in 200 runs.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
@@ -769,15 +776,23 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
         if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
     frames = [k * step for k in range(1, int(end // step) + 1)]
+    if drawn:
+        lo, hi = min(drawn), max(drawn)
+        frames = [t for t in frames if not lo - step / 2 < t < hi + step / 2]
+        gaps = list(itertools.pairwise(sorted(set(drawn))))
+        frame = statistics.median(b - a for a, b in gaps) if gaps else step
+        for a, b in gaps:
+            held = b - a > (DROPPED_FRAMES + 0.5) * frame
+            n = max(1, round(frame / step)) * (round((b - a) / frame) if held else 1)
+            frames += [a + (b - a) * i / n for i in range(1, n)]
     return sorted(
         exact
         + [
             t
             for t in frames
             if all(abs(t - x) >= MIN_GAP_MS for x in exact)
+            and 0 < t < end
             and not any(a < t < b for a, b in spans)
-            # #612
-            and all(abs(t - d) >= step / 2 for d in drawn)
         ]
     )
 

@@ -2302,6 +2302,37 @@ class MorphFlow(unittest.TestCase):
         self.assertEqual(steps(flow.sample_times(1000, drawn, 60, drawn=drawn)), [])
         self.assertTrue(steps(flow.sample_times(1000, drawn, 60)))
 
+    def morph_off_the_grid(self, fps, off):
+        """(steps, sample times) of a morph drawn at 60 fps, its frames `off` ms
+        either side of the grid in turn, sampled at `fps`."""
+        drawn = [0] + [k * STEP + off * (-1) ** k for k in range(1, 60)] + [1000]
+        times = flow.sample_times(1000, drawn, fps, drawn=drawn)
+        s = {
+            "times": times,
+            "elements": [],
+            "morphs": [{"label": "path#arch", "writes": writes(eased(0, 1000), drawn)}],
+        }
+        flow.add_morphs(s)
+        return flow.analyse(s)["steps"], times
+
+    def test_a_morph_drawn_4_ms_off_the_grid_has_no_step_at_each_fps(self):  # #620
+        for fps in (30, 60, 120):
+            with self.subTest(fps=fps):
+                found, times = self.morph_off_the_grid(fps, 4)
+                self.assertEqual(found, [])
+                gaps = [b - a for a, b in itertools.pairwise(times)]
+                self.assertLessEqual(max(gaps), 1.5 * 1000 / fps)
+
+    def test_a_morph_drawn_6_ms_off_the_grid_has_no_step_at_120_fps(self):  # #620
+        found, times = self.morph_off_the_grid(120, 6)
+        self.assertEqual(found, [])
+        self.assertGreater(len(times), 110)
+
+    def test_frames_a_morph_dropped_are_still_sampled_at_the_fps(self):  # #620
+        drawn = [k * STEP for k in range(7)] + [12 * STEP, 13 * STEP]
+        times = flow.sample_times(13 * STEP, drawn, 60, drawn=drawn)
+        self.assertEqual(len([t for t in times if 6 * STEP < t < 12 * STEP]), 5)
+
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {
             "times": [0, 10],
