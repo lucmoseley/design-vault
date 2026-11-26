@@ -110,8 +110,8 @@ STAGE_JITTER_MS = 50
 # and records where each sits on one page timeline, so a seek puts them all at
 # the same moment. Animations started in one frame share a start; ones a timer
 # or an event starts later sit wherever that load's clock put them (#259), so
-# a `timeline` from an earlier load, each animation's name and ms in start
-# order, puts them where that load did.
+# a `timeline` from an earlier load, each animation's name and ms, puts them
+# where that load did.
 PREPARE_JS = (
     r"""
 async ({ quiet, cap, shown, timeline }) => {
@@ -158,12 +158,13 @@ async ({ quiet, cap, shown, timeline }) => {
     else if (t && t.endTime === Infinity) reasons.push('runs an animation that never ends' + who);
     else rows.push({ a, t, rate: a.playbackRate, start: starts.get(a) });
   }
-  // A stable sort: one frame's animations keep the order the page lists them in.
-  rows.sort((p, q) => p.start - q.start);
-  const t0 = rows.length ? rows[0].start : 0;
+  const t0 = rows.reduce((m, r) => Math.min(m, r.start), rows.length ? Infinity : 0);
+  // #619
+  const listed = new Map(document.getAnimations().map((a, i) => [a, i]));
+  const found = new Map(anims.map((a, i) => [a, listed.size + i]));
+  const place = (r) => (listed.has(r.a) ? listed.get(r.a) : found.get(r.a));
+  rows.sort((p, q) => place(p) - place(q));
   if (timeline && !reasons.length) {
-    // Matched by name and its count so far, not by place: two animations one
-    // frame starts can list in either order from one load to the next.
     const keyed = (names) => { const seen = {}; return names.map((n) => n + ' ' + (seen[n] = (seen[n] || 0) + 1)); };
     const was = new Map(keyed(timeline.map((s) => s.name)).map((k, i) => [k, timeline[i].ms]));
     const own = keyed(rows.map((r) => name(r.a)));

@@ -88,14 +88,7 @@ check-layout.py does, and measures each question at both:
   and icons) against the colours next to it, or its own fill or border against
   those outside it, at the table's figure, so its own backdrop, halo or shadow
   counts and the image's worst pixel beside it decides. One over a video or
-  canvas cannot be measured. Where a declared carousel holds an image, video
-  or canvas on any slide, a fresh load,
-  kept from following links to other pages and from submitting, presses each
-  of its page dots in turn, else its next button until a slide shows again,
-  up to MAX_SLIDES, and each control's worst figure over every slide decides,
-  the fault naming that slide; a carousel with neither, or one the browser
-  errs on while it is stepped through, cannot be measured past the slides
-  read. In the declared carousel, a row of two or more
+  canvas cannot be measured. In the declared carousel, a row of two or more
   controls drawing no text or icon, its page dots, must hold one that differs
   by more than opacity. With no carousel declared, each such row on the page
   whose names match but for a number ("Slide 1", "Slide 2", or none) cannot
