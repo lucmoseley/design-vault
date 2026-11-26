@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { position: absolute; left: 0; width: 80px; height: 80px; background: #2a2a2a; }
+#box { top: 40px; animation: rise 1200ms ease-out both paused; }
+#twin { top: 160px; animation: rise 1200ms ease-out both, rise 1200ms ease-out both; animation-play-state: paused, running; }
+.seen { animation-play-state: running; }
+@keyframes rise { from { transform: none; } to { transform: translateX(400px); } }
+</style></head>
+<body>
+<div id="box"></div>
+<div id="twin"></div>
+<script>
+addEventListener("scroll", () => document.querySelectorAll("div").forEach((d) => d.classList.add("seen")), { once: true });
+</script>
+</body></html>

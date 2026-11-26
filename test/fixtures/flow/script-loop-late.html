@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- A frame loop that starts once the animation is over and holds the browser
+     600 ms every frame, so the quiet window ends a write or two into its 13
+     (#469). -->
+<html><body>
+<div id="waapi" style="width:40px;height:40px;background:#333"></div>
+<div id="loop" style="width:40px;height:40px;background:#333"></div>
+<script>
+document.getElementById("waapi").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 50, fill: "forwards" });
+const loop = document.getElementById("loop");
+const FRAMES = 12;
+let frame = 0;
+setTimeout(() => requestAnimationFrame(function tick() {
+  const held = performance.now();
+  while (performance.now() - held < 600);
+  loop.style.transform = `translateX(${300 * frame / FRAMES}px)`;
+  if (frame++ < FRAMES) requestAnimationFrame(tick);
+}), 400);
+</script>
+</body></html>

@@ -36,6 +36,8 @@ PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
 STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
+SLOW_CANVAS = os.path.join(HERE, "fixtures", "look", "slow-canvas.html")
+SLOW_CANVAS_END_MS = 4500  # END_MS in slow-canvas.html
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
@@ -189,6 +191,31 @@ class Page(unittest.TestCase):
             self.assertEqual(shot.size, (200, 100))
             # The fade has finished: the box is black.
             self.assertEqual(shot.convert("RGB").getpixel((100, 50)), (0, 0, 0))
+
+    def test_zoom_after_waits_out_a_canvas_build_longer_than_the_settle(self):
+        # Crosses the real clock: --after is a real wait, and the default run
+        # proves the build outlasts SETTLE_MS (#613).
+        with tempfile.TemporaryDirectory() as d:
+            shots = {}
+            for name, extra in (
+                ("default", ()),
+                ("after", ("--after", str(SLOW_CANVAS_END_MS + 1000))),
+            ):
+                out = os.path.join(d, f"{name}.png")
+                proc = run(
+                    "zoom",
+                    SLOW_CANVAS,
+                    "--clip",
+                    "0,0,100,100",
+                    "--scale",
+                    "1",
+                    "--out",
+                    out,
+                    *extra,
+                )
+                self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                shots[name] = Image.open(out).convert("RGB").getpixel((50, 50))
+            self.assertEqual(shots, {"default": (255, 255, 255), "after": (0, 0, 0)})
 
     def test_scrub_stops_the_fade_at_each_frame(self):
         with tempfile.TemporaryDirectory() as d:

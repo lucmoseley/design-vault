@@ -350,8 +350,30 @@ class Scripted(unittest.TestCase):
     ):
         self.refused(
             hash_page(os.path.join(FIXTURES, "seeked.html")),
-            "holds 1 animation(s) it paused itself (div#box), which a seek would move as if playing",
+            "holds 1 animation(s) a script paused (div#box), which a seek would move as if playing",
         )
+
+    def test_a_reveal_css_holds_paused_is_hashed_as_it_plays_once_released_unlike_a_script_seeked_one(
+        self,
+    ):
+        """#610"""
+        with tempfile.TemporaryDirectory() as out:
+            proc = run(
+                "hash",
+                os.path.join(FIXTURES, "revealed.html"),
+                "--out",
+                out,
+                "--times",
+                "0,1200",
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            shots = [
+                open(os.path.join(out, f"frame-{ms}.png"), "rb").read()
+                for ms in (0, 1200)
+            ]
+            self.assertNotEqual(
+                *shots, "the reveal did not move between its start and end"
+            )
 
     def test_a_frame_loop_build_ending_on_its_asset_cannot_be_checked_beside_listed_animations_unlike_the_mark_alone(
         self,

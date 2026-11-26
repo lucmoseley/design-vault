@@ -1046,6 +1046,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/cycle-loop.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/embed.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1111,6 +1115,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/flow/reverse.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/flow/script-loop-late.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1243,6 +1251,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/restless.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/revealed.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1752,6 +1764,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/look/page.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/look/slow-canvas.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],

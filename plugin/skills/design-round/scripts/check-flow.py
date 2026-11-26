@@ -227,7 +227,8 @@ TURN_FRAMES = 2
 # draws them (#135), is moving it frame by frame. A framework's few setup
 # writes and a storyboard's class changes a beat apart stay under it.
 # Residual: where frames come a beat or more apart, changes a beat apart land
-# in consecutive frames and are refused as a loop.
+# in consecutive frames and are refused as a loop. A loop that ends by the
+# clock, which a stall leaves fewer frames than this, is not seen (#617).
 REWRITE_FRAMES = 5
 REWRITE_SPAN_MS = 250
 # Across two or more dropped frames in a row, as a busy machine or a page's
@@ -469,8 +470,17 @@ STATUS_JS = (
   const now = performance.now();
   const timers = [...f.pending.values()].map((due) => Math.max(0, due - now));
   const morphed = [...f.morphs.values()].some((log) => loop(log, frames, span));
+  // An element rewritten in this frame and each frame before it, too few yet to
+  // read as a loop, may still become one however slowly a starved browser draws
+  // (#469).
+  const logs = [...f.rewrites.values()];
+  const looped = logs.some((log) => loop(log, frames, span));
+  const rewriting = logs.some((log) => {
+    const [last, prev] = log.slice(-2).reverse();
+    return last.frame === f.frame && (!prev || prev.frame === last.frame - 1);
+  });
   return { now, firstFrame: f.firstFrame, lastNew: f.lastNew, running, timer: timers.length ? Math.max(...timers) : null,
-    framing: morphed && f.lastPageFrame >= f.frame };
+    framing: morphed && f.lastPageFrame >= f.frame, looped, rewriting };
 }
 """
 )
@@ -524,7 +534,7 @@ BLOCKERS_JS = (
   f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
   if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
-  if (f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
+  if (before !== null && f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
   return reasons;
 }
 """
@@ -1668,14 +1678,16 @@ def run_browser(work, timeout, url=None, unmeasurable=None):
 
 
 def settled(s, quiet):
-    """Whether a page's status shows its motion over. The quiet window runs from
-    its first frame at the earliest: a busy machine can delay that frame past
-    --quiet, and a frame loop has written nothing before it (#135)."""
-    return (
+    """Whether a page's status shows its motion over, or a frame loop it will be
+    refused for. The quiet window runs from its first frame at the earliest: a
+    busy machine can delay that frame past --quiet, and a frame loop has
+    written nothing before it (#135)."""
+    return s["looped"] or (
         s["firstFrame"] is not None
         and s["running"] == 0
         and s["timer"] is None
         and not s["framing"]
+        and not s["rewriting"]
         and s["now"] - max(s["lastNew"], s["firstFrame"]) >= quiet
     )
 
@@ -1687,7 +1699,7 @@ def settle(page, at):
             STATUS_JS, {"frames": REWRITE_FRAMES, "span": REWRITE_SPAN_MS}
         )
         if settled(s, at.quiet):
-            return
+            return s
         if waited >= at.timeout and s["firstFrame"] is None:
             raise PageTimeoutError("no frame drawn")
         if s["timer"] is not None and waited + s["timer"] > at.timeout:
@@ -1756,11 +1768,15 @@ def measure(at):
             page.goto(at.url, wait_until="load")
             if at.wait:
                 page.wait_for_selector(at.wait)
-            settle(page, at)
-            before = page.evaluate(
-                "() => { const f = window.__flow; f.scan(); f.sweptFrom = performance.now(); return f.seen.size; }"
-            )
-            sweep(page)
+            # A page refused for its frame loop is not scrolled, so nothing it
+            # starts or morphs meanwhile is put down to a scroll.
+            looped = settle(page, at)["looped"]
+            before = None
+            if not looped:
+                before = page.evaluate(
+                    "() => { const f = window.__flow; f.scan(); f.sweptFrom = performance.now(); return f.seen.size; }"
+                )
+                sweep(page)
             reasons = page.evaluate(
                 BLOCKERS_JS,
                 {
