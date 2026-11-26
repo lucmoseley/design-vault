@@ -1072,6 +1072,8 @@ class PageQuiet(unittest.TestCase):
             "running": 0,
             "timer": None,
             "framing": False,
+            "looped": False,
+            "rewriting": False,
             **over,
         }
 
@@ -1080,6 +1082,12 @@ class PageQuiet(unittest.TestCase):
         # its frame loop had written nothing yet.
         self.assertFalse(flow.settled(self.status(firstFrame=350), 300))
         self.assertTrue(flow.settled(self.status(now=650, firstFrame=350), 300))
+
+    def test_a_frame_loop_still_rewriting_an_element_has_not_settled(self):
+        self.assertFalse(flow.settled(self.status(rewriting=True), 300))
+
+    def test_a_frame_loop_it_will_be_refused_for_ends_the_wait(self):
+        self.assertTrue(flow.settled(self.status(running=1, looped=True), 300))
 
     def test_a_page_with_no_frame_drawn_has_not_settled(self):
         self.assertFalse(flow.settled(self.status(now=5000, firstFrame=None), 300))
@@ -1500,6 +1508,11 @@ class Refused(unittest.TestCase):
     def test_a_script_moving_an_element_frame_by_frame_at_11_fps(self):
         self.refuses(
             "script-loop-starved.html", "from a script, frame by frame (div#loop)"
+        )
+
+    def test_a_script_moving_an_element_frame_by_frame_after_the_quiet_window(self):
+        self.refuses(
+            "script-loop-late.html", "from a script, frame by frame (div#loop)"
         )
 
     def test_a_scroll_handler_on_a_short_page(self):
