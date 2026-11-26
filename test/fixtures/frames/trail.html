@@ -15,19 +15,15 @@ div { position: absolute; height: 40px; background: #2a2a2a; }
 const move = document.getElementById("box").animate([{ transform: "none" }, { transform: "translateX(600px)" }],
   { duration: 1000, easing: "ease-in-out", fill: "both" });
 let furthest = 0;
-(function tick() {
-  // #621
-  if (move.playState === "paused") {
-    furthest = Math.max(furthest, move.currentTime || 0);
+// #621
+const seek = Object.getOwnPropertyDescriptor(Animation.prototype, "currentTime");
+Object.defineProperty(move, "currentTime", {
+  get() { return seek.get.call(this); },
+  set(t) {
+    seek.set.call(this, t);
+    furthest = Math.max(furthest, t);
     document.getElementById("trail").style.width = furthest * 0.6 + "px";
-  }
-  requestAnimationFrame(tick);
-})();
-setTimeout(() => {
-  const ready = document.createElement("p");
-  ready.id = "ready";
-  ready.textContent = "ready";
-  document.body.append(ready);
-}, 600);
+  },
+});
 </script>
 </body></html>
