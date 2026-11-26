@@ -19,7 +19,7 @@ set -u
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
 # The one list of suites (#233). A Python suite names after a tab what it needs past the standard library: `images` for
-# numpy, Pillow and scipy, `chromium` for Playwright and its Chromium.
+# numpy, Pillow and scipy, `chromium` for Playwright and its Chromium, `openssl` for the openssl command.
 # A new suite also owes README §Validating the library its sentence, and, if it never loads check-flow.py,
 # test/select-suites.test.js its NO_FLOW entry.
 registry='node --test --test-reporter=./test/failed-files.js
@@ -48,7 +48,7 @@ python3 test/parts-map.test.py	images chromium
 python3 test/look.test.py	images chromium
 python3 test/check-load.test.py	chromium
 python3 test/check-load-files.test.py	chromium
-python3 test/drive-overlay.test.py	chromium
+python3 test/drive-overlay.test.py	chromium openssl
 python3 test/conditions.test.py	chromium
 python3 test/look-renders.test.py	images chromium
 python3 test/check-seams.test.py	images chromium
@@ -64,7 +64,7 @@ suites=()
 declare -A needs=()
 while IFS=$'\t' read -r suite need; do
   for word in ${need:-}; do
-    [[ $word == images || $word == chromium ]] || { echo "test/all.sh: $suite needs '$word', which is neither images nor chromium" >&2 && exit 2; }
+    [[ $word == images || $word == chromium || $word == openssl ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium and openssl" >&2 && exit 2; }
   done
   suites+=("$suite")
   needs[$suite]=${need:-}
@@ -234,6 +234,9 @@ if [[ " ${run[*]} " == *" python3 "* ]]; then
         'python3 -m playwright install chromium' \
         python3 -c 'from playwright.sync_api import sync_playwright
 with sync_playwright() as p: p.chromium.launch().close()'
+  fi
+  if for_openssl="$(suites_needing openssl)"; then
+    need "the openssl command, for $for_openssl" 'sudo apt install openssl' command -v openssl
   fi
 fi
 if ((missing)); then

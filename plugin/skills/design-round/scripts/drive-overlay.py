@@ -19,11 +19,14 @@ find() lists, as Overlays, first the visible triggers in document order:
     open draws;
 then the opener of each <dialog> no trigger above names, found by trial; then each dialog or popover already
 open with no trigger, as a script opens one unprompted, whose `trigger` is None. The trial runs on a page of
-its own in the caller's browser, reloaded from the caller's URL at the caller's viewport before each click, so the
-caller's page is never clicked: each visible button, [role=button] or menu item that would not submit a form
-or leave the page is clicked, top-level ones first and then those each trigger's overlay draws, until every
-such dialog has its opener. A trial is kept per URL and viewport. It reads the page as it loads, so it misses
-an opener that only the caller's own steps draw, and it cannot load a page set by set_content. A
+its own in the caller's browser, in a context of its own under the caller's context options (touch, colour
+scheme, locale…) at the caller's viewport, reloaded from the caller's URL before each click, so the caller's page
+is never clicked: each visible button, [role=button] or menu item that would not submit a form or leave the
+page is clicked, top-level ones first and then those each trigger's overlay draws, until every such dialog has
+its opener. A trial is kept per URL and those options. It reads the page as it loads, with none of the caller's
+cookies, storage (storage_state included), proxy, init scripts, routes or page.emulate_media, so it misses an
+opener that only the caller's own steps or those draw, and it cannot load a page set by set_content; it
+downloads nothing, so it takes no accept_downloads. A
 [role=dialog] that no markup names is not tried for, as nothing generic tells a trial it opened. Text fields
 are never triggers: a combobox opens by typing, which the form driver (#302) does.
 
@@ -47,7 +50,10 @@ never an error: open() and close() raise ValueError only for an unknown `by` or 
 open, else only Playwright's own failures raise, and a trial click Playwright refuses skips that button.
 """
 
+import base64
 import dataclasses
+import inspect
+import json
 
 # A click or keypress waits this long for its element before Playwright raises: a working figure, a tenth of
 # Playwright's own 30 s default, since an element on a loaded local page is ready at once or never.
@@ -280,8 +286,8 @@ class Overlay:
     declared: bool
 
 
-# Trial results, {(url, viewport): {opener path: dialog path}}.
-_trials = {}
+_trials: dict[tuple[str, str], dict[str, str]] = {}
+TRIAL_LEAVES_OUT = ("accept_downloads",)
 
 
 def _items(handle):
@@ -295,16 +301,50 @@ def _settle(page, target=None):
     return page.evaluate(SETTLE_JS, [target, QUIET_MS, SETTLE_CAP_MS])
 
 
+def _trial_options(page):
+    # `playwright==1.61.0` has no public getter for a context's options, and keeps no storage_state or proxy
+    # among the private ones it holds.
+    from playwright.sync_api import Browser
+
+    names = {
+        n.replace("_", ""): n for n in inspect.signature(Browser.new_context).parameters
+    }
+    protocol = dict(page.context._impl_obj._options)
+    if protocol.pop("noDefaultViewport", False):
+        protocol["noViewport"] = True
+    if "extraHTTPHeaders" in protocol:
+        protocol["extraHTTPHeaders"] = {
+            h["name"]: h["value"] for h in protocol["extraHTTPHeaders"]
+        }
+    if "clientCertificates" in protocol:
+        protocol["clientCertificates"] = [
+            {
+                k: base64.b64decode(v) if k in ("cert", "key", "pfx") else v
+                for k, v in c.items()
+            }
+            for c in protocol["clientCertificates"]
+        ]
+    options = {
+        names[k.lower()]: v
+        for k, v in protocol.items()
+        if k.lower() in names and names[k.lower()] not in TRIAL_LEAVES_OUT
+    }
+    if page.viewport_size:
+        options["viewport"] = page.viewport_size
+    return options
+
+
 def _openers(page, orphans):
     """{opener path: dialog path} for the closed dialogs at `orphans` (paths), tried on a second page."""
     from playwright.sync_api import Error as PlaywrightError
 
     if not page.url.startswith(("http:", "https:", "file:")):
         return {}
-    key = (page.url, tuple(sorted((page.viewport_size or {}).items())))
+    options = _trial_options(page)
+    key = (page.url, json.dumps(options, sort_keys=True, default=str))
     if key in _trials:
         return {p: d for p, d in _trials[key].items() if d in orphans}
-    context = page.context.browser.new_context(viewport=page.viewport_size)
+    context = page.context.browser.new_context(**options)
     trial = context.new_page()
     try:
 
