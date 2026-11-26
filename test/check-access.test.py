@@ -147,6 +147,17 @@ class OneCopy(unittest.TestCase):  # #606
         self.assertIs(access.contrasts, contrasts)
 
 
+class PreludeMoved(unittest.TestCase):  # #641
+    def test_access_page_sends_the_prelude_check_access_sends(self):
+        access = siblings.load(SCRIPTS, "check-access.py")
+        prelude = siblings.load(SCRIPTS, "access-page.py")
+        for body in ("", "() => 1", "(i) => {\n}"):
+            with self.subTest(body=body):
+                self.assertEqual(prelude.page_js(body), access.page_js(body))
+                self.assertEqual(prelude.labelled_js(body), access.keys_js(body))
+                self.assertEqual(prelude.labelled_js(body), access.contrast_js(body))
+
+
 class Arithmetic(unittest.TestCase):
     def test_contrast_matches_wcags_published_pairs(self):
         self.assertAlmostEqual(
