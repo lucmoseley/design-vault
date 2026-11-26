@@ -247,6 +247,21 @@ Animation: brand motion's pace, length and end frame, and pausing motion that st
 - ledger: MOT-10
 - status: staged
 
+### vault.motion-purpose
+- applies-when: web-surface and has-motion; every motion that starts by itself: an idle float, a loop, a ring that pops out, drifting particles; not a status or progress indicator
+- question: Does every motion that starts by itself draw attention to one thing the brief names, with none on anything else?
+- answered-by: look
+- writes: self-starting motion
+- yields-to: level 2
+- source: Anthropic `frontend-design` SKILL.md:32, "Use non-user-triggered motion sparingly and deliberately, only to draw attention"; impeccable 4.5.0 `craft-floor.md:13`, "one authored moment, not scattered effects"; impeccable slop catalogue (impeccable.style/slop), "wobbling icons, and drifting badges" (all as read Nov 2026); strength: impeccable "AI look" ban and vendor skill guidance
+- era: dated 2027-04-14
+- owner: vault
+- stage: treatment
+- target: Let motion that starts by itself point only at the one thing the brief names, and leave everything else still until a visitor acts.
+- reasons: design-critique/references/house-principles.md#motion-that-starts-by-itself
+- ledger: MOT-5, MOT-6, MOT-89, MOT-99
+- status: staged
+
 ### vault.motion-frequency-look
 - applies-when: web-surface and has-motion; every part that moves, by how often a visitor meets it
 - question: Is longer, expressive motion kept for rare moments (a first run, a finished booking, a milestone), and does a list item, or a menu or command palette opened from the keyboard, open under 150 ms or with none?
