@@ -1083,10 +1083,10 @@ class PageQuiet(unittest.TestCase):
         self.assertFalse(flow.settled(self.status(firstFrame=350), 300))
         self.assertTrue(flow.settled(self.status(now=650, firstFrame=350), 300))
 
-    def test_a_frame_loop_still_rewriting_an_element_has_not_settled(self):
+    def test_a_frame_loop_still_rewriting_an_element_has_not_settled(self):  # #469
         self.assertFalse(flow.settled(self.status(rewriting=True), 300))
 
-    def test_a_frame_loop_it_will_be_refused_for_ends_the_wait(self):
+    def test_a_frame_loop_it_will_be_refused_for_ends_the_wait(self):  # #469
         self.assertTrue(flow.settled(self.status(running=1, looped=True), 300))
 
     def test_a_page_with_no_frame_drawn_has_not_settled(self):
@@ -1296,6 +1296,13 @@ box.animate([{ transform: "translateX(0)" }, { transform: "translateX(300px)" }]
 
 
 class Pages(unittest.TestCase):
+    def test_a_frame_loop_cycling_its_writes_over_four_elements_is_measured(
+        self,
+    ):  # #469
+        proc, data, _ = run("cycle-loop.html", "--timeout", "5000")
+        self.assertIsNotNone(data, proc.stdout + proc.stderr)
+        self.assertEqual([e["label"] for e in data["elements"]], ["div#waapi"])
+
     def test_eased_moves_placed_at_their_real_starts_pass(self):
         proc, data, _ = run("smooth.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
@@ -1505,12 +1512,19 @@ class Refused(unittest.TestCase):
     def test_a_script_moving_an_element_frame_by_frame(self):
         self.refuses("script-loop.html", "from a script, frame by frame (div#loop)")
 
+    def test_a_frame_loop_is_refused_before_the_page_is_scrolled(self):  # #469
+        proc, _, _ = run("script-loop.html")
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertNotIn("when the page is scrolled", proc.stdout)
+
     def test_a_script_moving_an_element_frame_by_frame_at_11_fps(self):
         self.refuses(
             "script-loop-starved.html", "from a script, frame by frame (div#loop)"
         )
 
-    def test_a_script_moving_an_element_frame_by_frame_after_the_quiet_window(self):
+    def test_a_script_moving_an_element_frame_by_frame_after_the_quiet_window(
+        self,
+    ):  # #469
         self.refuses(
             "script-loop-late.html", "from a script, frame by frame (div#loop)"
         )
