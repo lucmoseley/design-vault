@@ -27,12 +27,18 @@ floor.
 
 import json
 import os
+import sys
 import re
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+rule_table = siblings.load(HERE, "rule-table.py")
+
 # The --pointer coarse floor, from vault.coarse-target's record.
-TABLE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "check-access-pointer.table"
-)
+TABLE = os.path.join(HERE, "check-access-pointer.table")
 SEP = " | "
 FLOOR = re.compile(r"(\d+(?:\.\d+)?)px")
 QUESTION = (
@@ -41,18 +47,14 @@ QUESTION = (
 )
 
 
-class TableError(Exception):
-    """A table line --pointer cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_table(text, least):
     """The coarse floor in px from the table's one line, vault.coarse-target's,
     `least` px or more."""
     found = None
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         if len(fields) != 3 or fields[:2] != [QUESTION[0], "coarse"]:
             raise TableError(

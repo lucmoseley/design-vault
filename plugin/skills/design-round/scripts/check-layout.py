@@ -53,7 +53,7 @@ range of widths it holds over:
   past the file's edge, or an art shown at no swept width) is listed as not
   measured.
 
-The first five answer vault.reflow, the cta check vault.layout and the
+The first four answer vault.reflow, the cta check vault.layout and the
 focal check vault.focal-crop: the report gives each question pass or fail,
 with its faults under it, vault.layout not checked with no --cta,
 vault.focal-crop not checked with no --focal or "cannot measure" where an art
@@ -93,7 +93,7 @@ for size the default text sizes set, proportional and monospace, in px.
 (its CHECKS), at every width and on loads of its own: zoomed and with a larger
 default text size, script off, an emulated safe-area inset and each popover
 or menu opened. --parts is the round's parts declaration, which names the
-card and the logo; --brief gives the brief's facts a check reads. A record
+card, the logo, the empty state and the category tile; --brief gives the brief's facts a check reads. A record
 answers fail where any of its checks found a fault at any width, not judged
 where a check lacks a part or fact, pass where a check found something it
 applies to, else no match; layout.json's "records" holds the answers, what
@@ -130,7 +130,6 @@ would never return. Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 import argparse
 import collections
 import datetime
-import importlib.util
 import json
 import os
 import pathlib
@@ -138,22 +137,15 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_flow", os.path.join(HERE, "check-flow.py")
-)
-flow = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(flow)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+flow = siblings.load(HERE, "check-flow.py")
 
 
-def _load(name, file):
-    """A sibling script loaded by path."""
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _load("layout_records", "layout-records.py")
+records = siblings.load(HERE, "layout-records.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 
 # 320 is WCAG 1.4.10's reflow width, a 1280 px desktop at 400% zoom. 2560 is
@@ -174,6 +166,7 @@ PHONE_MAX = BANDS[0][2]
 # (developer.apple.com/forums/thread/735055, #252). Unmeasured here or on
 # iPadOS 26.
 HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)
+MOTION_HEIGHTS = (*HEIGHTS[:2], flow.DESKTOP_WINDOW[1])
 # A common phone's width and the commonest desktop's (StatCounter Sept 2026),
 # the widths the other checks render a page at.
 PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]
@@ -271,18 +264,14 @@ class BadSelectorError(Exception):
     args are the flag, the selector and the browser's message."""
 
 
-class TableError(Exception):
-    """A table line check-layout cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_table(text):
     """{mode: Mode} from the table's lines; a spacing value is its four
     numbers by property, a zoom or size value the factor text is enlarged by."""
     out = {}
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         if len(fields) != 3 or fields[1] not in (*MODES, *records.CHECKS):
             raise TableError(
@@ -997,7 +986,7 @@ class Records:
         self.inset = records.with_label(records.INSET_JS, flow.LABEL_JS)
         self.sheet = records.with_label(records.SHEET_JS, flow.LABEL_JS)
         self.measure = (
-            _load("check_measure", "check-measure.py")
+            siblings.load(HERE, "check-measure.py")
             if "line-length" in self.checks
             else None
         )
@@ -1109,12 +1098,18 @@ def read_records(page, at, width, rec, *, page_as, raised, safe):
 
 def records_after(browser, at, rec, page_as):
     """The record checks read once the sweep ends: across its widths
-    (vault.card-media-stack, vault.logo-version), and at the screenshot widths
-    a phone or a narrow window takes, the tab panels with script on and off
-    (vault.tabs-narrow) and each popover and menu opened
-    (vault.popover-sheet). Adds what it finds to `rec`."""
+    (vault.card-media-stack, vault.logo-version), and at narrow widths the
+    tab panels with script on and off (vault.tabs-narrow) and each popover
+    and menu opened (vault.popover-sheet). Adds what it finds to `rec`."""
     checks = rec.checks
     widths = [w for w, _ in rec.notes]
+
+    def narrow(under, mode):
+        held = [w for w in widths if w < under]
+        if not held:
+            rec.unmet[mode] = f"the sweep holds no width under {under:g} px"
+        return [w for w in SHOT_WIDTHS if w in held] or held[:1]
+
     if "card-media" in checks:
         cards = [(w, n.get("cards", [])) for w, n in rec.notes]
         if any(c for _, c in cards):
@@ -1129,12 +1124,11 @@ def records_after(browser, at, rec, page_as):
             rec.seen.add("logo-version")
         for w, faults in records.logo_faults(logos):
             rec.add(w, faults)
-    shots = [w for w in SHOT_WIDTHS if w in widths]
     if "tabs-narrow" in checks:
         off = browser.new_context(java_script_enabled=False, **PHONE)
         off.set_default_timeout(at.timeout)
         bare = off.new_page()
-        for w in [w for w in shots if rec.phone(w)]:
+        for w in narrow(rec.phone_under, "tabs-narrow"):
             page = page_as(device(w))
             load(page, at.url, w, at.heights)
             panels = page.evaluate(records.TABS_JS, None)
@@ -1150,9 +1144,9 @@ def records_after(browser, at, rec, page_as):
             rec.add(w, faults)
         off.close()
     if "popover-sheet" in checks:
-        overlay = _load("drive_overlay", "drive-overlay.py")
+        overlay = siblings.load(HERE, "drive-overlay.py")
         under = checks["popover-sheet"].value["under"]
-        for w in [w for w in shots if w < under]:
+        for w in narrow(under, "popover-sheet"):
             page = page_as(device(w))
             load(page, at.url, w, at.heights)
             faults = []
@@ -1551,7 +1545,7 @@ def parse(argv):
         at.brief[key] = value
     at.parts = {}
     if at.parts_file:
-        probe = _load("probe", "probe.py")
+        probe = siblings.load(HERE, "probe.py")
         try:
             with open(at.parts_file, encoding="utf8") as fh:
                 at.parts = probe.declared_parts(fh.read())[0]
@@ -1574,14 +1568,13 @@ def parse(argv):
             p.error(f"{at.table} has no phone-width line, which --records needs")
     if at.step < 1:
         p.error("--step wants 1 or more")
+    wants = f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
     try:
         at.heights = tuple(int(n) for n in at.heights.split(","))
     except ValueError:
-        at.heights = ()
+        p.error(wants)
     if len(at.heights) != 3 or min(at.heights) < 1:
-        p.error(
-            f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
-        )
+        p.error(wants)
     m = re.fullmatch(r"(\d+)-(\d+)", at.widths)
     at.span = (int(m[1]), int(m[2])) if m else ()
     if not at.span or not LOW <= at.span[0] <= at.span[1] <= HIGH:

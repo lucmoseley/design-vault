@@ -26,10 +26,23 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+sys.path.append(
+    str(
+        pathlib.Path(__file__).resolve().parents[3]
+        / "plugin/skills/design-round/scripts"
+    )
+)
 import runner
+from fail_open import expected
 
 ROOT, WORK = runner.ROOT, runner.WORK
-RUNS = [1, 2, 3]
+RUNS = []
+
+
+def use_runs(runs):
+    RUNS[:] = runs
+
+
 # {gate load: the passes scored}, from --passes as runner.py gate takes it.
 PASSES = None
 CRITICS = [
@@ -82,6 +95,8 @@ SHAPES["294 tone line"] = ["WN", "TN"]
 SHAPES["294 tone line, whole-page alone"] = ["WN"]
 SHAPES["294 lean tone lens"] = ["WM", "TN"]
 SHAPES["294 lean tone lens, whole-page alone"] = ["WM"]
+SHAPES["502 visible-nav whole-page"] = ["WV0"]
+SHAPES["502 visible-nav script"] = ["WV1"]
 # #415's: the gate trio on the live look records, and on the live and held ones in passes of at most 20.
 SHAPES["415 gate, live"] = ["G-old"]
 SHAPES["415 gate, live and held"] = ["G-new"]
@@ -618,12 +633,12 @@ def main():
     ap.add_argument("mode", choices=["match", "judge", "third", "tally"])
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--critics", default=",".join(CRITICS), help="the critics that ran")
-    ap.add_argument("--runs", default="1,2,3")
+    runner.add_runs(ap)
     ap.add_argument("--cands", help="candidate names; default all")
     ap.add_argument("--passes", help="the gate passes that ran; default every pass")
     a = ap.parse_args()
     CRITICS[:] = a.critics.split(",")
-    RUNS[:] = [int(r) for r in a.runs.split(",")]
+    use_runs(a.runs)
     if a.cands:
         CANDS[:] = a.cands.split(",")
     unknown = [c for c in CANDS if c not in runner.CID]
@@ -670,6 +685,7 @@ def match_job(cand, run, scorer):
     try:
         return _match_job(cand, run, scorer)
     except (NotReadyError, FileNotFoundError) as e:
+        expected(e, "scored as not finished")
         runner.log("not ready", e)
         return False
 
@@ -678,6 +694,7 @@ def judge_job(cand, run, jset, scorer, *, only=None):
     try:
         return _judge_job(cand, run, jset, scorer, only=only)
     except (NotReadyError, FileNotFoundError) as e:
+        expected(e, "scored as not finished")
         runner.log("not ready", e)
         return False
 

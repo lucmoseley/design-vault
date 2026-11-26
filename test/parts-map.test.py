@@ -105,21 +105,27 @@ class StaticPill(unittest.TestCase):
         self.assertFalse(self.parts["Sold out"]["actable"])
 
     def test_a_click_the_page_adds_by_script_makes_a_part_actable(self):
-        for text in ("Read more about the house", "See the garden"):
+        for text in (
+            "Read more about the house",
+            "See the garden",
+            "Open the gallery",
+            "See the bar",
+            "Hold to hear",
+        ):
             with self.subTest(text):
                 self.assertTrue(self.parts[text]["actable"])
                 self.assertEqual(self.parts[text]["role"], "click handler on p")
 
     def test_ids_follow_document_order(self):
         self.assertEqual(
-            [p["id"] for p in self.found["parts"]], [f"p{i}" for i in range(1, 13)]
+            [p["id"] for p in self.found["parts"]], [f"p{i}" for i in range(1, 16)]
         )
         self.assertEqual(self.parts["Rooms"]["id"], "p1")
 
     def test_the_key_names_each_part_and_never_what_it_does(self):
         with open(os.path.join(self.dir, "key.txt"), encoding="utf8") as fh:
             lines = [ln for ln in fh.read().splitlines() if ln.startswith("p")]
-        self.assertEqual(len(lines), 12)
+        self.assertEqual(len(lines), 15)
         self.assertTrue(lines[2].startswith('p3  "Book a bed"  desktop at'))
         for line in lines:
             self.assertNotRegex(line, r"button|link|actable|click|static|role")

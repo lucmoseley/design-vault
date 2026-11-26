@@ -134,9 +134,11 @@
     const aim = x + (v / 1000) * (0.998 / (1 - 0.998));
     const to = SNAPS.reduce((a, b) => (Math.abs(b - aim) < Math.abs(a - aim) ? b : a));
     if (!fast) { place(to); return; }
-    const d0 = x - to, v0 = v / 1000, t0 = performance.now();
+    const d0 = x - to, v0 = v / 1000;
     const w = Math.max(0.01, d0 && v0 * d0 < 0 ? Math.abs(v0 / d0) : 0);
+    let t0 = null;
     const step = (now) => {
+      t0 ??= now; // #510
       const t = now - t0;
       const off = (d0 + (v0 + w * d0) * t) * Math.exp(-w * t);
       if (Math.abs(off) < 0.5 && t > 50) { place(to); return; }

@@ -2,13 +2,11 @@
 
 Why type size, weight, line height, tracking, axes and width follow the face rather than a fixed number, and how faces, figures, features and smoothing are chosen (#282, #275). The records are `vault.type-size`, `vault.type-floor`, `vault.type-weight`, `vault.type-leading`, `vault.type-tracking`, `vault.type-axes`, `vault.type-width`, `vault.code-size`, `vault.weight-count`, `vault.glyph-distinct`, `vault.figure-face`, `vault.figures`, `vault.font-features`, `vault.font-smoothing`, `vault.face-roles` and `vault.fluid-type`, in [rules/](../rules/). The research behind #282's lines is `docs/research/typeface-traits.md` in the design vault, and behind #275's `docs/research/carry-source-checks.md`.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new type scale.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new type scale.
 
 ## The face profile
 
 `python3 ${CLAUDE_PLUGIN_ROOT}/skills/design-round/scripts/face-profile.py <page> --out <dir>` reads, for each typeface setting the page draws text in, the inputs these records name: `xheight` (the ex unit over the size), `width` (a pangram's average character over the size), `weight` and `stem` (an upright stroke's thickness over the size), `axes` (which of wght, wdth, opsz and GRAD the font varies on) and `opsz` (the optical size in use and the font's range). It reads the font the browser drew, so a web font that failed to load is read as its fallback, and `rendered` names it.
-
-Common body faces run from x-height 0.447 (Times New Roman) to 0.550 (JetBrains Mono); Arial is 0.519 and Roboto 0.528, and serif text faces run lower (Georgia 0.481). Average lowercase advance runs from 0.456 em (Calibri) to 0.562 em (Verdana).
 
 ## Principles
 
@@ -18,7 +16,7 @@ Records: `vault.type-size`, `vault.type-floor`.
 
 - **Why.** Apparent size follows x-height, not the CSS size: Verdana's x-height is about 55% of its em and Baskerville's about 40%, so Baskerville must be set larger to look the same size (Google Fonts Knowledge, 2024). Reading slows below a critical print size of about 0.2° of x-height (Legge and Bigelow 2011). 16 px at x-height 0.52, the sans faces the 16 px floor was set with (Arial, Roboto, Helvetica; APCA's reference), already gives about 0.18° at the CSS reference distance, so a smaller x-height is scaled up by 0.52 over it and a larger one is never scaled down.
 - **Trade-off.** A face scaled up by x-height sets fewer characters a line at one column width, so the column widens with it (`vault.type-leading`'s order). Too large an x-height crowds accents (CSS Fonts 4 on `font-size-adjust`).
-- **Clash.** USWDS normalizes by cap height and lets a face go under 16 px (Roboto Mono 0.95); the house scales by x-height, which reading speed follows, and only up. `vault.body-size` asks for 16 px on all phone text; Apple (11 pt), Material 3 (11–12 sp) and Atlassian (12 px fine print) allow smaller labels and fine print, and only GOV.UK (16 px smallest) backs the phone floor. The founder ruled for the platforms (#362): `vault.type-floor` sets 11–12 px for labels and fine print, and `vault.body-size`'s phone clause retires when the staged records go live (#293).
+- **Clash.** USWDS normalizes by cap height and lets a face go under 16 px (Roboto Mono 0.95); the house scales by x-height, which reading speed follows, and only up. `vault.body-size` asks for 16 px on all phone text; Apple (11 pt), Material 3 (11–12 sp) and Atlassian (12 px fine print) allow smaller labels and fine print, and only GOV.UK (16 px smallest) backs the phone floor. The founder ruled for the platforms (#362): `vault.type-floor` sets 11–12 px for labels and fine print, and `vault.body-size`'s phone clause retires when its successor goes live (#416).
 
 ### Weight by size and ground
 
@@ -26,7 +24,7 @@ Record: `vault.type-weight`.
 
 - **Why.** Thin strokes render fainter and are hard to see at small sizes (WCAG 2.2 Understanding 1.4.3; Apple HIG: avoid Ultralight, Thin and Light "especially when text is small"); black and ultra weights are for headlines (Butterick), and excess weight at small sizes hurts too (Material 3). The stem measures what the weight number does not: a 400 in a light design draws a thin stroke, and `vault.type-floor` sets such a face larger. On a dark ground, light text looks heavier (irradiation), but no study finds a reading need to change weight or grade by mode (Material 2022; Palmén, Gilbert and Crossland, CHI 2023, 459 readers), so a lighter weight or grade there is a look choice for large text only. Some platforms render thin strokes lighter than others; Butterick serves Windows a heavier body weight by script, but the 400 floor already keeps text above the weights that fade, so one weight serves every platform without detecting the device.
 - **Trade-off.** Lowering grade on dark keeps line breaks, as grade leaves widths alone; lowering wght reflows. Below 400, de-emphasis costs legibility; a lighter colour or smaller size does that job instead (Refactoring UI).
-- **Clash.** The Typography Handbook (2026, uncited) takes weight up on dark; Material, Argyle and Google Fonts Knowledge take it down. Both sides agree small light text must not get thinner, which is the rule. Supersedes `vault.dark-text-weight`'s extra line height and tracking, which no source backs. The size split at WCAG's large-text sizes is the house's mapping, not a finding.
+- **Clash.** The Typography Handbook (2026, uncited) takes weight up on dark; Material, Argyle and Google Fonts Knowledge take it down. Both sides agree small light text must not get thinner. Supersedes the live `vault.dark-text-weight`'s extra line height and tracking, which no source backs, when this record goes live (#416). The size split at WCAG's large-text sizes is the house's mapping, not a finding.
 
 ### Line height by role, face and measure
 
@@ -46,15 +44,15 @@ Record: `vault.type-tracking`.
 
 ### Variable fonts and axes
 
-Record: `vault.type-axes`.
+Records: `vault.type-axes`, `vault.axis-properties`.
 
-- **Why.** A weight-axis variable file weighs about two static weights (measured: Inter 48 KB against 24 KB a weight; Source Serif 4 and Roboto Flex 2.5), so it pays once a page uses three weights, a weight between two named ones, or grade or width. An opsz axis adds 1.5–2.4× more and pays where the face is used at both text and display sizes. Optical sizing is on by default and the browser sets opsz to the used size; setting it by hand is outdated advice (Web Almanac 2024).
+- **Why.** A weight-axis variable file weighs about two static weights (measured, #282), so it pays once a page uses three weights, a weight between two named ones, or grade or width. An opsz axis adds 1.5–2.4× more and pays where the face is used at both text and display sizes. Optical sizing is on by default and the browser sets opsz to the used size; setting it by hand is outdated advice (Web Almanac 2024).
 - **Trade-off.** A variable file is one request and many styles; at one or two weights it costs bytes. A variable file's default instance may not be 400 (Fira Code ships at 300), so the weight is always set.
 - **Clash.** The Typography Handbook makes variable fonts the default whatever the count; the byte measurement does not bear that out at one or two weights. A `font` shorthand resets `font-optical-sizing`, `font-size-adjust` and `font-variation-settings` (MDN), so they are set after it.
 
 ### Width by role
 
-Record: `vault.type-width`.
+Records: `vault.type-width`, `vault.prose-width`.
 
 - **Why.** A narrow width fits more characters in a label or a dense cell, and a wide one carries personality in a short heading (Material 3; Google Fonts Knowledge). Text read at a glance reads best in a non-condensed width at a larger size (Google Fonts Knowledge, 2025).
 - **Trade-off.** A condensed face may need a slightly larger size; a wide one costs space a top bar lacks.
@@ -70,7 +68,7 @@ Record: `vault.code-size`.
 
 ### Emphasis takes bold
 
-Record: `vault.emphasis-weight`.
+Records: `vault.emphasis-weight`, `vault.toggle-state`.
 
 - **Why.** One step from regular to semibold is often too small to read as emphasis, and the visible step shrinks further at small sizes and on dark grounds (Google Fonts Knowledge; [Weight by size and ground](#weight-by-size-and-ground)). The same holds for a selected state shown by weight: it must be obvious (Apple HIG Toggles).
 - **Trade-off.** Butterick allows semibold, which reads a little more easily than bold; the house takes Google's clearly visible difference. A face drawn without a 700 takes its next weight past +300.
@@ -94,7 +92,7 @@ Record: `vault.weight-count`.
 
 ### Telling characters apart
 
-Record: `vault.glyph-distinct`.
+Records: `vault.glyph-distinct`, `vault.zero-distinct`.
 
 - **Why.** Readers with dyslexia and others confuse I, l and 1, and O and 0; in a reference number or code there are no words around them to help.
 - **Trade-off.** A slashed zero looks technical in running prose, so it is kept to codes and data.
@@ -126,7 +124,7 @@ Record: `vault.font-smoothing`.
 
 ### One job per face
 
-Record: `vault.face-roles`.
+Records: `vault.face-roles`, `vault.face-count`.
 
 - **Why.** A second face works when each face keeps one job, body or headings; a third rarely works, and four almost never (Butterick). Too many faces blur the hierarchy and make an interface look inconsistent (Apple). Code needs a monospace face, because its dense punctuation reads better there. Design systems split the faces the same way: USWDS by role tokens, Atlassian with a brand face for marketing and a plain one for the app.
 - **Trade-off.** One family is lighter to load and always consistent; a second face adds voice and file weight.

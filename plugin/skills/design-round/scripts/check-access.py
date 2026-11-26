@@ -88,7 +88,14 @@ check-layout.py does, and measures each question at both:
   and icons) against the colours next to it, or its own fill or border against
   those outside it, at the table's figure, so its own backdrop, halo or shadow
   counts and the image's worst pixel beside it decides. One over a video or
-  canvas cannot be measured. In the declared carousel, a row of two or more
+  canvas cannot be measured. Where a declared carousel holds an image, video
+  or canvas on any slide, a fresh load,
+  kept from following links to other pages and from submitting, presses each
+  of its page dots in turn, else its next button until a slide shows again,
+  up to MAX_SLIDES, and each control's worst figure over every slide decides,
+  the fault naming that slide; a carousel with neither, or one the browser
+  errs on while it is stepped through, cannot be measured past the slides
+  read. In the declared carousel, a row of two or more
   controls drawing no text or icon, its page dots, must hold one that differs
   by more than opacity. With no carousel declared, each such row on the page
   whose names match but for a number ("Slide 1", "Slide 2", or none) cannot
@@ -114,8 +121,12 @@ check-layout.py does, and measures each question at both:
 - vault.theme-contrast: the page is loaded again in a dark scheme and under
   prefers-contrast: more, and each one that changes any colour the page draws
   is measured as the light page is, for vault.contrast, vault.control-edges
-  and the questions above, text held to the ladder's aim line under more
-  contrast; each fault there is this question's;
+  and the questions above, under more contrast text held to the ladder's aim
+  line and every other role to its more line;
+  each fault there is this question's, as is each part, by subject and role,
+  read in light and dark whose worst ratio sits on a lower rung of the
+  ladder in dark, a rung being the highest of its role's floor and top it
+  clears, capped at the top;
 - vault.keyboard: Tab walks the page from its top to its end, then Shift+Tab
   walks it back. Every part a pointer can work must take
   focus: a link, button, form control or ARIA widget, or an element with a
@@ -143,12 +154,26 @@ check-layout.py does, and measures each question at both:
 - vault.pause: on a fresh load, each animation running from the start whose
   active span is over 5 s, and each video playing that loops or runs over
   5 s without its own controls, fails unless a button, switch or checkbox
-  named for pausing, stopping or hiding it stops it when clicked. Such an
-  animation that ends before the check could try a control, or while it
-  tries them, an element
-  a script moves frame by frame, and a canvas, image or SVG whose pixels
-  change across WATCH_MS without an animation the browser lists, cannot be
-  measured; nor can a carousel that changes slides less often than that;
+  named for pausing, stopping or hiding it stops it when clicked. So does a
+  declared carousel shown whose pixels, or the boxes inside it, change past
+  5 s from load and within ROTATE_MS of that, as vault.carousel-focus reads
+  a change, unless such a control, clicked with the pointer then moved off,
+  holds it still for its slide's span as vault.carousel-focus timed it, or
+  ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
+  still through that watch while the page still runs an interval or holds
+  a pending timeout cannot be measured, as it may turn more slowly. Outside
+  a declared carousel, where in that window a script changes an attribute,
+  past the caret style a screenshot writes, adds or removes nodes, changes
+  text or scrolls a box, or an animation or transition starts, the changed
+  element's parent cannot be measured unless a control holds it still for
+  ROTATE_MS and STILL_SLACK_MS. An entrance that ends within 5 s is no such
+  change, and one is watched for only where a carousel is declared or the
+  page, at the read, still runs an interval, holds a pending timeout or
+  asks for frames; an undeclared one slower than ROTATE_MS is not seen.
+  A long animation that ends before the check could try a control, or while
+  it tries them, an element a script moves frame by frame, and a canvas,
+  image or SVG whose pixels change across WATCH_MS without an animation the
+  browser lists, cannot be measured;
 - vault.skip-link: where a Tab stop outside the main element comes before it,
   the first stop, past any in a dialog or a fixed or sticky cookie or consent
   banner, must link to the main element or something in it, and show whole in
@@ -235,7 +260,6 @@ but a question cannot be measured / 7 a call hung that would never return. Exits
 import argparse
 import collections
 import datetime
-import importlib.util
 import io
 import itertools
 import json
@@ -244,32 +268,26 @@ import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
-def sibling(name):
-    """The module in the file `name` beside this script."""
-    spec = importlib.util.spec_from_file_location(
-        name[:-3].replace("-", "_"), os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-layout = sibling("check-layout.py")
+layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
 try:
     import numpy as np
     from PIL import Image
 except ImportError as err:
     sys.exit(flow.missing(err))
-maths = sibling("access-pixels.py")
-answering = sibling("access-answers.py")
-pseudo_boxes = sibling("access-boxes.py")
-keys = sibling("access-keys.py")
-contrasts = sibling("access-contrast.py")
-pointing = sibling("access-pointer.py")
-conditions = sibling("conditions.py")
+maths = siblings.load(HERE, "access-pixels.py")
+answering = siblings.load(HERE, "access-answers.py")
+pseudo_boxes = siblings.load(HERE, "access-boxes.py")
+keys = siblings.load(HERE, "access-keys.py")
+contrasts = siblings.load(HERE, "access-contrast.py")
+pointing = siblings.load(HERE, "access-pointer.py")
+conditions = siblings.load(HERE, "conditions.py")
 
 VIEWPORTS = tuple(
     (name, width, layout.height_at(width, layout.HEIGHTS))
@@ -300,9 +318,10 @@ LONG_MS = 5000
 # named for pausing it clicks. Guesses, unmeasured.
 WATCH_MS = 1000
 PAUSE_TRIES = 6
-# How long a click on one of those controls may wait for it to take a click.
-# A guess, unmeasured: a control that is there to be clicked takes one at once.
-PAUSE_CLICK_MS = 2000
+# Frames a pause control has to hold still in before it counts as moving (#536): a guess.
+PAUSE_FRAMES = 10
+# Frames since the page last asked for one in which its frame loop counts as running (#545): a guess.
+PAGE_LOOP_FRAMES = 2
 # Event types that make an element act on a pointer, and React's props for them.
 ACT_EVENTS = (
     "click",
@@ -503,7 +522,7 @@ MEASURE_JS = (
   const linkFaults = [];
   document.querySelectorAll('a[href]').forEach((a) => {
     if (!shown(a) || !/\S/.test(a.textContent) || !inText(a) || cued(a)) return;
-    const ratio = contrast(rgba(css(a).color), rgba(css(a.parentElement).color));
+    const ratio = contrast(rgba(css(a).color), rgba(css(textBesideOf(a)).color));
     if (ratio < LINK_RATIO) {
       linkFaults.push({ subject: label(a), detail: `is told from the text around it by colour alone, at ${ratio.toFixed(2)}:1; ${LINK_RATIO}:1 or an underline is needed` });
     }
@@ -644,8 +663,14 @@ const shadowed = (s) => s !== 'none' && s.split(/,(?![^(]*\))/).some((layer) => 
 });
 const bold = (cs) => parseInt(cs.fontWeight, 10) >= BOLD_CUE;
 const italic = (cs) => cs.fontStyle !== 'normal';
+const textBesideOf = (a) => {
+  const block = blockOf(a);
+  for (let e = a.parentElement; e && e !== block; e = e.parentElement)
+    if ([...e.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && /\S/.test(n.data))) return e;
+  return block;
+};
 const cued = (a) => {
-  const parent = css(a.parentElement);
+  const parent = css(textBesideOf(a));
   return [a, ...a.querySelectorAll('*')].some((e) => {
     const cs = css(e);
     return (/underline|overline/.test(cs.textDecorationLine) && painted(cs.textDecorationColor)) ||
@@ -883,8 +908,6 @@ async (back) => {
   const stop = { i: w.els.length - 1, subject: label(el), unreadable: frame, part: null, region: null, cover: null, covered: false, need: 0 };
   const view = [0, 0, document.documentElement.clientWidth, innerHeight];
   const showing = (e) => meet(visiblePart(e, box(e.getBoundingClientRect())), view);
-  // A control hidden for a screen reader shows its focus on what stands for
-  // it: its label, or else the nearest wrapper that shows.
   let shows = el, part = showing(el);
   for (const stand of [...(el.labels || []), ...ancestorsOf(el)]) {
     if (!empty(part)) break;
@@ -1035,9 +1058,122 @@ MOTION_JS = (
 """
 )
 
+# #536
+CLICKABLE_JS = r"""
+(i) => new Promise((resolve) => {
+  const el = window.__pauses[i];
+  if (!el.isConnected) return resolve(false);
+  el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+  const box = () => {
+    const r = [...el.getClientRects()].find((r) => r.width && r.height);
+    return r ? [r.left, r.top, r.width, r.height] : null;
+  };
+  let was = box(), left = PAUSE_FRAMES;
+  const frame = () => requestAnimationFrame(() => {
+    const now = box();
+    if (!el.isConnected || disabled(el) || !now) return resolve(false);
+    if (!was || now.some((v, k) => v !== was[k])) {
+      was = now;
+      return --left ? frame() : resolve(false);
+    }
+    const [x, y, w, h] = now;
+    const hit = el.getRootNode().elementFromPoint(x + w / 2, y + h / 2);
+    resolve(!!hit && el.contains(hit));
+  });
+  frame();
+})
+"""
+
 # Which long motions are stopped now, and which have ended, by their index.
 STOPPED_JS = "() => window.__motions.flatMap((m, i) => (m.stopped() ? [i] : []))"
 ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
+
+# Run before any page script, as a timer or change made at load is missed after.
+TIMERS_JS = r"""
+(() => {
+  const live = new Set(), set = window.setInterval, clear = window.clearInterval;
+  window.setInterval = function (...a) { const id = set.apply(this, a); live.add(id); return id; };
+  window.clearInterval = function (id) { live.delete(id); return clear.call(this, id); };
+  const changed = new Map();
+  const note = (el) => {
+    if (!el || el.nodeType !== 1) return;
+    const times = changed.get(el) || [];
+    times.push(performance.now());
+    changed.set(el, times);
+  };
+  // A screenshot hides the caret by a style it writes and takes off again.
+  const caret = (v) => (v || '').replace(/caret-color: transparent !important;\s*/g, '');
+  new MutationObserver((records) => {
+    for (const m of records) {
+      if (m.type === 'attributes' && caret(m.oldValue) === caret(m.target.getAttribute(m.attributeName))) continue;
+      note(m.type === 'characterData' ? m.target.parentElement : m.target);
+    }
+  }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
+  addEventListener('scroll', (e) => note(e.target), true);
+  window.__timers = { live, changed };
+})();
+"""
+
+TIMED_JS = r"""
+(carousels) => {
+  const f = window.__flow;
+  return carousels > 0 || window.__timers.live.size > 0 || f.pending.size > 0 || f.lastPageFrame >= f.frame - PAGE_LOOP_FRAMES;
+}
+"""
+
+LIVE_JS = "() => window.__timers.live.size > 0 || window.__flow.pending.size > 0"
+
+CHANGED_JS = r"""
+const changedSince = (since) => {
+  const f = window.__flow;
+  f.scan();
+  const out = new Set();
+  const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el), REWRITE_FRAMES, REWRITE_SPAN_MS);
+  const keep = (el) => el && el.isConnected && !scripted(el) && !window.__pauses.some((p) => p.contains(el));
+  for (const [el, times] of window.__timers.changed) if (keep(el) && times.some((t) => t >= since)) out.add(el);
+  for (const [a, rec] of f.seen) {
+    const el = a.effect && a.effect.target;
+    if (keep(el) && rec.start !== null && rec.start >= since) out.add(el);
+  }
+  return out;
+};
+"""
+
+# A changed element's parent stands for it, as a slide's does for the slide.
+ROTATION_JS = (
+    flow.LABEL_JS
+    + flow.LOOP_JS
+    + CHANGED_JS
+    + r"""
+([selectors, since]) => {
+  const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
+  const carousels = selectors.flatMap((s) => [...document.querySelectorAll(s)]);
+  const rest = [...changedSince(since)].filter((el) => !carousels.some((c) => c.contains(el))).map((el) => el.parentElement || el);
+  const roots = window.__rotations = [];
+  for (const root of rest)
+    if (on(root) && !rest.some((o) => o !== root && o.contains(root)) && !roots.includes(root)) roots.push(root);
+  return roots.map((r) => label(r));
+}
+"""
+)
+
+ROTATED_JS = (
+    flow.LOOP_JS
+    + CHANGED_JS
+    + r"""
+(since) => {
+  const changed = [...changedSince(since)];
+  return window.__rotations.flatMap((r, i) => (changed.some((el) => r.contains(el)) ? [i] : []));
+}
+"""
+)
+
+CAROUSEL_JS = (
+    flow.LABEL_JS
+    + r"""
+(e) => ({ subject: label(e), on: shown(e) && !empty(box(e.getBoundingClientRect())) })
+"""
+)
 
 BLUR_JS = "() => document.activeElement && document.activeElement.blur()"
 
@@ -1059,7 +1195,7 @@ def page_js(body):
     consts = (
         f"const MIN_TARGET = {MIN_TARGET}, PX_SLACK = {maths.PX_SLACK}, BOLD_CUE = {BOLD_CUE}, WRAP = {WRAP}, "
         f"LINK_RATIO = {LINK_RATIO}, WRAPPERS = {WRAPPERS}, FOCUS_REACH = {FOCUS_REACH}, LONG_MS = {LONG_MS}, "
-        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, "
+        f"REWRITE_FRAMES = {flow.REWRITE_FRAMES}, REWRITE_SPAN_MS = {flow.REWRITE_SPAN_MS}, PAUSE_TRIES = {PAUSE_TRIES}, PAUSE_FRAMES = {PAUSE_FRAMES}, PAGE_LOOP_FRAMES = {PAGE_LOOP_FRAMES}, "
         f"OPAQUE = {OPAQUE}, DATE_PARTS = {DATE_PARTS}, ACT_EVENTS = {json.dumps(ACT_EVENTS)}, REACT_PROPS = {json.dumps(REACT_PROPS)};\n"
     )
     return consts + CUE_JS + body
@@ -1250,14 +1386,10 @@ def focus_fault(page, stop, key):
             "takes focus outside the window or its clipping box, where its focus cannot be seen",
             False,
         )
-    # 2.4.11 judges the part, not its indicator: a ring showing past a bar
-    # that hides the whole part does not save it.
     if stop["covered"]:
         return f"is hidden under {stop['cover']} when {key} brings focus to it", False
     if stop["unreadable"]:
         return None, False
-    # Each state shot twice: a pixel that moves while focus stays put, a
-    # video's or a canvas's, is no indicator, nor is one near it.
     shots = []
     for _ in range(2):
         shots.append(viewport_shot(page))
@@ -1362,17 +1494,31 @@ def tab_walk(page, carousels):
     }
 
 
-def pause_answer(context, url):
+def hold_ms(span):
+    return (
+        span if isinstance(span, (int, float)) else keys.ROTATE_MS
+    ) + keys.STILL_SLACK_MS
+
+
+def motion_answers(context, url, carousels, *, mouse):
+    """keys.driven's answers, and vault.pause's Judged, which reads the slide
+    spans vault.carousel-focus timed."""
+    driven, spans = keys.driven(context, url, keys_js, carousels, mouse=mouse)
+    return driven, answering.Judged(
+        *pause_answer(context, url, carousels, spans), [], []
+    )
+
+
+def pause_answer(context, url, carousels, spans):
     """vault.pause's (faults, cannot-measure reasons), from a fresh load of the
-    page: each motion running more than LONG_MS from load fails
-    unless one of the controls named for pausing it, clicked, stops it.
-    One that ends before the read or while its controls are tried, and
-    motion a script draws, frame by frame or on a canvas, image or SVG,
-    cannot be measured."""
+    page, as the module docstring gives them. `spans` are
+    vault.carousel-focus's times from one slide to the next, by carousel, each
+    None or a reason where it timed none."""
     from playwright.sync_api import Error as PlaywrightError
 
     page = context.new_page()
     page.add_init_script(flow.COLLECTOR_JS)
+    page.add_init_script(TIMERS_JS)
     page.goto(url, wait_until="load")
     page.evaluate("() => document.fonts.ready")
     before = page.screenshot(full_page=True)
@@ -1393,23 +1539,65 @@ def pause_answer(context, url):
             unmeasured.append(
                 f"{painted['subject']} changes as it is drawn, which this check cannot time"
             )
-    stopped, unclickable = set(), 0
+    # Each declared carousel shown, as (subject, its element, its span).
+    declared = []
+    for n, el in enumerate(
+        el for sel in carousels for el in page.query_selector_all(sel)
+    ):
+        c = el.evaluate(page_js(CAROUSEL_JS))
+        if c["on"]:
+            declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
+    turning, stilled, others = [], [], []
+    if page.evaluate(page_js(TIMED_JS), len(carousels)):
+        page.wait_for_timeout(
+            max(0, LONG_MS - page.evaluate("() => performance.now()"))
+        )
+        since = page.evaluate("() => performance.now()")
+        for c in declared:
+            moved = keys.change(page, c[1], keys.ROTATE_MS) is not None
+            (turning if moved else stilled).append(c)
+        page.wait_for_timeout(
+            max(0, since + keys.ROTATE_MS - page.evaluate("() => performance.now()"))
+        )
+        others = page.evaluate(page_js(ROTATION_JS), [list(carousels), since])
+        if not page.evaluate(LIVE_JS):
+            stilled = []
+    stopped, held, held_others, unclickable = set(), set(), set(), 0
     for i in range(got["pauses"]):
-        if len(stopped) == len(got["long"]):
+        if (
+            len(stopped) == len(got["long"])
+            and len(held) == len(turning)
+            and len(held_others) == len(others)
+        ):
             break
-        try:
-            page.evaluate_handle("(i) => window.__pauses[i]", i).as_element().click(
-                timeout=PAUSE_CLICK_MS
-            )
-        except PlaywrightError:
-            # Covered, moving or detached: a visitor could not click it either,
-            # so it pauses nothing.
+        # Covered, moving or detached: a visitor could not click it either,
+        # so it pauses nothing.
+        if not page.evaluate(page_js(CLICKABLE_JS), i):
             unclickable += 1
             continue
+        try:
+            page.evaluate_handle("(i) => window.__pauses[i]", i).as_element().click(
+                force=True  # #536
+            )
+        except PlaywrightError as exc:
+            expected(exc, "counted unclickable")
+            unclickable += 1
+            continue
+        # Off it, so a carousel held while the pointer is over it is not taken
+        # for one the control stopped.
+        page.mouse.move(0, 0)
         page.evaluate(
             "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
         )
         stopped.update(page.evaluate(STOPPED_JS))
+        for k, (_, el, span) in enumerate(turning):
+            if k not in held and keys.change(page, el, hold_ms(span)) is None:
+                held.add(k)
+        if len(held_others) < len(others):
+            since = page.evaluate("() => performance.now()")
+            page.wait_for_timeout(hold_ms(None))
+            moved = page.evaluate(page_js(ROTATED_JS), since)
+            held_others.update(set(range(len(others))) - set(moved))
     ended = set(page.evaluate(ENDED_JS)) - stopped
     page.close()
     tried = (
@@ -1425,22 +1613,40 @@ def pause_answer(context, url):
                 f"{m['subject']} {m['what']} from the page's load and ended while the controls named for pausing it were tried"
             )
         elif i not in stopped:
-            held = faults.setdefault(
+            held_on = faults.setdefault(
                 m["subject"], {"subject": m["subject"], "what": []}
             )
-            held["what"].append(m["what"])
-    return [
+            held_on["what"].append(m["what"])
+    found = [
         {
             "subject": s,
             "detail": f"{' and '.join(f['what'])} from the page's load, and {tried}",
         }
         for s, f in faults.items()
-    ], unmeasured
+    ]
+    changing = f"changes what it shows more than {LONG_MS / 1000:g} s after the page's load, and {tried}"
+    found += [
+        {"subject": subject, "detail": changing}
+        for k, (subject, _, _) in enumerate(turning)
+        if k not in held
+    ]
+    unmeasured += [
+        f"{subject} {changing}; no carousel was declared, so whether the change shows cannot be told"
+        for k, subject in enumerate(others)
+        if k not in held_others
+    ] + [
+        f"{subject} held still from {LONG_MS / 1000:g} s to {(LONG_MS + keys.ROTATE_MS) / 1000:g} s after the page's load "
+        "while the page still ran a timer, so a slower rotation cannot be ruled out"
+        for subject, _, _ in stilled
+    ]
+    return found, unmeasured
 
 
 def judge(got, shots, measured, table):
     """One width's {question id: access-answers.py's Judged}, with `measured`
-    holding those other calls' Judged."""
+    holding those other calls' Judged, and access-contrast.py's Reading for
+    each text and control edge read and not faulted."""
+    readings = []
     out = {qid: answering.Judged([], [], [], []) for qid, _ in answering.QUESTIONS}
     shot, ink, held, sizes = shots.shot, shots.ink, shots.held, shots.sizes
     # A fault read over the whole box is otherwise taken for one under the letters (#290).
@@ -1459,7 +1665,9 @@ def judge(got, shots, measured, table):
     for text, read_on, held_on in read + got["focused"]:
         if text.get("under"):
             under.setdefault(text["under"], []).append(text["subject"])
-        fault, why = maths.text_contrast(*read_on, text, table.floors, held=held_on)
+        fault, why, worst = maths.text_reading(
+            *read_on, text, table.floors, held=held_on
+        )
         if text["logotype"]:
             if fault or why:
                 out["vault.contrast"].exempt.append(
@@ -1476,6 +1684,13 @@ def judge(got, shots, measured, table):
             )
         if why:
             out["vault.contrast"].unmeasured.append(why)
+        if worst is not None:
+            big = maths.large(text["size"], text["weight"], table.floors)
+            readings.append(
+                contrasts.Reading(
+                    text["subject"], "large text" if big else "text", worst
+                )
+            )
     out["vault.contrast"].unmeasured.extend(
         f"{subject} is generated text in a Tab stop hidden at rest, which is read only "
         "focused, and generated text is not read there"
@@ -1517,12 +1732,14 @@ def judge(got, shots, measured, table):
                     "detail": f"shows {by} at {edge.ratio:.2f}:1 at best against {maths.hexed(edge.behind)} behind that; {table.edge:g}:1 needed",
                 }
             )
+        elif edge.box is not None:
+            readings.append(contrasts.Reading(subject, "control edge", edge.ratio))
     out["vault.target-size"].faults.extend(got["targetFaults"])
     out["vault.colour-script"].faults.extend(got["linkFaults"])
     for qid, judged in measured.items():
         for mine, theirs in zip(out[qid], judged, strict=True):
             mine.extend(theirs)
-    return out
+    return out, readings
 
 
 class BadSelectorError(Exception):
@@ -1546,9 +1763,13 @@ def open_page(browser, at, width, height, **scheme):
     )
     context.set_default_timeout(at.timeout)
     context.add_init_script(LISTEN_JS)
+    return (context, *load(context, at.url))
+
+
+def load(context, url):
     page = context.new_page()
-    page.goto(at.url, wait_until="load")
-    return context, page, page.evaluate(layout.SETTLE_JS)
+    page.goto(url, wait_until="load")
+    return page, page.evaluate(layout.SETTLE_JS)
 
 
 def read_texts(page, logotype):
@@ -1579,17 +1800,24 @@ def read_texts(page, logotype):
     return got, shots
 
 
-def contrast_answers(page, at, texts):
-    """access-contrast.py's {question id: Judged} for a settled page."""
-    found = contrasts.measure(
-        page, contrast_js, at.table, parts=at.parts, absent=at.absent, texts=texts
+def contrast_answers(page, at, texts, table):
+    """access-contrast.py's {question id: Judged} for a settled page, held to
+    `table`, and its Readings."""
+    found, readings = contrasts.measure(
+        page,
+        contrast_js,
+        table,
+        parts=at.parts,
+        absent=at.absent,
+        texts=texts,
+        fresh=lambda: load(page.context, at.url)[0],
     )
     if "bad" in found:
         raise BadSelectorError("--parts", found["bad"])
-    return found
+    return found, readings
 
 
-def theme_answer(browser, at, width, height, *, light, answered):
+def theme_answer(browser, at, width, height, *, light, answered, readings):
     """vault.theme-contrast's Judged at one width: each scheme in contrasts.SCHEMES
     that changes a colour the `light` signature holds, measured as the light
     page is, past what the light page's `answered` already finds."""
@@ -1600,16 +1828,17 @@ def theme_answer(browser, at, width, height, *, light, answered):
             if contrasts.signature(page, contrast_js) == light:
                 continue
             shipped.append(name)
+            table = contrasts.scheme_table(name, at.table)
             got, shots = read_texts(page, at.logotype)
-            judged = judge(
-                got,
-                shots,
-                {},
-                at.table._replace(floors=contrasts.scheme_floors(name, at.table)),
-            )
-            found = contrasts.scheme(
-                name, judged, contrast_answers(page, at, None), answered
-            )
+            judged, judge_readings = judge(got, shots, {}, table)
+            measured, contrast_readings = contrast_answers(page, at, None, table)
+            found = contrasts.scheme(name, judged, measured, answered)
+            if name == "dark":
+                found.faults.extend(
+                    contrasts.rung_drops(
+                        readings, judge_readings + contrast_readings, at.table
+                    )
+                )
             for mine, theirs in zip(out, found, strict=True):
                 mine.extend(theirs)
         finally:
@@ -1638,22 +1867,25 @@ def run(at):
             context, page, loops = open_page(browser, at, width, height)
             looping = max(looping, loops)
             got, shots = read_texts(page, at.logotype)
-            measured = contrast_answers(page, at, (got, shots))
+            measured, contrast_readings = contrast_answers(
+                page, at, (got, shots), at.table
+            )
             light = contrasts.signature(page, contrast_js)
             merge(measured, tab_walk(page, at.carousels))
-            measured["vault.pause"] = answering.Judged(
-                *pause_answer(context, at.url), [], []
+            driven, measured["vault.pause"] = motion_answers(
+                context, at.url, at.carousels, mouse=name == "desktop"
             )
-            merge(
-                measured,
-                keys.driven(
-                    context, at.url, keys_js, at.carousels, mouse=name == "desktop"
-                ),
-            )
+            merge(measured, driven)
             context.close()
-            answered = judge(got, shots, measured, at.table)
+            answered, judge_readings = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(
-                browser, at, width, height, light=light, answered=answered
+                browser,
+                at,
+                width,
+                height,
+                light=light,
+                answered=answered,
+                readings=judge_readings + contrast_readings,
             )
             found.append((name, answered))
     return found, looping
@@ -1747,7 +1979,7 @@ def parse(argv):
         p.error(f"--contrast-table {at.contrast_table}: {exc}")
     at.parts, at.absent = {}, set()
     if at.parts_file:
-        probe = sibling("probe.py")
+        probe = siblings.load(HERE, "probe.py")
         try:
             with open(at.parts_file, encoding="utf8") as fh:
                 at.parts, at.absent = probe.declared_parts(fh.read())

@@ -298,8 +298,8 @@ Symbols: xh = the face's x-height in em (OS/2 sxHeight / unitsPerEm, measured as
 
 ### TYS-7. Body text size
 - Decision: the size of running body text on a web surface.
-- Rule: inputs xh of the body face, role (running text or dense working role). Output: running text body_px = max(16, round(16 × 0.52 / xh)). Dense working role (tables, tool panels): 14 px × 0.52 / xh, rounded, never under the TYS-8 floor. Scale UP only. Never scale down below 16 px for a face with a large x-height.
-- Worked values: Source Serif 4 (0.475) → 17.5 → 18 px. Georgia (0.481) → 17.3 → 17 px. Times (0.447) → 18.6 → 19 px. Inter (0.546), Verdana (0.545) → 16 px.
+- Rule: inputs xh of the body face, role (running text or dense working role). Output: running text body_px = max(16, ceil(16 × 0.52 / xh)). Dense working role (tables, tool panels): 14 px × 0.52 / xh, rounded up, never under the TYS-8 floor. Scale UP only. Never scale down below 16 px for a face with a large x-height.
+- Worked values: Source Serif 4 (0.475) → 17.5 → 18 px. Georgia (0.481) → 17.3 → 18 px. Times (0.447) → 18.6 → 19 px. Inter (0.546), Verdana (0.545) → 16 px.
 - Clash: USWDS (R11) normalizes by cap height and scales DOWN too (Merriweather and Roboto Mono get smaller). I reject the down step for running text with the R28 argument. USWDS uses cap height; I use x-height because reading speed follows x-height (R28, APCA R29).
 - Clash: house vault.body-size says "all text at phone widths 16 px or more". No source supports this for labels and captions (see TYS-8).
 - Era: principle T (R28, R12). The 16 px base is current: GOV.UK v6.0.0 (9 Feb 2026) body 19, smallest 16; Atlassian body 16 (as read Oct 2026); MDN and USWDS "effective size of 16px" (as read Oct 2026). Label E for the 16 px value.

@@ -9,7 +9,7 @@
 
 ## Precedence
 
-- **The house overrides below win over impeccable's text and its detector.** A project's rules file may override any of them, except one that rests on WCAG or the law, and, on behaviour, one that rests on domain evidence, which it overrides only on evidence of its own.
+- **The house overrides below win over impeccable's text and its detector.** Where a project's rules file and one of them disagree, [source precedence](../../design-critique/references/house-principles.md#source-precedence) decides.
 - **The round governs.** Where impeccable asks the user to pick, such as its direction board, the round's candidates and the founder's reply are that pick.
 - **The project's rules file wins** over PRODUCT.md and DESIGN.md, which impeccable reads on every run. Both are consumers of the rules file: bring them into line when it changes.
 - **Web layouts build code-first.** The project's `.impeccable/config.json` carries `"buildPath": "code"`.
@@ -90,7 +90,7 @@ The precedence levels are the house's [source precedence](../../design-critique/
 
 ### The "AI look" bans: dated defaults, review by 14 Apr 2027
 
-The record is `vault.ai-look`. These are impeccable's reaction to 2024–2026 model output (design-vault#119 F3), so they sit at precedence level 6. The rest of the Refuse list keeps impeccable's weight, its light-or-dark row as conditioned above.
+The record is `vault.ai-look`. These are impeccable's reaction to 2024–2026 model output (design-vault#119 F3), so they sit at precedence level 6. Purple, as a gradient or the default accent, rests on more than impeccable: Hallmark's lint bans the gradient and Krebs's scan of Show HN pages counts it (#400), though impeccable's catalogue dates it to 2022, so it is reviewed with the rest. The rest of the Refuse list keeps impeccable's weight, its light-or-dark row as conditioned above.
 
 A candidate that uses one is reported at P2 at most. It never fails a gate and never decides a pick. At the review date, check each against Anthropic's `frontend-design` list of current AI-made traits, which the House DNA follows, and strike what no longer marks it.
 

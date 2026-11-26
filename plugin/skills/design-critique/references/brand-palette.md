@@ -2,7 +2,7 @@
 
 Why a palette is built around a client's logo as its records say, how far apart two colours must sit, and which grounds a logo may take (#143, #175, #272). The research behind every line is in the design vault: `docs/research/brand-palette.md`, and `docs/research/de00-thresholds.md` and `de00-greys.md` for the numbers.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets, and, on behaviour, a record resting on domain evidence, which it departs from only on evidence of its own ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 `python3 ${CLAUDE_PLUGIN_ROOT}/skills/design-project/scripts/palette.py` measures the numbers the records set: ΔE00 between colours, the logo's lightness, and its grounds at 3:1.
 
@@ -30,11 +30,11 @@ Record: `vault.colour-distance`.
 
 - **Why.** Under 2 is one just-noticeable difference, so two such colours are one colour with two names. Between 2 and the line, a pair reads as a mistake rather than a choice. Large grey surfaces near the ground that share an edge are judged side by side, so they part at a smaller gap than small marks, which need more. ΔEOK divided by 100 ranks pairs differently from ΔE00. Two colours that never share a view may sit closer, and a ramp's own steps are judged by contrast instead.
 - **Trade-off.** Keeping every pair far apart costs richness: fewer colours, or colours further from the brand's hue.
-- **Clash.** Against "make distinctions as subtle as possible" (Tufte), the job decides: a difference of identity or meaning takes this record, a difference of rank inside one family takes Tufte, with WCAG as its floor. Against a fixed logo colour, the logo never moves. No source measures the near-miss line directly: 10 is the founder's ruling on #178 over four proxies that meet near it.
+- **Clash.** Against "make distinctions as subtle as possible" (Tufte), the job decides: a difference of identity or meaning takes this record, a difference of rank inside one family takes Tufte, with WCAG as its floor. Against a fixed logo colour, the logo never moves. No source measures the near-miss line directly: 10 is where four proxies meet (#178, `docs/research/de00-thresholds.md`).
 
 ### A logo's grounds follow its lightness
 
-Record: `vault.logo-ground`.
+Records: `vault.logo-ground`, `vault.logo-ground-script`.
 
 - **Why.** WCAG exempts a logo from contrast only where brand guidelines fix it; a ground the designer chooses is not exempt, so the 3:1 check binds in every round.
 - **Trade-off.** The more grounds a site wants, the more versions the logo needs. A keyline reads as a sticker, and adds a colour that must itself pass the near-miss check.
@@ -42,7 +42,7 @@ Record: `vault.logo-ground`.
 
 ### Never recolour a logo
 
-Record: `vault.logo-colour`.
+Records: `vault.logo-colour`, `vault.logo-unchanged`.
 
 - **Why.** The client owns the logo; its colours are part of the mark, as the brand guidelines of Spotify and GOV.UK both say.
 - **Trade-off.** The page loses grounds it wanted, or waits for the client.

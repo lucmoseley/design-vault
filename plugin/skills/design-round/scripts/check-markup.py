@@ -42,26 +42,23 @@ import argparse
 import collections
 import contextlib
 import datetime
-import importlib.util
 import json
 import os
 import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
 AXE = os.path.join(HERE, "..", "vendor", "axe-core", "axe.min.js")
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-layout = _load("check_layout", os.path.join(HERE, "check-layout.py"))
-probe = _load("probe", os.path.join(HERE, "probe.py"))
+flow = siblings.load(HERE, "check-flow.py")
+layout = siblings.load(HERE, "check-layout.py")
+probe = siblings.load(HERE, "probe.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-markup.table")
 SEP = " | "
@@ -80,8 +77,7 @@ Line = collections.namedtuple("Line", "id rules part text")
 Table = collections.namedtuple("Table", "lines off")
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 def _rule_ids(n, given):
@@ -94,10 +90,7 @@ def _rule_ids(n, given):
 
 def parse(text):
     lines, off = [], ()
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [f.strip() for f in line.split(SEP)]
         if len(fields) not in (2, 3) or not all(fields):
             raise TableError(f"line {n}: want ID | RULE, … [| part:NAME], got {line!r}")
@@ -222,12 +215,9 @@ def findings(table, swept):
             f["misses"] += [{"width": width, **n} for n in got["violations"]]
             f["review"] += [{"width": width, **n} for n in got["incomplete"]]
             applied = applied or bool(set(got["applied"]) & set(line.rules))
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif applied:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=applied
+        )
         out.append(f)
     return out
 
@@ -254,19 +244,7 @@ def parse_args(argv):
     )
     p.add_argument("url", help="an http(s) URL, or a local HTML file")
     p.add_argument("--out", required=True, metavar="DIR", help="where markup.json goes")
-    p.add_argument(
-        "--parts",
-        dest="declaration",
-        metavar="FILE",
-        help=f"the building session's parts declaration, {probe.DECLARATION}",
-    )
-    p.add_argument(
-        "--part",
-        action="append",
-        default=[],
-        metavar="NAME=SELECTOR",
-        help="a declared part's name and its CSS selector, for part: lines",
-    )
+    probe.part_arguments(p)
     p.add_argument("--table", default=TABLE, metavar="FILE", help="the rule table")
     p.add_argument(
         "--timeout",
@@ -276,20 +254,7 @@ def parse_args(argv):
         help="for each load",
     )
     at = p.parse_args(argv)
-    at.parts = {}
-    if at.declaration:
-        try:
-            with open(at.declaration, encoding="utf8") as fh:
-                at.parts, _ = probe.declared_parts(fh.read())
-        except OSError as exc:
-            p.error(f"cannot read --parts {at.declaration}: {exc.strerror}")
-        except probe.DeclarationError as exc:
-            p.error(f"--parts {at.declaration}: {exc}")
-    for given in at.part:
-        name, eq, selector = given.partition("=")
-        if not eq or not name.strip() or not selector.strip():
-            p.error(f"--part wants NAME=SELECTOR, got {given!r}")
-        at.parts[name.strip()] = selector.strip()
+    at.parts, _ = probe.part_options(p, at)
     try:
         with open(at.table, encoding="utf8") as fh:
             at.table = parse(fh.read())

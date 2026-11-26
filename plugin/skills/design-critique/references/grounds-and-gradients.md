@@ -2,13 +2,15 @@
 
 Why a section, region, bar or footer takes its own background, how far apart neighbouring grounds sit, and when a gradient, a wash or a frame does a job (#284). The research behind every line is on design-vault#284's research comment.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when CSS changes how gradients blend or a design system cited here changes its surface model.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when CSS changes how gradients blend or a design system cited here changes its surface model.
 
 ## Principles
 
 ### The step between neighbouring grounds
 
-Record: `vault.ground-step`. The levels themselves are `vault.surface-layers`'s.
+Record: `vault.ground-step`.
+
+The levels themselves are `vault.surface-layers`'s, in [named surface levels](surface-styling.md#named-surface-levels).
 
 - **Why.** The systems that publish their surface tones keep the steps small. Material's light containers span tones 100 to 90, about 1.29:1 in all. Carbon's first layer, #f4f4f4 on white, is 1.10:1, and its next layer returns to white, so the set alternates rather than darkening. A step that small groups without drawing a line. The house asks more per step than either: the founder's 3 ΔE00 for large greys that meet (`vault.colour-distance`), about 1.14:1 near white, against Carbon's 2.2 ΔE00 and Material's 1.2. Two such steps reach the 1.3:1 span, so a third level alternates.
 - **Trade-off.** A small step can vanish on a poor screen or in sunlight, which is where `vault.border-fill` keeps a border. A bigger span makes the page look striped.
@@ -16,7 +18,7 @@ Record: `vault.ground-step`. The levels themselves are `vault.surface-layers`'s.
 
 ### Regions in an app
 
-Record: `vault.region-ground`.
+Records: `vault.region-ground`, `vault.region-fill`.
 
 - **Why.** Polaris lets several backgrounds share a view "only if they exist side by side", as the admin and its side navigation do. In Material, the navigation rail on a wide screen sits on the same surface as the content, and the bottom bar that replaces it on a phone takes a container tone. A drawer takes a tone of its own. So a region's ground follows the component it is, not the screen width. impeccable gives sidebars, toolbars and panels "a second neutral layer". Polaris bans bright or contrasting container fills in working areas because they pull the eye from the work.
 - **Trade-off.** A region on the content's own ground behind a divider looks calmer but reads less as a separate place. A second neutral layer marks the shell but adds one more tone to keep in step across themes.
@@ -76,9 +78,9 @@ Record: `vault.card-image-tint`.
 
 ### When a gradient has a function
 
-Records: `vault.gradient-function`, `vault.gradient-kind`.
+Records: `vault.gradient-function`, `vault.gradient-kind`, `vault.gradient-place`.
 
-- **Why.** A gradient does a job when it is a scrim under text on a photo (NN/g's fade), a light cue on a surface (Krehel's "depth lighting"), the brand's colour where the page may go committed (`vault.tone-colour-share`), an ambient pattern on a promotion (Atlassian), or a chart or ring (conic). Each kind suits one of these jobs. impeccable's detector flags the radial halo and spotlight glow behind a hero, and its quieter pass removes any gradient "that don't serve purpose".
+- **Why.** A gradient does a job when it is a scrim under text on a photo (NN/g's fade), a light cue on a surface (Krehel's "depth lighting"), the brand's colour where the page may go committed (`vault.tone-colour-share`), an ambient pattern on a promotion (Atlassian), or a chart or ring (conic). Each kind suits one of these jobs. impeccable's detector flags the radial halo and spotlight glow behind a hero, and its quieter pass removes any gradient "that don't serve purpose". An orb, a soft sphere of light set on the page, is the same glow given a shape, which Hallmark's lint gate 29 flags, so it needs a job too.
 - **Clash.** A gradient behind a working region is `vault.decoration-place`'s to refuse. Where one is earned back, `vault.ai-look` decides.
 
 ### Gradient text

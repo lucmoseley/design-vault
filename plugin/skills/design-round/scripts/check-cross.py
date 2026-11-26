@@ -41,7 +41,9 @@ where it reads one. Blank lines and lines starting with # are skipped.
                       or a search field)
   home-hub pages <= N on a site of N pages or fewer whose home page links
                       every other page, a page that links back to the home
-                      page passes the ways line however many ways it has
+                      page passes the ways line on the home-hub line's own
+                      record however many ways it has; a home-hub line on a
+                      record with no ways line is refused
   back                in a flow, Back from a step shows the step before at
                       its own URL with every value typed into it
   repeat              in a flow, a field whose autocomplete token an
@@ -73,7 +75,6 @@ import collections
 import contextlib
 import datetime
 import difflib
-import importlib.util
 import json
 import os
 import re
@@ -81,20 +82,17 @@ import sys
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-form = _load("drive_form", os.path.join(HERE, "drive-form.py"))
+flow = siblings.load(HERE, "check-flow.py")
+form = siblings.load(HERE, "drive-form.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-cross.table")
-SEP = " | "
 # Each check and the shape of the value its line gives: None for no value.
 CHECKS = {
     "phone": re.compile(r"\S.*"),
@@ -106,7 +104,6 @@ CHECKS = {
 }
 WAYS = ("navigation", "links", "search")
 
-Line = collections.namedtuple("Line", "id check value text")
 # One flow's walk: each step's URL, what was typed into it, what its fields
 # held on arrival with their autocomplete tokens, and what Back showed.
 Step = collections.namedtuple("Step", "url typed arrived back")
@@ -116,39 +113,33 @@ Walk = collections.namedtuple("Walk", "start steps ended")
 LAST_SUBMIT = "the last step's submit, after which Back is not pressed"
 
 
-class TableError(Exception):
-    """A table line the probe cannot run."""
+TableError = rule_table.TableError
 
 
 def parse(text):
     """The table's lines as Line records, in order."""
-    out = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        fields = [f.strip() for f in line.split(SEP)]
-        if len(fields) not in (2, 3) or not all(fields):
-            raise TableError(f"line {n}: want ID | CHECK [| VALUE], got {line!r}")
-        check = fields[1]
-        if check not in CHECKS:
+    lines = rule_table.parse(text, CHECKS, _line_value)
+    first_by_check = {}
+    for line in lines:
+        first = first_by_check.setdefault(line.check, line)
+        if first.value != line.value:
             raise TableError(
-                f"line {n}: no check {check!r}; the checks are {', '.join(CHECKS)}"
+                f"{line.text!r}: {line.check} is already given a different value by "
+                f"{first.text!r}, and the table gives each check one value"
             )
-        shape, given = CHECKS[check], fields[2] if len(fields) == 3 else None
-        if shape is None and given is not None:
-            raise TableError(f"line {n}: {check} reads no value, got {given!r}")
-        if shape is not None:
-            m = shape.fullmatch(given or "")
-            if not m:
-                raise TableError(
-                    f"line {n}: {check} wants a value like {shape.pattern!r}, got {given!r}"
-                )
-            given = int(m[1]) if m.groups() else given
-        out.append(Line(fields[0], check, given, line))
-    if not out:
-        raise TableError("the table has no lines")
-    return out
+    ways = {line.id for line in lines if line.check == "ways"}
+    for line in lines:
+        if line.check == "home-hub" and line.id not in ways:
+            raise TableError(
+                f"{line.text!r}: home-hub relaxes its own record's ways line, and {line.id} has none"
+            )
+    return lines
+
+
+def _line_value(n, check, m):
+    if m is None:
+        return None
+    return int(m[1]) if m.groups() else m[0]
 
 
 PAGE_JS = r"""
@@ -256,8 +247,9 @@ def walk(browser, start, selector=None):
         while True:
             try:
                 fields = form.fields(page, selector)
-            except form.FormError:
+            except form.FormError as exc:
                 # No form here is where a flow ends, an answer, not a fault (#306).
+                expected(exc, "the walk ends")
                 return Walk(start, steps, "a step with no form")
             url = _bare(page.url)
             if (url, tuple(f.key for f in fields)) in seen:
@@ -289,8 +281,9 @@ def walk(browser, start, selector=None):
 def _has_form(page, selector):
     try:
         form.fields(page, selector)
-    except form.FormError:
+    except form.FormError as exc:
         # FormError is drive-form's word for a page with no form (#306).
+        expected(exc, "no form")
         return False
     return True
 
@@ -301,66 +294,26 @@ def _token(token):
     return words if form.name_of(words) else None
 
 
-class _Answers:
-    """The findings being gathered, one per record id in table order."""
-
-    def __init__(self, table):
-        self.found = {
-            line.id: {"id": line.id, "answer": "no match", "misses": [], "unjudged": []}
-            for line in table
-        }
-        self.compared = set()
-
-    def miss(self, line, page, what):
-        self.compared.add(line.id)
-        self.found[line.id]["misses"].append(
-            {"check": line.check, "page": page, "what": what}
-        )
-
-    def unjudged(self, line, page, what):
-        self.found[line.id]["unjudged"].append(
-            {"check": line.check, "page": page, "what": what}
-        )
-
-    def met(self, line):
-        self.compared.add(line.id)
-
-    def done(self):
-        for f in self.found.values():
-            if f["misses"]:
-                f["answer"] = "fail"
-            elif f["unjudged"]:
-                f["answer"] = "not judged"
-            elif f["id"] in self.compared:
-                f["answer"] = "pass"
-        return list(self.found.values())
-
-
 def findings(table, pages, walks, *, phones, home):
     """One finding per record id, in table order: {"id", "answer", "misses",
     "unjudged"}, each miss and unjudged entry {"check", "page", "what"}.
     `walks` holds a Walk for each flow; `phones` is phone_urls()'s result, or
     None where the table has no phone line."""
-    answers = _Answers(table)
-    lines = {line.check: line for line in table}
-    if "phone" in lines and phones is not None:
-        _phone(answers, lines["phone"], phones)
-    if "order" in lines:
-        _order(answers, lines["order"], pages)
-    if "ways" in lines:
-        _ways(
-            answers,
-            lines["ways"],
-            lines.get("home-hub"),
-            pages=pages,
-            walks=walks,
-            home=home,
-        )
-    for w in walks:
-        if "back" in lines:
-            _back(answers, lines["back"], w)
-        if "repeat" in lines:
-            _repeat(answers, lines["repeat"], w)
+    answers = rule_table.Answers(table, "page")
+    hubs = {line.id: line for line in table if line.check == "home-hub"}
+    for line in {(line.id, line.check): line for line in table}.values():
+        if line.check == "phone" and phones is not None:
+            _phone(answers, line, phones)
+        elif line.check == "order":
+            _order(answers, line, pages)
+        elif line.check == "ways":
+            _ways(answers, line, hubs.get(line.id), pages=pages, walks=walks, home=home)
+        elif line.check == "back":
+            for w in walks:
+                _back(answers, line, w)
+        elif line.check == "repeat":
+            for w in walks:
+                _repeat(answers, line, w)
     return answers.done()
 
 
@@ -556,10 +509,10 @@ def main(argv):
     json_path = os.path.join(at.out, "cross.json")
     with contextlib.suppress(FileNotFoundError):
         os.unlink(json_path)
-    checks = {line.check: line for line in at.lines}
+    phone_line = next((line for line in at.lines if line.check == "phone"), None)
 
     def run():
-        phone = device(checks["phone"].value) if "phone" in checks else None
+        phone = device(phone_line.value) if phone_line else None
         with flow.chromium() as browser:
             pages, unread = crawl(browser, at.url)
             walks = []

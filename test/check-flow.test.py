@@ -7,12 +7,14 @@ playing (#135) and the exit ladder the browser scripts share (#131).
 """
 
 import contextlib
+import http.server
 import importlib.util
 import io
 import itertools
 import json
 import math
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -40,9 +42,12 @@ CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
-spec = importlib.util.spec_from_file_location("check_flow", SCRIPT)
-flow = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(flow)
+REQUIREMENTS = os.path.join(HERE, "..", "plugin", "requirements.txt")
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+flow = siblings.load(SCRIPTS, "check-flow.py")
 
 STEP = 1000 / flow.FPS
 
@@ -93,6 +98,46 @@ def jolts_at(speeds, dropped=()):
 
 # Speeds px per frame of a move easing in and out to 3% of its top speed.
 EASED = [1, 3, 6, 10, 10, 6, 3, 1, 0.3]
+
+
+def run_records_layout(subject):
+    """The check-layout module `subject.run_records` loads, stopped before any browser starts."""
+    loaded = []
+    real = siblings.load
+
+    def spy(here, file):
+        module = real(here, file)
+        if file == "check-layout.py":
+            loaded.append(module)
+        return module
+
+    class StopError(Exception):
+        pass
+
+    with (
+        mock.patch.object(siblings, "load", spy),
+        mock.patch.object(subject, "chromium", side_effect=StopError),
+        contextlib.suppress(StopError),
+    ):
+        subject.run_records(types.SimpleNamespace(lines=[]))
+    (layout,) = loaded
+    return layout
+
+
+class OneCopy(unittest.TestCase):
+    def test_run_records_check_layout_shares_this_copy_paired_with_a_private_load(
+        self,
+    ):  # #562
+        self.assertIs(run_records_layout(flow).flow, flow)
+
+    def test_a_private_load_s_run_records_reaches_a_second_copy(self):  # #562
+        spec = importlib.util.spec_from_file_location("private_check_flow", SCRIPT)
+        private = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(private)
+        self.assertIsNot(run_records_layout(private).flow, private)
+
+    def test_the_probe_parse_loads_shares_this_copy(self):  # #562
+        self.assertIs(siblings.load(SCRIPTS, "probe.py").flow, flow)
 
 
 class Pauses(unittest.TestCase):
@@ -192,11 +237,38 @@ class Jolts(unittest.TestCase):
     def test_a_move_starting_mid_frame_has_a_whole_first_frame(self):
         # A loaded machine starts one 1.5 ms before a frame, where a part
         # frame would carry its box 3 px and hide its jump (#326).
-        times = flow.sample_times(800, [48.5, 448.5], 60, [48.5])
+        times = flow.sample_times(800, [48.5, 448.5], 60, [(48.5, 48.5)])
         self.assertEqual(times[times.index(48.5) + 1], 48.5 + STEP)
         move = (48.5, 448.5, lambda p: 1 - (1 - p) ** 3)
         r = flow.analyse(sample(move, until=800, times=times))
         self.assertEqual([round(j["px"]) for j in r["jumps"]], [36])
+
+    def test_a_delay_ending_mid_frame_is_drawn_in_its_starts_phase(self):
+        # #411
+        delay = 25
+        for start in (k / 2 for k in range(34)):
+            with self.subTest(start=start):
+                moves_at = start + delay
+                times = flow.sample_times(
+                    800, [start, moves_at, moves_at + 450], 60, [(start, moves_at)]
+                )
+                drawn = times[times.index(moves_at) + 1]
+                self.assertAlmostEqual(drawn, start + 2 * STEP)
+                r = flow.analyse(
+                    sample((moves_at, moves_at + 450, linear), until=800, times=times)
+                )
+                self.assertEqual(r["jumps"], [])
+
+    def test_a_delayed_move_off_the_sampled_frames_still_jumps(self):
+        start, moves_at = 8.4, 33.4
+        times = flow.sample_times(800, [start, moves_at], 60, [(start, moves_at)])
+        move = (moves_at, moves_at + 400, lambda p: 1 - (1 - p) ** 3)
+        r = flow.analyse(sample(move, until=800, times=times))
+        self.assertEqual([round(j["px"]) for j in r["jumps"]], [18])
+
+    def test_a_delay_ending_within_1_ms_of_its_frame_has_a_whole_first_frame(self):
+        times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
+        self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
 
     def test_no_two_sample_times_fall_within_1_ms(self):
         times = flow.sample_times(100, [16.9, 50, 99.5], 60)
@@ -1454,6 +1526,18 @@ class Refused(unittest.TestCase):
         self.refuses("still.html", "no Web Animations API animation")
 
 
+class GoneProcess(unittest.TestCase):
+    """A process that exits between being listed and being read has no
+    command line, children or driver (#432, #464)."""
+
+    def test_an_exited_process_reads_as_empty(self):
+        gone = subprocess.Popen(["true"])
+        gone.wait()
+        self.assertEqual(flow.process_args(gone.pid), [])
+        self.assertEqual(flow.descendants(gone.pid), [])
+        self.assertIsNone(flow.driver_pid(gone.pid))
+
+
 class Arguments(unittest.TestCase):
     def test_a_viewport_that_is_not_w_by_h_is_a_usage_error(self):
         proc, data, _ = run("still.html", "--viewport", "1280")
@@ -1482,8 +1566,11 @@ class RunBrowser(unittest.TestCase):
         self.assertEqual(self.exits(lambda: 7, "file:///p.html"), ((7, None), "", ""))
 
     def test_the_hint_names_the_plugins_pinned_requirements(self):
+        self.assertEqual(
+            os.path.realpath(flow.REQUIREMENTS), os.path.realpath(REQUIREMENTS)
+        )
         self.assertIn(f"-r {flow.REQUIREMENTS}\n", flow.INSTALL_HINT)
-        with open(flow.REQUIREMENTS, encoding="utf-8") as f:
+        with open(REQUIREMENTS, encoding="utf-8") as f:
             pins = [
                 line.split("==")
                 for line in f
@@ -1561,6 +1648,15 @@ CASE_LIMIT_S = 60
 PAUSED_AT_START = ["--renderer-startup-dialog"]
 
 
+def renderer_pids():
+    """The renderers this process's browsers run, read from /proc."""
+    return [
+        pid
+        for pid in flow.descendants(os.getpid())
+        if "--type=renderer" in flow.process_args(pid)
+    ]
+
+
 @contextlib.contextmanager
 def renderers_killed():
     """SIGTERMs each renderer this process's browsers start (#432). A browser launched with PAUSED_AT_START holds each
@@ -1569,11 +1665,10 @@ def renderers_killed():
 
     def kill():
         while not stop.wait(KILL_POLL_S):
-            for pid in flow.descendants(os.getpid()):
-                if "--type=renderer" in flow.process_args(pid):
-                    # A renderer that exited since the read is already gone.
-                    with contextlib.suppress(ProcessLookupError):
-                        os.kill(pid, signal.SIGTERM)
+            for pid in renderer_pids():
+                # A renderer that exited since the read is already gone.
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(pid, signal.SIGTERM)
 
     killer = threading.Thread(target=kill, daemon=True)
     killer.start()
@@ -1584,12 +1679,24 @@ def renderers_killed():
         killer.join()
 
 
+def renderers_ended():
+    """SIGTERMs each renderer this process's browsers run, and returns once /proc
+    shows none."""
+    end = time.monotonic() + CASE_LIMIT_S
+    while running := renderer_pids():
+        if time.monotonic() > end:
+            raise AssertionError(f"renderers {running} still running")
+        for pid in running:
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGTERM)
+        time.sleep(KILL_POLL_S)
+
+
 def renderers_frozen():
     """SIGSTOPs each renderer this process's browsers run, leaving it alive and
     never answering (#459)."""
-    for pid in flow.descendants(os.getpid()):
-        if "--type=renderer" in flow.process_args(pid):
-            os.kill(pid, signal.SIGSTOP)
+    for pid in renderer_pids():
+        os.kill(pid, signal.SIGSTOP)
 
 
 class HungCalls(unittest.TestCase):
@@ -1618,8 +1725,10 @@ class HungCalls(unittest.TestCase):
         return done["got"], done["err"]
 
     def test_a_renderer_killed_as_it_starts_exits_7_naming_the_call(self):
-        # With PAUSED_AT_START, new_page waits on the
-        # renderer it starts, so the hang lands there on every run.
+        # With PAUSED_AT_START, the kill lands while new_page waits on the
+        # renderer it starts. Landing after Playwright has sent the page's setup,
+        # it leaves new_page waiting for the watch; landing before, as a loaded
+        # machine slows the driver, it makes new_page raise (#472).
         def work():
             with flow.chromium(PAUSED_AT_START) as browser:
                 browser.new_context().new_page()
@@ -1630,8 +1739,111 @@ class HungCalls(unittest.TestCase):
         self.assertRegex(
             err,
             r"^BrowserContext\.new_page at check-flow\.test\.py:\d+ "
+            rf"(waited {TEST_WINDOW_S} s|raised .*) "
+            "with the browser running no renderer",
+        )
+
+    def test_a_call_waiting_as_its_renderer_dies_exits_7_naming_the_call(self):
+        # The kill waits for the page's script to fetch, so it lands while the
+        # call is waiting in the renderer: nothing is raised (#432, #472).
+        ran = threading.Event()
+
+        class Seen(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/ran":
+                    ran.set()
+                self.send_response(200)
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Seen)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = f"http://127.0.0.1:{server.server_port}"
+
+        def kill():
+            if ran.wait(CASE_LIMIT_S):
+                renderers_ended()
+
+        def work():
+            with flow.chromium() as browser:
+                page = browser.new_page()
+                page.goto(f"{url}/")
+                threading.Thread(target=kill, daemon=True).start()
+                call["line"] = sys._getframe().f_lineno + 1
+                page.evaluate(f"fetch('{url}/ran'); new Promise(() => {{}})")
+
+        call = {}
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 7), err)
+        self.assertRegex(
+            err,
+            rf"^Page\.evaluate at check-flow\.test\.py:{call['line']} "
             rf"waited {TEST_WINDOW_S} s with the browser running no renderer",
         )
+
+    def test_a_call_on_a_page_whose_renderer_died_exits_7_naming_the_call(self):
+        # Made once Playwright has heard of the crash, the call raises (#472).
+        def work():
+            with flow.chromium() as browser:
+                page = browser.new_page()
+                with page.expect_event("crash"):
+                    renderers_ended()
+                call["line"] = sys._getframe().f_lineno + 1
+                page.evaluate("1 + 1")
+
+        call = {}
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 7), err)
+        self.assertRegex(
+            err,
+            rf"^Page\.evaluate at check-flow\.test\.py:{call['line']} raised .* "
+            "with the browser running no renderer",
+        )
+
+    def test_a_refused_load_with_its_renderer_alive_exits_5_naming_the_call(self):
+        def work():
+            with flow.chromium() as browser:
+                # Port 1 has no listener: the load is refused at once.
+                browser.new_page().goto("http://127.0.0.1:1/")
+
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 5), err)
+        self.assertRegex(err, r"^the browser could not draw Page\.goto")
+
+    def test_a_call_after_its_browser_died_exits_5_naming_the_call(self):
+        # No renderer runs, but the browser died, closing its pages first.
+        def work():
+            with flow.chromium() as browser:
+                page = browser.new_page()
+                (pid,) = flow.browser_pids(flow.descendants(os.getpid()))
+                os.kill(pid, signal.SIGKILL)
+                end = time.monotonic() + CASE_LIMIT_S
+                while flow.process_args(pid):
+                    if time.monotonic() > end:
+                        raise AssertionError(f"browser {pid} still running")
+                    time.sleep(KILL_POLL_S)
+                page.evaluate("1 + 1")
+
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 5), err)
+        self.assertRegex(err, r"^the browser could not draw Page\.evaluate")
+
+    def test_a_call_on_a_page_it_closed_exits_5_naming_the_call(self):
+        # No renderer runs, but none died: the script closed its own page.
+        def work():
+            with flow.chromium() as browser:
+                page = browser.new_page()
+                page.close()
+                renderers_ended()
+                page.evaluate("1 + 1")
+
+        got, err = self.exits(work)
+        self.assertEqual(got, (None, 5), err)
+        self.assertRegex(err, r"^the browser could not draw Page\.evaluate")
 
     def test_a_long_call_with_its_renderer_alive_is_left_to_finish(self):
         def work():
@@ -1708,6 +1920,61 @@ class HungCalls(unittest.TestCase):
                 return browser.new_page().evaluate("1 + 1")
 
         self.assertEqual(self.exits(work), ((2, None), ""))
+
+
+class RendererDeath(unittest.TestCase):
+    """CallWatch.renderer_death's verdict on an error raised from a stand-in
+    Playwright package, with the browser alive and running no renderer (#472).
+    A real new_page raises only where the kill beats Playwright's page setup,
+    which no case can order."""
+
+    def death(self, method, page_open):
+        import greenlet
+
+        package = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, package)
+        path = os.path.join(package, "api.py")
+        with open(path, "w") as f:
+            f.write(
+                f"class BrowserContext:\n    def {method}(self):\n"
+                "        raise RuntimeError('Target page, context or browser has been closed')\n"
+            )
+        spec = importlib.util.spec_from_file_location("api", path)
+        api = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(api)
+        # A live process with no children stands in for the browser.
+        browser = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"]
+        )
+        self.addCleanup(browser.wait)
+        self.addCleanup(browser.kill)
+        try:
+            getattr(api.BrowserContext(), method)()
+        except RuntimeError as exc:
+            raised = exc
+        watch = flow.CallWatch(browser.pid, greenlet.getcurrent(), package + os.sep)
+        try:
+            return watch.renderer_death(raised, page_open)
+        finally:
+            watch.stop()
+
+    def test_new_page_raising_with_no_page_open_is_a_renderer_death(self):
+        self.assertRegex(
+            self.death("new_page", page_open=False) or "",
+            r"^BrowserContext\.new_page at check-flow\.test\.py:\d+ raised "
+            "'Target page, context or browser has been closed' with the browser running no renderer",
+        )
+
+    def test_another_call_raising_with_no_page_open_is_not(self):
+        self.assertIsNone(self.death("new_cdp_session", page_open=False))
+
+    def test_another_call_raising_with_a_page_open_is_a_renderer_death_naming_the_call(
+        self,
+    ):
+        self.assertRegex(
+            self.death("new_cdp_session", page_open=True) or "",
+            r"^BrowserContext\.new_cdp_session at check-flow\.test\.py:\d+ raised ",
+        )
 
 
 class Sweep(unittest.TestCase):

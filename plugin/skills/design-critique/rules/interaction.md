@@ -365,10 +365,10 @@ How controls answer the user: what looks actable, targets, keyboard and focus. T
 - ledger: NEW3-44
 - status: live
 
-### vault.drag-release-spring-look
+### vault.drag-release-spring-code
 - applies-when: web-surface and has-motion; every dragged or swiped part the visitor lets go of: a sheet, a carousel, a thrown card or panel, a swipe row
-- question: Does each released part move to where it settles on a spring that starts at its release velocity, rather than an ease or a spring that starts from rest?
-- answered-by: look
+- question: Is each released part's settle defined to start at its release velocity: a spring handed the pointer's velocity as its initial velocity, or a Web Animations or CSS settle whose first keyframe segment's slope matches it, rather than an ease or a spring that starts from rest?
+- answered-by: code
 - writes: release spring
 - yields-to: vault.drag-release, vault.reduced-motion, level 2
 - source: Apple WWDC 2023, "Animate with springs": a spring "can start with any initial velocity"; strength: design-system guidance

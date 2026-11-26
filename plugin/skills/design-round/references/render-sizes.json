@@ -53,13 +53,12 @@
     "midjourney/v7": {
       "name": "Midjourney V7, upscaled",
       "tier": "Upscale (Subtle) or Upscale (Creative), each doubling the grid image",
-      "sizes": {
-        "16:9": { "size": "2912x1632", "source": "docs: docs.midjourney.com/docs/upscalers, 1456x816 upscaled to 2912x1632; read through a web search's summary of the page on 16 Oct 2026" }
-      }
+      "note": "Midjourney's Upscalers article (help-centre API, articles/32804058614669, updated 27 Jul 2026, read 25 Nov 2026) tables V8.2's sizes only, and its Legacy Features article gives no V7 size, so no V7 size is on record; measure a V7 upscale into this row.",
+      "sizes": {}
     },
     "midjourney/v8.1": {
       "name": "Midjourney V8.1",
-      "note": "Its --hd renders at 2k (docs.midjourney.com/docs/upscalers, through the same search summary). The house template, --ar 21:9 --hd (prompts.md §Midjourney), renders here.",
+      "note": "Its --hd renders at 2048px (Midjourney's Parameter List and Version articles, help-centre API, read 25 Nov 2026), which names no size per aspect ratio. The house template, --ar 21:9 --hd (prompts.md §Midjourney), renders here.",
       "sizes": {}
     },
     "recraft-api": {

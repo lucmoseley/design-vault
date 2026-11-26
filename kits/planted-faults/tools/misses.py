@@ -1,16 +1,21 @@
-"""misses.py — per known fault, which critics found it in each run (2-of-3 scorer vote)."""
+"""python3 kits/planted-faults/tools/misses.py [--runs 4,5,6] — per known fault, which critics found it in each run (2-of-3 scorer vote)."""
 
+import argparse
 import json
 import sys
 import pathlib
 from collections import Counter
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import runner
 import score
 
+ap = argparse.ArgumentParser()
+runner.add_runs(ap)
+score.use_runs(ap.parse_args().runs)
 WORK = score.WORK
 hit = {}
-for cand in score.PLANTED + [c for c in score.FOUNDER if c not in score.PLANTED]:
+for cand in score.scored_cands():
     for run in score.RUNS:
         per = []
         for s in (1, 2, 3):
@@ -29,7 +34,7 @@ for cand in score.PLANTED + [c for c in score.FOUNDER if c not in score.PLANTED]
         for (fault, src), n in Counter(p for s in per for p in s).items():
             if n >= 2:
                 hit.setdefault((cand, run, fault), set()).add(src.split("#")[0])
-for cand in score.PLANTED + [c for c in score.FOUNDER if c not in score.PLANTED]:
+for cand in score.scored_cands():
     for fid, _what, kind in score.known(cand):
         row = []
         for run in score.RUNS:

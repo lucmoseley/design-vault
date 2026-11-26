@@ -148,7 +148,6 @@ Animation: brand motion's pace, length and end frame, and pausing motion that st
 - era: timeless
 - owner: vault
 - stage: value
-- target: Time interface moves between 100 and 500 ms, exits shorter than entrances; go longer only for one authored focal entrance.
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: MOT-12, MOT-16, MOT-18, MOT-28, MOT-61
 - status: live
@@ -227,7 +226,6 @@ Animation: brand motion's pace, length and end frame, and pausing motion that st
 - stage: value
 - inputs: the viewport width (phone or wider), the frame's visible word count
 - output: phone width: no auto-advance; wider: each frame shown max(5, ⌈words ÷ 3⌉) s, so a headline frame 5 s and a 30-word frame 10 s
-- target: Never auto-advance on a phone; on wider screens show each frame for 5 s or its words ÷ 3 s, whichever is longer, pause on hover and focus, and stop after the visitor's first change.
 - script: check-flow.py <page> --out <dir> --records [--parts <declaration>]
 - reasons: design-critique/references/page-behaviour.md#carousels
 - ledger: MOT-98
@@ -247,6 +245,21 @@ Animation: brand motion's pace, length and end frame, and pausing motion that st
 - script: check-flow.py <page> --out <dir> --records [--parts <declaration>]
 - reasons: design-critique/references/house-principles.md#expression-by-frequency
 - ledger: MOT-10
+- status: staged
+
+### vault.motion-purpose
+- applies-when: web-surface and has-motion; every motion that starts by itself: an idle float, a loop, a ring that pops out, drifting particles; not a status or progress indicator
+- question: Does every motion that starts by itself draw attention to one thing the brief names, with none on anything else?
+- answered-by: look
+- writes: self-starting motion
+- yields-to: level 2
+- source: Anthropic `frontend-design` SKILL.md:32, "Use non-user-triggered motion sparingly and deliberately, only to draw attention"; impeccable 4.5.0 `craft-floor.md:13`, "one authored moment, not scattered effects"; impeccable slop catalogue (impeccable.style/slop), "wobbling icons, and drifting badges" (all as read Nov 2026); strength: impeccable "AI look" ban and vendor skill guidance
+- era: dated 2027-04-14
+- owner: vault
+- stage: treatment
+- target: Let motion that starts by itself point only at the one thing the brief names, and leave everything else still until a visitor acts.
+- reasons: design-critique/references/house-principles.md#motion-that-starts-by-itself
+- ledger: MOT-5, MOT-6, MOT-89, MOT-99
 - status: staged
 
 ### vault.motion-frequency-look

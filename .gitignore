@@ -9,6 +9,7 @@ __pycache__/
 !.claude/guard-registry-anchors.json
 !.claude/registrations.json
 !.claude/guard-fire-needles.json
+!.claude/implicit-behaviours.json
 node_modules/
 .impeccable/
 *.pyc

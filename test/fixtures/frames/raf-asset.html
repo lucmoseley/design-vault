@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+svg { display: block; margin: 40.25px 0 0 60.5px; }
+</style></head>
+<body>
+<svg width="600" height="300" viewBox="0 0 400 200">
+  <g transform="translate(37.5 20.25) scale(1.37)">
+    <g id="logo">
+      <g id="pieces" fill="#2a2a2a">
+        <path id="ring" d="M50 15a35 35 0 1 1 0 70a35 35 0 1 1 0-70zm0 14a21 21 0 1 0 0 42a21 21 0 1 0 0-42z" fill-rule="evenodd"/>
+        <path id="arch" d="M105 85V50a40 40 0 0 1 80 0v35h-16V52a24 24 0 0 0-48 0v33z"/>
+      </g>
+      <g id="finished" fill="#2a2a2a" opacity="0">
+        <path d="M50 15a35 35 0 1 1 0 70a35 35 0 1 1 0-70zm0 14a21 21 0 1 0 0 42a21 21 0 1 0 0-42z" fill-rule="evenodd"/>
+        <path d="M105 85V50a40 40 0 0 1 80 0v35h-16V52a24 24 0 0 0-48 0v33z"/>
+      </g>
+    </g>
+  </g>
+</svg>
+<script>
+const ring = document.getElementById("ring").animate([{ transform: "translateY(-120px)" }, { transform: "none" }],
+  { duration: 3000, easing: "ease-in-out", fill: "both" });
+const arch = document.getElementById("arch");
+const began = performance.now();
+const archDone = new Promise((done) => {
+  const tick = (now) => {
+    const t = Math.min(1, (now - began) / 3000);
+    arch.style.transform = t < 1 ? "translateY(" + (1 - t) * -120 + "px)" : "";
+    if (t < 1) requestAnimationFrame(tick);
+    else done();
+  };
+  requestAnimationFrame(tick);
+});
+Promise.all([ring.finished, archDone]).then(() => {
+  ring.cancel();
+  document.getElementById("pieces").style.display = "none";
+  document.getElementById("finished").style.opacity = 1;
+});
+</script>
+</body></html>

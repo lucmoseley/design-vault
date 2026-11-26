@@ -140,11 +140,9 @@ wrong / 3 Playwright or its browser is missing / 4 the page did not load in time
 """
 
 import argparse
-import collections
 import colorsys
 import contextlib
 import datetime
-import importlib.util
 import io
 import json
 import math
@@ -156,25 +154,22 @@ import tempfile
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected, fail_open  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = _load("check_flow", os.path.join(HERE, "check-flow.py"))
-form = _load("drive_form", os.path.join(HERE, "drive-form.py"))
-pointer = _load("drive_pointer", os.path.join(HERE, "drive-pointer.py"))
-overlay = _load("drive_overlay", os.path.join(HERE, "drive-overlay.py"))
-conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
-markup = _load("check_markup", os.path.join(HERE, "check-markup.py"))
-probe = _load("probe", os.path.join(HERE, "probe.py"))
+flow = siblings.load(HERE, "check-flow.py")
+form = siblings.load(HERE, "drive-form.py")
+pointer = siblings.load(HERE, "drive-pointer.py")
+overlay = siblings.load(HERE, "drive-overlay.py")
+rule_table = siblings.load(HERE, "rule-table.py")
+conditions = siblings.load(HERE, "conditions.py")
+markup = siblings.load(HERE, "check-markup.py")
+probe = siblings.load(HERE, "probe.py")
 
 TABLE = os.path.join(HERE, "check-state.table")
-SEP = " | "
 ITEMS = "; "
 VIEWPORT = dict(
     zip(("width", "height"), map(int, flow.DESKTOP.split("x")), strict=True)
@@ -245,7 +240,6 @@ CHECKS = {
     + NUM.format("horizon"),
 }
 
-Line = collections.namedtuple("Line", "id check value text")
 # The text a paste check writes to the clipboard: digits, so a number, phone
 # or code field takes it as readily as a text field.
 PASTED = "4242"
@@ -499,99 +493,26 @@ TAP_JS = r"""
 """
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 def parse(text):
     """The table's lines as Line records, in order, each value a dict."""
-    out = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        fields = [f.strip() for f in line.split(SEP)]
-        if len(fields) not in (2, 3) or not all(fields):
-            raise TableError(f"line {n}: want ID | CHECK [| VALUE], got {line!r}")
-        check = fields[1]
-        if check not in CHECKS:
-            raise TableError(
-                f"line {n}: no check {check!r}; the checks are {', '.join(CHECKS)}"
-            )
-        shape, given = CHECKS[check], fields[2] if len(fields) == 3 else None
-        if shape is None and given is not None:
-            raise TableError(f"line {n}: {check} reads no value, got {given!r}")
-        value = {}
-        if shape is not None:
-            m = re.fullmatch(shape, given or "")
-            if not m:
-                raise TableError(
-                    f"line {n}: {check} wants a value like {shape!r}, got {given!r}"
-                )
-            for key, got in m.groupdict().items():
-                if key.startswith("n_"):
-                    value[key[2:]] = float(got)
-                elif key == "words":
-                    value[key] = [
-                        w.strip().lower() for w in got.split(",") if w.strip()
-                    ]
-                elif key == "rules":
-                    value[key] = tuple(got.split())
-                else:
-                    value[key] = got
-        out.append(Line(fields[0], check, value, line))
-    if not out:
-        raise TableError("the table has no lines")
-    return out
+    return rule_table.parse(text, CHECKS, _line_value)
 
 
-class Answers:
-    """The findings being gathered, one per record id in table order."""
-
-    def __init__(self, table):
-        self.found = {
-            line.id: {
-                "id": line.id,
-                "answer": "no match",
-                "misses": [],
-                "unjudged": [],
-                "review": [],
-            }
-            for line in table
-        }
-        self.judged = set()
-
-    def _entry(self, line, at, what):
-        at = at or {}
-        return {
-            "check": line.check,
-            "where": at.get("where"),
-            "fault": at.get("fault"),
-            "what": what,
-        }
-
-    def miss(self, line, at, what):
-        self.judged.add(line.id)
-        self.found[line.id]["misses"].append(self._entry(line, at, what))
-
-    def unjudged(self, line, at, what):
-        self.found[line.id]["unjudged"].append(self._entry(line, at, what))
-
-    def review(self, line, at, what):
-        self.found[line.id]["review"].append(self._entry(line, at, what))
-
-    def met(self, line):
-        self.judged.add(line.id)
-
-    def done(self):
-        for f in self.found.values():
-            if f["misses"]:
-                f["answer"] = "fail"
-            elif f["unjudged"]:
-                f["answer"] = "not judged"
-            elif f["id"] in self.judged:
-                f["answer"] = "pass"
-        return list(self.found.values())
+def _line_value(n, check, m):
+    value = {}
+    for key, got in (m.groupdict() if m else {}).items():
+        if key.startswith("n_"):
+            value[key[2:]] = float(got)
+        elif key == "words":
+            value[key] = [w.strip().lower() for w in got.split(",") if w.strip()]
+        elif key == "rules":
+            value[key] = tuple(got.split())
+        else:
+            value[key] = got
+    return value
 
 
 def _off_site(page_url, href):
@@ -730,8 +651,9 @@ def gone(page, url0):
 
     try:
         return page.url != url0 or not page.evaluate("() => !!window.__st")
-    except PlaywrightError:
+    except PlaywrightError as exc:
         # An evaluate the page's own navigation cut short is it leaving (#312).
+        expected(exc, "the page has left")
         return True
 
 
@@ -800,8 +722,9 @@ def trial(run, page, *, keep=None, before=None, after=None):
             pointer.click(page, button)
             at, drawn = info(page, button), elements(page, "() => __st.revealed()")
             got = after(page, button, drawn) if after else drawn
-        except pointer.PointerError:
+        except pointer.PointerError as exc:
             # A button no visitor can reach shows them nothing to judge (#312).
+            expected(exc, "nothing to judge")
             continue
         yield button, at, got
 
@@ -817,6 +740,7 @@ def check_reveal(run, line, ans):
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             if not shown:
@@ -868,6 +792,7 @@ def check_persist(run, line, ans):
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             if not shown:
@@ -889,6 +814,7 @@ def check_persist(run, line, ans):
                         )
                 except pointer.PointerError as exc:
                     # Content hover shows that the pointer cannot reach is the fault (#312).
+                    expected(exc, "said as a miss")
                     ans.miss(
                         line, at, f"the pointer cannot reach what hover shows: {exc}"
                     )
@@ -936,6 +862,7 @@ def check_click_opens(run, line, ans):
                     shown = reveals(page, el)
                 except pointer.PointerError as exc:
                     # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                    expected(exc, "said as not judged")
                     unreached(page, line, ans, el, exc=exc)
                     continue
                 if not shown:
@@ -1026,6 +953,7 @@ def check_reflow(run, line, ans):
                 pointer.leave(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             before = page.evaluate(BOX_JS, el)
@@ -1033,6 +961,7 @@ def check_reflow(run, line, ans):
                 pointer.hover(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             worst = _moved(before, page.evaluate(BOX_JS, el), px)
@@ -1088,6 +1017,7 @@ def check_states(run, line, ans):
                 pointer.leave(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             rest = style(page, el)
@@ -1121,6 +1051,7 @@ def check_states(run, line, ans):
                     blur(page)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             same = [k for k, s in seen.items() if s == rest]
@@ -1159,6 +1090,7 @@ def check_inverse(run, line, ans):
                 shown = reveals(page, el)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             tips = elements(
@@ -1248,6 +1180,7 @@ def check_toggle(run, line, ans):
                 blur(page)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             on = page.evaluate(SHAPE_JS, [el, SHAPE_PROPS])
@@ -1319,6 +1252,7 @@ def check_release(run, line, ans):
                         )
             except pointer.PointerError as exc:
                 # #312
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
             if acted:
                 page.goto(run.url)
@@ -1532,8 +1466,9 @@ def check_slider_keys(run, line, ans):
                     wrong.append("a click on its track (leaves the page)")
                 elif _value(page, el) >= high:
                     wrong.append("a click on its track")
-            except pointer.PointerError:
+            except pointer.PointerError as exc:
                 # A track the pointer cannot click is the fault (#312).
+                expected(exc, "said as a miss")
                 wrong.append("a click on its track (covered)")
             if wrong:
                 ans.miss(
@@ -1557,6 +1492,7 @@ def check_direction(run, line, ans):
                     at_end = _value(page, el)
                 except pointer.PointerError as exc:
                     # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                    expected(exc, "said as not judged")
                     unreached(page, line, ans, el, exc=exc)
                     continue
                 side = "right to left" if rtl else "left to right"
@@ -1602,6 +1538,7 @@ def check_drag(run, line, ans):
                 pointer.drag(page, el, (dx, dy), hold=True)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             value = _value(page, el)
@@ -1668,6 +1605,7 @@ def check_wheel(run, line, ans):
                     ans.miss(line, at, "Shift with the wheel does not move it")
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, el, exc=exc)
                 continue
             box = page.evaluate_handle(CAROUSEL_JS, el).as_element()
@@ -1686,8 +1624,9 @@ def check_wheel(run, line, ans):
                         left = page.evaluate("(el) => el.scrollLeft", el)
                         try:
                             pointer.click(page, b)
-                        except pointer.PointerError:
+                        except pointer.PointerError as exc:
                             # A control no pointer reaches is no way to move it (#312).
+                            expected(exc, "not a way to move it")
                             continue
                         now = page.evaluate("(el) => el.scrollLeft", el)
                         if (now > left and way == "next") or (
@@ -1823,6 +1762,7 @@ def check_target(run, line, ans):
                 pointer.click(page, link)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, link, exc=exc)
                 continue
             after = style(page, target, TARGET_PROPS)
@@ -1895,6 +1835,7 @@ def check_visited(run, line, ans):
             )
         except PlaywrightError as exc:
             # A browser that will not launch leaves visited colours unread, said as not judged (#312).
+            fail_open(exc, "visited colours are said as not judged")
             ans.unjudged(
                 line,
                 None,
@@ -2189,9 +2130,9 @@ def check_on_input(run, line, ans):
                 page.evaluate("(el) => el.blur()", el)
             try:
                 pointer.settle(page)
-            except PlaywrightError:
+            except PlaywrightError as exc:
                 # The choice navigated mid-settle; gone() below reads it (#312).
-                pass
+                expected(exc, "gone() reads the navigation")
             changed = []
             if gone(page, url0):
                 changed.append("loads another page")
@@ -2235,6 +2176,7 @@ def check_enter(run, line, ans):
                 got = form.submit(page, sel, by="enter")
             except form.FormError as exc:
                 # A form Enter cannot submit is the fault (#312).
+                expected(exc, "said as a miss")
                 ans.miss(line, at, f"Enter cannot submit it: {exc}")
                 continue
             if not got.submits and not got.navigated:
@@ -2253,8 +2195,9 @@ def _submit(page, sel):
     """The form at `sel` submitted by its button, or None where it has none."""
     try:
         return form.submit(page, sel)
-    except form.FormError:
+    except form.FormError as exc:
         # A form with no submit button leaves its caller nothing to read (#312).
+        expected(exc, "no submission to read")
         return None
 
 
@@ -2629,6 +2572,7 @@ def check_ellipsis(run, line, ans):
                     pointer.click(page, item)
                 except pointer.PointerError as exc:
                     # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                    expected(exc, "said as not judged")
                     unreached(page, line, ans, item, exc=exc)
                     continue
                 asks = not gone(page, url0) and not submenu and page.evaluate(ASKS_JS)
@@ -2813,13 +2757,14 @@ def check_exit(run, line, ans):
                 pointer.click(page, link)
             except pointer.PointerError as exc:
                 # Not judged where the pointer cannot reach it, so it is never a pass (#312).
+                expected(exc, "said as not judged")
                 unreached(page, line, ans, link, exc=exc)
                 continue
             try:
                 page.wait_for_load_state()
-            except PlaywrightError:
+            except PlaywrightError as exc:
                 # A load the guard's blank answer cut short still names the page reached (#312).
-                pass
+                expected(exc, "the page reached is read")
             pages = [page, *run.popups]
             arrived = any(
                 urllib.parse.urlsplit(p.url).netloc
@@ -2936,13 +2881,14 @@ def findings(run, table):
     "unjudged", "review"}, each entry {"check", "where", "fault", "what"}."""
     from playwright.sync_api import Error as PlaywrightError
 
-    ans = Answers(table)
+    ans = rule_table.Answers(table, "where", "fault", review=True)
     for line in table:
         run.popups.clear()
         try:
             RUNS[line.check](run, line, ans)
         except (PlaywrightError, form.FormError) as exc:
             # One check stopping leaves the others to run; it is said as not judged (#312).
+            fail_open(exc, f"{line.check} is said as not judged")
             ans.unjudged(line, None, f"the check stopped: {flow.first_line(exc)}")
     return ans.done()
 

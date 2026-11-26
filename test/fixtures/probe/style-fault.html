@@ -69,6 +69,8 @@ footer > .legal { background: #ededed; padding: 0.5rem; }
 .pic > * { position: absolute; }
 @media (max-width: 640px) { table.stack tr { display: block; } }
 @media print { #f-table-print-header { display: table-row-group; } }
+#f-caption-colours::cue { color: #ff0; background-color: rgba(0, 0, 0, 0.3); }
+#f-caption-colours.bare::cue { background-color: #fff; }
 </style>
 </head>
 <body>
@@ -113,6 +115,7 @@ footer > .legal { background: #ededed; padding: 0.5rem; }
     <tbody>
       <tr><td>Garden</td><td class="num">£24</td></tr>
       <tr><td>Harbour</td><td class="num">£32</td></tr>
+      <tr id="f-zebra-tint" style="background: #b0b0b0"><td>Loft</td><td class="num">£40</td></tr>
     </tbody>
   </table>
   <table class="stack"><tbody><tr><th scope="row">Garden</th><td class="num">£24</td></tr></tbody></table>
@@ -173,6 +176,9 @@ footer > .legal { background: #ededed; padding: 0.5rem; }
   <p>An <em id="f-emphasis-form" style="text-decoration: underline">underlined</em> word.</p>
   <p>A <strong id="f-emphasis-cue" style="font-size: 1.25em">bigger</strong> word.</p>
   <p id="f-type-size" style="font-size: 15px">Small prose.</p>
+  <table><tbody><tr><td id="f-type-size-tall" style="font-size: 13.5px">Garden</td><td id="f-type-size-short" style="font-size: 14px; font-size-adjust: 0.45">Harbour</td></tr></tbody></table>
+  <p id="f-type-size-nearest" style="font-size: 17px; font-size-adjust: 0.481">Prose rounded to the nearest pixel.</p>
+  <table><tbody><tr><td id="f-type-size-nearest-dense" style="font-size: 15px; font-size-adjust: 0.481">Loft</td></tr></tbody></table>
   <small id="f-type-floor" style="font-size: 11px; letter-spacing: 0.03em">Tiny</small>
   <p>Use <code id="f-code-size" style="font-size: 0.8em">npm test</code> first.</p>
   <h2 id="f-fluid-type" style="font-size: calc(1rem + 2vw)">Fluid heading</h2>

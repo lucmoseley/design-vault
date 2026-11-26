@@ -400,7 +400,7 @@ How running text and inline links are set. The form is [rules.md](../rules.md)'s
 
 ### vault.white-space
 - applies-when: web-surface; every paragraph, list item, heading, table cell, definition and quotation
-- question: Does each paragraph, list item, heading, table cell, definition and quotation keep the browser's white-space collapsing?
+- question: Does each paragraph, list item, heading, table cell, definition and quotation keep the browser's white-space collapsing, or at most `preserve-breaks`, which vault.kept-breaks keeps for verse and addresses?
 - answered-by: script
 - writes: white-space collapse
 - yields-to: level 2

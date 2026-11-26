@@ -32,6 +32,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 VAULT = ROOT.parents[1]
+sys.path.append(str(VAULT / "plugin/skills/design-round/scripts"))
+from fail_open import expected, fail_open  # noqa: E402
+
 # Whoever runs the kit sets KIT_WORK by hand, to keep a test's runs apart from another's (#238).
 WORK = pathlib.Path(
     os.environ.get("KIT_WORK") or VAULT / ".claude/tmp/planted-faults"
@@ -78,6 +81,8 @@ RULES = {
     "WN": None,
     "TN": None,
     "WM": None,
+    "WV0": None,
+    "WV1": None,
 }
 # A load-change test's loads: each one's rule files, made by store-refs.py from the rule store, in its own folder.
 # #292: WL is W1 with today's house-principles.md, the old load beside TT1; WS and TS, whole-page and type with tier 0's
@@ -96,9 +101,19 @@ REFS = {
     "WN": "refs-294/new-w",
     "TN": "refs-292/new-t",
     "WM": "refs-294/new-w",
+    "WV0": "refs-502/old-w",
+    "WV1": "refs-502/new-w",
 }
-PROMPT = {"WL": "W1", "WS": "W1", "TS": "TT1", "WT": "W1", "TN": "TT1"}
-BRIEF = {"WN": "brief-tone.md", "TN": "brief-tone.md", "WM": "brief-tone.md"}
+PROMPT = {
+    "WL": "W1",
+    "WS": "W1",
+    "TS": "TT1",
+    "WT": "W1",
+    "TN": "TT1",
+    "WV0": "WM",
+    "WV1": "WM",
+}
+BRIEF = {c: "brief-tone.md" for c in ("WN", "TN", "WM", "WV0", "WV1")}
 # #415: the gate trio on the look list cut from the rule store with the live records alone (G-old) and with the held
 # records too (G-new), each pass to a fresh trio, as gate-check.md runs it. `gate-lists` freezes both lists in
 # prompts/gate-415/, so a later change to the store does not change what a test's runs were asked.
@@ -169,7 +184,8 @@ def fence(text):
     for cand in reversed(m):
         try:
             return json.loads(cand)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            expected(e, "the next candidate is read")
             continue
     return None
 
@@ -195,6 +211,7 @@ def run_child(folder, prompt, flags, expect, *, valid=None):
             )
             out = p.stdout
         except subprocess.TimeoutExpired as e:
+            fail_open(e, f"{folder.relative_to(WORK)}'s partial transcript is read")
             out = (
                 (e.stdout or b"").decode()
                 if isinstance(e.stdout, bytes)
@@ -205,7 +222,8 @@ def run_child(folder, prompt, flags, expect, *, valid=None):
         for line in out.splitlines():
             try:
                 ev = json.loads(line)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                expected(e, "the line is skipped")
                 continue
             if ev.get("type") == "result":
                 final = ev
@@ -685,12 +703,18 @@ def usage():
         )
 
 
+def add_runs(ap):
+    ap.add_argument(
+        "--runs", type=lambda s: [int(r) for r in s.split(",")], default="1,2,3"
+    )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "mode", choices=["packets", "critics", "chain", "gate-lists", "gate", "usage"]
     )
-    ap.add_argument("--runs", default="1,2,3")
+    add_runs(ap)
     ap.add_argument(
         "--critics", default="W,W2,W3,T-function,T-type,T-colour,T-layout,T-trust"
     )
@@ -711,7 +735,6 @@ def main():
     if a.mode == "packets":
         return render_packets()
     require_canary()
-    runs = [int(x) for x in a.runs.split(",")]
     gate_pages = {CID[n] for n in META["gate_pages"]}
     cands = (
         [c if c in NAME else CID.get(c, c) for c in a.cands.split(",")]
@@ -734,7 +757,7 @@ def main():
         if a.mode == "critics":
             jobs = [
                 ex.submit(critic_job, r, c, cid)
-                for r in runs
+                for r in a.runs
                 for c in a.critics.split(",")
                 for cid in cands
             ]
@@ -743,14 +766,14 @@ def main():
                 parts_key(NAME[cid])
             jobs = [
                 ex.submit(gate_job, r, load, n, critic=critic, group=group)
-                for r in runs
+                for r in a.runs
                 for load, passes in plan.items()
                 for n in passes
                 for critic in GATE_CRITICS
                 for group in gate_groups(cands)
             ]
         else:
-            jobs = [ex.submit(chain_job, r, cid) for r in runs for cid in cands]
+            jobs = [ex.submit(chain_job, r, cid) for r in a.runs for cid in cands]
         results = [j.result() for j in jobs]
     print(
         f"{sum(results)} of {len(results)} finished"

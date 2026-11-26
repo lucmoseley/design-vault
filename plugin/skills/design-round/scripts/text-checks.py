@@ -9,7 +9,16 @@ returns a Found.
 """
 
 import collections
+import os
+import sys
 import re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+rule_table = siblings.load(HERE, "rule-table.py")
 
 PAGE = "page"
 RTL = "rtl"
@@ -50,8 +59,7 @@ FRACTION = r"(?<![\d/.,])(\d+)\/(\d+)(?![\d/.,])"
 Load = collections.namedtuple("Load", "condition width data")
 
 
-class TableError(Exception):
-    pass
+TableError = rule_table.TableError
 
 
 class WordsError(Exception):
@@ -907,10 +915,7 @@ NUMBER_KEYS = {
 
 def parse_table(text):
     values = {}
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         fields = [x.strip() for x in line.split(SEP)]
         if len(fields) != 3 or not all(fields):
             raise TableError(f"line {n}: want ID | KEY | VALUE, got {line!r}")
@@ -1028,11 +1033,8 @@ def findings(values, loads, words, desktop, *, unjudged=None):
             for u in got.unjudged:
                 if u not in f["unjudged"]:
                     f["unjudged"].append(u)
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif judged:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=judged
+        )
         out.append(f)
     return out

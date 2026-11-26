@@ -139,9 +139,10 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
   for (const [key, project] of Object.entries(projects)) {
     if (!Array.isArray(project?.groups))
       fault("group-list", `projects.${key}.groups is missing or not a list — a project with no group carries []`);
-    // The project's gate file, optional, in the form `rules` takes, where gate.js reads it (#154, #159).
-    if (project?.gate !== undefined && !isRepoMarkdown(project.gate))
-      fault("project-gate", `projects.${key}.gate ${JSON.stringify(project.gate)} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
+    // The rules and gate files, where ledger-upkeep.js and gate.js read them (#154, #159, #554).
+    for (const [field, required] of [["rules", true], ["gate", false]])
+      if ((required || project?.[field] !== undefined) && !isRepoMarkdown(project?.[field]))
+        fault(`project-${field}`, `projects.${key}.${field} ${JSON.stringify(project?.[field])} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
     // The desktop size its own visitors use, optional, which design-round's scripts take as --viewport (#196).
     if (project?.desktop !== undefined && !(typeof project.desktop === "string" && /^[1-9]\d*x[1-9]\d*$/.test(project.desktop)))
       fault("project-desktop", `projects.${key}.desktop ${JSON.stringify(project.desktop)} is not a width and height in px, as \`1536x864\``);

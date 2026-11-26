@@ -124,7 +124,6 @@ import argparse
 import collections
 import contextlib
 import datetime
-import importlib.util
 import io
 import json
 import os
@@ -137,17 +136,14 @@ import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-probe = _load("probe", os.path.join(HERE, "probe.py"))
-conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
+probe = siblings.load(HERE, "probe.py")
+conditions = siblings.load(HERE, "conditions.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 flow, layout = probe.flow, probe.layout
 
 TABLE = os.path.join(HERE, "check-dom.table")
@@ -161,8 +157,7 @@ NOTHING = ":not(*)"
 Block = collections.namedtuple("Block", "load when rules")
 
 
-class TableError(Exception):
-    """A table check-dom.py cannot read: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse(text):
@@ -179,10 +174,7 @@ def parse(text):
             blocks.append(Block(load, when, rules))
         pending.clear()
 
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         if line.startswith("define "):
             m = DEFINE.fullmatch(line)
             if not m:

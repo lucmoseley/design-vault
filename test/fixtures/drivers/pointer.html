@@ -14,8 +14,10 @@
   sent, moves 20 px a frame for 20 frames and records where it is clicked. #strip
   scrolls sideways natively; #glide eases a wheel's scroll over 1200 ms,
   changing no markup. #layer moves at half the page's scroll, and #progress
-  fills with it by a scroll-driven animation. #spinner turns forever, which
-  the driver's wait must not hold for. #bottom sits off the first screen.
+  fills with it by a scroll-driven animation. #crawler slides along forever,
+  its box somewhere new each frame, which the driver's wait must not hold for.
+  #bottom sits off the first screen. #pinned's scroll-driven animation runs on
+  #stuck, which has nothing to scroll, so it waits to start for ever.
 -->
 <style>
   body { font: 16px/1.5 sans-serif; margin: 0; padding: 1rem; }
@@ -30,14 +32,17 @@
   #veil { position: absolute; inset: 0; width: 200px; background: rgb(255, 255, 255, 0.5); }
   #strip, #glide { display: inline-block; width: 300px; overflow-x: auto; white-space: nowrap; }
   #strip span, #glide span { display: inline-block; width: 300px; height: 40px; }
-  #spinner { position: fixed; bottom: 0; left: 0; width: 10px; height: 10px; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(1turn); } }
+  #crawler { position: fixed; bottom: 0; left: 0; width: 10px; height: 10px; animation: crawl 1s linear infinite; }
+  @keyframes crawl { to { transform: translateX(100px); } }
   #scene { height: 120px; overflow: hidden; }
   #layer { position: absolute; top: 0; width: 100px; height: 20px; background: rgb(200, 100, 0); }
   #progress { position: fixed; top: 0; right: 0; width: 8px; height: 100px; background: rgb(0, 128, 0);
               transform-origin: top; animation: fill linear both; animation-timeline: scroll(); }
   @keyframes fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
   #spacer { height: 3000px; }
+  #stuck { height: 20px; overflow: auto; }
+  #pinned { width: 40px; height: 10px; background: rgb(0, 0, 200); animation: pin linear both; animation-timeline: scroll(nearest); }
+  @keyframes pin { to { transform: translateX(40px); } }
 </style>
 </head>
 <body>
@@ -67,9 +72,10 @@
 </section>
 <section id="scene"><div id="layer"></div></section>
 <div id="progress"></div>
-<div id="spinner"></div>
+<div id="crawler"></div>
 <div id="spacer"></div>
 <p id="bottom">The end</p>
+<div id="stuck"><div id="pinned"></div></div>
 
 <script>
   document.getElementById("host").attachShadow({ mode: "open" }).innerHTML =

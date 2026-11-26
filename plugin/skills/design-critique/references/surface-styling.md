@@ -2,7 +2,7 @@
 
 Why a web surface's borders, shadows, corners, dividers, fills, focus rings, scrims and glass follow from what each part does (#117, #154). Decide a part's function first; its styling follows from that, and a styling finding against the function is reported, never dropped. The research behind every line is `docs/research/surface-styling.md` in the design vault, Parts B and E, and `docs/research/house-audit-visual.md` measures the figures against shipped design systems.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets, and, on behaviour, a record resting on domain evidence, which it departs from only on evidence of its own ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 ## Principles
 
@@ -16,7 +16,7 @@ Records: `vault.border-roles`, `vault.control-edges`.
 
 ### Hover signals
 
-Records: `vault.hover-signal`, `vault.press-state`.
+Records: `vault.hover-signal`, `vault.press-state`, `vault.control-states`.
 
 - **Why.** An overlay is already at the top level, so it cannot rise further. A shadow on a small part is too small to read as a raise. A ripple is one design system's pressed-state value, and a value comes from the project ([dependency order](house-principles.md#dependency-order), step 4).
 - **Trade-off.** One signal is calm and suits a dense tool; two are stronger, but double the motion and can read as noise.
@@ -24,7 +24,9 @@ Records: `vault.hover-signal`, `vault.press-state`.
 
 ### Depth only for what floats or acts
 
-Records: `vault.depth`, `vault.shadow-levels`, `vault.border-shadow`, `vault.grouping`.
+Records: `vault.depth`, `vault.shadow-levels`, `vault.surface-shadow`.
+
+A border paired with a shadow is `vault.border-shadow`'s, in [interactions](#interactions), and grouping by shadow `vault.grouping`'s, in [dividers against space and fill](#dividers-against-space-and-fill).
 
 - **Why.** A shadow means "above other content" or "you can act on this", and nothing else says "above". Atlassian ships three shadows, enough for a page with no drag and no nested overlays.
 - **Trade-off.** A rest shadow on every clickable card makes the cue strong, then worthless once everything has it.
@@ -32,7 +34,7 @@ Records: `vault.depth`, `vault.shadow-levels`, `vault.border-shadow`, `vault.gro
 
 ### Elevation on a dark ground
 
-Record: `vault.dark-elevation`.
+Records: `vault.dark-elevation`, `vault.dark-raise`.
 
 - **Why.** A shadow on a dark ground has almost no visible effect.
 - **Trade-off.** One more surface token per level on dark.
@@ -95,7 +97,7 @@ Record: `vault.tag-fill`.
 
 ### Inverse surfaces for passing messages
 
-Record: `vault.inverse-surface`.
+Records: `vault.inverse-surface`, `vault.inverse-surface-look`.
 
 - **Why.** A message that floats briefly over the page must stand apart from every surface below it, whatever that surface is; the theme's opposite neutral does that on any page.
 - **Trade-off.** A dark toast on a light page is loud for a routine confirmation; a light toast with a coloured edge is quieter but can merge with cards.
@@ -127,7 +129,7 @@ Record: `vault.button-group-size`.
 
 ### Icons on buttons
 
-Record: `vault.button-icon`.
+Records: `vault.button-icon`, `vault.button-icon-side`.
 
 - **Why.** Most buttons need no icon (Atlassian); one with a known meaning helps a visitor find the action faster. Design systems differ on the side (Material before the label, Carbon after), so what matters is one side across a site, with a forward arrow after the label, where reading goes.
 - **Trade-off.** An icon on every button adds noise and weakens the ones that help.
@@ -135,7 +137,7 @@ Record: `vault.button-icon`.
 
 ### Edges that survive forced colours
 
-Record: `vault.forced-colour-edges`.
+Records: `vault.forced-colour-edges`, `vault.shadow-meaning`.
 
 - **Why.** Windows high-contrast mode, and any forced-colours mode, removes every shadow but keeps borders and outlines in the user's colours (MDN). An edge drawn only as a shadow disappears there, and so does the meaning it carried.
 - **Trade-off.** A shadow takes no layout space; a real border does, so a ring that thickens on hover needs its space set aside from the start.
@@ -175,7 +177,7 @@ Record: `vault.surface-layers`.
 
 ### One card type per set
 
-Record: `vault.card-type`.
+Records: `vault.card-type`, `vault.card-treatment`.
 
 - **Why.** Material 3 makes outline, fill and shadow equal in function, so the choice is style. Within one set, a card that looks different is read as a different kind (NN/g on similarity).
 - **Trade-off.** One treatment across a long list can feel flat; emphasis then comes from content and size, not a second treatment.
@@ -191,7 +193,7 @@ Record: `vault.glass-dimming`.
 
 ### Outline and filled icons
 
-Record: `vault.icon-fill`.
+Records: `vault.icon-fill`, `vault.current-icon`.
 
 - **Why.** Outline icons sit lightly beside text; a filled one carries more weight, so filling the current tab marks it without colour alone (Apple SF Symbols, Material Symbols).
 - **Trade-off.** Filling too many icons spends that weight (Atlassian). Some craft sites fill icons on dark mode to hold their weight there (Devouring Details); a project may choose that.
@@ -224,7 +226,7 @@ Record: `vault.color-scheme`.
 
 ### Caption colours
 
-Record: `vault.caption-colours`.
+Records: `vault.caption-colours`, `vault.caption-settings`.
 
 - **Why.** White on 80% black is the WebVTT default. Viewers who need other colours set them in their player, a choice US rules require of video apparatus (47 CFR 79.103), so the page leaves those settings working.
 - **Trade-off.** Brand-coloured captions lose to the default on legibility over a busy frame.
@@ -232,7 +234,7 @@ Record: `vault.caption-colours`.
 
 ### hr for a thematic break
 
-Record: `vault.hr-break`.
+Records: `vault.hr-break`, `vault.typed-rules`.
 
 - **Why.** An `hr` means a thematic break in the HTML standard, so a decorative line drawn with it marks a break in the content that is not there. A line typed from dashes or underscores is text: it wraps or overflows at a narrow width, and Butterick rules it out.
 - **Trade-off.** None worth naming.
@@ -246,7 +248,7 @@ Where two of the treatments above meet, the record that settles it:
 2. Border and fill: `vault.border-fill`. Below Carbon's tile step a fill alone does not survive a poor screen.
 3. Border and space, divider and card: `vault.grouping`, `vault.dividers`.
 4. Radius and nesting: `vault.radius-nesting`.
-5. Radius, density and pointer: `vault.radius-density`. Capsules bring focus to touch layouts; in dense desktop rows they waste space (Apple WWDC25 session 356). The capsule for tags is Apple's convention: Atlassian's Radius gives tags 4 px and Material's filter chip a small rounded rectangle, so a project on either system may set tags that way.
+5. Radius, density and pointer: `vault.radius-density`, with `vault.key-action` for the main action's capsule and `vault.tag-shape` for a tag's. Capsules bring focus to touch layouts; in dense desktop rows they waste space (Apple WWDC25 session 356). The capsule for tags is Apple's convention: Atlassian's Radius gives tags 4 px and Material's filter chip a small rounded rectangle, so a project on either system may set tags that way.
 6. Radius and meaning: `vault.radius-meaning`. A square box means many choices and a circle one; a brand radius must not erase that.
 7. Tint and state: `vault.carry-select`, with the hover exemption in `vault.colour-look`. Hover is feedback on the visitor's own pointer; a selected state is a fact to read later.
 8. Focus, ground, border and sticky bars: `vault.focus-ring`, `vault.scroll-padding`.

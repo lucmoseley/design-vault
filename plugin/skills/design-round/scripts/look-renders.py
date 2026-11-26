@@ -32,11 +32,13 @@ vertex in the shape's own units. A BEND_SIZE CSS px square around each is shot
 at device scale 8. It writes DIR/bend-<k>.png and sheets DIR/sheet-<k>.png of
 at most BEND_COLUMNS x BEND_ROWS bends. A curve an <img> draws is not in the
 DOM: run bends on its SVG file too. One CSS or a canvas draws has no path data:
-shoot its tightest bend by eye with look.py zoom --scale 8.
+shoot its tightest bend by eye with look.py zoom --scale 8, at the --width and
+--height bends ran at, which its report prints.
 
 Both write DIR/renders.json naming every render, after deleting the renders an
 earlier run's renders.json in DIR names, and refuse a page check-frames.py hash
-refuses. --width and --height frame the page as look.py's do; a bare SVG
+refuses. --width and --height frame the page as the motion scripts do
+(1920x945 unless given); a bare SVG
 file larger than that is framed at its drawn size, which the report and
 renders.json give. A sheet fits the standard image tier, so no critic's model scales
 it down and its repeated pixels stay whole.
@@ -51,7 +53,6 @@ stderr.
 
 import argparse
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -60,19 +61,14 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
-def sibling(name):
-    spec = importlib.util.spec_from_file_location(
-        name.replace("-", "_")[:-3], os.path.join(HERE, name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-frames = sibling("check-frames.py")
-look = sibling("look.py")
+frames = siblings.load(HERE, "check-frames.py")
+look = siblings.load(HERE, "look.py")
 layout = look.layout
 flow = frames.flow
 try:
@@ -174,7 +170,9 @@ SVG_ROOT_JS = r"""
 }
 """
 
-CONTACT = re.compile(r"^([\w.-]+)=(?:(.+)@)?(-?[\d.]+),(-?[\d.]+)$")
+CONTACT = re.compile(
+    r"^([\w.-]+)=(?:(.+)@)?(-?\d+(?:\.\d+)?|-?\.\d+),(-?\d+(?:\.\d+)?|-?\.\d+)$"
+)
 
 
 def parse(argv):
@@ -202,7 +200,7 @@ def parse(argv):
         p.error(f"--width {args.width} is outside {layout.LOW}–{layout.HIGH}")
     args.viewport_size = {
         "width": args.width,
-        "height": args.height or layout.height_at(args.width, layout.HEIGHTS),
+        "height": args.height or layout.height_at(args.width, layout.MOTION_HEIGHTS),
     }
     if args.mode == "contacts":
         found = []
@@ -461,6 +459,10 @@ def report_contacts(args, result):
     return "\n".join(lines), 0
 
 
+def zoom_flags(size):
+    return f"--width {size['width']} --height {size['height']}"
+
+
 def report_bends(args, result):
     size = result["viewport"]
     bends, unread = result["bends"], result["unread"]
@@ -475,7 +477,8 @@ def report_bends(args, result):
     elif not unread:
         lines.append(
             "no SVG shape on the page draws a curve: vault.curves-look does not apply, "
-            "unless CSS or a canvas draws one (shoot that by eye with look.py zoom --scale 8)"
+            "unless CSS or a canvas draws one (shoot that by eye with look.py zoom --scale 8 "
+            f"{zoom_flags(size)})"
         )
     for b in bends:
         what = (
@@ -502,11 +505,17 @@ MODES = {
 def clear(out):
     """Deletes the renders an earlier run's renders.json in `out` names, so a
     sheet that run made and this one does not is never handed on."""
+    path = os.path.join(out, "renders.json")
     try:
-        with open(os.path.join(out, "renders.json"), encoding="utf8") as fh:
+        with open(path, encoding="utf8") as fh:
             old = json.load(fh)
-    except (OSError, ValueError):
+    except FileNotFoundError as exc:
+        expected(exc, "no earlier run to clear")
         return
+    except ValueError as exc:
+        sys.exit(
+            f"look-renders.py: {path} does not parse ({exc}); delete it and the renders beside it"
+        )
     named = old.get("sheets", []) + [
         r["file"] for r in old.get("shots", []) + old.get("bends", []) if "file" in r
     ]
@@ -523,7 +532,7 @@ def main(argv):
     clear(args.out)
 
     def run():
-        with flow.chromium(["--disable-threaded-animation"]) as browser:
+        with flow.chromium(frames.HASH_ARGS) as browser:
             return render(browser, args)
 
     result, code = flow.run_browser(
@@ -532,7 +541,7 @@ def main(argv):
         args.url,
         (
             f"cannot render {args.url}, because this page:",
-            "Shoot it by hand with look.py zoom: each contact at --scale 1, 2 and 3, "
+            f"Shoot it by hand with look.py zoom {zoom_flags(args.viewport_size)}: each contact at --scale 1, 2 and 3, "
             "each shot magnified 4x with Pillow's Image.NEAREST; each bend at --scale 8.",
         ),
     )

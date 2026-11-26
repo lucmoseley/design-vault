@@ -358,7 +358,6 @@ How boxes and layers look: borders and dividers, corner radius, shadows and elev
 - stage: value
 - inputs: the element's class (detail part, tag, control, container, large container or modal), the project's radius scale
 - output: each class one step of a 3–5 step scale, the step never falling as the class grows; the values are the project's
-- target: Keep one radius scale of three to five steps and give each element class one step, larger elements never a smaller step than smaller ones.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/surface-styling.md#a-radius-scale-by-element-size
 - ledger: OTH-11, SUR-22, SUR-27, SUR-28
@@ -432,7 +431,7 @@ How boxes and layers look: borders and dividers, corner radius, shadows and elev
 ### vault.glass-dimming
 - applies-when: web-surface; every clear, highly translucent glass layer over photos, video or other bright media
 - question: Where a clear glass layer floats over bright media, does a dark dimming layer of about 35% opacity sit behind it, and is none added over media already dark or with its own dimming?
-- answered-by: script
+- answered-by: look
 - writes: glass dimming layer
 - yields-to: vault.contrast, vault.glass, level 2
 - source: Apple HIG Materials, Liquid Glass (page updated Sep 2025, as read Oct 2026): for the clear variant, "If the underlying content is bright, consider adding a dark dimming layer of 35% opacity"; "If the underlying content is sufficiently dark ... you don't need to apply a dimming layer"; strength: platform guidance
@@ -442,7 +441,6 @@ How boxes and layers look: borders and dividers, corner radius, shadows and elev
 - inputs: the luminance of the media under the glass
 - output: bright media, a dark dimming layer at about 35% opacity; dark media or media with its own dimming, none
 - target: Put a dark layer of about 35% opacity under clear glass that floats over bright media; leave it out over dark media.
-- script: owed
 - reasons: design-critique/references/surface-styling.md#dimming-under-clear-glass
 - ledger: SUR-59
 - status: staged

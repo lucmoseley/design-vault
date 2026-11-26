@@ -33,25 +33,21 @@ rest print on stderr.
 """
 
 import argparse
-import importlib.util
 import json
 import pathlib
 import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import siblings  # noqa: E402
+
 SIZES = HERE.parent / "references" / "render-sizes.json"
 REQUIREMENTS = HERE.parents[2] / "requirements.txt"
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-spend_log = _load("spend_log", HERE / "spend-log.py")
+spend_log = siblings.load(HERE, "spend-log.py")
 UnreadableError = spend_log.UnreadableError
 
 PASS, FAIL, UNJUDGED = "PASS", "FAIL", "NOT JUDGED"
@@ -265,7 +261,9 @@ def main(argv):
             try:
                 with Image.open(render) as image:
                     width, height = image.size
-                    checker = check_checkerboard(image) if args.transparent else None
+                    checkerboard = (
+                        check_checkerboard(image) if args.transparent else None
+                    )
             except OSError as err:
                 raise UnreadableError(f"cannot read {render}: {err}") from err
             model, aspect, where = requested(render, args, logs)
@@ -278,9 +276,9 @@ def main(argv):
             f"{render} — {model or 'model unknown'} at {aspect or 'aspect unknown'} ({where})"
         )
         print(f"  size: {verdict} — {detail}")
-        if checker is not None:
-            results.append(checker[0])
-            print(f"  checkerboard: {checker[0]} — {checker[1]}")
+        if checkerboard is not None:
+            results.append(checkerboard[0])
+            print(f"  checkerboard: {checkerboard[0]} — {checkerboard[1]}")
 
     if FAIL in results:
         return 1

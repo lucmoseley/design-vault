@@ -2,7 +2,7 @@
 
 Why each edge (border, outline, ring, hairline) takes the form its role calls for, and why each role keeps its contrast in every theme (#283). The research behind every line is `docs/research/edges-contrast.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 ## Principles
 
@@ -11,8 +11,9 @@ A project's rules file wins over every record here except a floor WCAG or the la
 Records: `vault.contrast-ladder`, `vault.theme-contrast`.
 
 - **Why.** WCAG sets floors by role: 4.5:1 for text, 3:1 for large text and for whatever alone shows a control or its state. A decorative edge has no floor, and the systems that publish one keep it faint: Atlassian's grouping border measures 1.35:1, Material's `outlineVariant` 1.6–2.0:1, GOV.UK's `border` 1.6:1. WCAG notes that thin strokes are harder to read at low contrast and that anti-aliasing draws a thin line fainter than its colour, so a thin face or a 1 px edge needs margin above the floor; Apple asks 7:1 for small text in custom colours. Material holds each role to one minimum in light and dark alike and raises it at higher contrast levels, and Atlassian warns that a light theme that passes says nothing about the dark one.
+- **Rungs.** The ladder's steps are 3:1, 4.5:1 and 7:1, and each role sits on two: body text on 4.5:1 or 7:1, large text, and an icon, edge, state mark or chart mark that a visitor needs, on 3:1 or 4.5:1. A part should keep in dark the rung it holds in light: a paragraph at 7:1 in light and 4.6:1 in dark still passes, yet a dark-mode reader of a thin face loses the margin the light page gave them, and Material holds each role to the same curve in both. Under `prefers-contrast: more` every role steps up one rung, not only text: Material's medium contrast level raises `outline`, the edge that identifies a control, from 3:1 to 4.5:1 as it raises secondary text from 4.5:1 to 7:1, and Apple asks for an increased-contrast variant of each custom colour. Above a role's top rung a change is no drop.
 - **Trade-off.** 7:1 narrows the palette for a thin face; a heavier weight or a larger size buys the same legibility (`vault.type-weight`). A decorative edge strong enough to pass 3:1 competes with the control edges it should sit behind.
-- **Clash.** The WCAG floors in `vault.contrast`, `vault.control-edges` and `vault.focus` beat every aim here. The 7:1 aim for thin faces, the 4.5:1 aim for 1 px lines and the 0.06 em stem line are the house's mapping, not a finding. APCA is not settled (`docs/research/text-presentation.md`), so the ladder is in WCAG 2 ratios.
+- **Clash.** The WCAG floors in `vault.contrast`, `vault.control-edges` and `vault.focus` beat every aim here. The 7:1 aim for thin faces, the 4.5:1 aim for 1 px lines, the 0.06 em stem line and reading `prefers-contrast: more` as Material's medium level are the house's mapping, not a finding. APCA is not settled (`docs/research/text-presentation.md`), so the ladder is in WCAG 2 ratios.
 
 ### Text on a fill
 
@@ -24,7 +25,7 @@ Record: `vault.fill-text`.
 
 ### Disabled controls
 
-Record: `vault.disabled-legibility`.
+Records: `vault.disabled-legibility`, `vault.disabled-dim`.
 
 - **Why.** WCAG exempts inactive controls, and W3C says no one fix suits everyone. Systems split: Atlassian's disabled text measures 2.0:1, Material's 2.3–3.0:1, USWDS keeps 5.8:1. NN/g asks for lower contrast that a visitor can still read, but not so high it looks live. Whole-control opacity lets the ground show through, so the result changes with the ground; solid tokens do not. A row shown as full or sold out is content, not a control, so it keeps the text floor.
 - **Trade-off.** A legible disabled label invites a click on something that does nothing; a faint one hides what the control would do. A disabled control that stays focusable with `aria-disabled` can explain itself, at the cost of a stop in the Tab order.
@@ -40,7 +41,7 @@ Records: `vault.forced-colours-edge`, `vault.ring-outline`.
 
 ### One focus colour
 
-Record: `vault.focus-colour`.
+Records: `vault.focus-colour`, `vault.focus-colour-kept`.
 
 - **Why.** GOV.UK and Atlassian each reserve a focus colour, so focus never reads as selection or hover; GOV.UK pairs yellow with black so one ring passes on light and dark grounds. Chromium's own ring is already two colours, a dark ring with a thin white outline, drawn for light and dark grounds alike.
 - **Trade-off.** A reserved colour is one hue the brand cannot use elsewhere. Material instead takes focus from its secondary palette role; that keeps the palette smaller but lets focus look like other uses of that colour.

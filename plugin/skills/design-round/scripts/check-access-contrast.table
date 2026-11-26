@@ -7,6 +7,7 @@ vault.contrast-ladder | icon | 3
 vault.contrast-ladder | state | 3
 vault.contrast-ladder | thin | 0.06, 400
 vault.contrast-ladder | aim | 7, 4.5
+vault.contrast-ladder | more | 4.5
 vault.controls-on-photo | edge | 3
 vault.fill-text | split | 0.179
 vault.fill-text | gap | 0.5, 0.4

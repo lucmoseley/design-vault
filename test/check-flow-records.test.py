@@ -85,6 +85,18 @@ class Table(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(records.TableError):
                 records.parse_table(bad)
 
+    def test_a_check_given_two_values_is_refused_unlike_one_value_twice(self):  # #553
+        with self.assertRaisesRegex(records.TableError, r"line 2: frequent .* line 1"):
+            records.parse_table(
+                "vault.a | frequent | under 150\nvault.b | frequent | under 400"
+            )
+
+    def test_a_check_named_twice_at_one_value_is_kept(self):  # #553
+        got = records.parse_table(
+            "vault.a | frequent | under 150\nvault.b | frequent | under 150"
+        )
+        self.assertEqual([line.id for line in got], ["vault.a", "vault.b"])
+
     def test_a_bad_parts_or_table_flag_is_a_usage_error(self):
         bad = os.path.join(FIXTURES, "nosuch.table")
         for argv in (
@@ -498,7 +510,7 @@ def table_of(where, *checks):
 RUN_TIMEOUT_S = 240
 
 
-def run(page, out, *extra, script=FLOW):
+def run(page, out, *extra, script=FLOW, parts="tier01-parts.json"):
     """check-flow.py --records on `page` as a child, or `script` standing in
     for it: its exit code, its records and its stdout."""
     done = child.run(
@@ -510,7 +522,7 @@ def run(page, out, *extra, script=FLOW):
             out,
             "--records",
             "--parts",
-            os.path.join(FIXTURES, "tier01-parts.json"),
+            os.path.join(FIXTURES, parts),
             *extra,
         ],
         timeout=RUN_TIMEOUT_S,
@@ -592,12 +604,22 @@ class Pages(unittest.TestCase):
                 "--table",
                 table_of(where, "drag-release"),
             ),
+            "rest": (
+                os.path.join(FIXTURES, "tier01-fault.html"),
+                "--table",
+                table_of(where, "drag-release"),
+            ),
+        }
+        options = {
+            "late": {"script": LATE_INPUT},
+            "rest": {"parts": "tier01-rest-parts.json"},
         }
 
         def go(name):
             page, *extra = runs[name]
-            script = LATE_INPUT if name == "late" else FLOW
-            return name, run(page, os.path.join(where, name), *extra, script=script)
+            return name, run(
+                page, os.path.join(where, name), *extra, **options.get(name, {})
+            )
 
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
             cls.runs = dict(pool.map(go, runs))
@@ -665,9 +687,16 @@ class Pages(unittest.TestCase):
         self.assertEqual(got["vault.drag-release"]["not_judged"], [], out)
 
     def test_late_input_is_not_read_into_the_clean_pages_fling(self):
-        """#478. Its pair is the fault
+        """#478, #510. Its pair is the fault
         page's drag-release, failed in test_the_fault_page_names_every_plant."""
         code, got, out = self.runs["late"]
+        self.assertEqual(code, 0, out)
+        self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
+
+    def test_a_settle_from_rest_on_the_projected_snap_passes_the_script(self):
+        """#428. Its pair is the fault page's .card, failed in
+        test_the_fault_page_names_every_plant."""
+        code, got, out = self.runs["rest"]
         self.assertEqual(code, 0, out)
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
 
@@ -754,7 +783,7 @@ class Pause(unittest.TestCase):
                     url = "file://" + os.path.abspath(
                         os.path.join(FIXTURES, f"tier01-{name}.html")
                     )
-                    got[name] = access.pause_answer(ctx, url)
+                    got[name] = access.pause_answer(ctx, url, [], [])
                     ctx.close()
             finally:
                 browser.close()
@@ -763,7 +792,19 @@ class Pause(unittest.TestCase):
             [f["subject"] for f in faults],
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
         )
-        self.assertEqual(got["clean"], ([], []))
+        # Its live dot blinks forever and its carousel turns on a timer, neither
+        # declared, so past 5 s neither can be measured (#545).
+        tried = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
+        self.assertEqual(
+            got["clean"],
+            (
+                [],
+                [
+                    f"section:nth-of-type(2) > div.carousel {tried}",
+                    f"section:nth-of-type(1) {tried}",
+                ],
+            ),
+        )
 
 
 if __name__ == "__main__":

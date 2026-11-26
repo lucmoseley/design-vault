@@ -12,7 +12,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - era: timeless
 - owner: vault
 - stage: value
-- target: Size the text column so body lines run 50–75 characters at every width; check it with check-measure.py, never with a `ch` width.
 - reasons: design-round/references/impeccable.md#conditions-added
 - ledger: LAY-46, LAY-50, TYS-41
 - status: live
@@ -27,7 +26,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - era: timeless
 - owner: vault
 - stage: value
-- target: Set body text at 16 px or more, and all text at 16 px or more on a phone; go smaller only for a dense working role.
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: FRM-77, TYS-7, TYS-8, TYS-9, TYS-41
 - status: live
@@ -59,7 +57,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the text's role (body, heading, display), its measure in characters
 - output: body 1.3 or more, higher as the measure lengthens toward 75; headings and display may run under 1.3
-- target: Give body text a line height of 1.3 or more, more on longer lines; set headings and display tighter if the type needs it.
 - reasons: design-round/references/impeccable.md#conditions-added
 - ledger: TYS-39, TYS-40, TYS-41, TYS-42
 - status: live
@@ -104,7 +101,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - era: dated 2027-10-14
 - owner: vault
 - stage: value
-- target: Load each web font with `font-display: swap`, or `optional` where a late swap would jolt the layout.
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: TYF-47, TYF-48
 - status: live
@@ -127,7 +123,7 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 
 ### vault.type-size
 - applies-when: web-surface; running body text, and text in a dense working role (tables, tool panels)
-- question: Is running body text at least 16 px × 0.52 ÷ the body face's x-height, and never under 16 px, and dense-role text at least 14 px × 0.52 ÷ its face's x-height?
+- question: Is running body text at least 16 px × 0.52 ÷ the body face's x-height, and never under 16 px, and dense-role text at least 14 px × 0.52 ÷ its face's x-height, and never under 14 px?
 - answered-by: script
 - writes: body size
 - yields-to: level 2
@@ -136,8 +132,7 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - owner: vault
 - stage: value
 - inputs: the face's x-height (face-profile.py `xheight`), the text's role (running text or a dense working role)
-- output: running text max(16, 16 × 0.52 ÷ xheight) px, rounded; dense role max(14, 14 × 0.52 ÷ xheight) px, rounded, never under `vault.type-floor`; a fallback face matched to the primary by `font-size-adjust: from-font` on the primary
-- target: Size body text from the body face's x-height: 16 px for a face of x-height 0.52 or more, 16 × 0.52 ÷ x-height for a smaller one (Georgia 17 px, Times 19 px); set `font-size-adjust: from-font` after any `font` shorthand so a fallback face keeps the primary's x-height.
+- output: running text max(16, 16 × 0.52 ÷ xheight) px, rounded up; dense role max(14, 14 × 0.52 ÷ xheight) px, rounded up, never under `vault.type-floor`; a fallback face matched to the primary by `font-size-adjust: from-font` on the primary
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#size-from-x-height
 - ledger: TYS-7, TYS-10, TYF-19
@@ -155,7 +150,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the face's x-height (face-profile.py `xheight`) and stem, the text's role
 - output: fine print, captions, helper text max(12, 12 × 0.52 ÷ xheight) px rounded up; short labels max(11, 11 × 0.52 ÷ xheight) px with the positive tracking `vault.type-tracking` gives; a face whose stem is under 0.06 em, thinner than a regular text weight draws, 1 px larger (the house's reading of Apple's "larger than the recommended sizes", a first guess, not measured); a public-service surface 16 px
-- target: Keep fine print and captions at 12 px or more and short labels at 11 px or more, larger for a face with a small x-height or a thin stroke.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#size-from-x-height
 - ledger: TYS-8
@@ -173,7 +167,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the text's size, its computed weight (face-profile.py `weight`), the face's GRAD axis (`axes`), the ground's polarity
 - output: at body size and under, weight 400 or more and 700 or less at 14 px and under; 300 only from 18 px in a face drawing 300 as a text weight; 800–900 at display sizes alone; on a dark ground under 24 px (18.66 px bold) the light-ground weight; at or above it, GRAD −25 to −50 where the face has it, else wght −50, as a look choice; one weight on every platform, the 400 floor absorbing a lighter rendering, with no per-platform weight swap
-- target: Keep text at body size and under at weight 400 or more, set the weight explicitly on a variable font, keep black weights for display, and on a dark ground keep small text's weight; lighten large text by grade, not by weight, if it looks heavy; serve the same weight to every platform.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#weight-by-size-and-ground
 - ledger: TYF-13, TYF-54, TYF-55
@@ -191,7 +184,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the text's role and size, the face's x-height (face-profile.py `xheight`), the measure in characters (check-measure.py), the number of lines, the text's language and script (`lang`)
 - output: running text 1.4–1.6 at 45–65 characters, 1.5 at a middling x-height; past 65 plus 0.01 a character up to +0.1; under 45 down toward 1.3; never under 1.3; short UI copy of one or two lines and captions or text under a paragraph 1.3–1.43, 1.35 at a middling x-height; text set to stay on one line (a button, a nav item, a one-line list row) 1.0–1.25, a height-limited row of two lines at the band's lower end and of three or more never under its band; headings 20 px and under 1.25–1.4, 24–40 px 1.15–1.3, 48 px and over 1.0–1.15, 72 px and over 0.9–1.05, the upper end from three lines; within a band, x-height 0.53 or more the upper half and 0.49 or less the lower; text in a script with stacked diacritics or tall glyphs (Vietnamese, Thai, Devanagari) or a language of long compound words (German) the band's top, through a `:lang()` rule; unchanged by the ground's polarity
-- target: Set size, then measure, then line height: running text about 1.5, more on long lines and for a large x-height, headings tighter as they grow; keep the same line height in dark mode.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#line-height-by-role-face-and-measure
 - ledger: TYS-11, TYS-39, TYS-40, TYS-41, TYS-42, TYS-45, TYS-48, TYS-50
@@ -209,7 +201,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the text's size and case, the face's published curve if any, its opsz in use, weight and stretch (face-profile.py `opsz`, `weight`, `stretch`)
 - output: the maker's curve; else 12 px and under +0.025 em, 13–21 px 0, 22–31 px −0.01, 32–63 px −0.02, 64 px and over −0.03; capitals, small capitals, acronyms and long digit strings (serials, references) +0.05 to +0.10 em; short labels the upper end; no negative value where opsz or a display cut is active, or at weight 700 and over, or in a condensed width; floor −0.03 em
-- target: Track text by the face's own curve, or USWDS's where the maker gives none: a little looser under 13 px, tighter as headings grow, never past −0.03 em; open capitals, acronyms and long digit strings by 5–10%; leave display sizes untracked when the face has an optical size axis.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#tracking-by-size-and-face
 - ledger: TYS-61, TYS-62, TYS-63, TYS-64, TYS-65, TYS-66, TYS-67
@@ -290,7 +281,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the body face's and the code face's x-heights (face-profile.py `xheight`)
 - output: code size = body size × body xheight ÷ code xheight, in em, or `font-size-adjust` on the code set to the body face's x-height; a padded code box raises its line's height
-- target: Size inline code to the body face's x-height: body × body x-height ÷ code x-height.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#inline-code-beside-body-text
 - ledger: TYS-13
@@ -337,7 +327,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - era: timeless
 - owner: vault
 - stage: value
-- target: Use regular and one bold (600–700); add a medium or a display weight only for a named job, four at most.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#how-many-weights
 - ledger: TYF-14
@@ -483,7 +472,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: each text element's computed font size at a width W and 100% zoom, and at 200% zoom (a viewport of W ÷ 2 CSS px, the root size doubled)
 - output: pass where the 200% size is at least 2 × the 100% size for every element; stepped sizes in `rem` pass by construction
-- target: Step sizes at breakpoints in `rem`, or scale a heading with `clamp(<min>rem, <rem> + <vw>, <max>rem)` whose max is at least twice its min; never `vw` alone; body text keeps the size vault.type-size gives.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#fluid-size
 - ledger: TYS-5
@@ -499,7 +487,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - era: timeless
 - owner: vault
 - stage: value
-- target: Choose a face whose character set covers every language the page carries, or name a face for each further script in the stack before the generic family.
 - script: check-load.py <page> --files --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/platform-defaults.md#a-face-that-covers-the-text
 - ledger: TYF-21
@@ -597,7 +584,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the text's smallest and largest size in `rem`, and the narrowest and widest viewport widths the size grows between
 - output: `clamp(<min>rem, <a>rem + <b>vw, <max>rem)`, with `a` and `b` solved so the size is the minimum at the narrowest width and the maximum at the widest, and the maximum no more than 2.5 times the minimum
-- target: Build fluid sizes as `clamp(<min in rem>, <rem> + <vw>, <max in rem>)` with the maximum no more than 2.5 times the minimum, never in `vw` alone.
 - script: check-layout.py <page> --out <dir> --records
 - reasons: design-critique/references/platform-defaults.md#fluid-type-that-still-zooms
 - ledger: TYS-6
@@ -613,7 +599,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - era: timeless
 - owner: vault
 - stage: value
-- target: Write every line height as a plain number, never in px, em, rem or percent.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/platform-defaults.md#line-height-without-units
 - ledger: TYS-44
@@ -709,7 +694,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the web font's metrics (average character width, ascent, descent, line gap), the fallback face's same metrics
 - output: `size-adjust` the ratio of the web font's average width to the fallback's; `ascent-override`, `descent-override` and `line-gap-override` the web font's values over that size; or `font-size-adjust` the web font's x-height ratio
-- target: Declare the fallback face in an `@font-face` with `size-adjust` (and the ascent, descent and line-gap overrides) set to the web font's metrics, or set `font-size-adjust`, so swapping fonts moves no text.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/typeface-traits.md#fallback-faces-match-the-web-font
 - ledger: TYF-50
@@ -727,7 +711,6 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 - stage: value
 - inputs: the text's role (body, large, short passage), its column count, whether the column already fills the viewport less its side gutters, the characters on each full line as set (check-measure.py)
 - output: body, one column: 50–75; body, one of several columns: 40–50; large text above body size: 75 at most, any shorter length allowed; short passage of three lines or fewer: WCAG's 80 at most, any shorter length allowed; any role whose column already fills the viewport less its gutters: the floor lifts, the ceiling holds
-- target: Set the text column so body lines run 50–75 characters (40–50 in each of several columns), large text 75 or fewer, and captions and notes 80 or fewer; on a phone, let the column fill the screen and the lines run short.
 - script: check-layout.py <page> --out <dir> --records
 - reasons: design-critique/references/alignment-and-width.md#line-length-by-role
 - ledger: LAY-46, LAY-47, LAY-48, TYS-56, TYS-60
@@ -802,15 +785,13 @@ Typefaces and type settings: sizes, weights, line height, line length and font l
 ### vault.text-style-count
 - applies-when: web-surface; all visible text on the page
 - question: Is every text style on the page (its face, size, weight and colour together) one of the site's named type-scale styles, with no one-off combination outside the scale and the lead or display sizes held to at most two elements a view?
-- answered-by: script
+- answered-by: look
 - writes: text style set
 - yields-to: vault.face-roles, vault.weight-count, vault.text-steps, vault.heading-step, level 2
 - source: Apple HIG, Typography (alert date 16 Dec 2025), "Minimize the number of typefaces" and use the built-in text styles; GOV.UK Design System styles (as read Nov 2026), a fixed type scale, bold "sparingly", the lead paragraph "only use it once per page"; USWDS Typography (2024), other sizes "sparingly"; NN/g, Gordon, "Visual Hierarchy in UX" (2021), "Use no more than 3 sizes" and "Limit how many elements are big to a maximum of 2"; NN/g, Nielsen, homepage guideline 63 (2001), "Limit font styles and other text formatting"; Polaris, Using type (2024), the same body size everywhere hides key elements; strength: design-system and expert guidance, no study sets a count
 - era: timeless
 - owner: vault
 - stage: value
-- target: Set every text from the site's named type-scale styles, add no one-off size, weight or colour beside them, and hold display sizes to two elements a view.
-- script: owed
 - reasons: design-critique/references/busyness.md#text-styles
 - ledger: NEW1-7
 - status: staged

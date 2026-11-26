@@ -49,7 +49,12 @@ finishes those too, and refuses a page that keeps starting them. An animation a
 timer or an event starts after the first sits where that load's clock put it,
 which moves from load to load, so `hash` renders every frame on the timeline
 its first load timed, and --save keeps that timeline for --check, which names
-any start its own load put more than STAGE_JITTER_MS away (#259).
+any start its own load put more than STAGE_JITTER_MS away (#259). Both refuse,
+naming it, a page holding what that list does not: a visible canvas, video or
+embedded document, SMIL or shadow DOM, moving or not; a script rewriting an
+element or a path's d frame by frame; or an animation the page paused itself,
+which a seek would move. One such part refuses the whole page, its listed
+animations included.
 
 EXITS 0 every frame matches / 1 a frame differs (each printed) / 2 the arguments
 are wrong / 3 Playwright or its browser is missing / 4 the page did not render
@@ -61,7 +66,6 @@ stdout; the rest print on stderr.
 import argparse
 import base64
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -69,11 +73,11 @@ import sys
 import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_flow", os.path.join(HERE, "check-flow.py")
-)
-flow = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(flow)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+flow = siblings.load(HERE, "check-flow.py")
 UnmeasurableError = flow.UnmeasurableError
 
 # LABEL_JS plus a name for an animation, by its target.
@@ -118,6 +122,7 @@ async ({ quiet, cap, shown, timeline }) => {
   let lastNew = began;
   let latest = [];
   let quietNow = false;
+  const held = [];
   for (;;) {
     const fresh = document.getAnimations().filter((a) => !starts.has(a));
     // An animation cancelled while it waits rejects its ready promise; it is
@@ -125,6 +130,7 @@ async ({ quiet, cap, shown, timeline }) => {
     await Promise.all(fresh.map((a) => a.ready.catch(() => null)));
     const now = document.timeline.currentTime;
     for (const a of fresh) {
+      if (a.playState === 'paused') held.push(a);
       starts.set(a, a.startTime !== null ? a.startTime : now - a.currentTime / a.playbackRate);
       a.pause();
     }
@@ -135,7 +141,9 @@ async ({ quiet, cap, shown, timeline }) => {
     await new Promise((next) => requestAnimationFrame(next));
   }
   const reasons = [];
-  if (!quietNow) reasons.push('is still starting animations ' + cap + ' ms after it loaded and its fonts were ready (' + [...new Set(latest.map(name))].sort().slice(0, shown).join(', ') + '), so its frames have no fixed timeline; start its motion once and let it end');
+  const names = (as) => [...new Set(as.map(name))].sort().slice(0, shown).join(', ');
+  if (!quietNow) reasons.push('is still starting animations ' + cap + ' ms after it loaded and its fonts were ready (' + names(latest) + '), so its frames have no fixed timeline; start its motion once and let it end');
+  if (held.length) reasons.push('holds ' + held.length + ' animation(s) it paused itself (' + names(held) + '), which a seek would move as if playing');
   const anims = [...starts.keys()];
   const rows = [];
   for (const a of anims) {
@@ -175,6 +183,22 @@ async ({ quiet, cap, shown, timeline }) => {
   }
   window.__frames = { anims: new Set(anims), rows, t0 };
   return { reasons, end, keys, timeline: rows.map((r) => ({ name: name(r.a), ms: r.start - t0 })) };
+}
+"""
+)
+
+SCRIPTED_JS = (
+    r"""
+({ frames, span, shown }) => {
+  """
+    + flow.LABEL_JS
+    + flow.LOOP_JS
+    + flow.DRAWN_JS
+    + r"""
+  const f = window.__flow;
+  f.scan();
+  f.stopped = true;
+  return drawn(f, { frames, span, shown, morphs: true });
 }
 """
 )
@@ -414,6 +438,7 @@ def open_page(browser, at, scale, *, device=None, timeline=None):
         viewport=at.viewport_size, device_scale_factor=scale, **(device or {})
     )
     context.set_default_timeout(at.timeout)
+    context.add_init_script(flow.COLLECTOR_JS)
     page = context.new_page()
     page.goto(at.url, wait_until="load")
     if at.wait:
@@ -427,8 +452,17 @@ def open_page(browser, at, scale, *, device=None, timeline=None):
             "timeline": timeline,
         },
     )
-    if prep["reasons"]:
-        raise UnmeasurableError(sorted(set(prep["reasons"])))
+    reasons = prep["reasons"] + page.evaluate(
+        SCRIPTED_JS,
+        {
+            "frames": flow.REWRITE_FRAMES,
+            "span": flow.REWRITE_SPAN_MS,
+            "shown": flow.NAMES_SHOWN,
+        },
+    )
+    if reasons:
+        context.close()
+        raise UnmeasurableError(sorted(set(reasons)))
     return context, page, prep
 
 
@@ -497,6 +531,17 @@ def seek(page, t):
     late = page.evaluate(SEEK_JS, t)
     if late:
         raise late_error(late)
+
+
+def seek_shots(page, times):
+    """Each time in `times` seeked and shot, as (ms, PNG), then refuse_chain,
+    so it spends the page."""
+    shots = []
+    for t in times:
+        seek(page, t)
+        shots.append((t, page.screenshot()))
+    refuse_chain(page)
+    return shots
 
 
 def check_last(browser, blank, at, assets):
@@ -860,7 +905,7 @@ def main(argv):
         at.url,
         (
             f"cannot check {at.url}, because this page:",
-            "Check its frames by eye: seek it to each frame and compare.",
+            "Check its frames by eye.",
         ),
     )
     if code:

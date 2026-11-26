@@ -120,7 +120,7 @@ test("two calls on the same inputs give the same list, numbering included", () =
 
 test("a vault question that is not law or WCAG gives way to the project's", () => {
   assert.equal(clash(fixtureClashes(), "vault.spacing", "demo.spacing"),
-    "- Settled by precedence (the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own): N. vault.spacing and N. demo.spacing both write spacing and neither yields to the other; demo.spacing stands.");
+    "- Settled by precedence (within one step, the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own): N. vault.spacing and N. demo.spacing both write spacing and neither yields to the other; demo.spacing stands.");
 });
 
 test("a project question that departs from a vault question on domain evidence goes to the founder, unless the vault's gives way or the project's rests on evidence too", () => {
@@ -129,26 +129,26 @@ test("a project question that departs from a vault question on domain evidence g
     "- For the founder (the project's rule departs from domain evidence, and stands only on evidence of its own): N. vault.filters and N. demo.filters both write filters and neither yields to the other.");
   assert.ok(!lines.some((l) => l.includes("labels")), lines.join("\n"));
   for (const other of ["vault.filters", "demo.filters"]) {
-    assert.match(clash(lines, other, "vault.law-filters"), /^- Settled by precedence \(law and WCAG beat every other rule\): .*; vault\.law-filters stands\.$/);
+    assert.match(clash(lines, other, "vault.law-filters"), /^- Settled by precedence \(within one step, law and WCAG beat every other rule\): .*; vault\.law-filters stands\.$/);
   }
-  assert.match(clash(lines, "vault.sort", "demo.sort"), /^- Settled by precedence \(the project beats .*\): .*; demo\.sort stands\.$/);
-  assert.match(clash(lines, "vault.sort", "demo.law-sort"), /^- Settled by precedence \(law and WCAG beat every other rule\): .*; demo\.law-sort stands\.$/);
+  assert.match(clash(lines, "vault.sort", "demo.sort"), /^- Settled by precedence \(within one step, the project beats .*\): .*; demo\.sort stands\.$/);
+  assert.match(clash(lines, "vault.sort", "demo.law-sort"), /^- Settled by precedence \(within one step, law and WCAG beat every other rule\): .*; demo\.law-sort stands\.$/);
 });
 
 test("a law or WCAG vault question stands against the project's, and against another vault question", () => {
   const lines = fixtureClashes();
   assert.equal(clash(lines, "demo.contrast", "vault.contrast"),
-    "- Settled by precedence (law and WCAG beat every other rule): N. demo.contrast and N. vault.contrast both write contrast and neither yields to the other; vault.contrast stands.");
-  assert.match(clash(lines, "vault.law-grid", "vault.house-grid"), /^- Settled by precedence \(law and WCAG beat every other rule\): .*; vault\.law-grid stands\.$/);
+    "- Settled by precedence (within one step, law and WCAG beat every other rule): N. demo.contrast and N. vault.contrast both write contrast and neither yields to the other; vault.contrast stands.");
+  assert.match(clash(lines, "vault.law-grid", "vault.house-grid"), /^- Settled by precedence \(within one step, law and WCAG beat every other rule\): .*; vault\.law-grid stands\.$/);
 });
 
 test("the sweep's reflow question stands at level 1, against the project, and its first-screen question below level 2 (#218)", () => {
   const lines = clashLines(list(["--asset", "web-surface", "--fact", "has-cta"], [VAULT_GATE, path.join(FIXTURES, "layout-rivals.md")]).out);
   assert.equal(clash(lines, "vault.reflow", "demo.reflow"),
-    "- Settled by precedence (law and WCAG beat every other rule): N. vault.reflow and N. demo.reflow both write reflow and neither yields to the other; vault.reflow stands.");
+    "- Settled by precedence (within one step, law and WCAG beat every other rule): N. vault.reflow and N. demo.reflow both write reflow and neither yields to the other; vault.reflow stands.");
   // The rival yields to every level and vault.layout to level 2, so the project stands only over a vault question below it.
   assert.equal(clash(lines, "vault.layout", "demo.first-screen"),
-    "- Settled by precedence (the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own): N. vault.layout and N. demo.first-screen both write first screen and each yields to the other; demo.first-screen stands.");
+    "- Settled by precedence (within one step, the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own): N. vault.layout and N. demo.first-screen both write first screen and each yields to the other; demo.first-screen stands.");
 });
 
 test("two of one project's questions that clash go to the founder, whether neither yields or each does, or one is law", () => {

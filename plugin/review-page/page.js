@@ -27,10 +27,8 @@
   }
 
   function card(item, data) {
-    const view = item.link || item.image;
-    // A card with neither shows only the set's figure, above the cards.
-    const shot = view ? el('a', { cls: 'shot', href: view, target: '_blank', rel: 'noopener', 'aria-label': `Open ${item.name} in full` },
-      [item.image ? el('img', { src: item.image, alt: item.name, loading: 'lazy' }) : el('span', { cls: 'out', text: 'Open it ↗' })]) : null;
+    const shot = el('a', { cls: 'shot', href: item.link || item.image, target: '_blank', rel: 'noopener', 'aria-label': `Open ${item.name} in full` },
+      [item.image ? el('img', { src: item.image, alt: item.name, loading: 'lazy' }) : el('span', { cls: 'out', text: 'Open it ↗' })]);
     const marks = el('div', { cls: 'marks', role: 'group', 'aria-label': `Mark ${item.name}` },
       (data.marks || []).map(m => el('button', { type: 'button', 'data-mark': m.id, 'data-tone': m.tone, 'aria-pressed': 'false', disabled: '', text: m.label })));
     if (data.pick && item.pickable !== false) marks.appendChild(el('button', { type: 'button', 'data-pick': item.id, 'aria-pressed': 'false', disabled: '', text: pickLabel(data) }));
@@ -48,10 +46,6 @@
     document.title = data.title || document.title;
     $('title').textContent = data.title || 'Review';
     $('intro').textContent = data.intro || '';
-    if (data.figure) {
-      $('figure').hidden = false;
-      $('figure').appendChild(el('img', { src: data.figure, alt: data.figureAlt || '' }));
-    }
     $('total').textContent = data.items.length;
     $('marked').hidden = !(data.marks || []).length;
     for (const item of data.items) $('cards').appendChild(card(item, data));

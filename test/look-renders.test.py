@@ -10,6 +10,7 @@ page or on a bare SVG file (#354), and check-curves.js --contacts hands this
 script a contact it refuses or crops somewhere else.
 """
 
+import importlib.util
 import json
 import os
 import shlex
@@ -28,6 +29,9 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "look-renders.py"
 )
+_spec = importlib.util.spec_from_file_location("look_renders", SCRIPT)
+look_renders = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(look_renders)
 FIXTURES = os.path.join(HERE, "fixtures", "look-renders")
 CURVES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
@@ -74,6 +78,11 @@ def size(path):
 
 def white_columns(img):
     return [x for x in range(img.shape[1]) if (img[:, x] == WHITE).all()]
+
+
+class Siblings(unittest.TestCase):  # #558
+    def test_look_renders_and_look_share_one_check_frames(self):
+        self.assertIs(look_renders.frames, look_renders.look.frames)
 
 
 class Contacts(unittest.TestCase):
@@ -159,11 +168,10 @@ CURVES_RUN_S = 60
 
 class ContactsFromCheckCurves(unittest.TestCase):
     def test_each_printed_contact_is_taken_unchanged_and_cropped_at_the_gap(self):
-        self.round_trip(os.path.join(FIXTURES, "drawn-contacts.html"), 633)
+        self.round_trip(os.path.join(FIXTURES, "drawn-contacts.html"), 945)
 
     def test_a_contact_on_a_bare_svg_file_is_cropped_there_too(self):  # #354
-        # The default 633 px viewport grown to the SVG's 900.
-        self.round_trip(os.path.join(FIXTURES, "drawn-contacts.svg"), 900)
+        self.round_trip(os.path.join(FIXTURES, "drawn-contacts.svg"), 1100)
 
     def round_trip(self, page, height):
         listed = subprocess.run(
@@ -201,8 +209,8 @@ class ContactsFromCheckCurves(unittest.TestCase):
 
 
 class Bends(unittest.TestCase):
-    # The viewport asked for: --width 1024 and the desktop height check-layout.py gives it.
-    WIDTH, HEIGHT = 1024, 633
+    WIDTH = 1024
+    HEIGHT = look_renders.layout.height_at(WIDTH, look_renders.layout.MOTION_HEIGHTS)
 
     def test_a_bend_outside_the_viewport_on_a_bare_svg_file_is_shot_once_the_viewport_fits_it(
         self,
@@ -215,7 +223,7 @@ class Bends(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             with open(os.path.join(out, "renders.json"), encoding="utf8") as fh:
                 renders = json.load(fh)
-            self.assertEqual(renders["viewport"], {"width": 1200, "height": 900})
+            self.assertEqual(renders["viewport"], {"width": 1200, "height": 1100})
             (bend,) = [b for b in renders["bends"] if b["shape"] == "circle#dot"]
             self.assertAlmostEqual(bend["radius"], 10, delta=0.05)
             self.assertGreater(bend["at"][0], self.WIDTH)
@@ -278,7 +286,9 @@ class Bends(unittest.TestCase):
             proc = run("bends", os.path.join(FIXTURES, "contacts.html"), "--out", out)
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             self.assertIn("vault.curves-look does not apply", proc.stdout)
-            self.assertIn("look.py zoom --scale 8", proc.stdout)
+            self.assertIn(
+                "look.py zoom --scale 8 --width 1920 --height 945", proc.stdout
+            )
 
     def test_a_second_run_deletes_the_renders_the_first_made(self):
         with tempfile.TemporaryDirectory() as out:
@@ -292,6 +302,24 @@ class Bends(unittest.TestCase):
                 sorted(os.listdir(out)),
                 ["bend-1.png", "notes.txt", "renders.json", "sheet-1.png"],
             )
+
+
+class Clear(unittest.TestCase):
+    def test_an_out_folder_with_no_earlier_run_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as out:
+            open(os.path.join(out, "notes.txt"), "w").close()
+            look_renders.clear(out)
+            self.assertEqual(os.listdir(out), ["notes.txt"])
+
+    def test_an_unreadable_renders_json_stops_the_run_naming_it(self):
+        with tempfile.TemporaryDirectory() as out:
+            path = os.path.join(out, "renders.json")
+            with open(path, "w", encoding="utf8") as fh:
+                fh.write('{"sheets": [')
+            with self.assertRaises(SystemExit) as stop:
+                look_renders.clear(out)
+            self.assertIn(f"{path} does not parse", str(stop.exception.code))
+            self.assertTrue(os.path.exists(path))
 
 
 class Times(unittest.TestCase):
@@ -339,12 +367,39 @@ class StagedBuilds(unittest.TestCase):
                     "starts animations when others finish (div#bottom)", proc.stdout
                 )
 
+    def test_a_frame_loop_build_cannot_be_rendered_naming_it_unlike_every_contact_cropped(
+        self,
+    ):  # #546
+        for mode, extra in (
+            ("contacts", ["--contact", "joint=#logo@105,85"]),
+            ("bends", []),
+        ):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as out:
+                proc = run(
+                    mode, os.path.join(self.FRAMES, "raf-asset.html"), *extra, "--out", out
+                )  # fmt: skip
+                self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+                self.assertIn(
+                    "by rewriting their style or attributes from a script, frame by frame (path#arch)",
+                    proc.stdout,
+                )
+                self.assertIn("\nShoot it by hand with look.py zoom", proc.stdout)
+                self.assertFalse(os.path.exists(os.path.join(out, "renders.json")))
+
 
 class Arguments(unittest.TestCase):
     def test_a_contact_without_a_point_is_a_usage_error(self):
         proc = run(
             "contacts", os.path.join(FIXTURES, "contacts.html"),
             "--contact", "gap=#a", "--out", "x",
+        )  # fmt: skip
+        self.assertEqual(proc.returncode, 2, proc.stderr)
+        self.assertIn("--contact wants NAME=X,Y", proc.stderr)
+
+    def test_a_contact_whose_point_is_no_number_is_a_usage_error(self):  # #154
+        proc = run(
+            "contacts", os.path.join(FIXTURES, "contacts.html"),
+            "--contact", "gap=1.2.3,4", "--out", "x",
         )  # fmt: skip
         self.assertEqual(proc.returncode, 2, proc.stderr)
         self.assertIn("--contact wants NAME=X,Y", proc.stderr)

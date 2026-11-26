@@ -9,6 +9,7 @@ import concurrent.futures
 import importlib.util
 import json
 import os
+import pathlib
 import re
 import sys
 import tempfile
@@ -76,6 +77,9 @@ def setUpModule():
         "clean": lambda: run("clean"),
         "undeclared": lambda: run("clean", parts=None, key="undeclared"),
         "absent": lambda: run("clean", parts=ABSENT, key="absent"),
+        "later": lambda: run(
+            "later", parts=os.path.join(FIXTURES, "contrast-tier01-later-parts.json")
+        ),
     }
     with concurrent.futures.ThreadPoolExecutor(2) as pool:
         DONE.update(zip(runs, pool.map(lambda go: go(), runs.values()), strict=True))
@@ -97,6 +101,7 @@ class Table(unittest.TestCase):
         self.assertEqual((TABLE.gap, TABLE.gap_large), (0.5, 0.4))
         self.assertEqual(TABLE.aim[:2], (7, 4.5))
         self.assertEqual(TABLE.hued, 0.05)
+        self.assertEqual(TABLE.more, 4.5)
 
     def test_a_missing_doubled_or_malformed_line_is_refused(self):
         lines = TABLE_TEXT.splitlines()
@@ -112,15 +117,87 @@ class Table(unittest.TestCase):
             ),
             "want one of": TABLE_TEXT + "vault.contrast | made-up | 3\n",
         }
+        more = next(line for line in lines if "| more |" in line)
+        cases |= {
+            "no vault.contrast-ladder | more line": "\n".join(
+                line for line in lines if line != more
+            ),
+            "| more wants 1 number(s) over 0, got '4.5, 7'": TABLE_TEXT.replace(
+                more, more + ", 7"
+            ),
+            "| more wants numbers over 0": TABLE_TEXT.replace(
+                more, more.replace("| 4.5", "| 0")
+            ),
+            "| more wants 1 number(s) over 0, got 'high'": TABLE_TEXT.replace(
+                more, more.replace("| 4.5", "| high")
+            ),
+        }
         for why, text in cases.items():
             with self.subTest(why), self.assertRaises(contrasts.TableError) as caught:
                 contrasts.parse_table(text)
             self.assertIn(why, str(caught.exception))
 
-    def test_more_contrast_raises_the_text_floors_alone(self):
-        more = contrasts.scheme_floors("more contrast", TABLE)
-        self.assertEqual((more.body, more.large), (7, 4.5))
-        self.assertEqual(contrasts.scheme_floors("dark", TABLE), TABLE.floors)
+    def test_more_contrast_raises_every_role_and_dark_keeps_the_floors(self):
+        more = contrasts.scheme_table("more contrast", TABLE)
+        self.assertEqual((more.floors.body, more.floors.large), (7, 4.5))
+        self.assertEqual(
+            (more.edge, more.icon, more.state, more.photo, more.mark), (4.5,) * 5
+        )
+        self.assertEqual(contrasts.scheme_table("dark", TABLE), TABLE)
+
+
+class Rungs(unittest.TestCase):
+    def test_a_rung_is_the_highest_its_role_clears_capped_at_its_top(self):
+        cases = {
+            ("text", 4.49): None,
+            ("text", 4.5): 4.5,
+            ("text", 6.99): 4.5,
+            ("text", 7): 7,
+            ("text", 15): 7,
+            ("large text", 2.99): None,
+            ("large text", 3): 3,
+            ("large text", 4.49): 3,
+            ("large text", 4.5): 4.5,
+            ("icon", 3): 3,
+            ("icon", 4.5): 4.5,
+            ("icon", 7): 4.5,
+            ("chart mark", 6.99): 4.5,
+        }
+        for (role, ratio), want in cases.items():
+            with self.subTest(role=role, ratio=ratio):
+                self.assertEqual(contrasts.rung(ratio, role, TABLE), want)
+
+    def test_a_drop_is_reported_and_a_rise_or_a_move_above_the_top_is_not(self):
+        light = [
+            contrasts.Reading("p#drop", "text", 7.31),
+            contrasts.Reading("p#rise", "text", 5),
+            contrasts.Reading("p#top", "text", 15),
+            contrasts.Reading("button#icon", "icon", 18),
+            contrasts.Reading("p#light-only", "text", 8),
+        ]
+        dark = [
+            contrasts.Reading("p#drop", "text", 4.62),
+            contrasts.Reading("p#drop", "text", 9),
+            contrasts.Reading("p#rise", "text", 8),
+            contrasts.Reading("p#top", "text", 12),
+            contrasts.Reading("button#icon", "icon", 5),
+            contrasts.Reading("p#dark-only", "text", 4.6),
+        ]
+        (fault,) = contrasts.rung_drops(light, dark, TABLE)
+        self.assertEqual(fault["subject"], "p#drop")
+        self.assertEqual(
+            fault["detail"],
+            "in the dark scheme, is 4.62:1, down from 7.31:1 on the light page: off the 7:1 rung it holds there, "
+            "onto 4.5:1 (vault.contrast-ladder)",
+        )
+
+    def test_a_part_is_compared_within_its_role(self):
+        light = [
+            contrasts.Reading("button#go", "text", 8),
+            contrasts.Reading("button#go", "control edge", 5),
+        ]
+        dark = [contrasts.Reading("button#go", "control edge", 8)]
+        self.assertEqual(contrasts.rung_drops(light, dark, TABLE), [])
 
     def test_a_bad_table_stops_the_run_with_exit_2(self):
         with tempfile.NamedTemporaryFile("w", suffix=".table", delete=False) as fh:
@@ -240,11 +317,162 @@ class Chart(unittest.TestCase):
         )
 
     def test_a_filled_mark_takes_the_mark_figure_against_the_ground(self):
-        (fault,) = self.chart([0xDD] * 3)
+        (fault,), readings = self.chart([0xDD] * 3)
         self.assertEqual(fault["subject"], "rect#bar")
         self.assertIn("against the chart's ground (#ffffff)", fault["detail"])
         self.assertIn("3:1 needed", fault["detail"])
-        self.assertEqual(self.chart([0x33] * 3), [])
+        self.assertEqual(readings, [])
+        faults, (reading,) = self.chart([0x33] * 3)
+        self.assertEqual(faults, [])
+        self.assertEqual(reading[:2], ("rect#bar", "chart mark"))
+        self.assertAlmostEqual(reading.ratio, 12.63, places=2)
+
+
+class Slides(unittest.TestCase):  # #427
+    LIGHT = contrasts.Figure(1.2, np.array([255.0] * 3), np.array([0xF2] * 3))
+    DARK = contrasts.Figure(9.0, np.array([255.0] * 3), np.array([0x22] * 3))
+    MID = contrasts.Figure(4.0, np.array([255.0] * 3), np.array([0x80] * 3))
+
+    def verdict(self, readings):
+        photo = contrasts.answering.unjudged()
+        self.passed = contrasts._photo_verdict(photo, readings, TABLE)
+        return photo
+
+    def test_a_control_takes_its_worst_figure_over_every_slide(self):
+        photo = self.verdict(
+            [
+                (None, [("button#save", self.DARK)]),
+                ("on its slide 2 of 2", [("button#save", self.LIGHT)]),
+            ]
+        )
+        (fault,) = photo.faults
+        self.assertEqual(self.passed, [])
+        self.assertEqual(fault["subject"], "button#save")
+        self.assertIn(
+            "1.20:1 at best on its slide 2 of 2 (#ffffff against #f2f2f2",
+            fault["detail"],
+        )
+
+    def test_a_control_that_holds_on_every_slide_passes(self):
+        photo = self.verdict(
+            [
+                (None, [("button#save", self.DARK)]),
+                ("on its slide 2 of 2", [("button#save", self.MID)]),
+            ]
+        )
+        self.assertEqual((photo.faults, photo.unmeasured), ([], []))
+        self.assertEqual(
+            self.passed,
+            [contrasts.Reading("button#save", "control on a photo", 4.0)],
+        )
+
+    def test_a_reason_seen_on_several_slides_is_named_once_where_first_seen(self):
+        why = "lies over a video, which a script draws"
+        photo = self.verdict(
+            [(None, [("a#play", why)]), ("on its slide 2 of 2", [("a#play", why)])]
+        )
+        self.assertEqual(photo.unmeasured, [f"a#play {why}"])
+
+
+def photo_answer(fixture, carousel, fresh=None):
+    from playwright.sync_api import sync_playwright
+
+    access = library("check-access.py")
+    url = pathlib.Path(FIXTURES, fixture).resolve().as_uri()
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        try:
+
+            def load():
+                page = browser.new_page()
+                page.goto(url)
+                return page
+
+            out, _ = contrasts.measure(
+                load(),
+                access.contrast_js,
+                TABLE,
+                parts={"carousel": carousel},
+                absent={"chart"},
+                texts=None,
+                fresh=fresh or load,
+            )
+        finally:
+            browser.close()
+    return out["vault.controls-on-photo"]
+
+
+class SlidePassErrors(unittest.TestCase):  # #528
+    def photo_answer(self, fresh):
+        return photo_answer("contrast-tier01-later.html", "#deck", fresh)
+
+    def test_a_load_that_throws_is_a_reason_naming_the_error(self):
+        from playwright.sync_api import Error as PlaywrightError
+
+        def fresh():
+            raise PlaywrightError("Timeout 30000ms exceeded.\n=== logs ===")
+
+        photo = self.photo_answer(fresh)
+        self.assertEqual(photo.faults, [])
+        (why,) = photo.unmeasured
+        self.assertIn("slides could not be stepped through", why)
+        self.assertTrue(why.endswith("(Error: Timeout 30000ms exceeded.)"), why)
+
+    def test_a_page_that_throws_mid_pass_is_closed_and_a_reason(self):
+        from playwright.sync_api import Error as PlaywrightError
+
+        class Page:
+            closed = False
+
+            def evaluate(self, *_):
+                raise PlaywrightError("Execution context was destroyed")
+
+            def close(self):
+                self.closed = True
+
+        page = Page()
+        photo = self.photo_answer(lambda: page)
+        self.assertEqual(photo.faults, [])
+        (why,) = photo.unmeasured
+        self.assertIn("Execution context was destroyed", why)
+        self.assertTrue(page.closed)
+
+
+class SlidePassLimits(unittest.TestCase):  # #512
+    @classmethod
+    def setUpClass(cls):
+        cls.photo = photo_answer("contrast-tier01-decks.html", ".deck")
+
+    def test_no_deck_is_faulted_and_each_names_one_reason(self):
+        self.assertEqual(self.photo.faults, [])
+        self.assertEqual(len(self.photo.unmeasured), 4, self.photo.unmeasured)
+
+    def test_dots_past_max_slides_are_named_unread(self):
+        self.assertIn(
+            "div#deck-dots holds 13 page dots, so its slides past 12 were not read",
+            self.photo.unmeasured,
+        )
+
+    def test_a_next_button_still_showing_new_slides_is_named_unread(self):
+        self.assertIn(
+            "div#deck-endless still showed a new slide after 12 presses of its next button, so its later "
+            "slides were not read",
+            self.photo.unmeasured,
+        )
+
+    def test_a_deck_with_no_dots_or_next_is_named_read_at_load_alone(self):
+        self.assertIn(
+            "div#deck-bare shows no page dots or next button the check can press, so only the slide it shows "
+            "at load was read",
+            self.photo.unmeasured,
+        )
+
+    def test_a_deck_that_never_holds_still_is_named_unread(self):
+        self.assertIn(
+            "div#deck-restless never held still on div#deck-restless's slide 2, reached by its next "
+            "button, so that slide was not read",
+            self.photo.unmeasured,
+        )
 
 
 PLANT = re.compile(
@@ -260,7 +488,7 @@ class EndToEnd(unittest.TestCase):
             os.path.join(FIXTURES, "contrast-tier01-fault.html"), encoding="utf8"
         ) as fh:
             plants = [(m[0] or m[3], m[1] or m[2]) for m in PLANT.findall(fh.read())]
-        self.assertEqual(len(plants), 11)
+        self.assertEqual(len(plants), 16)
         for plant, record in plants:
             with self.subTest(plant):
                 subjects = [f["subject"] for f in found["answers"][record]["faults"]]
@@ -275,6 +503,36 @@ class EndToEnd(unittest.TestCase):
             "div#dots-plant holds 3 page dots that differ by opacity alone", out
         )
         self.assertIn("mark it by fill, size or shape", out)
+
+    def test_a_control_that_fails_on_a_later_slide_alone_is_named_on_that_slide(
+        self,
+    ):  # #427
+        photo = DONE["fault"][3]["answers"]["vault.controls-on-photo"]
+        faults = {f["subject"]: f["detail"] for f in photo["faults"]}
+        self.assertEqual(photo["unmeasured"], [])
+        self.assertIn(
+            "at best on div#deck-dots's slide 2 of 2 (", faults["button#slide-plant"]
+        )
+        self.assertIn(
+            "at best on div#deck-next's slide 2, reached by its next button (",
+            faults["button#next-plant"],
+        )
+        self.assertIn(
+            "at best on div#deck-swap's slide 2, reached by its next button (",
+            faults["button#swap-plant"],
+        )
+
+    def test_a_control_on_a_photo_only_from_slide_2_is_read_past_a_submitting_next(
+        self,
+    ):  # #528
+        photo = DONE["later"][3]["answers"]["vault.controls-on-photo"]
+        (fault,) = photo["faults"]
+        self.assertEqual(photo["unmeasured"], [])
+        self.assertTrue(fault["subject"].endswith("#later-plant"), fault)
+        self.assertIn(
+            "at best on div#deck's slide 2, reached by its next button (",
+            fault["detail"],
+        )
 
     def test_a_thin_face_short_of_the_ladders_aim_is_a_note_not_a_fault(self):
         ladder = DONE["fault"][3]["answers"]["vault.contrast-ladder"]
@@ -297,6 +555,40 @@ class EndToEnd(unittest.TestCase):
         self.assertNotIn("p#contrast-plant", theme)
         light = {f["subject"] for f in answers["vault.contrast"]["faults"]}
         self.assertFalse({"p#theme-plant", "p#more-plant"} & light)
+
+    def test_a_part_a_rung_lower_in_dark_is_a_theme_fault_and_no_contrast_fault(self):
+        answers = DONE["fault"][3]["answers"]
+        theme = {
+            f["subject"]: f["detail"] for f in answers["vault.theme-contrast"]["faults"]
+        }
+        detail = theme["p#rung-plant"]
+        self.assertRegex(
+            detail,
+            r"^in the dark scheme, is 5\.5\d:1, down from 18\.8\d:1 on the light page: off the 7:1 rung it "
+            r"holds there, onto 4\.5:1 \(vault\.contrast-ladder\)",
+        )
+        self.assertNotIn(
+            "p#rung-plant", {f["subject"] for f in answers["vault.contrast"]["faults"]}
+        )
+        self.assertNotIn("down from", theme["p#theme-plant"])
+
+    def test_more_contrast_holds_an_icon_to_its_raised_rung(self):
+        answers = DONE["fault"][3]["answers"]
+        (detail,) = [
+            f["detail"]
+            for f in answers["vault.theme-contrast"]["faults"]
+            if f["subject"].endswith("#more-icon-plant")
+        ]
+        self.assertIn("in the more contrast scheme, ", detail)
+        self.assertIn("4.5:1 needed", detail)
+        for qid in ("vault.contrast-ladder", "vault.contrast"):
+            with self.subTest(qid):
+                self.assertFalse(
+                    any(
+                        f["subject"].endswith("#more-icon-plant")
+                        for f in answers[qid]["faults"]
+                    )
+                )
 
     def test_the_clean_page_meets_every_record(self):
         code, out, err, found = DONE["clean"]
@@ -325,8 +617,16 @@ class Undeclared(unittest.TestCase):  # #429, #453
                 "no chart was declared",
                 ["figure#chart > svg", "canvas#spark", "svg#bars", "svg#nest"],
             ),
-            ("vault.controls-on-photo", "no carousel was declared", ["ul.dots"]),
-            ("vault.carousel-focus", "no carousel was declared", ["ul.dots"]),  # #453
+            (
+                "vault.controls-on-photo",
+                "no carousel was declared",
+                ["ul.dots", "ul.pips"],
+            ),
+            (
+                "vault.carousel-focus",
+                "no carousel was declared",
+                ["ul.dots", "ul.pips"],
+            ),  # #453
         ):
             with self.subTest(qid):
                 reasons = [u["reason"] for u in answers[qid]["unmeasured"]]

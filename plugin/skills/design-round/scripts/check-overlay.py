@@ -41,7 +41,6 @@ print on stderr.
 
 import argparse
 import base64
-import importlib.util
 import io
 import math
 import os
@@ -50,11 +49,11 @@ import sys
 import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_spec = importlib.util.spec_from_file_location(
-    "check_flow", os.path.join(HERE, "check-flow.py")
-)
-flow = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(flow)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+flow = siblings.load(HERE, "check-flow.py")
 try:
     import numpy as np
     from PIL import Image
@@ -69,7 +68,8 @@ first_line, PageTimeoutError, RefusedError = (
 )
 
 # The largest edge offset vault.curves-script allows, in px at the source's size,
-# and the source's kind as the report names it, by whether the source is an SVG.
+# and the source's kind as the report names it, by whether the source is an SVG
+# that draws no raster image.
 # Against a raster, half a pixel: a standard tracer's criterion (potrace, Selinger
 # 2003 §2.2), since the source's own edge is known to no better. Against an SVG,
 # this script's resolution, the reading error measured below, since the founder
@@ -77,6 +77,8 @@ first_line, PageTimeoutError, RefusedError = (
 # docs/research/house-audit-craft.md §1.1). The error reads high, so at 4x a mark
 # 0.02 px off can fail.
 LIMITS = {True: (0.1, "an SVG"), False: (0.5, "a raster")}
+# The SVG elements that draw a raster: an image, a filter's image, or HTML holding one.
+RASTER_TAGS = {"image", "feImage", "foreignObject"}
 # Measured on a 120x80 arch shifted 0 to 1 px (#73 review): the offset read
 # up to 0.05 px high at 8x, 0.08 at 4x, 0.18 at 2x and 0.30 at 1x, so below 4x
 # a mark 0.3 px off can fail.
@@ -108,8 +110,9 @@ def px(value):
 
 
 def read(path):
-    """A file as {path, data, mime, size, viewbox}: size is its own, viewbox
-    whether it can be drawn at another."""
+    """A file as {path, data, mime, size, viewbox, vector}: size is its own,
+    viewbox whether it can be drawn at another, vector whether it is an SVG
+    that draws no raster image."""
     with open(path, "rb") as fh:
         data = fh.read()
     if path.lower().endswith(".svg"):
@@ -136,6 +139,9 @@ def read(path):
             "mime": "image/svg+xml",
             "size": size,
             "viewbox": box is not None,
+            "vector": not any(
+                e.tag.rpartition("}")[2] in RASTER_TAGS for e in root.iter()
+            ),
         }
     try:
         image = Image.open(io.BytesIO(data))
@@ -154,6 +160,7 @@ def read(path):
         "mime": mime,
         "size": image.size,
         "viewbox": True,
+        "vector": False,
     }
 
 
@@ -298,7 +305,7 @@ def parse(argv):
     except (OSError, ValueError) as exc:
         p.error(str(exc))
     at.box = at.files["source"]["size"]
-    at.limit, at.source_kind = LIMITS[at.files["source"]["mime"] == "image/svg+xml"]
+    at.limit, at.source_kind = LIMITS[at.files["source"]["vector"]]
     if at.size:
         size = flow.size_arg(p, "--size", at.size, number=float, example="120x80")
         w, h = size["width"], size["height"]

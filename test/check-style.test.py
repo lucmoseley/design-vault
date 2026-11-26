@@ -4,7 +4,8 @@ It is a suite of the commit gate (test/all.sh): loosening it lets a page pass
 a computed-style record it misses, or fail one it meets.
 test/fixtures/probe/style-fault.html plants one fault per record, on an
 element whose id is f- and the record's name, and every record must fail on
-its plant, or on the whole selection where WHOLE names it.
+its plant, or on the whole selection where WHOLE names it. A record's
+extra plants take f-<record>-<variant>.
 test/fixtures/probe/style-clean.html meets every record but those UNMET names,
 and nothing may fail or go unjudged there.
 """
@@ -109,6 +110,22 @@ def tearDownModule():
         shutil.rmtree(work, ignore_errors=True)
 
 
+def plant_at(plant):
+    return re.compile(re.escape("#" + plant) + r"(?![\w-])")
+
+
+def read_records():
+    records = {}
+    for name in os.listdir(RULES):
+        with open(os.path.join(RULES, name), encoding="utf8") as fh:
+            for chunk in re.split(r"^### ", fh.read(), flags=re.M)[1:]:
+                rid, _, body = chunk.partition("\n")
+                records[rid.strip()] = dict(
+                    re.findall(r"^- ([\w-]+): (.*)$", body, flags=re.M)
+                )
+    return records
+
+
 def table_ids():
     with open(TABLE, encoding="utf8") as fh:
         blocks = style.parse(fh.read())
@@ -134,13 +151,26 @@ class Pages(unittest.TestCase):
                         and WHOLE[rid].endswith(" ")
                     ]
                 else:
-                    plant = re.compile(
-                        re.escape("#f-" + rid.removeprefix("vault.")) + r"(?![\w-])"
-                    )
+                    plant = plant_at("f-" + rid.removeprefix("vault."))
                     hit = [s for s in subjects if plant.search(s)]
                 self.assertTrue(hit, f"no miss on its plant: {subjects[:5]}")
                 self.assertIn(f"{rid}: fail", proc.stdout)
         self.assertIn("every finding: ", proc.stdout)
+
+    def test_type_size_fails_each_plant_on_the_one_floor_it_breaks(self):
+        """#479, #514. Pass pair: test_the_clean_page_reports_nothing."""
+        _, found = RAN["fault"]
+        (f,) = [f for f in found if f["id"] == "vault.type-size"]
+        for plant, read in (
+            ("f-type-size-tall", "style:font-size"),
+            ("f-type-size-short", "style:font-size times xheight"),
+            ("f-type-size-nearest", "style:font-size times xheight"),
+            ("f-type-size-nearest-dense", "style:font-size times xheight"),
+        ):
+            with self.subTest(plant):
+                at = plant_at(plant)
+                reads = {m["read"] for m in f["misses"] if at.search(m["subject"])}
+                self.assertEqual(reads, {read})
 
     def test_every_block_of_the_table_misses_on_the_fault_page(self):
         _, found = RAN["fault"]
@@ -182,19 +212,37 @@ class Pages(unittest.TestCase):
 
 class Records(unittest.TestCase):
     def test_every_record_the_table_answers_names_this_script(self):
-        records = {}
-        for name in os.listdir(RULES):
-            with open(os.path.join(RULES, name), encoding="utf8") as fh:
-                for chunk in re.split(r"^### ", fh.read(), flags=re.M)[1:]:
-                    rid, _, body = chunk.partition("\n")
-                    records[rid.strip()] = dict(
-                        re.findall(r"^- ([\w-]+): (.*)$", body, flags=re.M)
-                    )
+        records = read_records()
         for rid in table_ids():
             with self.subTest(rid):
                 self.assertIn(rid, records)
                 self.assertEqual(records[rid].get("answered-by"), "script")
                 self.assertRegex(records[rid].get("script", ""), r"^check-style\.py ")
+
+    def test_type_size_output_rounds_each_table_threshold_up(self):
+        """#514."""
+        output = read_records()["vault.type-size"]["output"]
+        with open(TABLE, encoding="utf8") as fh:
+            rules = [
+                r
+                for b in style.parse(fh.read())
+                for r in b.rules
+                if r.id == "vault.type-size" and r.must.op == ">="
+            ]
+        thresholds = collections.defaultdict(dict)
+        for r in rules:
+            _, selection, read, _ = r.line.split(" | ")
+            ((px, _),) = r.must.values
+            thresholds[selection][read] = px
+        self.assertEqual(len(thresholds), 2)
+        for selection, by_read in thresholds.items():
+            with self.subTest(selection):
+                base = by_read["style:font-size"]
+                ratio = by_read["style:font-size times xheight"] / base
+                self.assertIn(
+                    f"max({base:g}, {base:g} × {ratio:g} ÷ xheight) px, rounded up",
+                    output,
+                )
 
 
 class Table(unittest.TestCase):

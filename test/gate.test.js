@@ -94,7 +94,7 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.hover-content": "script",
     "vault.native-scroll": "script",
     "vault.drag-release": "script",
-    "vault.drag-release-spring-look": "look",
+    "vault.drag-release-spring-code": "code",
     "vault.dialog-default": "script",
     "vault.dialog-default-look": "look",
     "vault.menu-click": "script",
@@ -114,6 +114,7 @@ test("a live record outside the pinned gate map and the pinned type-critic list 
     "vault.axis-properties": "script",
     "vault.border-shadow": "script",
     "vault.calm-colour-share": "script",
+    "vault.caption-colours": "script",
     "vault.caret-shape": "script",
     "vault.dark-raise": "script",
     "vault.edit-wrap": "script",
@@ -213,6 +214,8 @@ const refusals = [
   ["record-inputs-alone.md", /:12: vault\.inputs-alone gives inputs with no output/m],
   ["record-bad-ledger.md", /:13: vault\.bad-ledger names a ledger entry that is no row key \(or `none`\): forms$/m],
   ["project-stage-no-target.md", /:1: demo\.staged is loaded by the builder \(stage role\) but gives no target$/m],
+  ["record-unread-target.md", /:14: vault\.unread-target gives a target no reader prints \(stage value, answered by script\): only a record at function, role, treatment, or answered by builder, gives one$/m],
+  ["project-unread-target.md", /:10: demo\.unread gives a target no reader prints \(no stage, answered by look\): only a record at function, role, treatment, or answered by builder, gives one$/m],
 ];
 for (const [fixture, why] of refusals) {
   test(`check refuses ${fixture} with exit 1, naming the line and the fault, and nothing else`, () => {

@@ -46,25 +46,21 @@ import argparse
 import collections
 import contextlib
 import datetime
-import importlib.util
 import json
 import os
 import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-probe = _load("probe", os.path.join(HERE, "probe.py"))
-cross = _load("check_cross", os.path.join(HERE, "check-cross.py"))
-conditions = _load("conditions", os.path.join(HERE, "conditions.py"))
+probe = siblings.load(HERE, "probe.py")
+cross = siblings.load(HERE, "check-cross.py")
+conditions = siblings.load(HERE, "conditions.py")
+rule_table = siblings.load(HERE, "rule-table.py")
 flow, layout = probe.flow, probe.layout
 
 TABLE = os.path.join(HERE, "check-style.table")
@@ -77,8 +73,7 @@ DEFAULT = "page as it loads"
 Block = collections.namedtuple("Block", "kind header given span brief compare rules")
 
 
-class TableError(Exception):
-    """A table check-style.py cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse(text):
@@ -94,10 +89,7 @@ def parse(text):
             blocks.append(current._replace(rules=_rules(pending, current)))
         pending = []
 
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+    for n, line in rule_table.lines(text):
         try:
             m = re.fullmatch(r"define\s+\$([\w-]+)\s*=\s*(.+)", line)
             header = None if m else _header(line)
@@ -384,16 +376,10 @@ def _compare(browser, url, block, *, widths, heights, parts, timeout):
 def _answered(out):
     for f in out.values():
         judged = f.pop("_judged", False)
-        if f["misses"]:
-            f["answer"] = "fail"
-        elif f["unjudged"]:
-            f["answer"] = "not judged"
-        elif judged:
-            f["answer"] = "pass"
+        f["answer"] = rule_table.answer(
+            misses=f["misses"], unjudged=f["unjudged"], judged=judged
+        )
     return list(out.values())
-
-
-RANK = {"fail": 3, "not judged": 2, "pass": 1, "no match": 0}
 
 
 def merged(ran):
@@ -404,8 +390,7 @@ def merged(ran):
             m = out.setdefault(f["id"], _finding(f["id"]))
             for bucket in ("misses", "unjudged"):
                 m[bucket] += [{**held, "block": block.header} for held in f[bucket]]
-            if RANK[f["answer"]] > RANK[m["answer"]]:
-                m["answer"] = f["answer"]
+            m["answer"] = max(m["answer"], f["answer"], key=rule_table.ANSWERS.index)
     return list(out.values())
 
 

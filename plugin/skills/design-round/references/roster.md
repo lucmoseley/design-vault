@@ -63,6 +63,8 @@ So a locked-palette mascot stays on GPT (rule 3), and a locked palette with the 
 
 ## Cut-out (design-vault#54)
 
+Record: `vault.render-checkerboard`.
+
 For brand art that needs a transparent background, such as a mascot or a spot illustration placed on a page.
 
 | Tool | Purpose | Asset class | Free or paid | House disposition | Fact | Dialect |
@@ -103,7 +105,7 @@ For brand art that needs a transparent background, such as a mascot or a spot il
 |---|---|---|---|---|---|---|
 | Chrome DevTools — Styles pane and Changes panel | Edit a `:root` custom property on the dev server, then copy the CSS diff into chat | Web surfaces | Free | use — rung one | Nothing to install. | — |
 | `impeccable live` | The founder picks one element in the browser and chooses among three generated alternatives | Web surfaces | Free | use — rung two | Needs the project's dev server running. | — |
-| Tweakpane | A slider panel bound to custom properties, with copy-to-clipboard read-back | Web surfaces | Free, MIT, zero dependencies | build when needed — rung three | Built to [polish.md](polish.md) the first time a favourite moves several axes at once. `lil-gui` is the fallback. `leva` is rejected on its dependency tree. | — |
+| Tweakpane | A slider panel bound to custom properties, with copy-to-clipboard read-back | Web surfaces | Free, MIT, zero dependencies | build when needed — rung three | Built to [polish.md](polish.md) the first time a favourite moves several axes at once. `lil-gui` is the fallback. | — |
 | Google Stitch | Generated screens | Web surfaces | Free | per project | Returns Tailwind HTML, which is fine on a Tailwind site. | — |
 | `stitch-skill` — Google Stitch's plugin | The same, from the agent | Web surfaces | Free | per project | Assumes Tailwind and React Router. Caveat: its install overwrites whichever `DESIGN.md` sits at the project root. | — |
 

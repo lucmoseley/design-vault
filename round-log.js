@@ -136,10 +136,14 @@ function repoOf(file) {
   return git;
 }
 
-/** When `file` was last committed, as git's ISO time, or null where git holds no commit of it. Throws where git cannot read it. */
+// Not %cI: git 2.45 changed its zero offset from +00:00 to Z (Documentation/RelNotes/2.45.0.txt), so it printed differently by machine (#532).
+const commitTime = (seconds) => new Date(Number(seconds) * 1000).toISOString().replace(".000Z", "Z");
+
+/** When `file` was last committed, as an ISO time, or null where git holds no commit of it. Throws where git cannot read it. */
 function lastCommitted(file) {
   const git = repoOf(file);
-  return git && (git("log", "-1", "--format=%cI", "--", path.basename(file)).trim() || null);
+  const seconds = git && git("log", "-1", "--format=%ct", "--", path.basename(file)).trim();
+  return seconds ? commitTime(seconds) : null;
 }
 
 /** The records a gate list carries in the gate files `texts`, as one text that no move between files or reordering changes. */
@@ -153,7 +157,7 @@ const gateRecords = (texts) =>
     .join("\n");
 
 /**
- * The time, as git's ISO time, of the last commit after `since` on the first-parent line that changed a record a gate
+ * The time, as an ISO time, of the last commit after `since` on the first-parent line that changed a record a gate
  * list carries in `file` (a gate file, or a directory of them), against its first parent; null where none did. A merge
  * stands for its branch's commits, so a change made on a branch before the run and merged after it counts. Throws where
  * git cannot read it.
@@ -177,10 +181,11 @@ function lastGateChange(file, since) {
             }),
         )
       : "";
-  const commits = git("log", "--first-parent", "--format=%H%x09%P%x09%cI", "--", name)
+  const commits = git("log", "--first-parent", "--format=%H%x09%P%x09%ct", "--", name)
     .split("\n")
     .filter(Boolean)
     .map((line) => line.split("\t"))
+    .map(([commit, parents, seconds]) => [commit, parents, commitTime(seconds)])
     .filter(([, , time]) => Date.parse(time) > Date.parse(since));
   for (const [commit, parents, time] of commits) if (records(commit) !== records(parents.split(" ")[0])) return time;
   return null;
@@ -241,4 +246,6 @@ const main = (argv) =>
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { checkRoundLog, FIELDS, CALIBRATION_EVERY };
+const isRowOfRound = (row, { ticket, round }) => row.ticket === ticket && row.round === round;
+
+module.exports = { checkRoundLog, isRowOfRound, FIELDS, CALIBRATION_EVERY };

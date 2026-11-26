@@ -121,7 +121,7 @@ const runMutated = (mutate) => {
 
 test("a reference kept for one project passes with that project's own verdict", () => {
   const result = runMutated((gallery) => {
-    gallery.projects.acme = { name: "Acme", rules: "docs/brand/brand-sheet.md in acme", verdicts: ["on-brand"], groups: [{ id: "hero", name: "Hero" }] };
+    gallery.projects.acme = { name: "Acme", rules: "docs/brand/brand-sheet.md in acme/acme", verdicts: ["on-brand"], groups: [{ id: "hero", name: "Hero" }] };
     gallery.entries[0].project = "acme";
     gallery.entries[0].fit = { acme: { verdict: "on-brand", groups: ["hero"], take: "Keep the quiet header." } };
   });
@@ -131,7 +131,7 @@ test("a reference kept for one project passes with that project's own verdict", 
 test("a judged reference with no group, and a project with none, pass", () => {
   const result = runMutated((gallery) => {
     gallery.entries[0].fit.manta.groups = [];
-    gallery.projects.acme = { name: "Acme", rules: "docs/brand/brand-sheet.md in acme", verdicts: ["on-brand"], groups: [] };
+    gallery.projects.acme = { name: "Acme", rules: "docs/brand/brand-sheet.md in acme/acme", verdicts: ["on-brand"], groups: [] };
     gallery.entries[2].fit = { acme: { verdict: "on-brand", groups: [], take: "Keep the quiet header." } };
   });
   assert.equal(result.status, 0, result.stderr);
@@ -159,7 +159,7 @@ test("a project's gate file written as <path> in <owner>/<repo> passes", () => {
   assert.equal(result.status, 0, result.stderr);
 });
 
-for (const gate of [
+const BAD_REPO_MARKDOWN = [
   null,
   42,
   "",
@@ -172,15 +172,17 @@ for (const gate of [
   "docs\\..\\..\\fit-gate.md in lucmoseley/mantahostels",
   "C:/fit-gate.md in lucmoseley/mantahostels",
   "docs/brand/fit-gate.md in ../..",
-])
-  test(`a project gate of ${JSON.stringify(gate)} is refused as one project-gate fault naming projects.manta.gate`, () => {
-    const result = runMutated((gallery) => {
-      gallery.projects.manta.gate = gate;
+];
+for (const [field, values] of [["gate", BAD_REPO_MARKDOWN], ["rules", [undefined, ...BAD_REPO_MARKDOWN]]])
+  for (const value of values)
+    test(`a project ${field} of ${JSON.stringify(value)} is refused as one project-${field} fault naming projects.manta.${field}`, () => {
+      const result = runMutated((gallery) => {
+        gallery.projects.manta[field] = value;
+      });
+      assert.equal(result.status, 1, result.stdout);
+      assert.equal(result.faults.length, 1, `expected one fault, got:\n${result.faults.join("\n")}`);
+      assert.match(result.faults[0], new RegExp(`^project-${field}: projects\\.manta\\.${field} `));
     });
-    assert.equal(result.status, 1, result.stdout);
-    assert.equal(result.faults.length, 1, `expected one fault, got:\n${result.faults.join("\n")}`);
-    assert.match(result.faults[0], /^project-gate: projects\.manta\.gate /);
-  });
 
 for (const desktop of [null, 1536, "", "1536", "1536x", "1536 x 864", "1536X864", "0x864", "-1536x864", "1536.5x864", "1536x864px"])
   test(`a project desktop of ${JSON.stringify(desktop)} is refused as one project-desktop fault naming projects.manta.desktop`, () => {

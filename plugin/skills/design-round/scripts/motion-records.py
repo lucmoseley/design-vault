@@ -16,7 +16,16 @@ to, else no match.
 import collections
 import itertools
 import math
+import os
+import sys
 import re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+rule_table = siblings.load(HERE, "rule-table.py")
 
 NUMBER = r"(\d+(?:\.\d+)?)"
 Check = collections.namedtuple("Check", "pattern parse needs")
@@ -80,8 +89,7 @@ CHECKS = {
 DRAG_PARTS = ("bottom-sheet", "card")
 
 
-class TableError(Exception):
-    """A table line check-flow cannot run: exit 2."""
+TableError = rule_table.TableError
 
 
 def parse_value(mode, value):
@@ -97,19 +105,23 @@ def parse_value(mode, value):
 
 def parse_table(text):
     """The table's lines, each a Line; `#` lines and blank ones are skipped."""
-    lines = []
-    for n, raw in enumerate(text.splitlines(), 1):
-        if not raw.strip() or raw.lstrip().startswith("#"):
-            continue
-        fields = [f.strip() for f in raw.split("|")]
+    lines, first_by_check = [], {}
+    for n, line in rule_table.lines(text):
+        fields = [f.strip() for f in line.split("|")]
         if len(fields) != 3 or fields[1] not in CHECKS:
             raise TableError(
-                f"line {n}: wants `record id | check | value`, the check one of {', '.join(CHECKS)}: {raw!r}"
+                f"line {n}: wants `record id | check | value`, the check one of {', '.join(CHECKS)}: {line!r}"
             )
         try:
             value = parse_value(fields[1], fields[2])
         except ValueError as exc:
             raise TableError(f"line {n}: {exc}") from None
+        first_n, first_value = first_by_check.setdefault(fields[1], (n, value))
+        if first_value != value:
+            raise TableError(
+                f"line {n}: {fields[1]} is already given a different value on line {first_n}, "
+                "and a check runs once, at one value"
+            )
         lines.append(Line(fields[0], fields[1], value))
     modes = {line.mode for line in lines}
     if "replay" in modes and "parallax" not in modes:
@@ -1001,12 +1013,9 @@ def answers(lines, got):
         by_record[line.id].append(got[line.mode])
     out = {}
     for record, answers_of in by_record.items():
-        if any(a.faults for a in answers_of):
-            out[record] = "fail"
-        elif any(a.unmet for a in answers_of):
-            out[record] = "not judged"
-        elif any(a.seen for a in answers_of):
-            out[record] = "pass"
-        else:
-            out[record] = "no match"
+        out[record] = rule_table.answer(
+            misses=any(a.faults for a in answers_of),
+            unjudged=any(a.unmet for a in answers_of),
+            judged=any(a.seen for a in answers_of),
+        )
     return out

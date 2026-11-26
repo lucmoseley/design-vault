@@ -68,7 +68,7 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - answered-by: builder
 - writes: colour difference
 - yields-to: vault.logo-anchors, vault.contrast, level 2
-- source: W3C CSS Color 4 §14.2.1 for under 2; Brychtová and Çöltekin 2016 for 10 between meanings; the founder's rulings on #178 for 20 on small marks, the near-miss line at 10 and 3 for surfaces; Williams, The Non-Designer's Design Book, and Apple HIG Color for the rule; strength: founder ruling for 20, 10 and 3, standard and peer-reviewed research for the rest
+- source: W3C CSS Color 4 §14.2.1 for under 2; Brychtová and Çöltekin 2016 for 10 between meanings; the founder's ruling on #178 for 20 on small marks; four proxies for the near-miss line at 10 (docs/research/de00-thresholds.md); design systems' surface layering for 3 on surfaces (docs/research/de00-greys.md); Williams, The Non-Designer's Design Book, and Apple HIG Color for the rule; strength: founder ruling for 20, practitioner research for 10 and 3, standard and peer-reviewed research for the rest
 - era: timeless
 - owner: vault
 - stage: value
@@ -164,7 +164,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - era: timeless
 - owner: vault
 - stage: value
-- target: Set body text on a light ground in a dark grey or tinted near-black at about 12:1, never under 7:1; pure black is allowed but not the default.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/text-presentation.md#near-black-body-text
 - ledger: COL-17
@@ -182,7 +181,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - stage: value
 - inputs: the grounds that hold text, the text's role (primary, secondary, placeholder, disabled)
 - output: per ground, primary about 12:1 and secondary 4.5:1 or more, both solid; placeholder 4.5:1 or more; disabled defined, free of the contrast floor and may be an opacity; a third readable grey is refused, and its rank goes to weight, size or space
-- target: Give each ground two text colours, primary near 12:1 and secondary at least 4.5:1, plus a placeholder at 4.5:1 and a disabled colour; rank anything further by weight, size and space.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/text-presentation.md#two-text-colours-per-ground
 - ledger: COL-18, TYS-27
@@ -200,7 +198,6 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - stage: value
 - inputs: the ground's colour, the text's role and size
 - output: primary off-white at about 10:1 (never pure #FFF on #000); secondary 7:1 or more under 24 px (18.66 px bold), 4.5:1 at or above; status carried by a border, icon or chip with off-white text
-- target: On a dark ground set text in an off-white near 10:1, secondary text at 7:1 when small, and show status by a coloured border, icon or chip, not coloured small text.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/text-presentation.md#text-on-a-dark-ground
 - ledger: COL-52
@@ -286,15 +283,32 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 
 ### vault.caption-colours
 - applies-when: web-surface and has-motion; every video with captions
-- question: Do captions keep the WebVTT default, white text on black at 80% opacity, or an author `::cue` style that holds 4.5:1 against its own background, and does a custom player leave the viewer able to change caption colour, opacity, size and background?
-- answered-by: builder
+- question: Does every author `::cue` rule that sets a caption colour or background set both, and does its text hold 4.5:1 against that background, drawn over black and over white where it is translucent, as the WebVTT default of white on black at 80% opacity does?
+- answered-by: script
 - writes: caption colours
 - yields-to: none
-- source: W3C WebVTT §7, CSS rendering: cue `color` "rgba(255,255,255,1)" and cue background "rgba(0,0,0,0.8)"; 47 CFR 79.103(c): US video apparatus lets the viewer set caption character colour, opacity, size, background colour and opacity, and edges; WCAG 2.2 SC 1.4.3, 4.5:1 for text (all as read Oct 2026); strength: web standard and US regulation
+- source: W3C WebVTT §7, CSS rendering: cue `color` "rgba(255,255,255,1)" and cue background "rgba(0,0,0,0.8)"; WCAG 2.2 SC 1.4.3, 4.5:1 for text (all as read Oct 2026); strength: web standard
 - era: timeless
 - owner: vault
 - stage: treatment
-- target: Leave captions white on 80% black, or style `::cue` with a background that holds 4.5:1; in a custom player, keep the viewer's caption colour, size and background settings.
+- target: Leave captions white on 80% black, or style `::cue` with its own background, and hold its text to 4.5:1 on that background over any frame.
+- parts: video
+- script: check-style.py <page> --out <dir> [--parts <declaration>]
+- reasons: design-critique/references/surface-styling.md#caption-colours
+- ledger: COL-104
+- status: live
+
+### vault.caption-settings
+- applies-when: web-surface and has-motion; every video with captions in a custom player
+- question: Does a custom player leave the viewer able to change caption colour, opacity, size and background, as the browser's own caption settings do?
+- answered-by: builder
+- writes: caption settings
+- yields-to: vault.caption-colours
+- source: 47 CFR 79.103(c): US video apparatus lets the viewer set caption character colour, opacity, size, background colour and opacity, and edges (as read Oct 2026); strength: US regulation
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: In a custom player, keep the viewer's caption colour, size and background settings.
 - parts: video
 - reasons: design-critique/references/surface-styling.md#caption-colours
 - ledger: COL-104
@@ -351,13 +365,12 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - answered-by: script
 - writes: contrast by role
 - yields-to: vault.contrast, vault.control-edges, vault.focus
-- source: W3C Understanding SC 1.4.3, 1.4.6 and 1.4.11 (WCAG 2.2, 2023; pages updated 6 Sep 2026), thin strokes harder to read at low contrast, an icon that identifies a control at 3:1, a boundary needed only where nothing else shows the control, and thin lines rendered fainter than their colour; Apple HIG Dark Mode, "strive for a contrast ratio of 7:1, especially in small text" (6 Aug 2024); decorative edges in @atlaskit/tokens 20.6.1 `color.border` (1.35:1 light, 1.39:1 dark), Material 3 `outlineVariant` (1.6:1 light, 2.0:1 dark, Compose tokens v0_210) and GOV.UK `border` (1.6:1), all as read Oct 2026; strength: design-system guidance over WCAG 2.2 AA, the 7:1 aim for thin faces and the 4.5:1 aim for 1 px lines the house's mapping
+- source: W3C Understanding SC 1.4.3, 1.4.6 and 1.4.11 (WCAG 2.2, 2023; pages updated 6 Sep 2026), thin strokes harder to read at low contrast, an icon that identifies a control at 3:1, a boundary needed only where nothing else shows the control, and thin lines rendered fainter than their colour; Apple HIG Dark Mode, "strive for a contrast ratio of 7:1, especially in small text" (6 Aug 2024); decorative edges in @atlaskit/tokens 20.6.1 `color.border` (1.35:1 light, 1.39:1 dark), Material 3 `outlineVariant` (1.6:1 light, 2.0:1 dark, Compose tokens v0_210) and GOV.UK `border` (1.6:1), all as read Oct 2026; Material 3 contrast curves, `outline` 3 → 4.5 and `on_surface_variant` 4.5 → 7 from standard to medium contrast, alike in light and dark (material-color-utilities `color_spec_2021.ts`, changed 20 Jan 2026, read 19 Oct 2026); strength: design-system guidance over WCAG 2.2 AA, the 7:1 aim for thin faces, the 4.5:1 aim for 1 px lines and `prefers-contrast: more` read as Material's medium contrast level the house's mapping
 - era: timeless
 - owner: vault
 - stage: value
 - inputs: the part's role; for text, its size and weight and the face's stem (face-profile.py `stem`)
-- output: body and secondary text 4.5:1, aiming at 7:1 (SC 1.4.6) where the face's stem is under 0.06 em or the weight is under 400; large text (24 px, or 18.66 px at 700) 3:1, aiming at 4.5:1 on the same thin-face terms; an icon or edge that is a control's only identifier, a state mark and a chart mark 3:1, a 1 px line aiming at 4.5:1 because anti-aliasing fades it; an icon beside its own text label, no floor; a decorative edge or divider about 1.3–2:1 and no floor; focus, as `vault.focus` measures it; disabled, as `vault.disabled-legibility` sets it
-- target: Pick each colour pair by the part's role: body text at 4.5:1 or more and 7:1 for a thin face, large text at 3:1, an edge or icon that alone shows a control at 3:1, and 4.5:1 for a 1 px line, and a decorative edge at about 1.3–2:1.
+- output: body and secondary text 4.5:1, aiming at 7:1 (SC 1.4.6) where the face's stem is under 0.06 em or the weight is under 400; large text (24 px, or 18.66 px at 700) 3:1, aiming at 4.5:1 on the same thin-face terms; an icon or edge that is a control's only identifier, a state mark and a chart mark 3:1, a 1 px line aiming at 4.5:1 because anti-aliasing fades it; an icon beside its own text label, no floor; a decorative edge or divider about 1.3–2:1 and no floor; focus, as `vault.focus` measures it; disabled, as `vault.disabled-legibility` sets it. Rungs, floor first, the last also the rung under `prefers-contrast: more`: body and secondary text 4.5:1 then 7:1; large text 3:1 then 4.5:1; an icon or edge that alone identifies a control, a control on a photo, a state mark and a chart mark 3:1 then 4.5:1. A part's rung is the highest of its role's it clears
 - script: check-access.py <page> --out <dir>
 - reasons: design-critique/references/edges-and-contrast.md#contrast-by-role
 - ledger: COL-1, COL-2
@@ -369,11 +382,10 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - answered-by: script
 - writes: contrast per colour scheme
 - yields-to: vault.contrast-ladder
-- source: Atlassian Elevation, "Don't assume that because UI is accessible in light mode, it will be in dark mode", and its increased-contrast themes (@atlaskit/tokens 20.6.1, as read Oct 2026); Apple HIG Accessibility, "check the minimum contrast in both light and dark appearances" (9 Jun 2025), and Color, an increased-contrast variant of each custom colour (16 Dec 2025); Material 3 contrast curves, one minimum per role in light and dark, rising with the contrast level (material-color-utilities, 20 Jan 2026); strength: design-system guidance over WCAG 2.2 AA
+- source: Atlassian Elevation, "Don't assume that because UI is accessible in light mode, it will be in dark mode", and its increased-contrast themes (@atlaskit/tokens 20.6.1, as read Oct 2026); Apple HIG Accessibility, "check the minimum contrast in both light and dark appearances" (9 Jun 2025), and Color, an increased-contrast variant of each custom colour (16 Dec 2025); Material 3 contrast curves, one minimum per role in light and dark, rising with the contrast level, `outline` 3 → 4.5 and `on_surface_variant` 4.5 → 7 from standard to medium contrast (material-color-utilities `color_spec_2021.ts`, changed 20 Jan 2026, read 19 Oct 2026); strength: design-system guidance over WCAG 2.2 AA
 - era: timeless
 - owner: vault
 - stage: value
-- target: Give each role the same contrast in light and dark and more under `prefers-contrast: more`, and measure each scheme separately.
 - script: check-access.py <page> --out <dir>
 - reasons: design-critique/references/edges-and-contrast.md#contrast-by-role
 - ledger: COL-53
@@ -463,16 +475,16 @@ The palette and how colour is used: its roles and distances, logo anchors, tints
 - status: staged
 
 ### vault.gradient-function
-- applies-when: web-surface; every gradient, glow or pattern drawn behind content
-- question: Does every gradient, glow or pattern behind content do one job (a scrim under text on an image, a light or depth cue on a raised surface, a brand ground where vault.tone-colour-share lets the surface go committed, an ambient pattern on a message or promotional area, a chart or progress ring), with none behind a region visitors work in, per vault.decoration-place?
+- applies-when: web-surface; every gradient, glow or pattern drawn behind content, and every blurred or glowing orb wherever it sits
+- question: Does every gradient, glow or pattern behind content, and every blurred or glowing orb drawn as an object, do one job (a scrim under text on an image, a light or depth cue on a raised surface, a brand ground where vault.tone-colour-share lets the surface go committed, an ambient pattern on a message or promotional area, a chart or progress ring), with none behind a region visitors work in, per vault.decoration-place?
 - answered-by: look
 - writes: gradient use
 - yields-to: vault.gradient-place, vault.decoration-place, vault.brand-layer, vault.ai-look
-- source: Atlassian Design, Illustrations, Ambient pattern, "Use patterns for messages or promotional areas that need visual interest but don't require a specific conceptual image" (as read Nov 2026); Krehel, "Understanding gradients" (as read Nov 2026), radial "for glows, backgrounds or depth lighting", conic "for charts, rings"; NN/g, "Text Over Images" (updated 13 Jan 2026), a fade under text; impeccable 4.5.0 `quieter.md`, "Remove decorative elements: Gradients, shadows, patterns, textures that don't serve purpose", and engine 0.1.11 rules radial-halo and radial-spotlight-glow; strength: design-system guidance
+- source: Atlassian Design, Illustrations, Ambient pattern, "Use patterns for messages or promotional areas that need visual interest but don't require a specific conceptual image" (as read Nov 2026); Krehel, "Understanding gradients" (as read Nov 2026), radial "for glows, backgrounds or depth lighting", conic "for charts, rings"; NN/g, "Text Over Images" (updated 13 Jan 2026), a fade under text; impeccable 4.5.0 `quieter.md`, "Remove decorative elements: Gradients, shadows, patterns, textures that don't serve purpose", and engine 0.1.11 rules radial-halo and radial-spotlight-glow; Hallmark `sloplint.mjs` gate 29 (`check29Glow`), a blurred orb over 40 px; strength: design-system guidance, and a lint gate for the orb
 - era: dated 2027-11-13
 - owner: vault
 - stage: role
-- target: Give every gradient, glow or pattern one job (a text scrim, a light cue, a brand ground where colour may lead, an ambient pattern on a promotion, a chart), and keep all of them out of working regions.
+- target: Give every gradient, glow, orb or pattern one job (a text scrim, a light cue, a brand ground where colour may lead, an ambient pattern on a promotion, a chart), and keep all of them out of working regions.
 - reasons: design-critique/references/grounds-and-gradients.md#when-a-gradient-has-a-function
 - ledger: COL-80
 - status: staged

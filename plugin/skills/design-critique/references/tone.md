@@ -2,7 +2,7 @@
 
 Why the feel a design aims at, its tone, is set as a position on five scales, and how each choice moves it (#288). The records are `vault.tone-direction`, `vault.tone-words`, `vault.tone-colour-share`, `vault.tone-saturation`, `vault.tone-space`, `vault.tone-symmetry`, `vault.tone-face` and `vault.tone-mix`, in [rules/](../rules/). The research behind every line is `docs/research/design-feel.md` (#204) and `docs/research/tone-sources.md` (#288) in the design vault.
 
-Where a project sits on the scales is its own brief's call; nothing here says which tone is right. A project's rules file wins over every record here ([source precedence](house-principles.md#source-precedence)), and the [brand-layer line](house-principles.md#the-brand-layer-line) says where expression may go before any of these says how much.
+Where a project sits on the scales is its own brief's call; nothing here says which tone is right. Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides, and the [brand-layer line](house-principles.md#the-brand-layer-line) says where expression may go before any of these says how much.
 
 ## The five scales
 
@@ -41,7 +41,7 @@ These four words name moves along the scales: louder is more energy, bolder more
 
 ## Colour share
 
-Record: `vault.tone-colour-share`.
+Records: `vault.tone-colour-share`, `vault.calm-colour-share`.
 
 - **Why.** Neutrals carry "most backgrounds, text, and shapes" (Atlassian), and USWDS splits the non-neutral colour 60/30/10 with the neutral base usually "the predominant tone". More colour on the surface makes a page more colourful, and saturation raises arousal (below). A small accent share is what makes the accent stand out: the 10% "lifts the subject out from its background" (Rauno, "Novelty", 2026, who offers it as an observation, not a prescription).
 - **Trade-off.** A restrained share keeps colour for meaning and action (Dannaway, 2026) and reads calm; a committed or drenched surface gives energy and brand presence and leaves colour less room to signal. The appeal curve peaks at moderate-to-high colourfulness and varies by audience, so the share is set for the audience, not by a fixed number.

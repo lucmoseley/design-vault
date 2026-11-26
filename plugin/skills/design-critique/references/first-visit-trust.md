@@ -2,7 +2,7 @@
 
 Why a first-time visitor to a small business's or a solo advisor's site needs what its records ask before they get in touch, and how clashes between them resolve (#144, #176, #272). The research behind every line is `docs/research/first-visit-trust.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets, and, on behaviour, a record resting on domain evidence, which it departs from only on evidence of its own ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when a platform ships a new design language or WCAG a new version.
 
 ## The checklist
 

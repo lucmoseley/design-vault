@@ -2,7 +2,7 @@
 
 Why a page's type, text, forms and images follow the standard or browser default their records name (#276). The source checks and browser measurements behind the records are `docs/research/platform-defaults.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
 
 ## Typography
 
@@ -72,7 +72,7 @@ Record: `vault.leading-unitless`.
 
 ### Text spacing overrides
 
-Record: `vault.text-spacing`.
+Records: `vault.text-spacing`, `vault.text-spacing-reveal`.
 
 - **Why.** Some readers, including many with dyslexia or low vision, set wider line, paragraph, letter and word spacing with their own style sheet. WCAG 1.4.12 asks that nothing is lost when all four are set at once (F104: no clipping, no overlap).
 - **Trade-off.** Boxes that are a fixed height, or that truncate their text, have to grow instead, which can make card rows uneven.
@@ -114,7 +114,7 @@ Record: `vault.mixed-check`.
 
 ### Paste is never blocked
 
-Records: `vault.auth-paste`, `vault.field-paste`.
+Records: `vault.auth-paste`, `vault.field-paste`, `vault.auth-paste-look`.
 
 - **Why.** In a sign-in step, blocking paste or password managers forces a visitor to remember and retype, which WCAG 2.2 SC 3.3.8 fails unless another way in exists. Elsewhere people paste addresses and references they hold in other places (GOV.UK, USWDS).
 - **Trade-off.** A confirm-email field loses some of its point when the visitor can paste their typo twice; USWDS suggests a verification link instead.
@@ -236,7 +236,7 @@ Record: `vault.prime-marks`.
 
 ### Dashes
 
-Record: `vault.dashes`.
+Records: `vault.dashes`, `vault.dash-glyphs`.
 
 - **Why.** Hyphen, en dash and em dash each have their own job, and a hyphen standing in for a dash reads as a joined word (Butterick).
 - **Trade-off.** Whether a mark joins a range or breaks a sentence is a reading of meaning, so the type critic answers it, not a script; spaced or flush em dashes are a house choice, kept consistent.
@@ -276,7 +276,7 @@ Record: `vault.week-hour`.
 
 ### Headings and lists are markup
 
-Records: `vault.heading-markup`, `vault.list-markup`.
+Records: `vault.heading-markup`, `vault.list-markup`, `vault.heading-markup-div`.
 
 - **Why.** Size, weight and bullets tell a sighted reader where a section starts and what belongs to a list; screen reader users move by headings and hear a list's length only from the markup, so WCAG 2.2 SC 1.3.1 asks that the structure be in the code (H42, H48).
 - **Trade-off.** A heading element brings its level into the outline, so a card title has to fit the page's heading order; a styled list may need its markers redrawn with `::marker`.
@@ -284,7 +284,7 @@ Records: `vault.heading-markup`, `vault.list-markup`.
 
 ### The language of each passage
 
-Record: `vault.lang-parts`.
+Records: `vault.lang-parts`, `vault.lang-parts-look`.
 
 - **Why.** A screen reader switches voice, and the browser hyphenates, only by the declared language; CSS forbids automatic hyphenation of text whose language is unknown (WCAG 2.2 SC 3.1.2; CSS Text 3; webtypography.net 2.4.5).
 - **Trade-off.** Marking every borrowed word is noise; WCAG excepts names, technical terms and words the surrounding language has taken in.
@@ -332,7 +332,7 @@ Record: `vault.rtl-sides`.
 
 ### Digits in right-to-left text
 
-Record: `vault.rtl-digits`.
+Records: `vault.rtl-digits`, `vault.rtl-digit-order`.
 
 - **Why.** The Unicode bidirectional algorithm keeps every run of digits left to right inside right-to-left text, with no markup needed in most cases (UAX #9); a number's digits never reverse (Apple HIG).
 - **Trade-off.** Punctuation between numbers (phone numbers, ranges) can still reorder, which `bdi` or `dir` on the number fixes.
@@ -340,7 +340,7 @@ Record: `vault.rtl-digits`.
 
 ### White space
 
-Record: `vault.white-space`.
+Records: `vault.white-space`, `vault.kept-breaks`.
 
 - **Why.** HTML collapses spaces and line breaks so source can be wrapped freely; code, verse and addresses carry meaning in their breaks and keep them (CSS Text 3; MDN).
 - **Trade-off.** Preserved white space does not reflow, so code blocks need horizontal scroll on a phone.
@@ -358,7 +358,7 @@ Record: `vault.ruby-position`.
 
 ### Icons are vector
 
-Record: `vault.icon-vector`.
+Records: `vault.icon-vector`, `vault.flat-art-vector`.
 
 - **Why.** An SVG icon stays sharp at every size and screen density from one file; a PNG icon needs a file per size and blurs between them (Apple HIG Icons; web.dev, Icons).
 - **Trade-off.** Art with texture, shading or photographic detail is heavier as SVG than as a raster file, so it stays raster.
@@ -382,7 +382,7 @@ Record: `vault.pinch-anchor`.
 
 ### Hard-edged images scale without smoothing
 
-Record: `vault.image-scaling`.
+Records: `vault.image-scaling`, `vault.pixel-image-kind`.
 
 - **Why.** The browser smooths an enlarged image, which suits a photo but blurs pixel art and the squares of a QR code; `pixelated` keeps each pixel square (MDN, `image-rendering`).
 - **Trade-off.** `pixelated` at a non-whole scale shows uneven pixels; `crisp-edges` is the closer fit for line drawings but only reached every browser in May 2026, so it waits until Baseline widely available.
@@ -390,7 +390,7 @@ Record: `vault.image-scaling`.
 
 ### Right-to-left icons
 
-Record: `vault.rtl-icons`.
+Records: `vault.rtl-icons`, `vault.rtl-fixed-icons`.
 
 - **Why.** Readers of a right-to-left language read forward as leftward, so arrows, back and next, and icons of text must flip to keep their meaning; marks, clocks and objects held in the right hand look the same everywhere (Apple HIG; Material Design 1).
 - **Trade-off.** Each icon is a judgment, and a flipped set doubles the icons to keep.
@@ -414,7 +414,7 @@ Record: `vault.rtl-image-order`.
 
 ### Captions, transcripts and audio description
 
-Record: `vault.media-alternatives`.
+Records: `vault.media-alternatives`, `vault.video-captions`.
 
 - **Why.** A deaf visitor needs captions, a blind visitor needs what is only shown described, and a transcript serves both and search engines. WCAG 2.2 sets it at level A for prerecorded media (1.2.1–1.2.3) and AA for live captions and audio description (1.2.4, 1.2.5).
 - **Trade-off.** At level A a full transcript can stand in for audio description, but AA asks for the description itself.
@@ -438,7 +438,7 @@ Record: `vault.space-plays`.
 
 ### Content images are elements
 
-Record: `vault.content-image`.
+Records: `vault.content-image`, `vault.background-image-role`.
 
 - **Why.** A screen reader cannot read a CSS background image, and no alt text can be attached to one, so an image the visitor needs must be an element (WCAG technique F3; MDN).
 - **Trade-off.** Cropping with `object-fit` replaces `background-size: cover`, with the same result.

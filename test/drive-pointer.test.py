@@ -262,12 +262,19 @@ class Settle(OnThePage):
     def test_a_target_that_never_holds_still_is_pointed_at_once_the_cap_passes_unsettled(
         self,
     ):
-        # #spinner turns forever, so its box never holds still; the cap is lowered so the wait is quick,
+        # #crawler slides forever, so its box never holds still; the cap is lowered so the wait is quick,
         # still past the settle's 800 ms quiet window, so a still target reads settled.
         self.addCleanup(setattr, pointer, "SETTLE_CAP_MS", pointer.SETTLE_CAP_MS)
         pointer.SETTLE_CAP_MS = 1500
-        self.assertFalse(pointer.hover(self.page, "#spinner").settled)
+        self.assertFalse(pointer.hover(self.page, "#crawler").settled)
         self.assertTrue(pointer.hover(self.page, "#count").settled)
+
+    def test_a_target_under_an_animation_that_waits_for_ever_to_start_reads_settled(
+        self,
+    ):
+        self.addCleanup(setattr, pointer, "SETTLE_CAP_MS", pointer.SETTLE_CAP_MS)
+        pointer.SETTLE_CAP_MS = 1500
+        self.assertTrue(pointer.hover(self.page, "#pinned").settled)
 
     def test_a_page_still_moving_at_the_cap_reads_unsettled(self):
         self.page.evaluate(

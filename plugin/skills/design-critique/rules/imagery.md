@@ -4,7 +4,7 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 
 ### vault.curves-script
 - applies-when: any; every curve the asset draws, and a traced or redrawn mark against its source
-- question: Is every curve drawn as a true curve, with no run of straight segments standing in for one and no node where two curves meet whose tangents differ by more than the path's written precision allows, nor a node where a curve meets a straight line whose tangents differ by more than that but under 5.7°, save a corner or kink the source has or the brief names, and does a traced or redrawn mark lie within 0.1 px of an SVG source's edge, or 0.5 px of a raster source's, at the source's size?
+- question: Is every curve drawn as a true curve, with no run of straight segments standing in for one and no node where two curves meet whose tangents differ by more than the path's written precision allows, nor a node where a curve meets a straight line whose tangents differ by more than that but under 5.7°, save a corner or kink the source has or the brief names, and does a traced or redrawn mark lie within 0.1 px of the edge of an SVG source that draws no raster image, or 0.5 px of a raster source's, at the source's size?
 - answered-by: script
 - writes: curve
 - yields-to: level 2
@@ -49,11 +49,11 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 
 ### vault.contacts-script
 - applies-when: any; every place two separately drawn paths nearly touch
-- question: Where segments of two separately drawn shapes run alongside within 2 px of each other at the drawn size, does each pair either match to the paths' written precision with both fills on one side, or have one fill run on past the other's edge, leaving no exact edge with a fill on each side, or, where a gap parts them, have an opaque shape painted after both fill it?
+- question: Where segments of two separately drawn shapes run alongside within 2 px of each other at the drawn size, does each pair either match to the paths' written precision with both fills on one side, or have one fill run on past the other's edge, the upper fill opaque, leaving no exact edge with a fill on each side, or, where a gap parts them, have an opaque shape painted after both fill it?
 - answered-by: script
 - writes: contact
 - yields-to: level 2
-- source: the rule is the founder's, lucmoseley/mmm-infra#9; the #262 ruling that a script lists the contacts (spec #324, user story 19); a fill on each side of one exact edge is the conflation seam (Khronos NV_path_rendering_shared_edge, Issue 1); an opaque shape painted later hides a gap, as each element paints over those before it (SVG 2, §3.3–3.4) (#356); the 2 px is a guess no source sets (#324's Values); strength: founder ruling for the rule, house ruling for the script, a rendering fact for the seam and the cover, an unsourced guess for the 2 px
+- source: the rule is the founder's, lucmoseley/mmm-infra#9; the #262 ruling that a script lists the contacts (spec #324, user story 19); a fill on each side of one exact edge is the conflation seam (Khronos NV_path_rendering_shared_edge, Issue 1); an opaque shape painted later hides a gap or an underlap's lower edge, as each element paints over those before it (SVG 2, §3.3–3.4) (#356, #489); the 2 px is a guess no source sets (#324's Values); strength: founder ruling for the rule, house ruling for the script, a rendering fact for the seam and the cover, an unsourced guess for the 2 px
 - era: timeless
 - owner: vault
 - stage: value
@@ -351,7 +351,6 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 - era: dated 2027-10-19
 - owner: vault
 - stage: value
-- target: Link an SVG favicon with `sizes="any"`, a 48 × 48 `favicon.ico` and a 180 × 180 PNG `apple-touch-icon` from every page's head.
 - script: check-dom.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/platform-defaults.md#favicon-and-touch-icon
 - ledger: IMG-37

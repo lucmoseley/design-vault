@@ -2,7 +2,7 @@
 
 Why text lines, columns and containers take the widths and alignments their records give (#285). The source checks behind the records are `docs/research/alignment-width.md` in the design vault.
 
-A project's rules file wins over every record here except a floor WCAG or the law sets ([source precedence](house-principles.md#source-precedence)). A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
+Where a project's rules file and a record here disagree, [source precedence](house-principles.md#source-precedence) decides. A dated record is reviewed a year after writing, or sooner when browsers change the behaviour it rests on.
 
 ## Principles
 
@@ -12,7 +12,7 @@ Record: `vault.line-length`.
 
 - **Why.** Very long lines tire readers and make the next line hard to find; very short ones break the reading rhythm (Baymard 2022). The 45–75 range was set for a single column of a serif text face at text size (Bringhurst), so other roles take their own: columns narrower (40–50), large text shorter, since it fills the width with fewer characters (USWDS), and short passages are read too briefly for the range to matter (USWDS). The count is of characters as set, so a wide or narrow face is already in it; line height rises with the count by `vault.type-leading`.
 - **Trade-off.** A phone column cannot reach 50 characters at a readable size; a short line beats sideways scrolling (Typography Handbook 2026), so the floor lifts there.
-- **Clash.** Butterick allows 45–90 and WCAG's AAA ceiling is 80; the house holds body text to Baymard's 50–75, inside both. Typography Handbook wants captions at 35–50 where USWDS lets them run longer; the house sets only WCAG's 80 ceiling on them, and its three-line bound for a short passage follows USWDS's "captions of fewer than three lines" loosely. Butterick keeps the range on small screens by scaling size and width together; the house leaves size to `vault.type-size` and lets the phone line run short. Supersedes the live `vault.measure`'s one range for every role when tier 1 goes live (#293).
+- **Clash.** Butterick allows 45–90 and WCAG's AAA ceiling is 80; the house holds body text to Baymard's 50–75, inside both. Typography Handbook wants captions at 35–50 where USWDS lets them run longer; the house sets only WCAG's 80 ceiling on them, and its three-line bound for a short passage follows USWDS's "captions of fewer than three lines" loosely. Butterick keeps the range on small screens by scaling size and width together; the house leaves size to `vault.type-size` and lets the phone line run short. Supersedes the live `vault.measure`'s one range for every role when this record goes live (#416).
 
 ### Cap the measure in a font-relative unit
 
@@ -28,7 +28,7 @@ Record: `vault.text-align`.
 
 - **Why.** Browsers justify by stretching word spaces line by line, which opens rivers of white that slow readers, those with some cognitive disabilities most (WCAG 2.2 F88); good justification needs hyphenation the web does unevenly (Butterick, Rutter). Narrow columns and sans faces look best ragged (Bringhurst).
 - **Trade-off.** A ragged edge looks less formal than a justified block, which some editorial brands want.
-- **Clash.** Butterick calls justification "personal preference"; GOV.UK, USWDS and WCAG 1.4.8 all set ragged text on the web, so the house does, and a project that wants a justified block names it in its rules file. Supersedes the live `vault.no-justify` when tier 1 goes live (#293).
+- **Clash.** Butterick calls justification "personal preference"; GOV.UK, USWDS and WCAG 1.4.8 all set ragged text on the web, so the house does, and a project that wants a justified block names it in its rules file. Supersedes the live `vault.no-justify` when this record goes live (#416).
 
 ### Where justification is allowed
 
@@ -88,7 +88,7 @@ Record: `vault.capped-centre`.
 
 ### Alignment lines between sections
 
-Records: `vault.alignment-lines`, `vault.alignment-break`.
+Records: `vault.alignment-lines`, `vault.alignment-break`, `vault.alignment-lines-look`.
 
 - **Why.** The eye follows a line and groups what sits on it (good continuation, Wagemans et al. 2012). A grid gives every section the same lines, so text, cards and images relate across the page; content in a gutter breaks them (Atlassian, NN/g). That the main text edge repeats from section to section is the house's reading of NN/g's "keep alignment consistent"; no source read states it for sections. Small parts (buttons, icons) sit by their spacing, not the grid (Atlassian).
 - **Trade-off.** A strict grid can feel rigid; a break (a full-bleed header, a centred hero) draws the eye, which is why it needs a reason. No outside source decides whether a measure-capped text column in a wide section sits on the left grid line or centred; GOV.UK sets it left in two thirds, Atlassian centres a block of 8–12 columns. Either passes if the choice repeats from section to section.
@@ -96,7 +96,7 @@ Records: `vault.alignment-lines`, `vault.alignment-break`.
 
 ### Optical alignment
 
-Record: `vault.optical-alignment`.
+Records: `vault.optical-alignment`, `vault.optical-icon`.
 
 - **Why.** The eye aligns what it sees, not the boxes: a padded column's text sits lower than its box, and an icon's shape rarely fills its frame (Refactoring UI, Krehel).
 - **Trade-off.** Optical fixes are by eye, so no script can check them; this record is answered by look, on the render.

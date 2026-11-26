@@ -60,6 +60,7 @@ footer > .legal { background: #ededed; padding: 0.5rem; }
 .cols h3 { column-span: all; }
 .stroke { -webkit-text-stroke: 1px #1a1a1a; paint-order: stroke fill; }
 @media (max-width: 640px) { table.stack tr { display: block; } }
+video::cue { color: #fff; background-color: rgba(0, 0, 0, 0.8); }
 </style>
 </head>
 <body>
@@ -104,10 +105,16 @@ footer > .legal { background: #ededed; padding: 0.5rem; }
     <tbody>
       <tr><td>Garden</td><td class="num">£24</td></tr>
       <tr><td>Harbour</td><td class="num">£32</td></tr>
+      <tr style="background: #f0f0f0"><td>Loft</td><td class="num">£40</td></tr>
     </tbody>
   </table>
   <table class="stack"><tbody><tr><th scope="row">Garden</th><td class="num">£24</td></tr></tbody></table>
+  <p id="ok-type-size-up" style="font-size: 18px; font-size-adjust: 0.481">Prose rounded up to the next pixel.</p>
+  <table><tbody><tr><td id="ok-type-size-up-dense" style="font-size: 16px; font-size-adjust: 0.481">Loft</td></tr></tbody></table>
   <hr>
+  <div><div class="card">Garden room</div><hr style="border-top-width: 2px"><div class="card">Harbour room</div></div>
+  <p style="white-space-collapse: preserve-breaks">The Harbour Hostel
+Penzance</p>
   <h2 id="book">Book</h2>
   <div class="actions"><button class="primary" type="button">Book a room</button></div>
   <div class="group">

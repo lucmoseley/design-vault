@@ -7,10 +7,13 @@
      the share button and the page dots sit on a backdrop of their own, the current dot larger than the rest; the
      field's edge is #767676; the icon button's icon is #444; the checked box fills #1a5fb4; dark text on the mid-grey
      band; the chart's line is #333; the filled button carries a transparent border for forced colours to paint; the
-     dark scheme draws the last paragraph light on dark. With contrast-tier01-parts.json, .carousel is the carousel and
+     dark scheme draws the last paragraph light on dark, 18.88:1 then 13.71:1, on the 7:1 rung in both, and the Search
+     icon #111 then #666, 18.88:1 then 5.74:1, past its 4.5:1 top rung in both; more contrast raises the Menu icon from
+     #888 to #555, 3.54:1 to 7.46:1, and the filled button to #0f4c97, 8.4:1 for its white text. With contrast-tier01-parts.json, .carousel is the carousel and
      #chart the chart. Without it, these are left out as no chart or page dots: the three-bar icon, too small; #pair,
      two shapes; #hidden, decoration; #defined, its shapes only defined; the Bold and Italic tools, named apart; the
-     links, each drawing a ::before glyph (#429). -->
+     links, each drawing a ::before glyph (#429). The .deck's Save button keeps its backdrop on its dark slide and on
+     the light one its page dots show. -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
   .photo { position: relative; max-width: 320px; height: 160px; margin: 16px 0;
@@ -24,6 +27,14 @@
   .dots button { width: 12px; height: 12px; margin: 0 6px; padding: 0; border: 1px solid transparent; border-radius: 50%;
     background: #fff; vertical-align: middle }
   .dots button[aria-current] { width: 16px; height: 16px }
+  .deck { background: none; overflow: hidden }
+  .deck .share:focus-visible { outline-color: #fff }
+  .slide { position: absolute; left: 0; top: 0; width: 100%; height: 100% }
+  .pips { margin: 0; list-style: none; position: absolute; left: 16px; bottom: 16px; padding: 4px 6px; border-radius: 12px; background: rgba(0, 0, 0, 0.7) }
+  .pips li { display: inline }
+  .pips button { width: 12px; height: 12px; margin: 0 6px; padding: 0; border: 1px solid transparent; border-radius: 50%;
+    background: #fff; vertical-align: middle }
+  .pips button[aria-current] { width: 16px; height: 16px }
   .edged { border: 1px solid #767676; width: 200px; height: 36px; padding: 0 8px; font: inherit }
   .icon { width: 32px; height: 32px; padding: 0; border: 0; background: none }
   .tick { appearance: none; width: 24px; height: 24px; margin: 0; border: 2px solid #555; background: #fff; vertical-align: middle }
@@ -34,7 +45,8 @@
   .glyph { display: inline-block; width: 32px; height: 32px; color: #444; text-decoration: none }
   .glyph::before { content: "\2605"; font-size: 24px }
   .book { border: 1px solid transparent; background: #1a5fb4; color: #fff; height: 44px; padding: 0 16px; font: inherit }
-  @media (prefers-color-scheme: dark) { #theme-ok { background: #222; color: #eee } }
+  @media (prefers-color-scheme: dark) { #theme-ok { background: #222; color: #eee } #search-ok path { fill: #666 } }
+  @media (prefers-contrast: more) { #menu-ok path { fill: #555 } .book { background: #0f4c97 } }
 </style>
 <div class="photo">
   <p>White text on a dark panel</p>
@@ -47,9 +59,20 @@
     <li><button aria-label="Slide 1" aria-current="true"></button></li><li><button aria-label="Slide 2"></button></li><li><button aria-label="Slide 3"></button></li>
   </ul>
 </div>
+<div class="photo carousel deck">
+  <img class="slide" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23222'/%3E%3Crect width='20' height='20' fill='%23333'/%3E%3C/svg%3E">
+  <img class="slide" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E" hidden>
+  <button class="share" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
+  <ul class="pips"><li><button aria-label="Slide 1" aria-current="true"></button></li><li><button aria-label="Slide 2"></button></li></ul>
+</div>
 <p><label>Name <input class="edged" type="text"></label></p>
 <p><button class="icon" aria-label="Close">
   <svg width="32" height="32" viewBox="0 0 32 32" fill="#444"><rect x="8" y="8" width="16" height="4"/><rect x="8" y="14" width="16" height="4"/><rect x="8" y="20" width="16" height="4"/></svg>
+</button></p>
+<p><button class="icon" id="search-ok" aria-label="Search">
+  <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#111"/></svg>
+</button> <button class="icon" id="menu-ok" aria-label="Menu">
+  <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#888"/></svg>
 </button></p>
 <p><label><input class="tick" type="checkbox" checked> Breakfast</label></p>
 <div class="band"><p>Dark on mid grey</p></div>
@@ -70,4 +93,14 @@
 <p class="social"><a class="glyph" href="#a"></a> <a class="glyph" href="#b"></a></p>
 <p><button class="book">Book a bed</button></p>
 <p id="theme-ok">Text the dark scheme draws light on dark</p>
+<script>
+  for (const deck of document.querySelectorAll('.deck')) {
+    const slides = [...deck.querySelectorAll('.slide')], pips = [...deck.querySelectorAll('.pips button')];
+    const show = (k) => {
+      slides.forEach((s, i) => { s.hidden = i !== k; });
+      pips.forEach((b, i) => b.toggleAttribute('aria-current', i === k));
+    };
+    pips.forEach((b, i) => b.addEventListener('click', () => show(i)));
+  }
+</script>
 </html>

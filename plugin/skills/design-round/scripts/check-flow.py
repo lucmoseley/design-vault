@@ -100,15 +100,14 @@ EXITS 0 measured, no pause, jolt, jump or step / 1 measured, one or more (each
 printed) / 2 the arguments are wrong / 3 Playwright or its browser is missing,
 or, for --records, numpy or Pillow /
 4 the page did not render in time / 5 the browser refused the page / 6 the page
-cannot be measured / 7 a call hung that would never return. Exits 0, 1 and 6 are
-results and print on stdout; the rest print on stderr.
+cannot be measured / 7 a call hung that would never return, or its renderer
+died. Exits 0, 1 and 6 are results and print on stdout; the rest print on stderr.
 """
 
 import argparse
 import base64
 import bisect
 import contextlib
-import importlib.util
 import io
 import itertools
 import json
@@ -121,6 +120,7 @@ import statistics
 import sys
 import threading
 import time
+import traceback
 import typing
 
 # The craft gate's pause limit: a still spell longer than this, in ms, is a pause
@@ -148,6 +148,9 @@ JOLT_BAND = (
 JUMP_DEG = 0.26
 # A common display's refresh rate, so the sample holds the frames a viewer sees.
 FPS = 60
+# The least gap between two sample times, in ms: an exact time nearer a frame
+# takes its place (guess, #126).
+MIN_GAP_MS = 1
 # How long, in ms, nothing new may start before the page counts as done starting
 # things. A guess, unmeasured.
 QUIET_MS = 2000
@@ -166,7 +169,8 @@ DESKTOP_BARS = 135
 # The desktop viewport every design-round script renders at unless told: that
 # screen less its bars (#252). A project whose own visitors differ records its
 # screen as `projects.<key>.desktop` in the library (#196).
-DESKTOP = f"{DESKTOP_SCREEN[0]}x{DESKTOP_SCREEN[1] - DESKTOP_BARS}"
+DESKTOP_WINDOW = (DESKTOP_SCREEN[0], DESKTOP_SCREEN[1] - DESKTOP_BARS)
+DESKTOP = f"{DESKTOP_WINDOW[0]}x{DESKTOP_WINDOW[1]}"
 # A channel slower than this share of its own top speed counts as still, so an
 # easing's long tail does not hide the pause after it. A box channel counts as
 # still only below the lower of this and STILL_ARCMIN_S (#196).
@@ -471,20 +475,12 @@ STATUS_JS = (
 """
 )
 
-# Everything that moves the page some way this sampler cannot seek.
-BLOCKERS_JS = (
-    r"""
-({ before, frames, span, shown }) => {
-  """
-    + LABEL_JS
-    + LOOP_JS
-    + r"""
-  const f = window.__flow;
-  f.scan();
-  f.stopped = true;
+DRAWN_JS = r"""
+const listing = (els, shown) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
+const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
+const drawn = (f, { frames, span, shown, morphs }) => {
   const reasons = [];
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const name = (els) => els.slice(0, shown).map((e) => label(e)).join(', ') + (els.length > shown ? ', …' : '');
   // [selector, why, whether only a visible one counts]
   const kinds = [
     ['canvas', 'draws on a canvas', true],
@@ -494,21 +490,40 @@ BLOCKERS_JS = (
   ];
   for (const [sel, why, onlyVisible] of kinds) {
     const els = [...document.querySelectorAll(sel)].filter((e) => !onlyVisible || visible(e));
-    if (els.length) reasons.push(why + ' (' + name(els) + ')');
+    if (els.length) reasons.push(why + ' (' + listing(els, shown) + ')');
   }
   const shadowed = [...document.querySelectorAll('*')].filter((e) => e.shadowRoot);
-  if (shadowed.length) reasons.push('has shadow DOM (' + name(shadowed) + ')');
+  if (shadowed.length) reasons.push('has shadow DOM (' + listing(shadowed, shown) + ')');
+  const rewritten = looping(f.rewrites, frames, span);
+  if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + listing(rewritten, shown) + ')');
+  const morphed = morphs ? looping(f.morphs, frames, span) : [];
+  if (morphed.length) reasons.push('morphs ' + morphed.length + ' path(s) by rewriting their d from a script, frame by frame (' + listing(morphed, shown) + ')');
+  return reasons;
+};
+"""
+
+# Everything that moves the page some way this sampler cannot seek.
+BLOCKERS_JS = (
+    r"""
+({ before, frames, span, shown }) => {
+  """
+    + LABEL_JS
+    + LOOP_JS
+    + DRAWN_JS
+    + r"""
+  const f = window.__flow;
+  f.scan();
+  f.stopped = true;
+  const reasons = drawn(f, { frames, span, shown, morphs: false });
   const scrolled = [...f.seen.keys()].filter((a) => a.timeline !== document.timeline);
   if (scrolled.length) reasons.push('drives ' + scrolled.length + ' animation(s) by scroll position, not time');
   const reversed = [...f.seen.keys()].filter((a) => a.playbackRate <= 0);
   if (reversed.length) reasons.push('plays ' + reversed.length + ' animation(s) in reverse or at zero speed');
   const seeked = [...f.seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused');
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
-  const rewritten = [...f.rewrites].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
-  if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + name(rewritten) + ')');
-  f.morphing = [...f.morphs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
+  f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
-  if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + name(scrollMorphed) + ')');
+  if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
   if (f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
   return reasons;
 }
@@ -557,8 +572,9 @@ PREPARE_JS = (
     const t = x.a.effect.getComputedTiming();
     const off = x.start - t0;
     // Played on a frame; a delay can end mid-frame.
-    starts.push(off);
-    first = Math.min(first, off + Math.max(0, t.delay) / x.rate);
+    const movesAt = off + Math.max(0, t.delay) / x.rate;
+    starts.push([off, movesAt]);
+    first = Math.min(first, movesAt);
     x.loops = t.endTime === Infinity;
     if (x.loops) {
       infinite = true;
@@ -689,19 +705,26 @@ def sample_times(end, edges, fps, starts=()):
     it, and at 0 reads as not yet started, its first keyframe unshown (#297).
     An animation starts at its timeline's time when it is ready, which a
     document timeline advances once a frame (Web Animations Level 1, "Playing
-    an animation", its pending play task), so each of `starts` is
-    followed by a whole frame, with no frame sampled inside it: a loaded
-    machine starts one off the sampled frames, and a part frame carries a jump
-    too short (#326). Residual: an edge inside that frame still cuts it, and a
-    move from rest after a delay, at a later keyframe or pass, keeps the
-    sampled frames' phase.
+    an animation", its pending play task), and its frames follow it a frame
+    apart. So each of `starts`, (start, moves_at), is followed by its first
+    moving frame in the start's phase, with no frame sampled between: a loaded
+    machine starts one off the sampled frames (#326, #411). Residual: an edge
+    inside that frame still cuts it, another element's move from rest inside it
+    gets a first frame in the wrong phase, and a move from rest at a later
+    keyframe or pass keeps the sampled frames' phase.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
-    first = max((e for e in edges if 0 <= e < min(1, end)), default=0)
+    first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
     exact = [first] + ([end] if end > 0 else [])
-    spans = [(s, s + step) for s in starts if 0 <= s and s + step < end]
+    spans = []
+    for start, moves_at in starts:
+        drawn = start + (math.floor((moves_at - start) / step) + 1) * step
+        if drawn - moves_at < MIN_GAP_MS:
+            drawn += step
+        if 0 <= moves_at and drawn < end:
+            spans.append((moves_at, drawn))
     for e in sorted(edges) + [b for _, b in spans]:
-        if 0 < e < end and all(abs(e - t) >= 1 for t in exact):
+        if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
     frames = [k * step for k in range(1, int(end // step) + 1)]
     return sorted(
@@ -709,7 +732,7 @@ def sample_times(end, edges, fps, starts=()):
         + [
             t
             for t in frames
-            if all(abs(t - x) >= 1 for x in exact)
+            if all(abs(t - x) >= MIN_GAP_MS for x in exact)
             and not any(a < t < b for a, b in spans)
         ]
     )
@@ -771,7 +794,8 @@ def dropped_frames(writes):
     gaps = [w["ms"] - w["prev_ms"] for w in writes if w["prev_ms"] is not None]
     try:
         points = morph_points(writes)
-    except ValueError:
+    except ValueError as exc:
+        expected(exc, "no dropped frames")
         return []
     if not gaps:
         return []
@@ -1300,7 +1324,8 @@ class UnmeasurableError(Exception):
 
 
 class HungCallError(Exception):
-    """A call the watch took as hung: exit 7."""
+    """A call the watch took as hung, or one that raised once its renderer died:
+    exit 7."""
 
 
 def size_arg(p, flag, value, *, number=int, example=DESKTOP):
@@ -1329,13 +1354,15 @@ def descendants(pid):
         parent = todo.pop()
         try:
             tasks = os.listdir(f"/proc/{parent}/task")
-        except OSError:  # no /proc, or the process has exited: no children (#432)
+        except FileNotFoundError as exc:  # #432
+            expected(exc, "no children")
             continue
         for task in tasks:
             try:
                 with open(f"/proc/{parent}/task/{task}/children") as f:
                     kids = [int(k) for k in f.read().split()]
-            except OSError:  # the thread has exited, or no children file: none (#432)
+            except (FileNotFoundError, ProcessLookupError) as exc:  # #432
+                expected(exc, "no children")
                 continue
             found += kids
             todo += kids
@@ -1348,7 +1375,8 @@ def process_args(pid):
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return f.read().decode(errors="replace").replace("\0", " ").split()
-    except OSError:  # the process has exited, as its docstring says (#432)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #432
+        expected(exc, "no command line")
         return []
 
 
@@ -1371,7 +1399,8 @@ def driver_pid(browser):
         with open(f"/proc/{browser}/stat") as f:
             # The name in brackets may hold spaces; the parent follows the state.
             parent = int(f.read().rsplit(")", 1)[1].split()[1])
-    except OSError:  # the browser has exited, as the docstring says (#464)
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #464
+        expected(exc, "no driver")
         return None
     return parent if "run-driver" in process_args(parent) else None
 
@@ -1386,30 +1415,41 @@ class WaitingCall(typing.NamedTuple):
     frame: object
 
 
-def waiting_call(main, package_dir):
-    """The WaitingCall the greenlet `main` is suspended in, naming the line
-    outside `package_dir`, Playwright's own, that made it; None while it runs or
-    waits on nothing of Playwright's.
-    Read from another thread: `gr_frame` and `f_locals` of a suspended greenlet
-    are read, not changed, and a resume mid-walk at worst names the wrong call."""
-    stack = []
-    frame = main.gr_frame
-    while frame is not None:
-        stack.append(frame)
-        frame = frame.f_back
-    stack.reverse()
-    for caller, frame in itertools.pairwise(stack):
+def playwright_call(stack, package_dir):
+    """The WaitingCall `stack`, (frame, line) pairs outermost first, is inside:
+    the first frame in `package_dir`, Playwright's own, and the line outside it
+    that made the call; None where no frame is Playwright's."""
+    for (caller, line), (frame, _) in itertools.pairwise(stack):
         if frame.f_code.co_filename.startswith(package_dir):
             owner = frame.f_locals.get("self")
             name = frame.f_code.co_name
             if owner is not None:
                 name = f"{type(owner).__name__}.{name}"
             return WaitingCall(
-                name,
-                f"{os.path.basename(caller.f_code.co_filename)}:{caller.f_lineno}",
-                frame,
+                name, f"{os.path.basename(caller.f_code.co_filename)}:{line}", frame
             )
     return None
+
+
+def waiting_call(main, package_dir):
+    """The WaitingCall the greenlet `main` is suspended in; None while it runs or
+    waits on nothing of Playwright's.
+    Read from another thread: `gr_frame` and `f_locals` of a suspended greenlet
+    are read, not changed, and a resume mid-walk at worst names the wrong call."""
+    stack = []
+    frame = main.gr_frame
+    while frame is not None:
+        stack.append((frame, frame.f_lineno))
+        frame = frame.f_back
+    stack.reverse()
+    return playwright_call(stack, package_dir)
+
+
+def raising_call(exc, package_dir):
+    """The WaitingCall `exc` was raised from; None where it left no Playwright
+    frame. A caller still handling it sits at its own `with` line, so each
+    frame's line is the traceback's."""
+    return playwright_call(list(traceback.walk_tb(exc.__traceback__)), package_dir)
 
 
 class CallWatch:
@@ -1487,6 +1527,27 @@ class CallWatch:
                     time.sleep(WATCH_POLL_S)
                 return
 
+    def renderer_death(self, exc, page_open):
+        """Why the Playwright error `exc` came of a renderer's death, or None:
+        the browser runs no renderer as it raises, and a page was open or the
+        call was opening one. A renderer killed while new_page sets its page up
+        makes it raise instead of wait (#472); a browser that died has closed
+        its pages first.
+        Residual: a call refused for another reason whose renderer then dies
+        before this reads /proc is reported as the renderer's death. Residual:
+        a call that opens a page under another name than new_page is not
+        recognised as opening one."""
+        call = raising_call(exc, self.package_dir)
+        if call is None or self._rendering():
+            return None
+        if not page_open and not call.name.endswith(".new_page"):
+            return None
+        return (
+            f"{call.name} at {call.where} raised {first_line(exc)!r} with the "
+            "browser running no renderer; an out-of-memory kill of the page's "
+            "renderer causes this (#430), so run it again once memory is free"
+        )
+
     def stop(self):
         self._stop.set()
         self._thread.join()
@@ -1496,8 +1557,9 @@ class CallWatch:
 def chromium(args=()):
     """A launched Chromium, closed on leaving. Playwright's failures leave as
     NoBrowserError at launch, and as PageTimeoutError or RefusedError after. A
-    call CallWatch takes as hung leaves as HungCallError, whatever the script
-    raised from it, where /proc shows exactly one new browser process.
+    call CallWatch takes as hung, or a Playwright error it puts down to a dead
+    renderer, leaves as HungCallError, whatever the script raised from it,
+    where /proc shows exactly one new browser process.
     Residual: with no /proc, as on macOS, or with no task `children` file, as
     in some containers, no watch runs, which it says on stderr, and the call
     can wait for ever."""
@@ -1532,6 +1594,17 @@ def chromium(args=()):
         except Exception as exc:
             if watch and watch.fired:
                 raise HungCallError(watch.fired) from exc
+            if (
+                watch
+                and isinstance(exc, PlaywrightError)
+                and not isinstance(exc, PlaywrightTimeout)
+                and (
+                    why := watch.renderer_death(
+                        exc, any(c.pages for c in browser.contexts)
+                    )
+                )
+            ):
+                raise HungCallError(why) from exc
             if isinstance(exc, PlaywrightTimeout):
                 raise PageTimeoutError(first_line(exc)) from exc
             if isinstance(exc, PlaywrightError):
@@ -1551,7 +1624,7 @@ def chromium(args=()):
 def run_browser(work, timeout, url=None, unmeasurable=None):
     """work()'s result and None, or None and the exit code of the failure it
     raised, printed: 3 no Playwright or no Chromium, 5 a refused load, 4 a
-    timeout, 7 a hung call, and 6 an UnmeasurableError,
+    timeout, 7 a hung call or a dead renderer, and 6 an UnmeasurableError,
     its reasons on stdout between the two lines of `unmeasurable`. With no `url`, a refusal names what failed to draw."""
     try:
         return work(), None
@@ -1579,8 +1652,9 @@ def run_browser(work, timeout, url=None, unmeasurable=None):
         )
         return None, 4
     except HungCallError as exc:
-        # The watch already killed the browser and its driver; its message names
-        # the call and why, and exit 7 is the result (#432, #459, #464).
+        # The watch already killed the browser and its driver, or the renderer
+        # had died; its message names the call and why, and exit 7 is the
+        # result (#432, #459, #464, #472).
         print(exc, file=sys.stderr)
         return None, 7
     except UnmeasurableError as exc:
@@ -1806,18 +1880,16 @@ def report(at, sample, result, *, svg_path, json_path, morph_path):
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
+
 TABLE = os.path.join(HERE, "check-flow.table")
 
 
-def _sibling(name, file):
-    spec = importlib.util.spec_from_file_location(name, os.path.join(HERE, file))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-records = _sibling("motion_records", "motion-records.py")
-pointer = _sibling("drive_pointer", "drive-pointer.py")
+records = siblings.load(HERE, "motion-records.py")
+pointer = siblings.load(HERE, "drive-pointer.py")
 
 # --records' working figures, none a record's value. No run has measured
 # where any of the caps or waits below starts to miss a fault, so each is a
@@ -2314,7 +2386,7 @@ RUNS = {
 
 def run_records(at):
     """Each table line's check's Answer."""
-    layout = _sibling("check_layout", "check-layout.py")
+    layout = siblings.load(HERE, "check-layout.py")
     phone = (layout.PHONE_WIDTH, layout.HEIGHTS[0], layout.PHONE)
     values = {line.mode: line.value for line in at.lines}
     out = {}
@@ -2344,7 +2416,7 @@ def records_main(at):
         import PIL  # noqa: F401 - imported only to learn it is installed
     except ImportError as err:
         # Exit 3, naming the package and its pinned install (#256, #477).
-        return missing(err)
+        sys.exit(missing(err))
     got, code = run_browser(lambda: run_records(at), at.timeout, at.url)
     if code:
         return code
@@ -2454,7 +2526,7 @@ def parse(argv):
             p.error(f"{at.table}: {exc}")
         at.parts = {}
         if at.parts_file:
-            probe = _sibling("probe", "probe.py")
+            probe = siblings.load(HERE, "probe.py")
             try:
                 with open(at.parts_file, encoding="utf8") as fh:
                     at.parts = probe.declared_parts(fh.read())[0]

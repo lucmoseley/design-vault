@@ -28,7 +28,8 @@ const CANDIDATE = /^rounds\/[\w.-]+-r[1-9]\d* [\w.-]+$/;
 const MISSED_BY = ["lint", "gate", "critic", "building session", "no rule"];
 const STANCES = ["kept", "rejected"];
 
-const isRuling = (value) => value === "pending" || value === "no rule" || (typeof value === "string" && /^rule: \S/.test(value));
+const LANDED = /^rule: \S/;
+const isRuling = (value) => value === "pending" || value === "no rule" || (typeof value === "string" && LANDED.test(value));
 
 /**
  * Returns every fault in the log `text`. `previousText` is the log HEAD holds: each of its rows must stand
@@ -75,4 +76,11 @@ const main = (argv) => runGate(argv, { log: LOG, name: "corrections-log.js", nou
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { checkCorrectionsLog, FIELDS, STANCES };
+const roundCandidate = ({ candidate }) => {
+  if (candidate === null) return null;
+  const [tag, name] = candidate.split(" ");
+  return { tag, name };
+};
+const isEntryOfRound = (e, project, tag) => e.project === project && roundCandidate(e)?.tag === tag;
+
+module.exports = { checkCorrectionsLog, roundCandidate, isEntryOfRound, FIELDS, LANDED, STANCES };

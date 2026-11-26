@@ -3,14 +3,8 @@
 // Loosen a rule and a change lands with its own tests unrun, or the slow suites run on every commit again.
 // And all.sh's --shard=k/n (#462): a suite in no shard is never run by the lander's whole run, one in two runs twice.
 require("./no-git-env");
-// A caller forcing every suite would select every suite in the commits below too; the one case that wants it sets it (#348).
-delete process.env.VAULT_ALL_SUITES;
-// Run under workflow-core's gate, this file would read as a gate run itself; the one case that wants it sets it (#457).
-// env-write-kept: node:test runs this file in its own process, and every case here must read as a run by hand.
-delete process.env.WFC_GATE_SEAT;
-// The gate hands every command it runs its merge parents, empty where it has none; the cases that want them set them.
-// env-write-kept: as above.
-delete process.env.WFC_MERGE_PARENTS;
+// #348 #457
+const { VAULT_ALL_SUITES, WFC_GATE_SEAT, WFC_MERGE_PARENTS, ...HAND_ENV } = process.env;
 const assert = require("node:assert/strict");
 const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
@@ -21,9 +15,11 @@ const { after, test } = require("node:test");
 const ROOT = path.join(__dirname, "..");
 const { plan, planSides } = require("./select-suites.js");
 const SCRIPTS = "plugin/skills/design-round/scripts";
+const allSh = (args, { cwd, env } = {}) => spawnSync("bash", [path.join(cwd ?? ROOT, "test", "all.sh"), ...args],
+  { cwd, encoding: "utf8", env: { ...HAND_ENV, ...env } });
 
 // all.sh's own list, as it prints it run by hand: every suite.
-const byHand = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--plan"], { encoding: "utf8" });
+const byHand = allSh(["--plan"]);
 const SUITES = byHand.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
 const PYTHON = SUITES.filter((s) => s.startsWith("python3 "));
 const NODE = SUITES.find((s) => s.startsWith("node "));
@@ -33,11 +29,11 @@ const ran = (staged) => {
 };
 
 // The Python suites that never load check-flow.py.
-const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/child.test.py"];
+const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
   const shardOf = (k, n) => {
-    const r = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--plan", `--shard=${k}/${n}`], { encoding: "utf8" });
+    const r = allSh(["--plan", `--shard=${k}/${n}`]);
     assert.equal(r.status, 0, r.stderr);
     return r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
   };
@@ -54,11 +50,11 @@ test("--shard refuses a shard past its count, a zero, and test files beside it, 
     [["--shard=1/x"], /got '1\/x'/],
     [["--shard=1/4", "test/gate.test.js"], /--shard takes no test files/],
   ]) {
-    const r = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--plan", ...args], { encoding: "utf8" });
+    const r = allSh(["--plan", ...args]);
     assert.equal(r.status, 2, args.join(" "));
     assert.match(r.stderr, said);
   }
-  const after = spawnSync("bash", [path.join(ROOT, "test", "all.sh"), "--shard=1/4", "--plan"], { encoding: "utf8" });
+  const after = allSh(["--shard=1/4", "--plan"]);
   assert.equal(after.status, 0, after.stderr);
 });
 
@@ -66,7 +62,7 @@ test("run by hand, all.sh runs every suite file git tracks in test/ and skips no
   assert.equal(byHand.status, 0);
   // Tracked files only, so a suite another session is still writing does not fail this session's commit. A listed
   // suite need only be on disk: the commit that adds one runs this before git tracks it, and no-git-env hides its index.
-  const tracked = execFileSync("git", ["ls-files", "test/*.test.py", "test/*.test.sh"], { cwd: ROOT, encoding: "utf8" })
+  const tracked = execFileSync("git", ["ls-files", "test/*.test.py", "test/*.test.sh"], { cwd: ROOT, encoding: "utf8", env: HAND_ENV })
     .split("\n").filter((f) => /^test\/[^/]+$/.test(f)).map((f) => `${f.endsWith(".py") ? "python3" : "bash"} ${f}`);
   assert.deepEqual(tracked.filter((s) => !SUITES.includes(s)), [], "a tracked suite all.sh does not list");
   const missing = SUITES.filter((s) => s !== NODE && !fs.existsSync(path.join(ROOT, s.split(" ")[1])));
@@ -80,12 +76,25 @@ test("a commit staging only docs/, data/ or images/ files runs the fast checks a
   assert.ok(p.suites.filter((s) => s.why).every((s) => /none of the 3 staged file\(s\) is one it reads/.test(s.why)));
 });
 
-test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py; contact-sheet.py runs its own alone", () => {
+test("a script a named directory holds is followed, so colour_space.py, which probe.py there loads, runs the suites naming design-round's scripts (#382)", () => {
+  const staged = ["plugin/skills/design-project/scripts/colour_space.py"];
+  assert.ok(!plan(SUITES, staged).all);
+  const got = ran(staged);
+  for (const suite of ["python3 test/check-dom.test.py", "python3 test/check-load-files.test.py"]) assert.ok(got.includes(suite), suite);
+});
+
+test("a directory named by a lone bare word is not followed: check-flow.test.py's \"load\" is a mock target, not test/load/ (#382)", () => {
+  assert.ok(SUITES.includes("python3 test/check-flow.test.py"));
+  assert.ok(!plan(SUITES, [`${SCRIPTS}/cutout.py`]).all);
+  assert.ok(!ran([`${SCRIPTS}/cutout.py`]).includes("python3 test/check-flow.test.py"));
+});
+
+test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py loads back; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
-  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
-  assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
-  assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), [...fast, "python3 test/check-flow-records.test.py", "python3 test/check-measure.test.py", "python3 test/face-profile.test.py", "python3 test/contact-sheet.test.py", "python3 test/check-layout.test.py", "python3 test/check-access.test.py", "python3 test/check-access-contrast.test.py", "python3 test/check-access-pointer.test.py", "python3 test/probe.test.py", "python3 test/parts-map.test.py", "python3 test/look.test.py", "python3 test/check-load.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py", "python3 test/check-markup.test.py", "python3 test/check-style.test.py", "python3 test/check-state.test.py", "python3 test/check-text.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
 
 test("a suite runs for its own test file, its fixtures, and a script its test runs", () => {
@@ -127,7 +136,7 @@ const relist = (from, to) => {
 
 const FAST = [NODE, "bash test/design-round-pointer.test.sh"];
 // What a commit staging contact-sheet.py alone runs.
-const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
+const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
 const relisting = (after) => plan(SUITES, ["test/all.sh"], { before: ALL_SH, after });
 const runs = (p) => p.suites.filter((s) => !s.why).map((s) => s.suite);
 
@@ -176,7 +185,7 @@ const hooks = path.join(scratch, "hooks");
 const planOut = path.join(scratch, "plan.txt");
 fs.mkdirSync(hooks);
 fs.writeFileSync(path.join(hooks, "pre-commit"), `#!/bin/sh\nbash test/all.sh --plan >"${planOut}"\n`, { mode: 0o755 });
-const git = (args, env = process.env) => execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
+const git = (args, env = HAND_ENV) => execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
   { cwd: repo, encoding: "utf8", env });
 git(["init", "-q", "-b", "main"]);
 git(["-c", "core.hooksPath=/dev/null", "add", "-A"]);
@@ -185,13 +194,24 @@ git(["config", "core.hooksPath", hooks]);
 const touch = (rel) => fs.appendFileSync(path.join(repo, rel), "\n# touched\n");
 const planRuns = () => fs.readFileSync(planOut, "utf8").split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
 
+test("a script a followed directory holds, named by no suite, still runs every suite (#382)", () => {
+  const unnamed = `${SCRIPTS}/unnamed-by-any-suite.py`;
+  fs.writeFileSync(path.join(repo, unnamed), "");
+  try {
+    const scratchPlan = require(path.join(repo, "test", "select-suites.js")).plan;
+    assert.match(scratchPlan(SUITES, [unnamed]).all ?? "", /no suite is known to read it/);
+  } finally {
+    fs.rmSync(path.join(repo, unnamed));
+  }
+});
+
 test("a commit through its own index file, as commit-paths.js makes, is judged on that index, not the shared one", () => {
   // The shared index stages check-flow.py; the private one stages contact-sheet.py alone.
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", `${SCRIPTS}/check-flow.py`]);
   touch(`${SCRIPTS}/contact-sheet.py`);
   const index = path.join(scratch, "private-index");
-  const env = { ...process.env, GIT_INDEX_FILE: index };
+  const env = { ...HAND_ENV, GIT_INDEX_FILE: index };
   git(["read-tree", "HEAD"], env);
   git(["add", `${SCRIPTS}/contact-sheet.py`], env);
   git(["commit", "-q", "-m", "private"], env);
@@ -200,7 +220,7 @@ test("a commit through its own index file, as commit-paths.js makes, is judged o
 });
 
 test("a plain commit is judged on the shared index, and VAULT_ALL_SUITES=1 runs every suite", () => {
-  git(["commit", "-q", "-m", "shared"], { ...process.env, VAULT_ALL_SUITES: "1" });
+  git(["commit", "-q", "-m", "shared"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
   assert.deepEqual(planRuns(), SUITES);
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", `${SCRIPTS}/check-flow.py`]);
@@ -210,7 +230,7 @@ test("a plain commit is judged on the shared index, and VAULT_ALL_SUITES=1 runs 
 
 test("in workflow-core's gate, which drops GIT_INDEX_FILE and sets WFC_GATE_SEAT, staged files choose; by hand they do not (#457)", () => {
   const planIn = (env) => {
-    const r = spawnSync("bash", ["test/all.sh", "--plan"], { cwd: repo, encoding: "utf8", env: { ...process.env, ...env } });
+    const r = allSh(["--plan"], { cwd: repo, env });
     assert.equal(r.status, 0, r.stderr);
     return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
   };
@@ -255,7 +275,7 @@ test("a commit through all.sh editing only its list runs only the suite on the l
   const text = fs.readFileSync(sh, "utf8");
   fs.writeFileSync(sh, text.replace("python3 test/palette.test.py\n", "python3 test/palette.test.py\timages\n"));
   const index = path.join(scratch, "list-index");
-  const env = { ...process.env, GIT_INDEX_FILE: index };
+  const env = { ...HAND_ENV, GIT_INDEX_FILE: index };
   git(["read-tree", "HEAD"], env);
   git(["add", "test/all.sh"], env);
   git(["commit", "-q", "-m", "list"], env);
@@ -266,17 +286,17 @@ test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate
   git(["checkout", "-q", "-b", "branch"]);
   touch(`${SCRIPTS}/contact-sheet.py`);
   git(["add", "-A"]);
-  git(["commit", "-q", "-m", "branch"], { ...process.env, VAULT_ALL_SUITES: "1" });
+  git(["commit", "-q", "-m", "branch"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
   git(["checkout", "-q", "main"]);
   touch("test/all.sh");
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", "-A"]);
-  git(["commit", "-q", "-m", "main"], { ...process.env, VAULT_ALL_SUITES: "1" });
+  git(["commit", "-q", "-m", "main"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
   const main = git(["rev-parse", "main"]).trim();
   git(["checkout", "-q", "branch"]);
   git(["merge", "-q", "--no-commit", "--no-ff", "main"]);
   const planIn = (env) => {
-    const r = spawnSync("bash", ["test/all.sh", "--plan"], { cwd: repo, encoding: "utf8", env: { ...process.env, ...env } });
+    const r = allSh(["--plan"], { cwd: repo, env });
     assert.equal(r.status, 0, r.stderr);
     return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
   };

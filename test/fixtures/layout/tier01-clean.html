@@ -8,7 +8,7 @@
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font: 16px/1.5 monospace; }
-  img { display: block; }
+  img { display: block; max-width: 100%; height: auto; }
   .wrap { max-width: 1200px; margin-inline: auto; padding: 0 24px; }
   header { padding: 8px 0; }
   header .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
@@ -21,7 +21,7 @@
   .page > * { min-width: 0; }
   @media (min-width: 840px) { .page { grid-template-columns: 7fr 3fr; } }
   main section { padding: 16px 0; }
-  p { max-width: 32em; }
+  p { max-width: 36em; }
   .rtl { display: flex; gap: 8px; padding: 0; list-style: none; }
   .fluid { font-size: clamp(1rem, 0.8rem + 1vw, 2rem); }
   .cols { display: flex; width: 100px; background: #111; }
@@ -29,6 +29,12 @@
   .centre { display: flex; justify-content: safe center; width: 200px; overflow-x: auto; }
   .centre div { flex: none; width: 300px; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 16px; }
+  @media (max-width: 599px) { .cards { grid-template-columns: 1fr; } }
+  .chips { display: flex; gap: 8px; overflow-x: auto; width: 100%; }
+  .chips a { flex: none; }
+  .cats.wide { grid-template-columns: 1fr; }
+  .cats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0; list-style: none; }
+  @media (min-width: 600px) { .cats { grid-template-columns: repeat(4, 1fr); } }
   .card { display: grid; grid-row: span 3; grid-template-rows: subgrid; gap: 4px; border: 1px solid #ccc; }
   .card h3, .card p { margin: 0; }
   .mo { container-type: inline-size; }
@@ -42,7 +48,8 @@
   .buttons { display: flex; gap: 8px; }
   @media (max-width: 767px) { .buttons { flex-direction: column; } .buttons button { width: 100%; } }
   .tags { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
-  .strip { display: flex; gap: 16px; overflow-x: auto; white-space: nowrap; padding: 0; list-style: none; margin: 0; }
+  .strip a { display: block; padding: 0 8px; }
+  .strip { display: flex; max-width: 250px; overflow-x: auto; white-space: nowrap; padding: 0; list-style: none; margin: 0; }
   .crumbs ol { display: flex; gap: 8px; padding: 0; list-style: none; }
   @media (max-width: 767px) { .crumbs .middle { display: none; } }
   @media (min-width: 768px) { .crumbs .more { display: none; } }
@@ -64,6 +71,7 @@
   <div class="wrap">
     <a class="logo" href="/"><img class="full" alt="Vault Hostel" width="160" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='40'%3E%3Crect width='160' height='40' fill='%23335'/%3E%3C/svg%3E"><img class="mark" alt="Vault Hostel" width="40" height="40" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23335'/%3E%3C/svg%3E"></a>
     <nav id="main-nav" aria-label="Main"><ul><li><a href="#a">Home</a></li><li><a href="#b">Rooms</a></li><li><a href="#c">Food</a></li><li><a href="#d">Book</a></li></ul></nav>
+    <div class="chips"><a href="#dorm-beds">Dorm beds</a><a href="#private-rooms">Private rooms</a><a href="#family-rooms">Family rooms</a><a href="#sea-view">Sea view</a><a href="#breakfast">Breakfast</a><a href="#late-check-in">Late check-in</a><a href="#parking">Parking</a><a href="#pets">Pets</a></div>
   </div>
 </header>
 <div class="page wrap">
@@ -94,6 +102,9 @@
       <article class="card"><h3>Dorm</h3><p>Six beds.</p><p>From 20</p></article>
       <article class="card"><h3>Private room with a view over the square</h3><p>Two beds.</p><p>From 60</p></article>
     </div>
+    <ul class="cats"><li class="tile">Dorms</li><li class="tile">Rooms</li><li class="tile">Suites</li><li class="tile">Tents</li></ul>
+    <ul class="cats wide"><li class="tile">Private rooms with a sea view and a balcony</li><li class="tile">Family rooms for four</li></ul>
+    <div class="empty"><p>No bookings yet.</p></div>
     <div class="mo"><article class="card media"><img alt="" width="120" height="80" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80'/%3E"><p>A room with a balcony.</p></article></div>
   </section>
   <section>

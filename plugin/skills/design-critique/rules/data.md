@@ -153,13 +153,30 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 - question: Are alternating row fills used only on a wide table of many columns, or a label-and-value spec table, where the eye must track along a row, each stripe a subtle tint in the direction of reading, and every other table read by alignment, space and rules alone?
 - answered-by: look
 - writes: row striping
-- yields-to: vault.table-headers, level 2
+- yields-to: vault.zebra-tint, vault.table-headers, level 2
 - source: Apple HIG Lists and tables: "Consider using alternating row colors in a multicolumn table ... especially in a wide table"; USWDS Table, striped variant, "to help the eye track across table rows", paired "with the scrollable variant for tables with many columns"; Baymard, product spec sheets (2026): "alternating backgrounds or subtle borders ... to connect labels directly to their values"; Richard Rutter, Web Typography (2017), "Keep table furniture and fills to a minimum": "Avoid zebra striping ... Only use tints as a subtle means of guiding your reader's eyes, and then only if you cannot arrange the data to that end"; strength: design-system guidance
 - era: timeless
 - owner: vault
 - stage: treatment
 - target: Stripe the rows of a wide many-column table or a spec sheet with a subtle tint; set narrower tables by alignment, space and light rules.
 - parts: table
+- reasons: design-critique/references/layout-and-data.md#striped-rows
+- ledger: SUR-16
+- status: staged
+
+### vault.zebra-tint
+- applies-when: web-surface; every filled row or cell in a table body
+- question: Does each striped row's or cell's fill hold within 1.32:1 WCAG contrast of the table's ground beneath it on a light ground, and 1.48:1 on a dark one?
+- answered-by: script
+- writes: row stripe tint
+- yields-to: vault.ground-step, level 2
+- source: design systems' stripe tokens against their plain rows, contrast computed from each (as read Nov 2026): USWDS `usa-table--striped`, gray-5 #f0f0f0 on white, 1.14:1; IBM Carbon `--data-table--zebra`, layer-accent on layer, 1.20:1 (White), 1.32:1 (g10), 1.31:1 (g100), 1.48:1 (g90); Bootstrap 5.3 `.table-striped`, 5% black, 1.12:1, and 5% white on #212529, 1.16:1; Shopify Polaris DataTable, #f7f7f7 on white, 1.07:1; GitHub Primer Markdown tables, #f6f8fa on white, 1.07:1; the ceilings are the highest of them on each ground, Carbon g10 on light and g90 on dark; strength: design-system guidance
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: Tint a striped row no further than 1.32:1 from the table's ground on a light ground, or 1.48:1 on a dark one.
+- parts: table
+- script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-critique/references/layout-and-data.md#striped-rows
 - ledger: SUR-16
 - status: staged
@@ -217,7 +234,7 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 
 ### vault.table-narrow
 - applies-when: web-surface; each data table wider than the screen at phone width
-- question: At phone width, does each data table too wide for the screen take the form its use needs: a table read to compare across rows or columns scrolling sideways in its own keyboard-focusable container with its headers kept, a list of records stacking each row into a block of label-value lines, a comparison of items showing at most two at a time or one tab each, a spec sheet becoming one column of collapsible sections, and never the whole table shrunk to fit?
+- question: At phone width, does each data table too wide for the screen either scroll sideways in its own keyboard-focusable container or stack its rows into blocks?
 - answered-by: script
 - writes: data table form at narrow widths
 - yields-to: vault.reflow, level 2
@@ -227,6 +244,21 @@ Sets of data and repeated items: lists, tables, filters and sets of options. The
 - stage: role
 - target: Pick each wide table's phone form by its use: a scrolling, focusable container for tables read across rows or columns; stacked label-value blocks for a list of records; two items or one tab each for a comparison; collapsible single-column sections for a spec sheet.
 - script: check-layout.py <page> --out <dir> --records
+- reasons: design-critique/references/responsive-structure.md#wide-tables-by-purpose
+- ledger: LAY-76
+- status: staged
+
+### vault.table-narrow-form
+- applies-when: web-surface; each data table wider than the screen at phone width
+- question: At phone width, does each wide table take the form its use needs, with its headers kept and never shrunk to fit: scrolling for a table read across rows or columns, label-value blocks for a list of records, two items or one tab each for a comparison, collapsible single-column sections for a spec sheet?
+- answered-by: look
+- writes: data table form by use at narrow widths
+- yields-to: vault.table-narrow, level 2
+- source: Rutter, Web Typography (2017), "Numerals and tables" pp. 140–143: "Make tables responsive according to their purpose", "Linearise simple tables into lists"; NN/g, "Comparison Tables for Products, Services, and Features" (9 Feb 2024): "unlikely that you'll be able to show more than 2 items at a time", "converting the table to tabs or lists for small screens"; Baymard, "Product Spec Sheet UX" (24 Sep 2026): "consider using vertically collapsible sections or truncation rather than compressing the layout"; strength: expert and design-system guidance
+- era: timeless
+- owner: vault
+- stage: role
+- target: Pick each wide table's phone form by its use, keeping its headers at full size: scrolling for tables read across, label-value blocks for records, two items or one tab each for a comparison, collapsible sections for a spec sheet.
 - reasons: design-critique/references/responsive-structure.md#wide-tables-by-purpose
 - ledger: LAY-76
 - status: staged

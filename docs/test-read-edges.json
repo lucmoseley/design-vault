@@ -31,6 +31,7 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"calibration-log.js": [
+			"test/bundle.test.js",
 			"test/calibration-log.test.js",
 			"test/calibration-score.test.js",
 			"test/rule-store-pointers.test.js"
@@ -46,12 +47,20 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"corrections-log.js": [
+			"test/bundle.test.js",
 			"test/corrections-log.test.js",
 			"test/rule-store-pointers.test.js"
 		],
 		"critic-examples.js": [
 			"test/critic-examples.test.js",
 			"test/rule-store-pointers.test.js"
+		],
+		"data/calibration-log.jsonl": [
+			"test/bundle.test.js",
+			"test/round-log.test.js"
+		],
+		"data/corrections-log.jsonl": [
+			"test/bundle.test.js"
 		],
 		"data/gallery.json": [
 			"test/bundle.test.js",
@@ -60,6 +69,7 @@
 			"test/validate.test.js"
 		],
 		"data/round-log.jsonl": [
+			"test/bundle.test.js",
 			"test/round-log.test.js"
 		],
 		"data/styles.json": [
@@ -119,10 +129,11 @@
 		"plugin/.claude-plugin/plugin.json": [
 			"test/plugin-manifest.test.js"
 		],
+		"plugin/review-page/index.html": [
+			"test/review-page.test.js"
+		],
 		"plugin/review-page/review.js": [
-			"test/ledger-check.test.js",
-			"test/no-git-env.test.js",
-			"test/select-suites.test.js"
+			"test/review-page.test.js"
 		],
 		"plugin/skills/design-critique/SKILL.md": [
 			"test/gate-wording.test.js"
@@ -235,6 +246,9 @@
 			"test/client-originals.test.js",
 			"test/select-suites.test.js"
 		],
+		"plugin/skills/design-project/scripts/colour_space.py": [
+			"test/select-suites.test.js"
+		],
 		"plugin/skills/design-round/SKILL.md": [
 			"test/gate-wording.test.js"
 		],
@@ -278,6 +292,9 @@
 			"test/gate-tally.test.js",
 			"test/gate.test.js"
 		],
+		"plugin/skills/design-round/scripts/higgsfield-api.js": [
+			"test/higgsfield.test.js"
+		],
 		"plugin/skills/design-round/scripts/higgsfield-client.js": [
 			"test/higgsfield.test.js"
 		],
@@ -301,37 +318,15 @@
 			"test/rule-store-pointers.test.js"
 		],
 		"round-log.js": [
+			"test/bundle.test.js",
 			"test/round-log.test.js",
 			"test/rule-store-pointers.test.js"
 		],
 		"scripts/lib/resolve-core.js": [
-			"test/bundle.test.js",
-			"test/calibration-critic.test.js",
-			"test/calibration-packet.test.js",
-			"test/calibration-score.test.js",
-			"test/check-curves.test.js",
-			"test/chromium-suites.test.js",
-			"test/client.test.js",
-			"test/corrections-log.test.js",
-			"test/critic-examples.test.js",
 			"test/failed-files.test.js",
-			"test/fall-check.test.js",
-			"test/fall.test.js",
-			"test/fit-gate-template.test.js",
-			"test/gate-affordance.test.js",
-			"test/gate-list.test.js",
-			"test/gate-recheck.test.js",
-			"test/gate-select.test.js",
-			"test/gate-tally.test.js",
-			"test/gate.test.js",
-			"test/higgsfield.test.js",
-			"test/ingest.test.js",
 			"test/ledger-check.test.js",
-			"test/ledger-upkeep.test.js",
-			"test/release-check.test.js",
-			"test/round-log.test.js",
-			"test/select-suites.test.js",
-			"test/validate.test.js"
+			"test/run-lanes.test.js",
+			"test/select-suites.test.js"
 		],
 		"search.js": [
 			"test/rule-store-pointers.test.js"
@@ -589,6 +584,10 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/carousel.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/clean.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -601,7 +600,19 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/contrast-tier01-decks.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/contrast-tier01-fault.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/access/contrast-tier01-later-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/access/contrast-tier01-later.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -634,6 +645,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/access/ended.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/access/entrance.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -725,6 +740,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/access/settling.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/access/strokes.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -754,6 +773,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/access/trapped.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/access/unclickable.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -866,6 +889,7 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/check-seams/translucent.html": [
+			"test/check-curves.test.js",
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1142,6 +1166,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/tier01-rest-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/touch-map.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1170,6 +1198,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/canvas.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/chained.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1194,11 +1226,31 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/morph.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/raf-asset.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/raf.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/restless.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/ring.svg": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/seeked.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/smil.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1330,6 +1382,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/gate/project-unread-target.md": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/gate/recheck/answered.json": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1387,6 +1443,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/gate/record-owed-look.md": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/gate/record-unread-target.md": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1547,11 +1607,43 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/layout/tier01-columns-beside.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-columns-clean.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-columns-fault.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/layout/tier01-fault.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/layout/tier01-gaps-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-gaps.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-main-grid.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/layout/tier01-parts.json": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-reading-column.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/tier01-reading-wide.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1576,6 +1668,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/layout/wide.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/load/after-load.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1647,7 +1743,19 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/look/late.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/look/page.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/look/staggered.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/look/still.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1852,6 +1960,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/text/countdown.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/text/quicksand.ttf": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -2247,6 +2359,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/load/renderer-kill.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/load/sibling-shots.py": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -2318,6 +2434,16 @@
 			"test/rule-store-pointers.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/rule-table.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/run-cost.js": [
+			"test/failed-files.test.js",
+			"test/ledger-check.test.js",
+			"test/run-lanes.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/run-lanes.sh": [
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
@@ -2348,6 +2474,10 @@
 		"test/server.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/siblings.test.py": [
+			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/validate.test.js": [

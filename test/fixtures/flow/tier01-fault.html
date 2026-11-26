@@ -25,7 +25,7 @@
   .layer { height: 300px; background-image: linear-gradient(#fecaca, #7f1d1d); }
   .reveal { opacity: 0; transition: opacity 300ms; }
   .reveal.in { opacity: 1; }
-  .card { width: 160px; height: 100px; background: #fde68a; touch-action: none; user-select: none; }
+  .card, .rest-card { width: 160px; height: 100px; background: #fde68a; touch-action: none; user-select: none; }
   .lane { width: 800px; height: 120px; }
 </style>
 </head>
@@ -47,6 +47,11 @@
 <!-- vault.drag-release: a card that settles on the snap point nearest where it was let go. -->
 <section>
   <div class="lane"><div class="card" data-record="vault.drag-release">Drag me</div></div>
+</section>
+<!-- vault.drag-release-spring-code: a card that settles on the snap point its release velocity projects to,
+     with no overshoot, but on an ease that starts from rest, so its settle ignores the release velocity. -->
+<section>
+  <div class="lane"><div class="rest-card" data-record="vault.drag-release-spring-code">Drag me too</div></div>
 </section>
 <!-- vault.parallax: a heading that drifts at 0.4 of the scroll. -->
 <section><h2 class="drift" data-record="vault.parallax">A drifting heading</h2></section>
@@ -73,17 +78,31 @@
   setInterval(() => go(at + 1), 2000);
   document.querySelector('.next').addEventListener('click', () => go(at + 1));
 
-  const card = document.querySelector('.card');
   const SNAPS = [0, 300];
-  let x = 0, from = null, base = 0;
-  card.addEventListener('pointerdown', (e) => { card.setPointerCapture(e.pointerId); from = e.clientX; base = x; card.style.transition = 'none'; });
-  card.addEventListener('pointermove', (e) => { if (from === null) return; x = base + e.clientX - from; card.style.transform = `translateX(${x}px)`; });
-  card.addEventListener('pointerup', () => {
-    from = null;
-    x = SNAPS.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
-    card.style.transition = 'transform 200ms ease-out';
-    card.style.transform = `translateX(${x}px)`;
-  });
+  const VELOCITY_WINDOW_MS = 100; // #428: tier01-clean.html's release window, a guess
+  const DECELERATION = 0.998; // #428: check-flow.table's drag-release deceleration
+  const nearest = (to) => SNAPS.reduce((a, b) => (Math.abs(b - to) < Math.abs(a - to) ? b : a));
+  const dragCard = (card, settle) => {
+    let x = 0, from = null, base = 0, moves = [];
+    card.addEventListener('pointerdown', (e) => { card.setPointerCapture(e.pointerId); from = e.clientX; base = x; moves = [[e.timeStamp, e.clientX]]; card.style.transition = 'none'; });
+    card.addEventListener('pointermove', (e) => {
+      if (from === null) return;
+      x = base + e.clientX - from;
+      card.style.transform = `translateX(${x}px)`;
+      moves.push([e.timeStamp, e.clientX]);
+    });
+    card.addEventListener('pointerup', (e) => {
+      from = null;
+      const recent = moves.filter((m) => m[0] > e.timeStamp - VELOCITY_WINDOW_MS);
+      const v = recent.length > 1 ? ((recent.at(-1)[1] - recent[0][1]) / (recent.at(-1)[0] - recent[0][0])) * 1000 : 0;
+      const [to, transition] = settle(x, v);
+      x = to;
+      card.style.transition = transition;
+      card.style.transform = `translateX(${x}px)`;
+    });
+  };
+  dragCard(document.querySelector('.card'), (x) => [nearest(x), 'transform 200ms ease-out']);
+  dragCard(document.querySelector('.rest-card'), (x, v) => [nearest(x + (v / 1000) * (DECELERATION / (1 - DECELERATION))), 'transform 300ms ease-in']);
 </script>
 </body>
 </html>

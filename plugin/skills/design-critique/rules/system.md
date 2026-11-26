@@ -162,18 +162,17 @@ Rules for the full site and the round: function codes, one look per function, th
 - era: dated 2027-10-14
 - owner: vault
 - stage: value
-- target: Keep interaction to next paint under 200 ms and cumulative layout shift under 0.1, reserving space for images, embeds and late fonts.
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: IMG-134, LAY-101, NAV-46
 - status: live
 
 ### vault.ai-look
 - applies-when: web-surface; the whole candidate
-- question: Does the candidate avoid impeccable's dated "AI look" defaults (same-size icon cards as the page's structure, nested cards, the hero-metric template, a decorative eyebrow that names no section, place or category, section numbers, gradient text, glass on content, a coloured side border, hard offset shadows, monospace as a costume, an overused font), save any the brief, a direction card or the project's rules file earns back?
+- question: Does the candidate avoid impeccable's dated "AI look" defaults (same-size icon cards as the page's structure, nested cards, the hero-metric template, a decorative eyebrow that names no section, place or category, section numbers, gradient text, glass on content, a coloured side border, hard offset shadows, monospace as a costume, an overused font, a purple or violet gradient, or purple as the default accent), save any the brief, a direction card or the project's rules file earns back?
 - answered-by: whole-page
 - writes: AI-look default
 - yields-to: level 5
-- source: impeccable 4.5.0 `craft-floor` Refuse list and its detector rules (`overused-font`, `side-tab` among them); GOV.UK Design System headings, for the eyebrow that names a section; strength: impeccable "AI look" ban
+- source: impeccable 4.5.0 `craft-floor` Refuse list and its detector rules (`overused-font`, `side-tab` among them); GOV.UK Design System headings, for the eyebrow that names a section; for purple, impeccable engine 0.1.11 `ai-color-palette`, the impeccable slop catalogue (impeccable.style/slop), Hallmark `sloplint.mjs` `bannedGradient` and Krebs, "Scoring Show HN submissions for AI design patterns" (20 Apr 2026); strength: impeccable "AI look" ban
 - era: dated 2027-04-14
 - owner: vault
 - stage: treatment

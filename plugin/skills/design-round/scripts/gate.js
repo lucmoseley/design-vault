@@ -72,7 +72,7 @@
 const fs = require("node:fs");
 const { parseArgs } = require("node:util");
 const path = require("node:path");
-const { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion } = require("./gate-form.js");
+const { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, isBuilderLoaded, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion } = require("./gate-form.js");
 
 // gate-form.js's LEVELS: #154 §The gate list's levels, of which these three a question's own source can set.
 const [LAW_LEVEL, PROJECT_LEVEL, EVIDENCE_LEVEL] = [1, 2, 3];
@@ -133,10 +133,11 @@ function yieldsTo(a, b) {
 /**
  * The static clashes among questions that all apply to one asset (#158): two that write the same property where
  * neither gives way to the other, or each does, or whether one does turns on an unrecorded level. Each is { a, b,
- * yielding, reason, winner }: `yielding` is `neither`, `each` or `unread`. Precedence keeps `winner` where the two
- * stand at different levels, a null level ranking below 2: `reason` is `law` where the winner is law or WCAG,
- * `project` where it is the project's. Otherwise `winner` is null and the founder settles it, `reason` saying why:
- * `same-owner` within one project's gate (#154 story 34), `same-level`, `vault-levels` for two vault questions below
+ * yielding, reason, winner }: `yielding` is `neither`, `each` or `unread`. Precedence keeps `winner`: `reason` is
+ * `stage` where the two give different stages, the earlier standing unless whether it yields is unread; else, where
+ * the two stand at different levels, a null level ranking below 2, `reason` is `law` where the winner is law or WCAG,
+ * `project` where it is the project's. Otherwise `winner` is null and the founder settles it,
+ * `reason` saying why: `same-owner` within one project's gate (#154 story 34), `same-level`, `vault-levels` for two vault questions below
  * level 1, `unread`, or `evidence` where the project's, resting on no domain evidence of its own, would beat a level-3
  * vault question that does not give way to the project (#192).
  */
@@ -150,13 +151,15 @@ function clashes(questions) {
       const yielding = ab === null || ba === null ? "unread" : ab ? "each" : "neither";
       const owner = a.fields.owner.value;
       const [la, lb] = [ownLevel(a) ?? Infinity, ownLevel(b) ?? Infinity];
+      const [early, earlyYields] = stageRank(a) < stageRank(b) ? [a, ab] : [b, ba];
       let reason;
-      if (yielding === "unread") reason = "unread";
+      if (stageRank(a) !== stageRank(b) && hasStage(a) && hasStage(b) && earlyYields !== null) reason = "stage";
+      else if (yielding === "unread") reason = "unread";
       else if (owner !== "vault" && owner === b.fields.owner.value) reason = "same-owner";
       else if (owner === "vault" && b.fields.owner.value === "vault" && Math.min(la, lb) > LAW_LEVEL) reason = "vault-levels";
       else if (la === lb) reason = "same-level";
       else if (Math.min(la, lb) === PROJECT_LEVEL && Math.max(la, lb) === EVIDENCE_LEVEL && !evidenced(la < lb ? a : b)) reason = "evidence";
-      const winner = reason ? null : la < lb ? a : b;
+      const winner = reason === "stage" ? early : reason ? null : la < lb ? a : b;
       found.push({ a, b, yielding, reason: reason ?? (ownLevel(winner) === 1 ? "law" : "project"), winner });
     }
   });
@@ -191,7 +194,8 @@ function listGates(files, asset, facts, staged = false) {
 }
 
 // #121's dependency order, coarse to fine; a project's record with no stage comes last.
-const stageRank = (q) => (STAGES.includes(q.fields.stage?.value) ? STAGES.indexOf(q.fields.stage.value) : STAGES.length);
+const hasStage = (q) => STAGES.includes(q.fields.stage?.value);
+const stageRank = (q) => (hasStage(q) ? STAGES.indexOf(q.fields.stage.value) : STAGES.length);
 const coarseToFine = (records) => [...records].sort((a, b) => stageRank(a) - stageRank(b));
 
 /**
@@ -207,7 +211,7 @@ function pickRecords(records, reader, stage, partsPresent) {
   const forParts = (q) => !q.fields.parts || q.fields.parts.value.split(",").some((p) => partsPresent.includes(p.trim()));
   const pick = {
     direction: (q) => atStage(q, "function", "role"),
-    build: (q) => atStage(q, "function", "role") || (atStage(q, "treatment") && forParts(q)) || (answererOf(q) === "builder" && !atStage(q, "function", "role", "treatment")),
+    build: (q) => isBuilderLoaded(q) && (!atStage(q, "treatment") || forParts(q)),
     finish: (q) => answererOf(q) === "script",
   };
   const kept = reader === "builder" ? records.filter(pick[stage]) : records.filter((q) => answererOf(q) === reader);
@@ -311,6 +315,7 @@ function partsOf(data) {
     else if (!(p.dead == null || (typeof p.dead === "string" && p.dead.startsWith("#")))) faults.push(`part ${i + 1} has a \`dead\` that is neither null nor a link's target`);
     seen.add(p?.id);
   });
+  if (faults.length) return { parts: [], faults };
   return { parts: data.parts.map((p) => ({ id: p.id, actable: p.actable, href: p.href || null, dead: p.dead ?? null, text: p.text })), faults };
 }
 
@@ -375,7 +380,7 @@ function answeredFaults({ answered }, answers) {
 // land, every pass of the second. A record with no stage, which only a project's may lack, is asked in the first: a
 // guess, unmeasured, that a fault found before the fixes costs least.
 const PHASES = [
-  { name: "function and role", holds: (q) => stageRank(q) < STAGES.indexOf("treatment") || stageRank(q) === STAGES.length },
+  { name: "function and role", holds: (q) => stageRank(q) < STAGES.indexOf("treatment") || !hasStage(q) },
   { name: "treatment and value", holds: (q) => !PHASES[0].holds(q) },
 ];
 
@@ -730,7 +735,7 @@ function readAssetArgs({ asset, fact: facts = [] }) {
   return { asset, facts: [...new Set(facts)] };
 }
 
-const SETTLED = { law: "law and WCAG beat every other rule", project: "the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own" };
+const SETTLED = { stage: "the dependency order decides first, and a later step never changes an earlier one", law: "within one step, law and WCAG beat every other rule", project: "within one step, the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own" };
 const FOR_FOUNDER = {
   "same-owner": "both are {owner}'s own",
   "same-level": "both at one precedence level",
@@ -952,6 +957,23 @@ function readText(file) {
   }
 }
 
+function sharedCriticFile(critics) {
+  const owner = new Map();
+  for (const [index, files] of critics.entries()) {
+    for (const file of files.split(",")) {
+      let real;
+      try {
+        real = fs.realpathSync(file);
+      } catch {
+        real = path.resolve(file);
+      }
+      if (owner.has(real) && owner.get(real) !== index) return `${file} is named under two --critic flags, so one critic would count as two`;
+      owner.set(real, index);
+    }
+  }
+  return null;
+}
+
 /**
  * One answers file read against the form, { name, answers, clashes, faults }, each fault named by its file; or several,
  * comma-joined, as one critic's whose candidates were split across dispatches, which may not answer one candidate
@@ -1055,6 +1077,7 @@ function main(argv) {
     if (!why && values.pass !== undefined && !/^[1-9]\d*$/.test(values.pass)) why = `--pass is ${values.pass}, not a pass number`;
     if (!why && critiqued && !values.answered) why = `${command} needs the building session's answers, --answered <file>`;
     if (!why && critiqued && values.critic?.length !== CRITICS) why = `${command} takes ${CRITICS} ${command === "tally" ? "look" : "re-check"} critics' answers, --critic <file> each, not ${values.critic?.length ?? 0}`;
+    if (!why && critiqued) why = sharedCriticFile(values.critic);
     if (!why && isRecheck && !values.fault?.length) why = "recheck needs each fault fixed, --fault <candidate>:<id>";
     if (!why && isRecheck && !values.before) why = "recheck needs the building session's answers from before the fix, --before <file>";
     if (why) {

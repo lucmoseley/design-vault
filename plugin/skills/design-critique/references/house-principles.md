@@ -10,6 +10,8 @@ Every record carries both: its `stage` is its step in the dependency order, and 
 
 ### Dependency order
 
+Record: `vault.token-roles`.
+
 - **Rule.** Decide each part in four steps. An earlier step wins a clash with a later one by default:
 
   | Step | Decides | Reads | Decided by |
@@ -26,6 +28,8 @@ Every record carries both: its `stage` is its step in the dependency order, and 
 - **Source.** House synthesis over WAI-ARIA 1.2, Material 3 and Apple HIG for step 1, and the sources of each later step (`principle-interactions.md` §1, #121; confidence 0.7). The direction, abstract before concrete, is Garrett's (The Elements of User Experience, 2000) and Material 3's token tiers (a role named once, a value filling it). Garrett also names "a ripple effect up and down the planes" (#183 item 1).
 
 ### Source precedence
+
+Record: `vault.wcag-aa`.
 
 - **Rule.** Inside one step, a higher level wins. The levels, highest first:
   1. law and WCAG 2.2 AA;
@@ -88,11 +92,11 @@ Each function's carriers, and the properties it keeps for itself, are its record
 For each part, in this order, the whole-page critic answers:
 
 1. its function code: `vault.function-code`;
-2. whether a visitor can act on it and whether it looks as if they can: `vault.affordance`. Its cell is perceptible (both), hidden (acts, looks static), false (static, looks actable) or correct rejection (neither); hidden or false is a fault;
+2. whether a visitor can act on it and whether it looks as if they can: `vault.affordance`. Its cell is perceptible (both), hidden (acts, looks static), false (static, looks actable) or correct rejection (neither); hidden or false is a fault; and whether the Tab key reaches it: `vault.keyboard`;
 3. whether a visitor will know the action they want is here: `vault.findable-action`;
 4. which properties carry its function, and whether it takes one reserved for another: the carrier records above and `vault.borrowing`;
 5. whether each look on the page and the site means one function: `vault.borrowing`;
-6. its rank by visual weight against its rank by task priority, with one primary action: `vault.weight-order`, `vault.primary-action`;
+6. its rank by visual weight against its rank by task priority, with one primary action and no button colour past the action colour and the danger hue: `vault.weight-order`, `vault.primary-action`, `vault.action-colour`;
 7. whether decoration sits where the visitor works: `vault.decoration-place`;
 8. on a surface a visitor taps, whether each target has one action: `vault.one-target`;
 9. whether the moment is high-stakes, and its signifiers conventional: `vault.high-stakes`, `vault.brand-layer`.
@@ -105,7 +109,7 @@ For each part, in this order, the whole-page critic answers:
 
 ### Whole targets
 
-Record: `vault.whole-target`.
+Records: `vault.whole-target`, `vault.whole-target-look`.
 
 - **Why.** A visitor aims at the whole thing they see, not at its label. GOV.UK linked the whole task row after users tried to press the status labels, and makes the whole accordion heading the button; NN/g found a larger target catches more of the clicks people mean.
 - **Trade-off.** A row or card that is one target cannot hold a second action without hiding it; the second action splits the part into separate targets.
@@ -138,7 +142,7 @@ Record: `vault.brand-layer`.
 
 ### The default button in a dialog
 
-Record: `vault.dialog-default`.
+Records: `vault.dialog-default`, `vault.dialog-default-look`.
 
 - **Why.** People press the button that stands out, or press Return, without reading it first (Apple HIG).
 - **Trade-off.** Where a visitor chose the destructive action themselves (emptying the bin), it stays the default even though it cannot be undone, and saves a step (Apple HIG); opening focus on the safe button instead costs the visitor one more click.
@@ -162,11 +166,19 @@ Record: `vault.image-earns`.
 
 ### Expression by frequency
 
-Records: `vault.motion-frequency`, `vault.delight-frequency`.
+Records: `vault.motion-frequency`, `vault.delight-frequency`, `vault.motion-frequency-look`.
 
 - **Why.** Frequent parts move briefly or not at all, and expression is kept for the rare moments where it is noticed.
 - **Trade-off.** A product kept plain everywhere it is used often can feel flat; its character then rests on the brand layer and the rare moments.
 - **Clash.** `vault.high-stakes` and `vault.brand-layer` win: no delight goes on a price, a booking handover or an error. `vault.motion-duration` sets the range for every move; `vault.motion-frequency` keeps frequent parts at its short end.
+
+### Motion that starts by itself
+
+Record: `vault.motion-purpose`.
+
+- **Why.** Motion a visitor did not start pulls the eye whether or not anything is there to see, so it is spent on the one thing the brief wants noticed.
+- **Trade-off.** A brand whose character is restless motion loses it here unless the brief names that motion as the thing to notice.
+- **Clash.** `vault.pause` still gives any such motion over 5 s a control. A carousel that advances by itself is `vault.carousel-timing`'s, and a pulse on a status carrier `vault.carry-status`'s.
 
 ### Distinct from the category leaders
 

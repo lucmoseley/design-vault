@@ -73,7 +73,6 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - era: timeless
 - owner: vault
 - stage: value
-- target: Take every space from one scale on a 4 px step.
 - script: check-style.py <page> --out <dir> [--parts <declaration>]
 - reasons: design-round/references/impeccable.md#sources-for-the-rules-the-house-enforces
 - ledger: LAY-1, OTH-11
@@ -231,9 +230,9 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - owner: vault
 - stage: role
 - inputs: the container's role (reading page, default page or app view, canvas or board, footer band, empty state), the viewport width
-- output: reading page (articles, docs, blog): 864 px at most, margins included, or the main text in a two-thirds column of a wider page; default page (dashboard, directory, search results, and any page no other role names): 1020–1300 px, margins included; canvas or board: no cap; each stacked footer band (footer, identifier, sub-footer): the site footer's one max-width; empty state text: 464 px, or 304 px in a container narrower than 464 px
+- output: reading page (articles, docs, blog): 864 px at most, margins included, or the main text in a two-thirds column (2/3) of a wider page; default page (dashboard, directory, search results, and any page no other role names): 1020–1300 px, margins included; canvas or board: no cap; each stacked footer band (footer, identifier, sub-footer): the site footer's one max-width; empty state text: 464 px, or 304 px in a container narrower than 464 px
 - target: Cap each container by its role: about 864 px for a reading page, 1020–1300 px for the default page, none for a canvas; give every footer band the footer's one max-width and an empty state's text 464 px (304 px in a narrow container).
-- script: check-layout.py <page> --out <dir> --records [--brief page=<reading, default or canvas>]
+- script: check-layout.py <page> --out <dir> --records --parts <declaration> [--brief page=<reading, default or canvas>]
 - reasons: design-critique/references/alignment-and-width.md#content-width-by-role
 - ledger: LAY-43, LAY-45, LAY-49
 - status: staged
@@ -255,8 +254,8 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - status: staged
 
 ### vault.alignment-lines
-- applies-when: web-surface; every top-level content container (text block, card, image, table, form) in the main content area
-- question: Does each top-level content container start and end on a column line of the page's grid, never in a gutter or margin, with the main text edge on one line in every section but a full-bleed part (header, hero, image band) or a centred section?
+- applies-when: web-surface; every top-level content container (text block, card, image, table, form) in a CSS grid of the main content area, and each section's main text edge; a container placed without a CSS grid is `vault.alignment-lines-look`'s
+- question: Does each top-level content container in the main content's CSS grid start and end on one of its column lines, never in a gutter or margin, with the main text edge on one line in every section of a column but a full-bleed part (header, hero, image band) or a centred section, sections set side by side each keeping their own column's line?
 - answered-by: script
 - writes: grid alignment
 - yields-to: level 2
@@ -264,8 +263,23 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - era: timeless
 - owner: vault
 - stage: treatment
-- target: Lay the main content on one column grid: each text block, card, image, table and form starts and ends on its column lines, and the main text edge stays on one line through every section.
+- target: Lay the main content on one column grid: each text block, card, image, table and form starts and ends on its column lines, and the main text edge stays on one line through every section of a column.
 - script: check-layout.py <page> --out <dir> --records
+- reasons: design-critique/references/alignment-and-width.md#alignment-lines-between-sections
+- ledger: LAY-24
+- status: staged
+
+### vault.alignment-lines-look
+- applies-when: web-surface; every top-level content container (text block, card, image, table, form) in the main content area that no CSS grid places
+- question: Where the main content is laid on columns with no CSS grid, does each top-level content container start and end on a shared column line, never in a gutter or margin?
+- answered-by: look
+- writes: grid alignment without a CSS grid
+- yields-to: vault.alignment-lines, level 2
+- source: Atlassian Design System, "Grid" (as read Oct 2026): "align content containers to the grid columns. Examples include cards, images, text blocks, tables, and forms", "Only top-level containers need to align to the grid", "Don't allow content to overflow into gutters or margins"; Butterick, Practical Typography, "Grids": "the eye must always be the final judge"; strength: design-system guidance
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: Where the page's columns come from flex, widths or margins rather than a CSS grid, start and end each top-level container on one of those shared column lines.
 - reasons: design-critique/references/alignment-and-width.md#alignment-lines-between-sections
 - ledger: LAY-24
 - status: staged
@@ -286,8 +300,8 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - status: staged
 
 ### vault.optical-alignment
-- applies-when: web-surface; content whose visible edge sits off the box it is aligned by: text inside a padded column beside an unpadded one, an icon beside text
-- question: Where a box's visible content sits off the box's edge, is the visible content aligned, not the box?
+- applies-when: web-surface; text inside an unpainted padded column beside an unpadded one; not an icon beside text, which `vault.optical-icon` judges
+- question: Where a padded column's text sits beside an unpadded neighbour's, is the text aligned with the neighbour's text, not the column's box with its box?
 - answered-by: script
 - writes: optical alignment
 - yields-to: level 2
@@ -295,8 +309,24 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - era: timeless
 - owner: vault
 - stage: treatment
-- target: Align what the eye sees: line up a padded column's text with its neighbour's, trim the padding on a button's icon side, and fix an icon's drawn offset in the SVG; check it on the render.
+- target: Line up a padded column's text with its neighbour's text, not its box with the neighbour's box.
 - script: check-layout.py <page> --out <dir> --records
+- reasons: design-critique/references/alignment-and-width.md#optical-alignment
+- ledger: LAY-88
+- status: staged
+
+### vault.optical-icon
+- applies-when: web-surface; an icon beside text: in a button, a link, a list item or a label
+- question: Does each icon beside text look aligned with it, its drawn shape centred on the text's line and balanced in its box, the padding on a button's icon side trimmed, rather than aligned by its box alone?
+- answered-by: look
+- writes: optical alignment of icons
+- yields-to: vault.optical-alignment, level 2
+- source: Krehel, "Optical Alignment" (jakub.kr, archived Oct 2025): "there are instances where it just looks off. When that happens, it is best to align items optically instead", less padding on a button's icon side; Butterick, Practical Typography, "Grids": "the eye must always be the final judge"; impeccable 4.5.0, layout.md: "Make optical corrections only after inspecting the rendered result"; strength: expert craft range
+- era: timeless
+- owner: vault
+- stage: treatment
+- target: Trim the padding on a button's icon side and fix an icon's drawn offset in the SVG so it sits centred on its text; check it on the render.
+- parts: icon
 - reasons: design-critique/references/alignment-and-width.md#optical-alignment
 - ledger: LAY-88
 - status: staged
@@ -366,8 +396,8 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - status: staged
 
 ### vault.content-columns
-- applies-when: web-surface; every grid of like items (cards, tiles, a feed, a product or category grid), and the page's main and side content columns
-- question: Does each grid of like items take as many columns as fit its items' minimum width, fluidly or by breakpoints set where its content breaks, falling to one column of cards at phone width and two of category tiles, and do the page's main and side columns stack into one column below the width where the side column would fall under its own minimum?
+- applies-when: web-surface; every grid of like items (cards, tiles, a feed, a product or category grid); not the page's main and side columns, which `vault.panes-by-width` and `vault.pane-split` place
+- question: Does each grid of like items take as many columns as fit its items' minimum width, fluidly or by breakpoints set where its content breaks, falling to one column of cards at phone width and two of category tiles, one where two would cut a tile's label?
 - answered-by: script
 - writes: content column count by width
 - yields-to: level 2
@@ -376,8 +406,8 @@ Where things sit on the page: reflow across widths and the first screen. The for
 - owner: vault
 - stage: role
 - inputs: the container's width, the item kind, the item's minimum width, the gap
-- output: columns = max(1, floor((container width + gap) ÷ (item minimum width + gap))); item minimum width: a card about 15em, a feed tile about 180 px, unless the project sets its own; category or subcategory tiles at phone width (under 600 px): 2 columns, or 1 where 2 would cut a tile's label; main and side content columns: side by side only where the side column keeps its minimum width, else one column, main first
-- target: Lay item grids out with `repeat(auto-fill, minmax(<item min>, 1fr))` or breakpoints where the content breaks: one column of cards and two of category tiles on a phone; stack the side column under the main one once it would fall below its minimum.
+- output: columns = max(1, floor((container width + gap) ÷ (item minimum width + gap))); item minimum width: a card about 15em, a feed tile about 180 px, unless the project sets its own; category or subcategory tiles at phone width (under 600 px): 2 columns, or 1 where 2 would cut a tile's label
+- target: Lay item grids out with `repeat(auto-fill, minmax(<item min>, 1fr))` or breakpoints where the content breaks: one column of cards and two of category tiles on a phone.
 - script: check-layout.py <page> --out <dir> --records --parts <declaration>
 - reasons: design-critique/references/responsive-structure.md#columns-by-width
 - ledger: LAY-37, LAY-60, LAY-61

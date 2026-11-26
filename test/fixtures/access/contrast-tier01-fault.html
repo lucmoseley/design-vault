@@ -6,7 +6,10 @@
 <!-- One plant per contrast record check-access.py answers (#316), each marked data-record with the record it fails.
      The photo is a light check of #f2f2f2 and #e0e0e0. With contrast-tier01-parts.json, .carousel is the carousel
      and #chart the chart. The thin paragraph passes vault.contrast at 5.74:1 but not the ladder's 7:1 aim: a note. vault.theme-contrast
-     takes two plants, one per scheme. -->
+     takes four plants, two per scheme: in dark, text drawn too faint and text that drops from 18.88:1 to 5.58:1,
+     off the 7:1 rung onto 4.5:1; under more contrast, text short of 7:1 and an icon left at 3.54:1, short of 4.5:1.
+     Each .deck shows a dark slide at load and a light one after; #deck-swap's next button swaps its one image's
+     source and then disables itself. Each deck's bare Save icon fails on the light slide alone. -->
 <style>
   body { margin: 0; padding: 16px; font: 16px/1.5 sans-serif; color: #111; background: #fff }
   .photo { position: relative; max-width: 320px; height: 160px; margin: 16px 0;
@@ -16,6 +19,16 @@
   .dots { position: absolute; left: 16px; bottom: 16px }
   .dots button { width: 12px; height: 12px; margin: 0 6px; padding: 0; border: 0; border-radius: 50%; background: #fff; opacity: 0.5 }
   .dots button[aria-current] { opacity: 1 }
+  .deck { background: none; overflow: hidden }
+  .slide, .shown { position: absolute; left: 0; top: 0; width: 100%; height: 100% }
+  .save { position: absolute; right: 16px; top: 16px; width: 32px; height: 32px; padding: 0; border: 0; background: none }
+  .pips { margin: 0; list-style: none; position: absolute; left: 16px; bottom: 16px; padding: 4px 6px; border-radius: 12px; background: rgba(0, 0, 0, 0.7) }
+  .pips li { display: inline }
+  .pips button { width: 12px; height: 12px; margin: 0 6px; padding: 0; border: 1px solid transparent; border-radius: 50%;
+    background: #fff; vertical-align: middle }
+  .pips button[aria-current] { width: 16px; height: 16px }
+  .next { position: absolute; left: 16px; bottom: 16px; height: 32px; padding: 0 12px; border: 1px solid transparent;
+    border-radius: 16px; background: rgba(0, 0, 0, 0.75); color: #fff; font: inherit }
   .faint { border: 1px solid #ddd; width: 200px; height: 36px; padding: 0 8px; font: inherit }
   .icon { width: 32px; height: 32px; padding: 0; border: 0; background: none }
   .tick { appearance: none; width: 24px; height: 24px; margin: 0; border: 2px solid #555; background: #fff; vertical-align: middle }
@@ -24,7 +37,7 @@
   .band p { margin: 0; color: #fff; font-size: 24px; font-weight: 700 }
   .book { border: 0; background: #1a5fb4; color: #fff; height: 44px; padding: 0 16px; font: inherit }
   .thin { font-weight: 300; color: #666 }
-  @media (prefers-color-scheme: dark) { #theme-plant { background: #222; color: #444 } }
+  @media (prefers-color-scheme: dark) { #theme-plant { background: #222; color: #444 } #rung-plant { background: #222; color: #999 } }
   @media (prefers-contrast: more) { #more-plant { color: #6b6b6b } }
 </style>
 <div class="photo">
@@ -37,6 +50,23 @@
   <div class="dots" id="dots-plant" data-record="vault.controls-on-photo">
     <button aria-label="Slide 1" aria-current="true"></button><button aria-label="Slide 2"></button><button aria-label="Slide 3"></button>
   </div>
+</div>
+<div class="photo carousel deck" id="deck-dots">
+  <img class="slide" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23222'/%3E%3Crect width='20' height='20' fill='%23333'/%3E%3C/svg%3E">
+  <img class="slide" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E" hidden>
+  <button class="save" id="slide-plant" data-record="vault.controls-on-photo" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
+  <ul class="pips"><li><button aria-label="Slide 1" aria-current="true"></button></li><li><button aria-label="Slide 2"></button></li></ul>
+</div>
+<div class="photo carousel deck" id="deck-next">
+  <img class="slide" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23222'/%3E%3Crect width='20' height='20' fill='%23333'/%3E%3C/svg%3E">
+  <img class="slide" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E" hidden>
+  <button class="save" id="next-plant" data-record="vault.controls-on-photo" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
+  <button class="next" aria-label="Next">›</button>
+</div>
+<div class="photo carousel deck" id="deck-swap">
+  <img class="shown" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23222'/%3E%3Crect width='20' height='20' fill='%23333'/%3E%3C/svg%3E" data-next="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23f2f2f2'/%3E%3Crect width='20' height='20' fill='%23e0e0e0'/%3E%3C/svg%3E">
+  <button class="save" id="swap-plant" data-record="vault.controls-on-photo" aria-label="Save"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#fff"/></svg></button>
+  <button class="next" aria-label="Next">›</button>
 </div>
 <p><label>Name <input class="faint" id="edge-plant" data-record="vault.control-edges" type="text"></label></p>
 <p><button class="icon" id="icon-plant" data-record="vault.contrast-ladder" aria-label="Close">
@@ -54,5 +84,29 @@
 <p><button class="book" id="forced-plant" data-record="vault.forced-colours-edge">Book a bed</button></p>
 <p id="theme-plant" data-record="vault.theme-contrast">Text the dark scheme greys out</p>
 <p id="more-plant" data-record="vault.theme-contrast">Text more contrast greys to 5.33:1, short of its 7:1</p>
+<p id="rung-plant" data-record="vault.theme-contrast">Text the dark scheme takes off the 7:1 rung</p>
+<p><button class="icon" id="more-icon-plant" data-record="vault.theme-contrast" aria-label="Menu">
+  <svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 8h16v16H8z" fill="#888"/></svg>
+</button></p>
 <p class="thin" id="thin-note">A thin face in grey</p>
+<script>
+  for (const deck of document.querySelectorAll('.deck:not(#deck-swap)')) {
+    const slides = [...deck.querySelectorAll('.slide')], pips = [...deck.querySelectorAll('.pips button')];
+    let at = 0;
+    const show = (k) => {
+      at = k;
+      slides.forEach((s, i) => { s.hidden = i !== k; });
+      pips.forEach((b, i) => b.toggleAttribute('aria-current', i === k));
+    };
+    pips.forEach((b, i) => b.addEventListener('click', () => show(i)));
+    const next = deck.querySelector('.next');
+    if (next) next.addEventListener('click', () => show((at + 1) % slides.length));
+  }
+  const swap = document.querySelector('#deck-swap');
+  swap.querySelector('.next').addEventListener('click', (e) => {
+    const img = swap.querySelector('.shown');
+    img.src = img.dataset.next;
+    e.currentTarget.disabled = true;
+  });
+</script>
 </html>
