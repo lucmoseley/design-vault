@@ -2257,6 +2257,80 @@ class MorphFlow(unittest.TestCase):
         [st] = flow.analyse(s)["steps"]
         self.assertEqual(sorted(st["channels"]), ["d", "position"])
 
+    def morph_and_position(self, position_from, seen=None, ease=linear, px=300, **at):
+        times = flow.sample_times(800, [], 60)
+
+        def go(t):
+            return ease(min(1, max(0, (t - position_from) / 500)))
+
+        s = {
+            "times": times,
+            "elements": [
+                {
+                    "label": "path#m0",
+                    "channels": {"position": [[px * go(t), 0] for t in times]},
+                }
+                | ({"seen": [seen(t) for t in times]} if seen else {})
+            ],
+            "morphs": [
+                {
+                    "label": "path#m0",
+                    "writes": writes(
+                        lambda t: min(1, max(0, (t - 107) / 500)),
+                        [7 + k * STEP for k in range(48)],
+                    ),
+                }
+            ],
+        }
+        flow.add_morphs(s)
+        return flow.analyse(s, **at)
+
+    def test_a_morph_and_another_channel_starting_together_jolt_once_632(self):
+        got = [
+            (j["edge"], j["at"], j["channels"])
+            for j in self.morph_and_position(100)["jolts"]
+        ]
+        self.assertEqual(
+            got, [("starts", 100, ["position", "d"]), ("stops", 600, ["position", "d"])]
+        )
+
+    def test_a_morph_and_another_channel_unseen_together_are_listed_once_632(self):
+        r = self.morph_and_position(100, seen=lambda t: t < 300)
+        self.assertEqual(
+            [(u["edge"], u["at"], u["channels"]) for u in r["unseen"]],
+            [("stops", 600, ["position", "d"])],
+        )
+
+    def test_one_jolt_both_channels_find_takes_the_higher_share_632(self):
+        r = self.morph_and_position(100, ease=lambda p: p**1.2, jolt_ratio=0.3)
+        start = r["jolts"][0]
+        self.assertEqual(
+            (start["edge"], start["channels"]), ("starts", ["position", "d"])
+        )
+        self.assertEqual(start["share"], 1.0)
+
+    def test_one_unseen_start_both_channels_find_names_all_it_would_be_632(self):
+        r = self.morph_and_position(100 + STEP, seen=lambda t: t > 300, px=600)
+        self.assertEqual(
+            [(u["edge"], u["channels"], u["would_be"]) for u in r["unseen"]],
+            [("starts", ["d", "position"], ["jolt", "jump"])],
+        )
+
+    def test_a_morph_and_another_channel_two_frames_apart_jolt_apart_632(self):
+        got = [
+            (j["edge"], j["at"], j["channels"])
+            for j in self.morph_and_position(100 + 2 * STEP)["jolts"]
+        ]
+        self.assertEqual(
+            got,
+            [
+                ("starts", 107, ["d"]),
+                ("starts", 133, ["position"]),
+                ("stops", 607, ["d"]),
+                ("stops", 633, ["position"]),
+            ],
+        )
+
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {
             "times": [0, 10],

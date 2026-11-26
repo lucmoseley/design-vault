@@ -833,6 +833,23 @@ def merged_steps(label, found):
     return out
 
 
+# #632
+def merged_edges(found, frame_ms):
+    out, last = [], None
+    for key, t, edge in sorted(found, key=lambda f: (f[0], f[1])):
+        if out and last[0] == key and t - last[1] <= frame_ms:
+            merged = out[-1]
+            merged["channels"] += edge["channels"]
+            if "share" in edge:
+                merged["share"] = max(merged["share"], edge["share"])
+            if "would_be" in edge:
+                merged["would_be"] = sorted({*merged["would_be"], *edge["would_be"]})
+        else:
+            out.append(edge)
+        last = (key, t)
+    return out
+
+
 def runs(flags):
     out, start = [], None
     for i, f in enumerate(flags + [False]):
@@ -869,7 +886,7 @@ def nearest(ts, t):
     )
 
 
-def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
+def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM, *, fps=FPS):
     shared = sample["times"]
     moved = []
     elements = []
@@ -961,7 +978,7 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                 }
             )
 
-    jolts, jumps, unseen = {}, {}, {}
+    jolts, jumps, unseen = [], {}, []
     jump_min = jump_px(view_cm)
     for el in elements:
         for name, ch in el["channels"].items():
@@ -1008,37 +1025,40 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                     if not (jolt or jump):
                         continue
                     if not seen[rest]:
-                        u = unseen.setdefault(
-                            (el["label"], edge, round(t)),
-                            {
-                                "element": el["label"],
-                                "edge": edge,
-                                "at": round(t),
-                                "would_be": [],
-                                "channels": [],
-                            },
+                        unseen.append(
+                            (
+                                (el["label"], edge),
+                                t,
+                                {
+                                    "element": el["label"],
+                                    "edge": edge,
+                                    "at": round(t),
+                                    "would_be": [
+                                        k
+                                        for k, f in (("jolt", jolt), ("jump", jump))
+                                        if f
+                                    ],
+                                    "channels": [name],
+                                },
+                            )
                         )
-                        u["would_be"] = sorted(
-                            set(u["would_be"])
-                            | {k for k, f in (("jolt", jolt), ("jump", jump)) if f}
-                        )
-                        u["channels"].append(name)
                         continue
                     if jolt:
-                        j = jolts.setdefault(
-                            (el["label"], edge, round(t), turn),
-                            {
-                                "element": el["label"],
-                                "edge": edge,
-                                "at": round(t),
-                                "share": 0,
-                                "line": round(line, 2),
-                                "channels": [],
-                            }
-                            | ({"turn": True} if turn else {}),
+                        jolts.append(
+                            (
+                                (el["label"], edge, turn),
+                                t,
+                                {
+                                    "element": el["label"],
+                                    "edge": edge,
+                                    "at": round(t),
+                                    "share": round(gain / top, 2),
+                                    "line": round(line, 2),
+                                    "channels": [name],
+                                }
+                                | ({"turn": True} if turn else {}),
+                            )
                         )
-                        j["share"] = max(j["share"], round(gain / top, 2))
-                        j["channels"].append(name)
                     if jump:
                         jumps[(el["label"], round(t))] = {
                             "element": el["label"],
@@ -1051,9 +1071,9 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
 
     return {
         "pauses": pauses,
-        "jolts": by_time(jolts.values()),
+        "jolts": by_time(merged_edges(jolts, 1000 / fps)),
         "jumps": by_time(jumps.values()),
-        "unseen": by_time(unseen.values()),
+        "unseen": by_time(merged_edges(unseen, 1000 / fps)),
         "steps": by_time(steps),
         "elements": elements,
     }
@@ -2263,7 +2283,7 @@ def main(argv):
     )
     if code:
         return code
-    result = analyse(sample, at.pause_ms, at.jolt_ratio, at.view_cm)
+    result = analyse(sample, at.pause_ms, at.jolt_ratio, at.view_cm, fps=at.fps)
     os.makedirs(at.out, exist_ok=True)
     svg_path = os.path.join(at.out, "speed.svg")
     json_path = os.path.join(at.out, "flow.json")
