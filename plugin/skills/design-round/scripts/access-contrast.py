@@ -14,7 +14,7 @@ check-access.py calls, at each width:
     contrasts.scheme(name, judged, measured, light)   # one scheme's vault.theme-contrast, from its own judge() and measure()
 
 `js` wraps a page-side body with check-access.py's helpers (css, rgba, shown, label, box and the rest); `parts` is the
-parts declaration's {name: selector} and `absent` the names it declares null; `texts` is the light page's (MEASURE_JS's result, its Shots), or None in a scheme's pass, which takes no thin-face notes; `fresh()` gives a new load of the page.
+parts declaration's {name: selector} and `absent` the names it declares null; `texts` is the light page's (MEASURE_JS's result, its Shots), or None in a scheme's pass, which takes no thin-face notes.
 
 Its I/O is the Playwright page it is handed: it marks elements with data-contrast-* attributes and injected styles, and
 takes them off again, leaving only its window.__contrast* lists.
@@ -248,16 +248,6 @@ PRESS_JS = """
 }
 """
 BACK_JS = "([x, y]) => scrollTo({ left: x, top: y, behavior: 'instant' })"
-SLIDE_SHOWN_JS = r"""
-(e, limit) => {
-  const o = e.getBoundingClientRect();
-  return [e, ...e.querySelectorAll('*')].slice(0, limit).map((d) => {
-    const r = d.getBoundingClientRect(), s = getComputedStyle(d);
-    return [r.left - o.left, r.top - o.top, r.width, r.height].map(Math.round).join(',')
-      + `,${s.opacity},${s.visibility},${d.currentSrc || ''},${s.backgroundImage}`;
-  }).join(';');
-}
-"""
 
 # With no chart declared (#429), the longest side, in px, of a canvas or SVG left out as an icon rather than listed
 # as what may be a chart, and the fewest shapes an SVG draws to be listed: a bar chart's three bars, or an axis and
@@ -266,7 +256,9 @@ STRAY_CHART_PX = 48
 STRAY_CHART_MARKS = 3
 
 # Marks the page's candidates and gives what each question reads of them.
-MARK_JS = r"""
+MARK_JS = (
+    keys.CONTROL_NAMES_JS
+    + r"""
 ({ charts, carousels, undeclared, STRAY_CHART_PX, STRAY_CHART_MARKS }) => {
   const bad = [...charts, ...carousels].filter((s) => { try { document.querySelector(s); return false; } catch (e) { return true; } });
   if (bad.length) return { bad };
@@ -361,13 +353,11 @@ MARK_JS = r"""
   const strayDots = !undeclared.carousel ? [] : dotRows(document)
     .filter(([, row]) => new Set(row.map(unnumbered)).size === 1 && !row.some(glyph))
     .map(([parent, row]) => ({ subject: label(parent), count: row.length }));
-  const nameOf = (el) => (el.getAttribute('aria-label') || el.title || el.textContent || el.value || '').trim();
-  const step = /\b(prev|previous|next|back|forward)\b|^\s*[‹›←→<>]\s*$/i, ahead = /\b(next|forward)\b|^\s*[›→>]\s*$/i;
   window.__contrastCarousels = [];
   const slides = [];
   for (const sel of carousels) for (const c of document.querySelectorAll(sel)) {
-    const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => step.test(nameOf(e)))) || [];
-    const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && ahead.test(nameOf(e))) || null;
+    const row = dotRows(c).map(([, r]) => r).find((r) => !r.some((e) => nameMatches(e, step))) || [];
+    const next = row.length ? null : [...c.querySelectorAll(CONTROL)].find((e) => shown(e) && !disabled(e) && nameMatches(e, ahead)) || null;
     window.__contrastCarousels.push({ el: c, dots: row, next });
     const media = [c, ...c.querySelectorAll('*')].some((e) => ['img', 'video', 'canvas'].includes(e.localName)
       || /url\(/.test(getComputedStyle(e).backgroundImage));
@@ -503,6 +493,7 @@ MARK_JS = r"""
   return { photo, iconOnly, dots, strayDots, slides, states, fills, charts: chartsOut, strayCharts, forced };
 }
 """
+)
 
 # Recolours what data-contrast-glyph and data-contrast-box mark with one colour: a control's text and icons, then its fill
 # or border. Shadows and filters are taken off the recoloured parts, so a halo stays as drawn only in the shot
@@ -910,9 +901,13 @@ def _shots(page, photo):
     return Shots(drawn, glyph, boxed, glyph | (boxed if boxed is not None else False))
 
 
-def _photo_reading(c, shots):
+Measured = collections.namedtuple("Measured", "subject where figure")
+Unmeasured = collections.namedtuple("Unmeasured", "subject where why")
+
+
+def _sighting(c, shots, where):
     if c["why"]:
-        return c["why"]
+        return Unmeasured(c["subject"], where, c["why"])
     figures = [
         f
         for f in (
@@ -924,12 +919,14 @@ def _photo_reading(c, shots):
         if f
     ]
     if not figures:
-        return "shows no glyph or edge the check can find"
-    return max(figures, key=lambda f: f.ratio)
+        return Unmeasured(
+            c["subject"], where, "shows no glyph or edge the check can find"
+        )
+    return Measured(c["subject"], where, max(figures, key=lambda f: f.ratio))
 
 
-def _photo_readings(photo, shots):
-    return [(c["subject"], _photo_reading(c, shots)) for c in photo]
+def _sightings(photo, shots, where):
+    return [_sighting(c, shots, where) for c in photo]
 
 
 def _press(page, js, handle, *, deck, dot):
@@ -944,15 +941,15 @@ def _press(page, js, handle, *, deck, dot):
 def _slide_pass(fresh, js, parts, absent):
     from playwright.sync_api import Error as PlaywrightError
 
-    readings, unread = [], []
+    sightings, unread = [], []
     deck_page = None
     try:
         deck_page = fresh()
-        _slide_readings(
+        _slide_sightings(
             deck_page,
             js,
             functools.partial(_mark, deck_page, js, parts, absent),
-            readings=readings,
+            sightings=sightings,
             unread=unread,
         )
     except PlaywrightError as err:
@@ -964,10 +961,10 @@ def _slide_pass(fresh, js, parts, absent):
     finally:
         if deck_page is not None:
             deck_page.close()
-    return readings, unread
+    return sightings, unread
 
 
-def _slide_readings(page, js, mark, *, readings, unread):
+def _slide_sightings(page, js, mark, *, sightings, unread):
     page.evaluate(STAY_ON_PAGE_JS)
 
     def read(subject, where, held):
@@ -983,7 +980,7 @@ def _slide_readings(page, js, mark, *, readings, unread):
                 f"the page changed size between its shots {where}, so its controls were not read"
             )
         else:
-            readings.append((where, _photo_readings(photo, shots)))
+            sightings.extend(_sightings(photo, shots, where))
 
     decks = mark()["slides"]
     page.evaluate(KEEP_DECKS_JS)
@@ -1010,7 +1007,7 @@ def _slide_readings(page, js, mark, *, readings, unread):
                     f"{subject} holds {deck['dots']} page dots, so its slides past {count} were not read"
                 )
         elif deck["next"]:
-            seen = {handle.evaluate(SLIDE_SHOWN_JS, keys.WATCH_LIMIT)}
+            seen = {handle.evaluate(keys.SHOWN_JS, keys.WATCH_LIMIT)}
             for pressed in range(1, MAX_SLIDES + 1):
                 where = (
                     f"on {subject}'s slide {pressed + 1}, reached by its next button"
@@ -1021,7 +1018,7 @@ def _slide_readings(page, js, mark, *, readings, unread):
                 if not held:
                     read(subject, where, False)
                     break
-                shows = handle.evaluate(SLIDE_SHOWN_JS, keys.WATCH_LIMIT)
+                shows = handle.evaluate(keys.SHOWN_JS, keys.WATCH_LIMIT)
                 if shows in seen:
                     if pressed == 1:
                         unread.append(
@@ -1043,25 +1040,25 @@ def _slide_readings(page, js, mark, *, readings, unread):
             )
 
 
-def _photo_verdict(photo, readings, table):
+def _photo_verdict(photo, sightings, table):
     passed = []
     by = {}
-    for where, got in readings:
-        for subject, reading in got:
-            by.setdefault(subject, []).append((where, reading))
+    for s in sightings:
+        by.setdefault(s.subject, []).append(s)
     for subject, seen in by.items():
         reasons = {}
-        for where, reading in seen:
-            if isinstance(reading, str):
-                reasons.setdefault(reading, where)
+        for s in seen:
+            if isinstance(s, Unmeasured):
+                reasons.setdefault(s.why, s.where)
         photo.unmeasured.extend(
             f"{subject} {why}" + (f", {where}" if where else "")
             for why, where in reasons.items()
         )
-        figures = [(where, r) for where, r in seen if isinstance(r, Figure)]
-        if not figures:
+        measured = [s for s in seen if isinstance(s, Measured)]
+        if not measured:
             continue
-        where, worst = min(figures, key=lambda wf: wf[1].ratio)
+        least = min(measured, key=lambda s: s.figure.ratio)
+        where, worst = least.where, least.figure
         if worst.ratio < table.photo:
             photo.faults.append(
                 {
@@ -1079,7 +1076,7 @@ def _photo_verdict(photo, readings, table):
 
 def measure(page, js, table, *, parts, absent, texts, fresh):
     """The page's {question id: Judged} for QUESTIONS, at rest and, for vault.controls-on-photo, on each slide of the
-    declared carousel, read on the page `fresh()` loads; and vault.carousel-focus's cannot-measure reason for each row
+    declared carousel; and vault.carousel-focus's cannot-measure reason for each row
     of page dots where no carousel was declared; and a Reading for each part they read and did not fault."""
     readings, on_photo = [], []
     out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
@@ -1125,7 +1122,7 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
                     "the page changed size between its shots of controls, so their glyphs were not read"
                 )
         else:
-            on_photo.append((None, _photo_readings(got["photo"], shots)))
+            on_photo += _sightings(got["photo"], shots, None)
             for c in got["iconOnly"]:
                 f = glyph_figure(shots.drawn, shots.glyph, c["rect"])
                 if f is None:
