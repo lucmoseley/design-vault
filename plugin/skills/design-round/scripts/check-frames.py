@@ -117,6 +117,7 @@ PREPARE_JS = (
 async ({ quiet, cap, shown, timeline }) => {
   """
     + NAME_JS
+    + flow.CSS_PAUSED_JS
     + r"""
   await document.fonts.ready;
   // Each start is read before its pause, which nulls startTime.
@@ -126,19 +127,6 @@ async ({ quiet, cap, shown, timeline }) => {
   let latest = [];
   let quietNow = false;
   const held = [];
-  // #610
-  const cssPaused = (a) => {
-    if (!(a instanceof CSSAnimation) || !a.effect || !a.effect.target) return false;
-    const { target, pseudoElement } = a.effect;
-    const style = getComputedStyle(target, pseudoElement);
-    const splitList = (v) => v.split(',').map((x) => x.trim());
-    const states = splitList(style.animationPlayState);
-    // One CSSAnimation per entry of animation-name, listed in its order.
-    const twins = target.getAnimations({ subtree: true }).filter((b) => b instanceof CSSAnimation && b.effect.target === target && b.effect.pseudoElement === pseudoElement && b.animationName === a.animationName);
-    let nth = twins.indexOf(a);
-    const entry = splitList(style.animationName).findIndex((n) => n === a.animationName && nth-- === 0);
-    return entry >= 0 && states[entry % states.length] === 'paused';
-  };
   for (;;) {
     const fresh = document.getAnimations().filter((a) => !starts.has(a));
     // An animation cancelled while it waits rejects its ready promise; it is

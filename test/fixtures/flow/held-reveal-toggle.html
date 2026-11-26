@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><style>
+#late { margin-top: 2000px; width: 80px; height: 80px; background: #333; animation: rise 400ms ease-out both paused; }
+#late.in { animation-play-state: running; }
+@keyframes rise { from { transform: none; } to { transform: translateX(400px); } }
+</style></head>
+<body>
+<div id="top" style="width:40px;height:40px;background:#333"></div>
+<div id="late"></div>
+<script>
+document.getElementById("top").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+new IntersectionObserver((seen) => {
+  for (const s of seen) s.target.classList.toggle("in", s.isIntersecting);
+}).observe(document.getElementById("late"));
+</script>
+</body></html>
