@@ -53,11 +53,11 @@ import siblings  # noqa: E402
 
 layout = siblings.load(HERE, "check-layout.py")
 frames = siblings.load(HERE, "check-frames.py")
-flow = frames.flow
+runner = siblings.load(HERE, "runner.py")
 try:
     maths = siblings.load(HERE, "access-pixels.py")
 except ImportError as err:
-    sys.exit(flow.missing(err))
+    sys.exit(runner.missing(err))
 
 WIDTH = layout.DESKTOP_WIDTH
 SETTLE_MS = 4000  # guess, #170
@@ -145,7 +145,7 @@ def parse(argv):
             p.error(f"--{flag} wants {least} or more")
     if args.height is None:
         args.height = layout.height_at(args.width, FIRST_SCREEN[args.cmd][1])
-    args.url = flow.page_url(p, args.page)
+    args.url = runner.page_url(p, args.page)
     if args.cmd == "zoom":
         args.clip = numbers(p, "--clip", args.clip, 4)
     if args.cmd == "measure":
@@ -159,7 +159,7 @@ def settled_page(browser, args, scale=1):
         device_scale_factor=scale,
         **layout.device(args.width),
     )
-    page.set_default_timeout(flow.LOAD_TIMEOUT_MS)
+    page.set_default_timeout(runner.LOAD_TIMEOUT_MS)
     page.goto(args.url, wait_until="load")
     page.evaluate("document.fonts.ready")
     return page
@@ -183,7 +183,7 @@ def scrub(browser, args):
     at = frames.args_with(
         args,
         viewport_size={"width": args.width, "height": args.height},
-        timeout=flow.LOAD_TIMEOUT_MS,
+        timeout=runner.LOAD_TIMEOUT_MS,
     )
     context, page, prep = frames.open_page(
         browser, at, 1, device=layout.device(args.width)
@@ -215,7 +215,7 @@ def pixels(args):
     try:
         from PIL import Image
     except ImportError as err:
-        sys.exit(flow.missing(err))
+        sys.exit(runner.missing(err))
     import numpy as np
 
     try:
@@ -246,12 +246,12 @@ def main(argv):
     }[args.cmd]
 
     def run():
-        with flow.chromium(flags) as browser:
+        with runner.chromium(flags) as browser:
             return work(browser, args)
 
-    said, code = flow.run_browser(
+    said, code = runner.run_browser(
         run,
-        flow.LOAD_TIMEOUT_MS,
+        runner.LOAD_TIMEOUT_MS,
         args.url,
         (
             f"cannot scrub {args.url}, because this page:",

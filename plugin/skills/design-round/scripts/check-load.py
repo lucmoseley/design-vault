@@ -106,7 +106,7 @@ import siblings  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
-flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 fontfile = siblings.load(HERE, "font-file.py")
 probe = siblings.load(HERE, "probe.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -169,7 +169,7 @@ def parse(argv):
     at = p.parse_args(argv)
     if at.runs < 1:
         p.error(f"--runs wants 1 or more — got {at.runs}")
-    at.url = flow.page_url(p, at.page)
+    at.url = runner.page_url(p, at.page)
     if not at.files:
         return at
     if not at.out:
@@ -245,7 +245,7 @@ def one_run(browser, url, timeout):
             if since >= QUIET_MS:
                 return lcp
             if waited >= timeout:
-                raise flow.PageTimeoutError(
+                raise runner.PageTimeoutError(
                     "a new LCP entry kept coming for the whole --timeout"
                 )
             page.wait_for_timeout(POLL_MS)
@@ -545,7 +545,7 @@ def read_files(browser, url, *, declared, timeout):
                 except PlaywrightError as exc:
                     expected(exc, "said as not judged")
                     unread.append(
-                        (r.url, r.request.resource_type, flow.first_line(exc))
+                        (r.url, r.request.resource_type, runner.first_line(exc))
                     )
         fonts = {}
         with unbrotli(context) as decode:
@@ -1029,11 +1029,11 @@ def files_main(at):
     server, url = serve(at.url)
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return read_files(browser, url, declared=at.declared, timeout=at.timeout)
 
     try:
-        read, code = flow.run_browser(run, at.timeout, url=at.url)
+        read, code = runner.run_browser(run, at.timeout, url=at.url)
     finally:
         if server:
             server.shutdown()
@@ -1070,11 +1070,11 @@ def main(argv):
     server, url = serve(at.url)
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return [one_run(browser, url, at.timeout) for _ in range(at.runs)]
 
     try:
-        runs, code = flow.run_browser(run, at.timeout, url=at.url)
+        runs, code = runner.run_browser(run, at.timeout, url=at.url)
     finally:
         if server:
             server.shutdown()

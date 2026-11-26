@@ -160,6 +160,7 @@ from fail_open import expected, fail_open  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 form = siblings.load(HERE, "drive-form.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
 overlay = siblings.load(HERE, "drive-overlay.py")
@@ -1766,7 +1767,7 @@ def check_visited(run, line, ans):
             ans.unjudged(
                 line,
                 None,
-                f":visited needs Playwright's full Chromium, which did not start: {flow.first_line(exc)}",
+                f":visited needs Playwright's full Chromium, which did not start: {runner.first_line(exc)}",
             )
             return
         try:
@@ -2104,7 +2105,7 @@ def check_enter(run, line, ans):
 
 def unreached(page, line, ans, el, *, exc):
     ans.unjudged(
-        line, info(page, el), f"the pointer cannot reach it: {flow.first_line(exc)}"
+        line, info(page, el), f"the pointer cannot reach it: {runner.first_line(exc)}"
     )
 
 
@@ -2790,7 +2791,7 @@ def findings(run, table):
             RUNS[line.check](run, line, ans)
         except (PlaywrightError, form.FormError) as exc:
             fail_open(exc, f"{line.check} is said as not judged")
-            ans.unjudged(line, None, f"the check stopped: {flow.first_line(exc)}")
+            ans.unjudged(line, None, f"the check stopped: {runner.first_line(exc)}")
     return ans.done()
 
 
@@ -2837,7 +2838,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -2863,7 +2864,7 @@ def parse_args(argv):
         p.error(f"cannot read --table {at.table}: {exc.strerror}")
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -2876,7 +2877,7 @@ def main(argv):
         os.unlink(json_path)
 
     def work():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             with conditions.open_page(browser, at.url, viewport=VIEWPORT) as first:
                 first.set_default_navigation_timeout(at.timeout)
             run = Run(
@@ -2889,7 +2890,7 @@ def main(argv):
             )
             return findings(run, at.lines)
 
-    found, code = flow.run_browser(work, at.timeout, at.url)
+    found, code = runner.run_browser(work, at.timeout, at.url)
     if code:
         return code
     with open(json_path, "w", encoding="utf8") as fh:

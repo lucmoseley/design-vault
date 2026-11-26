@@ -22,17 +22,17 @@ TOUCH = (
 )
 
 
-FLOW = os.path.join(
-    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+RUNNER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "runner.py"
 )
 DRIVER = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-overlay.py"
 )
-SCRIPTS = os.path.dirname(FLOW)
+SCRIPTS = os.path.dirname(RUNNER)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
-flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
+runner = siblings.load(SCRIPTS, os.path.basename(RUNNER))
 overlay = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 
 TRIGGERS = {
@@ -47,7 +47,7 @@ TRIGGERS = {
     "panel-button": ("disclosure", False, "panel-close"),
     "sort-button": ("disclosure", False, "sort-button"),
 }
-BROWSER = flow.chromium()
+BROWSER = runner.chromium()
 # The phone band's first screen, measured at 390x664 (#197).
 PHONE = {"width": 390, "height": 664}
 LEFT_OUT = {
