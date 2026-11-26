@@ -38,6 +38,7 @@ def end_ms(fixture):
 
 
 SLOW_CANVAS_END_MS = end_ms(SLOW_CANVAS)
+BUILD_MARGIN_MS = 1000  # guess, #613
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
@@ -195,7 +196,7 @@ class Page(unittest.TestCase):
             shots = {}
             for name, extra in (
                 ("default", ()),
-                ("after", ("--after", str(SLOW_CANVAS_END_MS + 1000))),
+                ("after", ("--after", str(SLOW_CANVAS_END_MS + BUILD_MARGIN_MS))),
             ):
                 out = os.path.join(d, f"{name}.png")
                 proc = run(
@@ -217,7 +218,7 @@ class Page(unittest.TestCase):
         found = {}
         for name, extra in (
             ("default", ()),
-            ("after", ("--after", str(end_ms(SLOW_MOVE) + 1000))),
+            ("after", ("--after", str(end_ms(SLOW_MOVE) + BUILD_MARGIN_MS))),
         ):
             proc = run("measure", SLOW_MOVE, "--at", "350,50", *extra)
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
