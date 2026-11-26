@@ -149,6 +149,8 @@ class OneCopy(unittest.TestCase):  # #606
         self.assertIs(access.prelude, prelude)  # #641
         self.assertIs(keys.prelude, prelude)
         self.assertIs(contrasts.prelude, prelude)
+        self.assertIs(access.pointing.prelude, prelude)
+        self.assertIs(access.pointing.answering, answering)
 
 
 class Arithmetic(unittest.TestCase):
