@@ -576,9 +576,9 @@ PREPARE_JS = (
       drawn.push(w.frameAt - t0);
       if (w.prevFrameAt !== null) drawn.push(w.prevFrameAt - t0);
     }
-    edges.push(...drawn);
     end = Math.max(end, m.writes[m.writes.length - 1].frameAt - t0);
   }
+  edges.push(...drawn);
   for (const x of anims) {
     x.a.pause();
     const t = x.a.effect.getComputedTiming();
@@ -725,9 +725,7 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
     gets a first frame in the wrong phase, and a move from rest at a later
     keyframe or pass keeps the sampled frames' phase.
     Each of `drawn`, a frame the browser drew a morph in, takes the place of
-    every frame within half a frame of it: a loaded machine draws frames ms off
-    the sampled ones, and a sampled frame splitting one drawn frame in two
-    reads its one speed twice, which the step test takes as a step (#612).
+    every frame within half a frame of it.
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
@@ -750,6 +748,7 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
             for t in frames
             if all(abs(t - x) >= MIN_GAP_MS for x in exact)
             and not any(a < t < b for a, b in spans)
+            # #612
             and all(abs(t - d) >= step / 2 for d in drawn)
         ]
     )
@@ -983,24 +982,16 @@ def steps_in(r, changes, times, *, s, e):
             "up" if up else "down",
         )
 
+    def first(tries):
+        return next(filter(None, (step_at(i, n) for i, n in tries)), None)
+
     out = []
     i = s + k
     while i < e:
-        found = next(filter(None, (step_at(i, n) for n in range(STEP_SPREAD))), None)
-        # Frames between that read the slower speed but for float noise, as
-        # one ending on the keyframe does, would put the step a frame or two
-        # early (#126, #612). One between that reads the faster speed still does.
+        found = first((i, n) for n in range(STEP_SPREAD))
+        # #126, #612
         while found and (
-            later := next(
-                filter(
-                    None,
-                    (
-                        step_at(found[0] + j, found[1] - j)
-                        for j in range(1, found[1] + 1)
-                    ),
-                ),
-                None,
-            )
+            later := first((found[0] + j, found[1] - j) for j in range(1, found[1] + 1))
         ):
             found = later
         out += [found] if found else []

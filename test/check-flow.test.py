@@ -929,11 +929,9 @@ class Steps(unittest.TestCase):
         [st] = r["steps"]
         self.assertEqual((st["at"], st["channels"]), (round(9 * STEP), ["position"]))
 
-    def test_two_frames_reading_the_slower_speed_but_for_noise_are_not_between(
+    def test_a_step_after_two_frames_a_hair_over_the_slower_speed_starts_after_them(
         self,
-    ):
-        # As a rotation's 6-digit matrix reads, the first a hair above the
-        # slower side and the second below the first (#612).
+    ):  # #612
         speeds = [10] * 8 + [10.001, 10.0005] + [40] * 8
         xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
         r = flow.analyse(
@@ -2262,16 +2260,22 @@ class MorphFlow(unittest.TestCase):
         self.assertAlmostEqual(p["start"], 400, delta=2 * STEP)
         self.assertAlmostEqual(p["end"], 800, delta=2 * STEP)
 
-    def test_a_morph_drawn_ms_off_the_sampled_frames_has_no_step(self):
-        # A loaded machine draws its first frames 4 ms early and late (#612).
+    def test_a_morph_drawn_4_ms_off_the_sampled_frames_has_no_step(self):  # #612
         drawn = [0, STEP - 4, 2 * STEP + 4] + [k * STEP for k in range(3, 61)]
-        s = {
-            "times": flow.sample_times(1000, drawn, 60, drawn=drawn),
-            "elements": [],
-            "morphs": [{"label": "path#arch", "writes": writes(eased(0, 1000), drawn)}],
-        }
-        flow.add_morphs(s)
-        self.assertEqual(flow.analyse(s)["steps"], [])
+
+        def steps(times):
+            s = {
+                "times": times,
+                "elements": [],
+                "morphs": [
+                    {"label": "path#arch", "writes": writes(eased(0, 1000), drawn)}
+                ],
+            }
+            flow.add_morphs(s)
+            return flow.analyse(s)["steps"]
+
+        self.assertEqual(steps(flow.sample_times(1000, drawn, 60, drawn=drawn)), [])
+        self.assertTrue(steps(flow.sample_times(1000, drawn, 60)))
 
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {
