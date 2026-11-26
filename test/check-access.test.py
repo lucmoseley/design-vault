@@ -29,6 +29,7 @@ answering = siblings.load(SCRIPTS, "access-answers.py")
 boxes = siblings.load(SCRIPTS, "access-boxes.py")
 contrasts = siblings.load(SCRIPTS, "access-contrast.py")
 keys = siblings.load(SCRIPTS, "access-keys.py")
+prelude = siblings.load(SCRIPTS, "access-page.py")
 with open(contrasts.TABLE) as table:
     FLOORS = contrasts.parse_table(table.read()).floors
 
@@ -145,17 +146,9 @@ class OneCopy(unittest.TestCase):  # #606
         self.assertIs(access.answering, answering)
         self.assertIs(access.pseudo_boxes, boxes)
         self.assertIs(access.contrasts, contrasts)
-
-
-class PreludeMoved(unittest.TestCase):  # #641
-    def test_access_page_sends_the_prelude_check_access_sends(self):
-        access = siblings.load(SCRIPTS, "check-access.py")
-        prelude = siblings.load(SCRIPTS, "access-page.py")
-        for body in ("", "() => 1", "(i) => {\n}"):
-            with self.subTest(body=body):
-                self.assertEqual(prelude.page_js(body), access.page_js(body))
-                self.assertEqual(prelude.labelled_js(body), access.keys_js(body))
-                self.assertEqual(prelude.labelled_js(body), access.contrast_js(body))
+        self.assertIs(access.prelude, prelude)  # #641
+        self.assertIs(keys.prelude, prelude)
+        self.assertIs(contrasts.prelude, prelude)
 
 
 class Arithmetic(unittest.TestCase):
@@ -676,9 +669,9 @@ class TimedChange(Browsed):
         self,
     ):
         access = siblings.load(SCRIPTS, "check-access.py")
-        long_s, rotate_s = access.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
+        long_s, rotate_s = prelude.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
         # guess, #154
-        every = access.LONG_MS + 3 * access.keys.ROTATE_MS
+        every = prelude.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
             f"carousel.html?every={every}", carousels=[".slides", "main > div"]
         )
