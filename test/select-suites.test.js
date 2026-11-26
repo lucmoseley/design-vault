@@ -14,9 +14,10 @@ const { plan, planSides } = require("./select-suites.js");
 const SCRIPTS = "plugin/skills/design-round/scripts";
 const allSh = (args, { cwd, env } = {}) => spawnSync("bash", [path.join(cwd ?? ROOT, "test", "all.sh"), ...args],
   { cwd, encoding: "utf8", env: { ...HAND_ENV, ...env } });
+const parseRuns = (text) => text.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
 
 const byHand = allSh(["--plan"]);
-const SUITES = byHand.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+const SUITES = parseRuns(byHand.stdout);
 const PYTHON = SUITES.filter((s) => s.startsWith("python3 "));
 const NODE = SUITES.find((s) => s.startsWith("node "));
 const ran = (staged) => {
@@ -27,13 +28,13 @@ const ran = (staged) => {
 const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/video-sheet.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
-  const shardOf = (k, n) => {
+  const readShard = (k, n) => {
     const r = allSh(["--plan", `--shard=${k}/${n}`]);
     assert.equal(r.status, 0, r.stderr);
-    return r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+    return parseRuns(r.stdout);
   };
   const n = JSON.parse(fs.readFileSync(path.join(ROOT, ".claude", "workflow-core.json"), "utf8")).fullTestShards;
-  const shards = Array.from({ length: n }, (_, i) => shardOf(i + 1, n));
+  const shards = Array.from({ length: n }, (_, i) => readShard(i + 1, n));
   assert.deepEqual(shards.flat().sort(), [...SUITES].sort());
   shards.forEach((shard, i) => assert.deepEqual(shard, SUITES.filter((_, j) => j % n === i)));
 });
@@ -178,7 +179,12 @@ git(["-c", "core.hooksPath=/dev/null", "add", "-A"]);
 git(["-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", "base"]);
 git(["config", "core.hooksPath", hooks]);
 const touch = (rel) => fs.appendFileSync(path.join(repo, rel), "\n# touched\n");
-const planRuns = () => fs.readFileSync(planOut, "utf8").split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
+const readPlanRuns = () => parseRuns(fs.readFileSync(planOut, "utf8"));
+const readRepoPlan = (env) => {
+  const r = allSh(["--plan"], { cwd: repo, env });
+  assert.equal(r.status, 0, r.stderr);
+  return { runs: parseRuns(r.stdout), out: r.stdout };
+};
 
 test("a script a followed directory holds, named by no suite, still runs every suite (#382)", () => {
   const unnamed = `${SCRIPTS}/unnamed-by-any-suite.py`;
@@ -200,35 +206,30 @@ test("a commit through its own index file, as commit-paths.js makes, is judged o
   git(["read-tree", "HEAD"], env);
   git(["add", `${SCRIPTS}/contact-sheet.py`], env);
   git(["commit", "-q", "-m", "private"], env);
-  assert.deepEqual(planRuns(), SHEET);
+  assert.deepEqual(readPlanRuns(), SHEET);
   assert.match(fs.readFileSync(planOut, "utf8"), /^SKIP python3 test\/check-flow\.test\.py — /m);
 });
 
 test("a plain commit is judged on the shared index, and VAULT_ALL_SUITES=1 runs every suite", () => {
   git(["commit", "-q", "-m", "shared"], { ...HAND_ENV, VAULT_ALL_SUITES: "1" });
-  assert.deepEqual(planRuns(), SUITES);
+  assert.deepEqual(readPlanRuns(), SUITES);
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", `${SCRIPTS}/check-flow.py`]);
   git(["commit", "-q", "-m", "shared"]);
-  assert.deepEqual(planRuns(), SUITES.filter((s) => !NO_FLOW.includes(s)));
+  assert.deepEqual(readPlanRuns(), SUITES.filter((s) => !NO_FLOW.includes(s)));
 });
 
 test("in workflow-core's gate, which drops GIT_INDEX_FILE and sets WFC_GATE_SEAT, staged files choose; by hand they do not (#457)", () => {
-  const planIn = (env) => {
-    const r = allSh(["--plan"], { cwd: repo, env });
-    assert.equal(r.status, 0, r.stderr);
-    return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
-  };
   assert.equal(git(["diff", "--cached", "--name-only"]), "");
   const gate = { WFC_GATE_SEAT: path.join(scratch, "seat.json") };
-  assert.deepEqual(planIn(gate).runs, FAST);
+  assert.deepEqual(readRepoPlan(gate).runs, FAST);
   touch(`${SCRIPTS}/contact-sheet.py`);
   git(["add", `${SCRIPTS}/contact-sheet.py`]);
   try {
-    const staged = planIn(gate);
+    const staged = readRepoPlan(gate);
     assert.deepEqual(staged.runs, SHEET);
     assert.match(staged.out, /^SKIP python3 test\/check-flow\.test\.py — /m);
-    assert.deepEqual(planIn({}).runs, SUITES);
+    assert.deepEqual(readRepoPlan({}).runs, SUITES);
   } finally {
     git(["commit", "-q", "-m", "contact sheet"]);
   }
@@ -238,7 +239,7 @@ test("a commit staging the runner runs every suite through all.sh, and so does a
   touch("test/all.sh");
   git(["add", "test/all.sh"]);
   git(["commit", "-q", "-m", "runner"]);
-  assert.deepEqual(planRuns(), SUITES);
+  assert.deepEqual(readPlanRuns(), SUITES);
   assert.match(fs.readFileSync(planOut, "utf8"), /^all suites: test\/all\.sh is staged/m);
   const selector = path.join(repo, "test", "select-suites.js");
   const kept = fs.readFileSync(selector, "utf8");
@@ -250,7 +251,7 @@ test("a commit staging the runner runs every suite through all.sh, and so does a
   } finally {
     fs.writeFileSync(selector, kept);
   }
-  assert.deepEqual(planRuns(), SUITES);
+  assert.deepEqual(readPlanRuns(), SUITES);
   assert.match(fs.readFileSync(planOut, "utf8"), /^all suites: test\/select-suites\.js could not choose/m);
 });
 
@@ -263,7 +264,7 @@ test("a commit through all.sh editing only its list runs only the suite on the l
   git(["read-tree", "HEAD"], env);
   git(["add", "test/all.sh"], env);
   git(["commit", "-q", "-m", "list"], env);
-  assert.deepEqual(planRuns(), [...FAST, "python3 test/palette.test.py"]);
+  assert.deepEqual(readPlanRuns(), [...FAST, "python3 test/palette.test.py"]);
 });
 
 test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate against WFC_MERGE_PARENTS (#457)", () => {
@@ -279,33 +280,28 @@ test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate
   const main = git(["rev-parse", "main"]).trim();
   git(["checkout", "-q", "branch"]);
   git(["merge", "-q", "--no-commit", "--no-ff", "main"]);
-  const planIn = (env) => {
-    const r = allSh(["--plan"], { cwd: repo, env });
-    assert.equal(r.status, 0, r.stderr);
-    return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
-  };
   const seat = { WFC_GATE_SEAT: path.join(scratch, "seat.json") };
   try {
-    assert.deepEqual(planIn({ ...seat, WFC_MERGE_PARENTS: main }).runs, SHEET);
-    assert.deepEqual(planIn({ ...seat, WFC_MERGE_PARENTS: "" }).runs, SUITES);
-    const unread = planIn({ ...seat, WFC_MERGE_PARENTS: "unread: no git" });
+    assert.deepEqual(readRepoPlan({ ...seat, WFC_MERGE_PARENTS: main }).runs, SHEET);
+    assert.deepEqual(readRepoPlan({ ...seat, WFC_MERGE_PARENTS: "" }).runs, SUITES);
+    const unread = readRepoPlan({ ...seat, WFC_MERGE_PARENTS: "unread: no git" });
     assert.deepEqual(unread.runs, SUITES);
     assert.match(unread.out, /^merge parents unread, so judged against HEAD alone: no git$/m);
-    const bad = planIn({ ...seat, WFC_MERGE_PARENTS: "f".repeat(40) });
+    const bad = readRepoPlan({ ...seat, WFC_MERGE_PARENTS: "f".repeat(40) });
     assert.deepEqual(bad.runs, SUITES);
     assert.match(bad.out, /^merge parent f{40} will not read/m);
     const mergeHead = path.join(repo, ".git", "MERGE_HEAD");
     const heads = fs.readFileSync(mergeHead, "utf8");
     fs.rmSync(mergeHead);
     try {
-      assert.deepEqual(planIn({ GIT_INDEX_FILE: path.join(repo, ".git", "index"), [`GITHEAD_${main}`]: "main" }).runs, SHEET);
-      assert.deepEqual(planIn({ GIT_INDEX_FILE: path.join(repo, ".git", "index") }).runs, SUITES);
+      assert.deepEqual(readRepoPlan({ GIT_INDEX_FILE: path.join(repo, ".git", "index"), [`GITHEAD_${main}`]: "main" }).runs, SHEET);
+      assert.deepEqual(readRepoPlan({ GIT_INDEX_FILE: path.join(repo, ".git", "index") }).runs, SUITES);
     } finally {
       fs.writeFileSync(mergeHead, heads);
     }
   } finally {
     git(["commit", "-q", "--no-edit"]);
   }
-  assert.deepEqual(planRuns(), SHEET);
+  assert.deepEqual(readPlanRuns(), SHEET);
   assert.match(fs.readFileSync(planOut, "utf8"), /^SKIP python3 test\/check-flow\.test\.py — against [0-9a-f]{7}, none of /m);
 });

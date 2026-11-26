@@ -29,7 +29,16 @@ STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
 SLOW_CANVAS = os.path.join(HERE, "fixtures", "look", "slow-canvas.html")
-SLOW_CANVAS_END_MS = 4500
+SLOW_MOVE = os.path.join(HERE, "fixtures", "look", "slow-move.html")
+
+
+def end_ms(fixture):
+    with open(fixture, encoding="utf8") as fh:
+        return int(re.search(r"const END_MS = (\d+);", fh.read())[1])
+
+
+SLOW_CANVAS_END_MS = end_ms(SLOW_CANVAS)
+BUILD_MARGIN_MS = 1000  # guess, #613
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 SCRIPTS = os.path.dirname(SCRIPT)
 sys.path.insert(0, SCRIPTS)
@@ -187,7 +196,7 @@ class Page(unittest.TestCase):
             shots = {}
             for name, extra in (
                 ("default", ()),
-                ("after", ("--after", str(SLOW_CANVAS_END_MS + 1000))),
+                ("after", ("--after", str(SLOW_CANVAS_END_MS + BUILD_MARGIN_MS))),
             ):
                 out = os.path.join(d, f"{name}.png")
                 proc = run(
@@ -204,6 +213,18 @@ class Page(unittest.TestCase):
                 self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
                 shots[name] = Image.open(out).convert("RGB").getpixel((50, 50))
             self.assertEqual(shots, {"default": (255, 255, 255), "after": (0, 0, 0)})
+
+    def test_measure_after_finds_a_part_a_script_moves_later_than_the_settle_154(self):
+        found = {}
+        for name, extra in (
+            ("default", ()),
+            ("after", ("--after", str(end_ms(SLOW_MOVE) + BUILD_MARGIN_MS))),
+        ):
+            proc = run("measure", SLOW_MOVE, "--at", "350,50", *extra)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            found[name] = proc.stdout
+        self.assertNotIn("div#mover", found["default"])
+        self.assertIn('"element": "div#mover"', found["after"])
 
     def test_scrub_stops_the_fade_at_each_frame(self):
         with tempfile.TemporaryDirectory() as d:

@@ -664,9 +664,9 @@ class TimedChange(Browsed):
     def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_own_watch_154(
         self,
     ):
-        # #154
         access = siblings.load(SCRIPTS, "check-access.py")
         long_s, rotate_s = access.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
+        # guess, #154
         every = access.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
             f"carousel.html?every={every}", carousels=[".slides", "main > div"]
@@ -682,8 +682,8 @@ class TimedChange(Browsed):
         self.assertEqual(len(windows), 2, unmeasured)
         (start1, end1), (start2, end2) = sorted(windows)
         rounding = 0.1
-        self.assertGreaterEqual(start1, long_s - rounding)
-        self.assertGreaterEqual(start2, end1 - rounding)
+        self.assertGreaterEqual(start1, long_s)
+        self.assertGreaterEqual(start2, end1)
         for start, end in windows:
             self.assertGreaterEqual(end - start, rotate_s - rounding)
 
