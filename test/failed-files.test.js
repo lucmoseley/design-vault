@@ -38,6 +38,14 @@ function scratch(name) {
   return root;
 }
 
+// #627
+const QUIET_PS = path.join(dir, "quiet-ps");
+fs.writeFileSync(QUIET_PS, "#!/bin/sh\n", { mode: 0o755 });
+const AMPLE_MEMINFO = path.join(dir, "meminfo");
+fs.writeFileSync(AMPLE_MEMINFO, "MemAvailable:   8192000 kB\n");
+const nested = () => env({ VAULT_SUITE_LANES: "1", VAULT_PS: QUIET_PS, VAULT_MEMINFO: AMPLE_MEMINFO,
+  WFC_GATE_SEAT: "", VAULT_SUITE_BUDGET: "", VAULT_SUITE_TIMES: "" });
+
 const NODE = spawnSync("bash", [ALL_SH, "--plan"], { encoding: "utf8", env: env({}) }).stdout.match(/^RUN (node .*)$/m)[1];
 const plan = (...files) => spawnSync("bash", [ALL_SH, "--plan", ...files], { cwd: ROOT, encoding: "utf8", env: env({}) });
 
@@ -81,7 +89,7 @@ test("without VAULT_FAILED_FILES the reporter still prints Node's report and the
 test("all.sh on named files runs only them, .js ones in one node --test run, and prints FAIL per failing file", () => {
   const root = scratch("named");
   const r = spawnSync("bash", ["test/all.sh", "./test/red.test.js", "test/green.test.js", "test/palette.test.py"],
-    { cwd: root, encoding: "utf8", env: env({ VAULT_SUITE_LANES: "1" }) });
+    { cwd: root, encoding: "utf8", env: nested() });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.deepEqual(r.stderr.trim().split("\n").sort(), ["FAIL test/palette.test.py", "FAIL test/red.test.js"]);
   assert.deepEqual(r.stdout.match(/^== .*(?= \(\d+ s\)$)/gm), [
@@ -94,7 +102,7 @@ test("all.sh on named files runs only them, .js ones in one node --test run, and
 test("all.sh on named files that pass exits 0 and counts the suites it ran", () => {
   const root = scratch("green");
   const r = spawnSync("bash", ["test/all.sh", "test/green.test.js", "test/cutout.test.py"],
-    { cwd: root, encoding: "utf8", env: env({ VAULT_SUITE_LANES: "1" }) });
+    { cwd: root, encoding: "utf8", env: nested() });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /cutout ran/);
   assert.match(r.stdout, /^2 named suite\(s\) passed$/m);
