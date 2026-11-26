@@ -461,7 +461,6 @@ const cssPaused = (a) => {
   const style = getComputedStyle(target, pseudoElement);
   const splitList = (v) => v.split(',').map((x) => x.trim());
   const states = splitList(style.animationPlayState);
-  // One CSSAnimation per entry of animation-name, listed in its order.
   const twins = target.getAnimations({ subtree: true }).filter((b) => b instanceof CSSAnimation && b.effect.target === target && b.effect.pseudoElement === pseudoElement && b.animationName === a.animationName);
   let nth = twins.indexOf(a);
   const entry = splitList(style.animationName).findIndex((n) => n === a.animationName && nth-- === 0);

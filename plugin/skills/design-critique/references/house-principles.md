@@ -42,7 +42,7 @@ Record: `vault.wcag-aa`.
   On look (the value system, the brand), the project wins at level 2 as listed. On behaviour (what a part does, how a visitor reaches it), a project rule that departs from level-3 evidence wins only on evidence of its own, recorded in its rules file; without it, the clash goes to the founder.
 - **When.** Two rules set one property of one part to different values and neither yields to the other. Between steps, the dependency order decides first.
 - **Trade-off.** A project rule may beat better evidence at level 4 on a recorded reason. Asking evidence for a behaviour that departs from level 3 slows a client's own idea down.
-- **Clash.** Two rules the levels cannot rank go to the founder: two of one project's rules, or two vault rules below level 2 where neither names the other in `yields-to`.
+- **Clash.** Two rules the levels cannot rank go to the founder: two of one project's rules, at one step or across steps, or two vault rules below level 2 where neither names the other in `yields-to`.
 - **Era.** Timeless as an order; the sources named at each level are dated, current; review by 2027-10-14.
 - **Source.** `adopt-or-build.md` F5 (#119); the founder's ruling on #103 Q5 (A). The behaviour bar is GOV.UK's (Service Manual, "Making your service look like GOV.UK"; #183 item 2).
 

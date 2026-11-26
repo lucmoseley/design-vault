@@ -53,8 +53,8 @@ any start its own load put more than STAGE_JITTER_MS away (#259). Both refuse,
 naming it, a page holding what that list does not: a visible canvas, video or
 embedded document, SMIL or shadow DOM, moving or not; a script rewriting an
 element or a path's d frame by frame; or an animation a script paused, which
-a seek would move as the script may be seeking it by hand. One such part
-refuses the whole page, its listed animations included. An animation CSS
+a seek would move. One such part refuses the whole page, its listed animations
+included. An animation CSS
 animation-play-state holds paused, a reveal a scroll releases, is seeked as it
 plays from when it is first seen, so one a script seeks by hand through CSS, a
 custom property in its animation-delay, is drawn as if playing.

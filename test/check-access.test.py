@@ -704,12 +704,16 @@ class TimedChange(Browsed):
                     ([], [self.UNDECLARED]),
                 )
 
-    def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_own_watch(
+    def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_own_watch_154(
         self,
     ):
-        # #154: pause_answer watches the page's own clock, so the windows are real time.
+        # #154
+        access = siblings.load(SCRIPTS, "check-access.py")
+        long_s, rotate_s = access.LONG_MS / 1000, access.keys.ROTATE_MS / 1000
+        # Slower than both watches back to back, so neither sees a turn.
+        every = access.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
-            "carousel.html?every=20000", carousels=[".slides", "main > div"]
+            f"carousel.html?every={every}", carousels=[".slides", "main > div"]
         )
         self.assertEqual(faults, [])
         held = re.compile(
@@ -721,9 +725,11 @@ class TimedChange(Browsed):
         windows = [tuple(map(float, m.groups())) for m in matches]
         self.assertEqual(len(windows), 2, unmeasured)
         (start1, end1), (start2, end2) = sorted(windows)
-        self.assertGreaterEqual(start1, 5)
-        self.assertGreaterEqual(start2, end1 - 0.1)
-        self.assertGreater(end2, start2)
+        rounding = 0.1  # the message's .1f
+        self.assertGreaterEqual(start1, long_s - rounding)
+        self.assertGreaterEqual(start2, end1 - rounding)
+        for start, end in windows:
+            self.assertGreaterEqual(end - start, rotate_s - rounding)
 
     def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self):
         for carousels in ([".slides"], []):
