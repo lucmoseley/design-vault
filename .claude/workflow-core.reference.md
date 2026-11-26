@@ -5,11 +5,11 @@
 
 ## Switching a module on
 
-The modules are `roadmap`, `governance`, `site`, `mutation` and `comments`. To switch one on, add it to `modules` in `.claude/workflow-core.json`, then run `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.1/scripts/init-adopter.js --no-plugin-install`: it keeps the founder, modules and plugin pin already written. Commit what it wrote; the new rules load at the next session. Until a subject's switch is set, `check-gate-switches.js` refuses every commit.
+The modules are `roadmap`, `governance`, `site`, `mutation` and `comments`. To switch one on, add it to `modules` in `.claude/workflow-core.json`, then run `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.2/scripts/init-adopter.js --no-plugin-install`: it keeps the founder, modules and plugin pin already written. Commit what it wrote; the new rules load at the next session. Until a subject's switch is set, `check-gate-switches.js` refuses every commit.
 
 ## Repo-health checks on demand
 
-The repo-health checkers — stranded claims, stale queue markers and git locks, stray scratch among them — run on demand with `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.1/scripts/status-report.js`, or `--only <part of a name>` for some. A checker's finding never changes its exit code.
+The repo-health checkers — stranded claims, stale queue markers and git locks, stray scratch among them — run on demand with `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.2/scripts/status-report.js`, or `--only <part of a name>` for some. A checker's finding never changes its exit code.
 
 ## Page checks under `site`
 
@@ -25,5 +25,5 @@ What a `.claude/workflow-core.json` key does where it is absent or wrong — whi
 
 ## Plugin provenance
 
-- url source, ref v3.2.1, HEAD 147c6838b31717facd459ac89afc1fb5c4f447c2
+- url source, ref v3.2.2 (sha unknown)
 - the seven husky hooks run from `WFC_PLUGIN_ROOT` in both branches, so this is what the last init or upgrade installed, not what the hooks run today

@@ -1,9 +1,10 @@
 # CORE-OWNED. Written by workflow-core's upgrade, where the queue lander may test
 # on Actions by run length ("landingTester" absent or "auto" in
 # .claude/workflow-core.json), and REWRITTEN on every bump. Its shard jobs follow
-# "fullTestShards", their runner and ceiling the "ci" key.
+# "fullTestShards", their runner and ceiling the "ci" key, their setup
+# "ciSetup".
 # Change the config, not this file. What it runs: the plugin's
-# scripts/lib/lander-workflows.js. Why: lucmoseley/workflow-core-tracker#5511.
+# scripts/lib/lander-workflows.js.
 name: workflow-core lander
 
 on:
@@ -84,6 +85,11 @@ jobs:
           if [ -f package-lock.json ]; then npm ci; fi
           if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
 
+      - name: Repo setup
+        run: |
+          python3 -m pip install -r plugin/requirements.txt
+          python3 -m playwright install --with-deps chromium
+
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 1/4
 
@@ -156,6 +162,11 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; fi
           if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Repo setup
+        run: |
+          python3 -m pip install -r plugin/requirements.txt
+          python3 -m playwright install --with-deps chromium
 
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 2/4
@@ -230,6 +241,11 @@ jobs:
           if [ -f package-lock.json ]; then npm ci; fi
           if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
 
+      - name: Repo setup
+        run: |
+          python3 -m pip install -r plugin/requirements.txt
+          python3 -m playwright install --with-deps chromium
+
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 3/4
 
@@ -302,6 +318,11 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; fi
           if [ -f requirements-dev.txt ]; then python3 -m pip install --require-hashes --only-binary ":all:" -r requirements-dev.txt; fi
+
+      - name: Repo setup
+        run: |
+          python3 -m pip install -r plugin/requirements.txt
+          python3 -m playwright install --with-deps chromium
 
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 4/4
