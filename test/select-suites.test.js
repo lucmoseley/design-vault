@@ -91,6 +91,12 @@ test("check-flow.py runs every suite that loads it, as do check-frames.py and ch
   assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
 
+test("runner.py runs every suite that opens Chromium through it, the check-flow loaders among them (#640)", () => {
+  const fast = [NODE, "bash test/design-round-pointer.test.sh"];
+  const viaRunner = ["python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py"];
+  assert.deepEqual(ran([`${SCRIPTS}/runner.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s) || viaRunner.includes(s))]);
+});
+
 test("a suite runs for its own test file, its fixtures, and a script its test runs", () => {
   assert.ok(ran(["test/cutout.test.py"]).includes("python3 test/cutout.test.py"));
   assert.deepEqual(ran(["test/fixtures/flow/new-page.html"]).filter((s) => PYTHON.includes(s)), ["python3 test/check-flow.test.py", "python3 test/check-flow-records.test.py"]);
