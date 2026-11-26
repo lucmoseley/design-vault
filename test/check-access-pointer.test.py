@@ -7,7 +7,6 @@ reach the critic as a pass.
 
 import concurrent.futures
 import http.server
-import importlib.util
 import json
 import os
 import sys
@@ -19,9 +18,6 @@ HERE = os.path.dirname(__file__)
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
-LIBRARY = os.path.join(
-    HERE, "..", "plugin", "skills", "design-round", "scripts", "access-pointer.py"
-)
 FIXTURES = os.path.join(HERE, "fixtures", "access")
 FAULT = os.path.join(FIXTURES, "target-pointer-fault.html")
 CLEAN = os.path.join(FIXTURES, "target-pointer-clean.html")
@@ -30,9 +26,11 @@ SHEETS = os.path.join(FIXTURES, "target-pointer-sheets.html")
 sys.path.insert(0, HERE)
 import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
 
-spec = importlib.util.spec_from_file_location("access_pointer", LIBRARY)
-pointing = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(pointing)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+pointing = siblings.load(SCRIPTS, "access-pointer.py")
 
 QID = "vault.coarse-target"
 # How long one run may take, in s. A guess, unmeasured.

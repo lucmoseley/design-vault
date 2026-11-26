@@ -6,7 +6,6 @@ findings() a page read built here, one fact changed from a page that passes.
 """
 
 import copy
-import importlib.util
 import json
 import os
 import re
@@ -32,14 +31,10 @@ PLAIN = os.path.join(FIXTURES, "plain.ttf")
 FLEX = os.path.join(FIXTURES, "flex.woff")
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-load = _load("check_load", SCRIPT)
+load = siblings.load(SCRIPTS, "check-load.py")
 fontfile = load.fontfile
 
 

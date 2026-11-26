@@ -8,7 +8,6 @@ narrow, or fails a page for its headings and last lines.
 
 import argparse
 import contextlib
-import importlib.util
 import io
 import os
 import pathlib
@@ -24,9 +23,11 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-measure.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "measure")
-spec = importlib.util.spec_from_file_location("check_measure", SCRIPT)
-measure = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(measure)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+measure = siblings.load(SCRIPTS, "check-measure.py")
 
 
 def run(page, *args):

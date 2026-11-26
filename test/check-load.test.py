@@ -4,7 +4,6 @@ Lose the throttling and every local page passes in a few ms; stop waiting for
 a later paint and a headline held back passes on whatever drew first.
 """
 
-import importlib.util
 import os
 import shutil
 import sys
@@ -19,9 +18,11 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-load.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "load")
-spec = importlib.util.spec_from_file_location("check_load", SCRIPT)
-load = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(load)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+load = siblings.load(SCRIPTS, "check-load.py")
 
 
 # A guess for check-load.py alone: a run takes about QUIET_MS plus the load.

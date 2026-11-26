@@ -12,7 +12,6 @@ import contextlib
 import glob
 import hashlib
 import http.server
-import importlib.util
 import json
 import os
 import pathlib
@@ -30,14 +29,10 @@ SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-round", "scripts"
 RULES = os.path.join(HERE, "..", "plugin", "skills", "design-critique", "rules")
 
 
-def library(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-dom = library("check_dom", os.path.join(SCRIPTS, "check-dom.py"))
+dom = siblings.load(SCRIPTS, "check-dom.py")
 FIXTURES = pathlib.Path(HERE, "fixtures", "probe").resolve()
 FAULT = FIXTURES / "dom-fault.html"
 CLEAN = FIXTURES / "dom-clean.html"

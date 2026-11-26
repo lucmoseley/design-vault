@@ -7,7 +7,6 @@ the critic as one view of the candidate. Loosen the chain refusal and a build a 
 event carries on is sheeted only to its first link's end (#259).
 """
 
-import importlib.util
 import json
 import os
 import sys
@@ -24,9 +23,11 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "contact-sheet.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "sheet")
-spec = importlib.util.spec_from_file_location("contact_sheet", SCRIPT)
-sheet = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(sheet)
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+sheet = siblings.load(SCRIPTS, "contact-sheet.py")
 
 LABELS = ["0.00 s", "0.25 s", "0.50 s", "0.75 s", "1.00 s", "1.10 s (end)"]
 

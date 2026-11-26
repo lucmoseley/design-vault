@@ -19,7 +19,7 @@ set -u
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
 # The one list of suites (#233). A Python suite names after a tab what it needs past the standard library: `images` for
-# numpy, Pillow and scipy, `chromium` for Playwright and its Chromium, `openssl` for the openssl command.
+# numpy, Pillow and scipy, `chromium` for Playwright and its Chromium, `openssl` for the openssl command, `video` for PyAV.
 # A new suite also owes README §Validating the library its sentence, and, if it never loads check-flow.py,
 # test/select-suites.test.js its NO_FLOW entry.
 registry='node --test --test-reporter=./test/failed-files.js
@@ -59,12 +59,13 @@ python3 test/check-markup.test.py	chromium
 python3 test/check-style.test.py	images chromium
 python3 test/check-state.test.py	images chromium
 python3 test/check-text.test.py	chromium
-python3 test/drive-pointer.test.py	chromium'
+python3 test/drive-pointer.test.py	chromium
+python3 test/video-sheet.test.py	images video'
 suites=()
 declare -A needs=()
 while IFS=$'\t' read -r suite need; do
   for word in ${need:-}; do
-    [[ $word == images || $word == chromium || $word == openssl ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium and openssl" >&2 && exit 2; }
+    [[ $word == images || $word == chromium || $word == openssl || $word == video ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium, openssl and video" >&2 && exit 2; }
   done
   suites+=("$suite")
   needs[$suite]=${need:-}
@@ -223,6 +224,10 @@ if [[ " ${run[*]} " == *" python3 "* ]]; then
       need "the Python package $module, for $for_images" "python3 -m pip install -r plugin/requirements.txt" \
         python3 -c "import $module"
     done
+  fi
+  if for_video="$(suites_needing video)"; then
+    need "the Python package av, for $for_video" "python3 -m pip install --only-binary :all: -r plugin/requirements.txt" \
+      python3 -c "import av"
   fi
   if for_chromium="$(suites_needing chromium)"; then
     need "the Python package playwright, for $for_chromium" \

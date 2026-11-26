@@ -6,7 +6,6 @@ fresh page in it, so no test sees another's open overlay; the driver's trial cac
 test that watches the trial clears it first.
 """
 
-import importlib.util
 import inspect
 import os
 import pathlib
@@ -31,25 +30,18 @@ TOUCH = (
 )
 
 
-def load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-flow = load(
-    "check_flow",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
-    ),
+FLOW = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
 )
-overlay = load(
-    "drive_overlay",
-    os.path.join(
-        HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-overlay.py"
-    ),
+DRIVER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-overlay.py"
 )
+SCRIPTS = os.path.dirname(FLOW)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
+
+flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
+overlay = siblings.load(SCRIPTS, os.path.basename(DRIVER))
 
 # trigger id: (kind, whether markup names its target, the close control's id, or None for none)
 TRIGGERS = {

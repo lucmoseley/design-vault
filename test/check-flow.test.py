@@ -1577,7 +1577,8 @@ class RunBrowser(unittest.TestCase):
                 if line.strip() and not line.startswith("#")
             ]
         self.assertEqual(
-            sorted(name for name, _ in pins), ["Pillow", "numpy", "playwright", "scipy"]
+            sorted(name for name, _ in pins),
+            ["Pillow", "av", "numpy", "playwright", "scipy"],
         )
 
     def test_each_failure_exits_with_its_code_and_message(self):
@@ -1939,6 +1940,7 @@ class RendererDeath(unittest.TestCase):
                 f"class BrowserContext:\n    def {method}(self):\n"
                 "        raise RuntimeError('Target page, context or browser has been closed')\n"
             )
+        # #606
         spec = importlib.util.spec_from_file_location("api", path)
         api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(api)

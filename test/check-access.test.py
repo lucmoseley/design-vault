@@ -11,10 +11,10 @@ cannot read or use reach the critic as a pass.
 """
 
 import concurrent.futures
-import importlib.util
 import json
 import os
 import pathlib
+import re
 import sys
 import tempfile
 import unittest
@@ -32,19 +32,14 @@ import child  # noqa: E402 - imported after the sys.path.insert above puts test/
 REQUIREMENTS = os.path.realpath(os.path.join(HERE, "..", "plugin", "requirements.txt"))
 
 
-def library(name):
-    spec = importlib.util.spec_from_file_location(
-        name[:-3].replace("-", "_"), os.path.join(os.path.dirname(SCRIPT), name)
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+SCRIPTS = os.path.dirname(SCRIPT)
+sys.path.insert(0, SCRIPTS)
+import siblings  # noqa: E402
 
-
-maths = library("access-pixels.py")
-answering = library("access-answers.py")
-boxes = library("access-boxes.py")
-contrasts = library("access-contrast.py")
+maths = siblings.load(SCRIPTS, "access-pixels.py")
+answering = siblings.load(SCRIPTS, "access-answers.py")
+boxes = siblings.load(SCRIPTS, "access-boxes.py")
+contrasts = siblings.load(SCRIPTS, "access-contrast.py")
 with open(contrasts.TABLE) as table:
     FLOORS = contrasts.parse_table(table.read()).floors
 
@@ -161,6 +156,15 @@ def tearDownModule():
 
 def solid(rgb, w=40, h=20):
     return np.full((h, w, 3), rgb, dtype=np.uint8)
+
+
+class OneCopy(unittest.TestCase):  # #606
+    def test_check_access_s_siblings_are_the_copies_this_test_loaded(self):
+        access = siblings.load(SCRIPTS, "check-access.py")
+        self.assertIs(access.maths, maths)
+        self.assertIs(access.answering, answering)
+        self.assertIs(access.pseudo_boxes, boxes)
+        self.assertIs(access.contrasts, contrasts)
 
 
 class Arithmetic(unittest.TestCase):
@@ -563,7 +567,7 @@ class CarouselWatch(unittest.TestCase):
     def test_a_carousel_is_timed_in_the_page_whatever_its_shots_show(self):
         from playwright.sync_api import sync_playwright
 
-        keys = library("access-keys.py")
+        keys = siblings.load(SCRIPTS, "access-keys.py")
         same = np.zeros((4, 4, 3), int)
         shot, keys._shot = keys._shot, lambda handle: same
         try:
@@ -608,8 +612,9 @@ class Browsed(unittest.TestCase):
         cls.playwright.stop()
 
     def pause_answer(self, fixture, watch_ms=None, init=None, carousels=()):
-        access = library("check-access.py")
+        access = siblings.load(SCRIPTS, "check-access.py")
         if watch_ms is not None:
+            self.addCleanup(setattr, access, "WATCH_MS", access.WATCH_MS)
             access.WATCH_MS = watch_ms
         context = self.browser.new_context()
         try:
@@ -661,7 +666,7 @@ class Hold(unittest.TestCase):
     vault.carousel-focus timed, else access-keys.py's ROTATE_MS, and STILL_SLACK_MS more."""
 
     def test_a_timed_span_sets_the_hold_and_anything_else_takes_rotate_ms(self):
-        access = library("check-access.py")
+        access = siblings.load(SCRIPTS, "check-access.py")
         slack, rotate = access.keys.STILL_SLACK_MS, access.keys.ROTATE_MS
         for span, want in (
             (3000.0, 3000 + slack),
@@ -699,17 +704,23 @@ class TimedChange(Browsed):
                     ([], [self.UNDECLARED]),
                 )
 
-    def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured(self):
-        self.assertEqual(
-            self.pause_answer("carousel.html?every=12000", carousels=[".slides"]),
-            (
-                [],
-                [
-                    "main > div.slides held still from 5 s to 11 s after the page's load while the page still ran a "
-                    "timer, so a slower rotation cannot be ruled out"
-                ],
-            ),
+    def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_own_watch(
+        self,
+    ):
+        faults, unmeasured = self.pause_answer(
+            "carousel.html?every=20000", carousels=[".slides", "main > div"]
         )
+        self.assertEqual(faults, [])
+        held = re.compile(
+            r"main > div\.slides held still from ([\d.]+) s to ([\d.]+) s after the page's load while the page "
+            r"still ran a timer, so a slower rotation cannot be ruled out"
+        )
+        windows = [tuple(map(float, held.fullmatch(u).groups())) for u in unmeasured]
+        self.assertEqual(len(windows), 2, unmeasured)
+        (start1, end1), (start2, end2) = sorted(windows)
+        self.assertGreaterEqual(start1, 5)
+        self.assertGreaterEqual(start2, end1 - 0.1)
+        self.assertGreater(end2, start2)
 
     def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self):
         for carousels in ([".slides"], []):
@@ -725,13 +736,14 @@ class TimedChange(Browsed):
     def test_vault_pause_holds_a_declared_carousel_for_the_span_vault_carousel_focus_timed(
         self,
     ):
-        access = library("check-access.py")
+        access = siblings.load(SCRIPTS, "check-access.py")
         holds, hold_ms = [], access.hold_ms
 
         def recorded(span):
             holds.append(span)
             return hold_ms(span)
 
+        self.addCleanup(setattr, access, "hold_ms", hold_ms)
         access.hold_ms = recorded
         context = self.browser.new_context()
         try:
