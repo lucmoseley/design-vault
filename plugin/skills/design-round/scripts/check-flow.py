@@ -600,13 +600,15 @@ PREPARE_JS = (
   for (const m of morphs) {
     const w0 = m.writes[0];
     first = Math.min(first, (w0.prevFrameAt === null ? w0.frameAt : w0.prevFrameAt) - t0);
+    const own = [];
     for (const w of m.writes) {
-      drawn.push(w.frameAt - t0);
-      if (w.prevFrameAt !== null) drawn.push(w.prevFrameAt - t0);
+      own.push(w.frameAt - t0);
+      if (w.prevFrameAt !== null) own.push(w.prevFrameAt - t0);
     }
+    drawn.push(own);
     end = Math.max(end, m.writes[m.writes.length - 1].frameAt - t0);
   }
-  edges.push(...drawn);
+  edges.push(...drawn.flat());
   for (const x of anims) {
     x.a.pause();
     const t = x.a.effect.getComputedTiming();
@@ -752,6 +754,7 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
     inside that frame still cuts it, another element's move from rest inside it
     gets a first frame in the wrong phase, and a move from rest at a later
     keyframe or pass keeps the sampled frames' phase.
+    `drawn` holds, per morph, the frames the browser drew it in (#612, #620).
     In a window of 1 ms or more, no two times fall within 1 ms of each other."""
     step = 1000 / fps
     first = max((e for e in edges if 0 <= e < min(MIN_GAP_MS, end)), default=0)
@@ -767,15 +770,26 @@ def sample_times(end, edges, fps, starts=(), *, drawn=()):
         if 0 < e < end and all(abs(e - t) >= MIN_GAP_MS for t in exact):
             exact.append(e)
     frames = [k * step for k in range(1, int(end // step) + 1)]
+    if any(drawn):
+        lo = min(t for own in drawn for t in own)
+        hi = max(t for own in drawn for t in own)
+        frames = [t for t in frames if not lo - step / 2 < t < hi + step / 2]
+        for own in drawn:
+            gaps = list(itertools.pairwise(sorted(set(own))))
+            drawn_frame = statistics.median(b - a for a, b in gaps) if gaps else step
+            for a, b in gaps:
+                n = max(1, round(drawn_frame / step))
+                if is_dropped_gap(b - a, drawn_frame):
+                    n *= round((b - a) / drawn_frame)
+                frames += [a + (b - a) * i / n for i in range(1, n)]
     return sorted(
         exact
         + [
             t
             for t in frames
             if all(abs(t - x) >= MIN_GAP_MS for x in exact)
+            and 0 < t < end
             and not any(a < t < b for a, b in spans)
-            # #612
-            and all(abs(t - d) >= step / 2 for d in drawn)
         ]
     )
 
@@ -828,11 +842,18 @@ def morph_at(points, t):
     return [x + (y - x) * k for x, y in zip(a, b, strict=True)]
 
 
+def is_dropped_gap(gap, frame):
+    """Whether the browser dropped DROPPED_FRAMES or more frames in a row over a
+    gap of `gap` ms between frames `frame` ms apart, half a frame allowed for
+    jitter (a guess)."""
+    return gap > (DROPPED_FRAMES + 0.5) * frame
+
+
 def dropped_frames(writes):
     """(from ms, to ms) of each stretch over which a morph's shape changed while
-    the browser dropped DROPPED_FRAMES or more frames in a row, half a frame
-    allowed for jitter (a guess), stretches that touch joined into one. A change of
-    command structure finds none: add_morphs refuses it."""
+    the browser dropped frames over, by is_dropped_gap, stretches that touch
+    joined into one. A change of command structure finds none: add_morphs
+    refuses it."""
     gaps = [w["ms"] - w["prev_ms"] for w in writes if w["prev_ms"] is not None]
     try:
         points = morph_points(writes)
@@ -841,10 +862,10 @@ def dropped_frames(writes):
         return []
     if not gaps:
         return []
-    longest = (DROPPED_FRAMES + 0.5) * min(statistics.median(gaps), BROWSER_FRAME_MS)
+    frame = min(statistics.median(gaps), BROWSER_FRAME_MS)
     out = []
     for (ta, a), (tb, b) in itertools.pairwise(points):
-        if a != b and tb - ta > longest:
+        if a != b and is_dropped_gap(tb - ta, frame):
             if out and out[-1][1] == ta:
                 out[-1] = (out[-1][0], tb)
             else:
