@@ -58,9 +58,10 @@ no jolt, jump or step rests on it. A page that also moves another way gets no li
 because an empty one would read as a pass. It says it cannot measure, and names
 why: a canvas, a video, an embedded document, SVG SMIL, shadow DOM, a
 scroll-driven timeline, an animation played in reverse or seeked by hand from a
-script, an element other than a path's `d` that a script rewrites frame by
-frame, a morph that scrolling drives, whose command structure changes or whose
-frame loop never stops, or animations that start when the page is scrolled or
+script, one CSS animation-play-state holds paused, an element other than a
+path's `d` that a script rewrites frame by frame, a morph that scrolling
+drives, whose command structure changes or whose frame loop never stops, or
+animations that start, or are released, when the page is scrolled, or
 keep starting. An animated GIF is not detected.
 
 Time zero is the page's first frame.
@@ -340,6 +341,13 @@ COLLECTOR_JS = r"""
     return raf((t) => { try { return cb(t); } finally { state.scan(t); } });
   };
   state.raf = raf;
+  state.neverStarted = () => [...seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused').map(([a]) => a);
+  state.markSweep = () => {
+    state.scan();
+    state.sweptFrom = performance.now();
+    state.pausedAtSweep = state.neverStarted();
+    return seen.size;
+  };
   // `ended` is set once an animation reaches its end, so one the page then
   // cancels, as on animationend, is still known to have run its course (#368).
   const keep = (a) => {
@@ -445,6 +453,21 @@ const label = (el, pseudo) => {
 };
 """
 
+# #610
+CSS_PAUSED_JS = r"""
+const cssPaused = (a) => {
+  if (!(a instanceof CSSAnimation) || !a.effect || !a.effect.target) return false;
+  const { target, pseudoElement } = a.effect;
+  const style = getComputedStyle(target, pseudoElement);
+  const splitList = (v) => v.split(',').map((x) => x.trim());
+  const states = splitList(style.animationPlayState);
+  const twins = target.getAnimations({ subtree: true }).filter((b) => b instanceof CSSAnimation && b.effect.target === target && b.effect.pseudoElement === pseudoElement && b.animationName === a.animationName);
+  let nth = twins.indexOf(a);
+  const entry = splitList(style.animationName).findIndex((n) => n === a.animationName && nth-- === 0);
+  return entry >= 0 && states[entry % states.length] === 'paused';
+};
+"""
+
 # Whether a rewrite log shows a script moving its element frame by frame.
 LOOP_JS = r"""
 const loop = (log, frames, span) => log.some((w, i) => {
@@ -520,6 +543,7 @@ BLOCKERS_JS = (
     + LABEL_JS
     + LOOP_JS
     + DRAWN_JS
+    + CSS_PAUSED_JS
     + r"""
   const f = window.__flow;
   f.scan();
@@ -529,12 +553,16 @@ BLOCKERS_JS = (
   if (scrolled.length) reasons.push('drives ' + scrolled.length + ' animation(s) by scroll position, not time');
   const reversed = [...f.seen.keys()].filter((a) => a.playbackRate <= 0);
   if (reversed.length) reasons.push('plays ' + reversed.length + ' animation(s) in reverse or at zero speed');
-  const seeked = [...f.seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused');
+  const paused = f.neverStarted();
+  const held = paused.filter(cssPaused);
+  const seeked = paused.filter((a) => !held.includes(a));
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
+  if (held.length) reasons.push('holds ' + held.length + ' animation(s) CSS animation-play-state keeps paused (' + listing(held.map((a) => a.effect.target), shown) + '), which play only once something such as a scroll or a click releases them');
   f.morphing = looping(f.morphs, frames, span);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
   if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
-  if (before !== null && f.seen.size > before) reasons.push('starts ' + (f.seen.size - before) + ' animation(s) when the page is scrolled');
+  const started = before === null ? 0 : f.seen.size - before + f.pausedAtSweep.filter((a) => a.playState !== 'paused' || f.seen.get(a).start !== null).length;
+  if (started) reasons.push('starts ' + started + ' animation(s) when the page is scrolled');
   return reasons;
 }
 """
@@ -1773,9 +1801,7 @@ def measure(at):
             looped = settle(page, at)["looped"]
             before = None
             if not looped:
-                before = page.evaluate(
-                    "() => { const f = window.__flow; f.scan(); f.sweptFrom = performance.now(); return f.seen.size; }"
-                )
+                before = page.evaluate("() => window.__flow.markSweep()")
                 sweep(page)
             reasons = page.evaluate(
                 BLOCKERS_JS,
