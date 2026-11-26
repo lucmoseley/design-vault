@@ -15,6 +15,7 @@ import siblings  # noqa: E402
 
 
 answering = siblings.load(HERE, "access-answers.py")
+prelude = siblings.load(HERE, "access-page.py")
 keys = siblings.load(HERE, "access-keys.py")
 maths = siblings.load(HERE, "access-pixels.py")
 face = siblings.load(HERE, "face-profile.py")
@@ -729,7 +730,7 @@ def chart_faults(chart, ids_shot, ground, table):
     return out, readings
 
 
-def _thin_notes(page, js, table, texts):
+def _thin_notes(page, table, texts):
     got, shots = texts
     readable = [t for t in got["texts"] if not t["logotype"] and not t["why"]]
     if not readable:
@@ -740,7 +741,7 @@ def _thin_notes(page, js, table, texts):
             stems[s["family"], s["size"], s["weight"], s["style"], s["stretch"]] = s[
                 "stem"
             ]
-    settings = page.evaluate(js(SETTINGS_JS))
+    settings = page.evaluate(prelude.labelled_js(SETTINGS_JS))
     notes = []
     for text, setting in zip(got["texts"], settings, strict=True):
         if text["logotype"] or text["why"]:
@@ -767,10 +768,10 @@ def _thin_notes(page, js, table, texts):
     return notes
 
 
-def _mark(page, js, parts, absent):
+def _mark(page, parts, absent):
     page.evaluate(STRIP_JS)
     return page.evaluate(
-        js(MARK_JS),
+        prelude.labelled_js(MARK_JS),
         {
             "charts": [parts["chart"]] if "chart" in parts else [],
             "carousels": [parts["carousel"]] if "carousel" in parts else [],
@@ -827,8 +828,8 @@ def _sightings(photo, shots, where):
     return [_sighting(c, shots, where) for c in photo]
 
 
-def _press(page, js, handle, *, deck, dot):
-    at = page.evaluate(js(PRESS_JS), [deck, dot])
+def _press(page, handle, *, deck, dot):
+    at = page.evaluate(prelude.labelled_js(PRESS_JS), [deck, dot])
     if at is None:
         return None
     settled = keys.still(handle)
@@ -836,7 +837,7 @@ def _press(page, js, handle, *, deck, dot):
     return settled
 
 
-def _slide_pass(fresh, js, parts, absent):
+def _slide_pass(fresh, parts, absent):
     from playwright.sync_api import Error as PlaywrightError
 
     sightings, unread = [], []
@@ -845,8 +846,7 @@ def _slide_pass(fresh, js, parts, absent):
         deck_page = fresh()
         _slide_sightings(
             deck_page,
-            js,
-            functools.partial(_mark, deck_page, js, parts, absent),
+            functools.partial(_mark, deck_page, parts, absent),
             sightings=sightings,
             unread=unread,
         )
@@ -862,7 +862,7 @@ def _slide_pass(fresh, js, parts, absent):
     return sightings, unread
 
 
-def _slide_sightings(page, js, mark, *, sightings, unread):
+def _slide_sightings(page, mark, *, sightings, unread):
     page.evaluate(STAY_ON_PAGE_JS)
 
     def read(subject, where, held):
@@ -892,7 +892,7 @@ def _slide_sightings(page, js, mark, *, sightings, unread):
         if deck["dots"]:
             count = min(deck["dots"], MAX_SLIDES)
             for k in range(count):
-                held = _press(page, js, handle, deck=n, dot=k)
+                held = _press(page, handle, deck=n, dot=k)
                 if held is None:
                     unread.append(
                         f"{subject}'s page dot {k + 1} was gone, hidden or disabled when pressed, so its slide was "
@@ -910,7 +910,7 @@ def _slide_sightings(page, js, mark, *, sightings, unread):
                 where = (
                     f"on {subject}'s slide {pressed + 1}, reached by its next button"
                 )
-                held = _press(page, js, handle, deck=n, dot=None)
+                held = _press(page, handle, deck=n, dot=None)
                 if held is None:
                     break
                 if not held:
@@ -972,10 +972,10 @@ def _photo_verdict(photo, sightings, table):
     return passed
 
 
-def measure(page, js, table, *, parts, absent, texts, fresh):
+def measure(page, table, *, parts, absent, texts, fresh):
     readings, on_photo = [], []
     out = {qid: answering.unjudged() for qid in (*QUESTIONS, "vault.carousel-focus")}
-    got = _mark(page, js, parts, absent)
+    got = _mark(page, parts, absent)
     if "bad" in got:
         return got, readings
     photo, ladder, fills, chart_q, forced = (
@@ -1037,9 +1037,9 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
 
     if got["states"]:
         on = _shoot(page)
-        page.evaluate(js(STATE_JS), False)
+        page.evaluate(prelude.labelled_js(STATE_JS), False)
         off = _shoot(page)
-        page.evaluate(js(STATE_JS), True)
+        page.evaluate(prelude.labelled_js(STATE_JS), True)
         for s in got["states"]:
             ratio = state_figure(on, off, s["rect"]) if on.shape == off.shape else None
             if ratio is None:
@@ -1058,7 +1058,7 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
                 readings.append(Reading(s["subject"], "state mark", ratio))
 
     if texts is not None:
-        ladder.notes.extend(_thin_notes(page, js, table, texts))
+        ladder.notes.extend(_thin_notes(page, table, texts))
 
     ground = _shoot(page) if got["fills"] else None
     for entry in got["fills"]:
@@ -1078,13 +1078,13 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
             )
     if any(c["marks"] for c in measured_charts):
         style = page.add_style_tag(content=CHART_CSS)
-        page.evaluate(js(MARKS_JS), "id")
+        page.evaluate(prelude.labelled_js(MARKS_JS), "id")
         ids_shot = _shoot(page)
-        page.evaluate(js(MARKS_JS), None)
+        page.evaluate(prelude.labelled_js(MARKS_JS), None)
         style.evaluate("(el) => el.remove()")
-        page.evaluate(js(MARKS_JS), "hide")
+        page.evaluate(prelude.labelled_js(MARKS_JS), "hide")
         ground = _shoot(page)
-        page.evaluate(js(MARKS_JS), None)
+        page.evaluate(prelude.labelled_js(MARKS_JS), None)
         for c in measured_charts:
             if ids_shot.shape != ground.shape:
                 chart_q.unmeasured.append(
@@ -1098,7 +1098,7 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
     if got["forced"]:
         page.emulate_media(forced_colors="active")
         try:
-            edged = page.evaluate(js(FORCED_JS))
+            edged = page.evaluate(prelude.labelled_js(FORCED_JS))
         finally:
             page.emulate_media(forced_colors="none")
         for c, ok in zip(got["forced"], edged, strict=True):
@@ -1113,15 +1113,15 @@ def measure(page, js, table, *, parts, absent, texts, fresh):
     page.evaluate(STRIP_JS)
 
     if any(d["media"] for d in got["slides"]):
-        more, unread = _slide_pass(fresh, js, parts, absent)
+        more, unread = _slide_pass(fresh, parts, absent)
         on_photo += more
         photo.unmeasured.extend(unread)
     readings += _photo_verdict(photo, on_photo, table)
     return out, readings
 
 
-def signature(page, js):
-    return page.evaluate(js(SIGNATURE_JS))
+def signature(page):
+    return page.evaluate(prelude.labelled_js(SIGNATURE_JS))
 
 
 def scheme(name, judged, measured, light):

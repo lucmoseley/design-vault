@@ -8,6 +8,10 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
 
+answering = siblings.load(HERE, "access-answers.py")
+conditions = siblings.load(HERE, "conditions.py")
+layout = siblings.load(HERE, "check-layout.py")
+prelude = siblings.load(HERE, "access-page.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
 TABLE = os.path.join(HERE, "check-access-pointer.table")
@@ -110,7 +114,7 @@ return { faults, unread };
 )
 
 
-def judged(page, pointer, script, answering):
+def judged(page, pointer, script):
     if pointer == "coarse":
         return answering.Judged(page.evaluate(script(COARSE_JS)), [], [], [])
     got = page.evaluate(script(FINE_JS))
@@ -121,11 +125,11 @@ def judged(page, pointer, script, answering):
     return answering.Judged(got["faults"], [], [], notes)
 
 
-def run(browser, at, viewports, *, conditions, layout, page_js, answering):
+def run(browser, at, viewports):
     consts = f"const FLOOR = {json.dumps(at.pointer_floor)};\n"
 
     def script(body):
-        return page_js(layout.flow.LABEL_JS + consts + f"() => {{\n{body}\n}}")
+        return prelude.labelled_js(consts + f"() => {{\n{body}\n}}")
 
     found, looping = [], 0
     for name, width, height in viewports:
@@ -139,9 +143,7 @@ def run(browser, at, viewports, *, conditions, layout, page_js, answering):
             ) as page:
                 page.set_default_timeout(at.timeout)
                 looping = max(looping, page.evaluate(layout.SETTLE_JS))
-                for into, got in zip(
-                    mine, judged(page, pointer, script, answering), strict=True
-                ):
+                for into, got in zip(mine, judged(page, pointer, script), strict=True):
                     into.extend(got)
         found.append((name, {QUESTION[0]: mine}))
     return found, looping

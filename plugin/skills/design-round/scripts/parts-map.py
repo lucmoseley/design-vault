@@ -68,6 +68,7 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 access = siblings.load(HERE, "check-access.py")
+prelude = siblings.load(HERE, "access-page.py")
 layout, flow = access.layout, access.flow
 
 FILES = (
@@ -87,7 +88,7 @@ LISTEN_JS = r"""
     return add.call(this, type, ...rest);
   };
 })();
-""".replace("ACT_EVENTS_JSON", json.dumps(access.ACT_EVENTS))
+""".replace("ACT_EVENTS_JSON", json.dumps(prelude.ACT_EVENTS))
 
 MAP_JS = (
     flow.LABEL_JS
@@ -256,8 +257,8 @@ MAP_JS = (
   scrollTo({ top: 0, left: 0, behavior: 'instant' });
   return { unread, parts: parts.map(({ el, ...p }) => p) };
 }
-""".replace("REACT_PROPS_JSON", json.dumps(access.REACT_PROPS)).replace(
-        "ACT_EVENTS_JSON", json.dumps(access.ACT_EVENTS)
+""".replace("REACT_PROPS_JSON", json.dumps(prelude.REACT_PROPS)).replace(
+        "ACT_EVENTS_JSON", json.dumps(prelude.ACT_EVENTS)
     )
 )
 

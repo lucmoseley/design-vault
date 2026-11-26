@@ -755,7 +755,9 @@ class Pause(unittest.TestCase):
             ctx.close()
 
     def late(self, past_ms=PAST_MS):
-        return mock.patch.object(self.access, "WATCH_MS", self.access.LONG_MS + past_ms)
+        return mock.patch.object(
+            self.access, "WATCH_MS", self.access.prelude.LONG_MS + past_ms
+        )
 
     def clean_answer(self):
         return (
@@ -823,7 +825,7 @@ class Pause(unittest.TestCase):
     def test_a_change_past_rotate_ms_from_5_s_is_not_read_628_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        window_ms = self.access.LONG_MS + self.access.keys.ROTATE_MS
+        window_ms = self.access.prelude.LONG_MS + self.access.keys.ROTATE_MS
         logged = []
         self.unwatched_after_5_s(
             f"setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-late', 'on'); console.log('late'); }}, {window_ms + self.PAST_MS});",
@@ -835,7 +837,7 @@ class Pause(unittest.TestCase):
     def test_a_turn_the_page_signals_with_its_own_resize_is_read_628_paired_with_test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628(
         self,
     ):
-        ms = self.access.LONG_MS + 2 * self.PAST_MS
+        ms = self.access.prelude.LONG_MS + 2 * self.PAST_MS
         with self.late():
             _, unmeasured = self.pause_answer(
                 "clean",
