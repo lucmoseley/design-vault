@@ -79,6 +79,17 @@ test("the reporter writes each file's own wall seconds once, its module load cou
   assert.ok(took["test/slow-load.test.js"] >= LOAD_MS / 1000, `${took["test/slow-load.test.js"]} s`);
 });
 
+test("the reporter's seconds are the runner's own duration for the file, never the reporter's clock (#626)", () => {
+  const seconds = path.join(dir, "runner.tsv");
+  const feed = `const complete = (name, ms) => ({ type: "test:complete",
+      data: { file: require("node:path").resolve("test/a.test.js"), name, nesting: 0, details: { duration_ms: ms } } });
+    (async () => { for await (const _ of require(${JSON.stringify(path.join(__dirname, "failed-files.js"))})(
+      [complete("inner", 1), complete("test/a.test.js", 2), complete("test/a.test.js", 1234)])); })();`;
+  const r = spawnSync(process.execPath, ["-e", feed], { cwd: dir, encoding: "utf8", env: env({ VAULT_FILE_SECONDS: seconds }) });
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(fs.readFileSync(seconds, "utf8"), "test/a.test.js\t1.234\n");
+});
+
 test("without VAULT_FAILED_FILES the reporter still prints Node's report and the run's red", () => {
   const root = scratch("unset");
   const r = spawnSync("bash", ["-c", `${NODE} test/red.test.js`],

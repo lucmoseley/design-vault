@@ -1,0 +1,11 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+#pair { position: absolute; top: 40px; left: 0; width: 80px; height: 80px; background: #2a2a2a; animation: rise 1200ms ease-out both paused, fade 1200ms ease-out both paused; }
+#pair::before { content: ""; display: block; width: 20px; height: 20px; background: #c33; animation: rise 1200ms ease-out both paused; }
+@keyframes rise { from { transform: none; } to { transform: translateX(400px); } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+</style></head>
+<body>
+<div id="pair"></div>
+</body></html>

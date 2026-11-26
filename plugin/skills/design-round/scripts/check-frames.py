@@ -135,8 +135,8 @@ async ({ quiet, cap, shown, timeline }) => {
   const t0 = rows.reduce((m, r) => Math.min(m, r.start), rows.length ? Infinity : 0);
   // #619
   const listed = new Map(document.getAnimations().map((a, i) => [a, i]));
-  const found = new Map(anims.map((a, i) => [a, listed.size + i]));
-  const place = (r) => (listed.has(r.a) ? listed.get(r.a) : found.get(r.a));
+  const unlisted = new Map(anims.map((a, i) => [a, listed.size + i]));
+  const place = (r) => (listed.has(r.a) ? listed.get(r.a) : unlisted.get(r.a));
   rows.sort((p, q) => place(p) - place(q));
   if (timeline && !reasons.length) {
     const keyed = (names) => { const seen = {}; return names.map((n) => n + ' ' + (seen[n] = (seen[n] || 0) + 1)); };
