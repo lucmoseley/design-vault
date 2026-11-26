@@ -1,18 +1,10 @@
 "use strict";
-/**
- * log-gate.js — what the vault's append-only logs share (#166): reading a JSON-lines log from the working tree, the index or HEAD, and
- * the command line each log's gate runs.
- *
- * Every fault is one line led by its rule name. Exit codes: 0 clean, 1 faults found, 2 a usage error or a file
- * that could not be read.
- */
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { gitIn } = require("./git-read.js");
 
 const isText = (value) => typeof value === "string" && value.trim() !== "";
-// A real day: 2026-02-30 rolls over to March, so it fails the round trip.
 const isDate = (value) => {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const day = new Date(`${value}T00:00:00Z`);
@@ -34,8 +26,6 @@ function parseRows(text, fault) {
   return rows;
 }
 
-// `extra` names a gate's own options, each taking a value: "one", or "many" where it may be given more than once,
-// collected as a list.
 function parseArgs(argv, extra = {}) {
   const options = { staged: false, log: null, previous: null };
   for (const [name, times] of Object.entries(extra)) options[name] = times === "many" ? [] : null;
@@ -54,8 +44,6 @@ function parseArgs(argv, extra = {}) {
   return options;
 }
 
-// The log in HEAD, or in the index. A log git does not hold, or a repo with no commit yet, reads
-// as an empty log; any other git failure throws, so the hook refuses rather than passing an unread log.
 function gitLog(root, log, fromHead) {
   const git = gitIn(root);
   if (fromHead) {
@@ -69,12 +57,6 @@ function gitLog(root, log, fromHead) {
   return git("show", `:${log}`);
 }
 
-/**
- * Runs one log's gate on `argv` and returns its exit code. `log` is the log's path from the vault root, `name` the
- * gate's file name that leads every line it prints, `noun` what a clean log is called, and `check(text, previousText)`
- * returns the log's faults. `report(text, options)`, where given, returns more lines to print after a clean log's, and
- * `extra` names the options it reads, as parseArgs() takes them.
- */
 function runGate(argv, { log, name, noun, check, report, extra }) {
   let options;
   try {

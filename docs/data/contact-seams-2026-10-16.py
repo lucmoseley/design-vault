@@ -1,26 +1,7 @@
 #!/usr/bin/env python3
-"""contact-seams — the #340 instrument: what a gap or conflation seam at a
-contact between two SVG fills leaves in look-renders.py contacts' crops at
-device pixel ratios 1, 2 and 3, as docs/research/contact-seams.md reads it.
+"""python3 docs/data/contact-seams-2026-10-16.py RUN_DIR OUT.csv
 
-  python3 docs/data/contact-seams-2026-10-16.py RUN_DIR OUT.csv
-
-From the repo root. On each of five grounds, two fills, A drawn first and B
-second, meet at a contact through the centre of a crop. Each contact is a
-shared edge (vertical at five sub-pixel offsets, slanted, or on a circle), a
-gap of a given CSS px width, or an underlap (A runs on under B). It writes
-the page three times, RUN_DIR/page-drawn.html, then with every ground black
-(page-black.html), then white (page-white.html), and renders each through
-look-renders.py contacts. The ground share of each device px is
-(white - black) / 255, the two-backing matte; the pixel the fills would make
-with no ground showing is black / (1 - share).
-
-Per crop, over a window WIN CSS px each side of the contact, it reports the
-largest ground share; the ground share summed across the edge per unit of
-its length, in CSS px (the equivalent ground width); and the luminance Weber
-contrast of each pixel against its no-ground pixel, summed the same way and
-times one device px's visual angle (wc_arcsec: width x contrast, the form of
-Hecht & Mintz 1939's thin-line threshold).
+From the repo root.
 """
 
 import csv
@@ -52,34 +33,24 @@ cs = load(
 )
 look = load("look_renders", LOOK_RENDERS)
 SCALES = look.SCALES
-# Each crop is look.MAGNIFY x larger by repeating pixels, so every
-# MAGNIFY-th pixel is the device pixel itself.
 MAGNIFY = look.MAGNIFY
-CONTACT_SIZE = look.CONTACT_SIZE  # CSS px
+CONTACT_SIZE = look.CONTACT_SIZE
 
-# Untraced guesses, each enough for its job and nothing more:
-WIN = 5  # CSS px each side of the contact, inside the 16 px crop
-SIDE = 4  # CSS px from the contact where each fill is read, inside WIN
-SHIFT = 0.37  # CSS px, off the pixel grid at every DPR, for all but shared-v
-NOISE = 0.5 / 255  # a ground share at or under half a code value is rounding
-ALL_GROUND = 0.95  # past this share, black / (1 - share) is too noisy to use
-DARK = 1e-4  # a luminance floor, so a black no-ground pixel cannot divide by 0
-ARC_SAMPLES = 20000  # points along a circle when counting its length in WIN
+WIN = 5  # guess, #340
+SIDE = 4  # guess, #340
+SHIFT = 0.37  # guess, #340
+NOISE = 0.5 / 255  # guess, #340
+ALL_GROUND = 0.95  # guess, #340
+DARK = 1e-4  # guess, #340
+ARC_SAMPLES = 20000  # guess, #501
 
-# One cell per contact: a SHAPE px square pair inside a MARGIN of its ground.
-# A slanted pair runs SHAPE / 2 past the square on each side, so its ends fall
-# outside the crop and every neighbour's window.
-SHAPE, MARGIN = 40, 10
+SHAPE, MARGIN = 40, 10  # guess, #340
 CELL = SHAPE + 2 * MARGIN
 HALF = SHAPE / 2
 
-# One device px's visual angle in arcsec, at the nearest typical viewing:
-# 96 dpi at 50 cm (OSHA's near end), 224 ppi at 50 cm, 460 ppi at 32.2 cm
-# (Bababekova et al. 2011's mean for web reading).
-ARCSEC = {1: 109.0, 2: 47.0, 3: 35.0}
+ARCSEC = {1: 109.0, 2: 47.0, 3: 35.0}  # measured 96 dpi, 224 ppi, 460 ppi, #340
 
 GROUNDS = {
-    # name: (A, B, ground)
     "light-on-dark": ("#e8dcc4", "#d9c7a6", "#14181f"),
     "blue-orange-on-white": ("#1a4d8f", "#e0a030", "#ffffff"),
     "near-ground": ("#6f7a70", "#7d7468", "#76786f"),
@@ -87,9 +58,6 @@ GROUNDS = {
     "ground-between": ("#1d2a4a", "#efe3c8", "#b0503c"),
 }
 
-# (case, param, shape, gap, where): gap is CSS px of ground between the fills,
-# negative for an underlap; where is the edge's offset off the pixel grid for
-# "v", its slant in degrees for "slant", and the disc's radius for "arc".
 CASES = (
     [("shared-v", round(o, 3), "v", 0.0, o) for o in (0, 0.125, 0.25, 1 / 3, 0.5)]
     + [("shared-slant", d, "slant", 0.0, d) for d in (5, 30, 45)]
@@ -106,7 +74,6 @@ CASES = (
 
 
 def luminance(rgb):
-    """Relative luminance of an sRGB pixel of 0-255 floats."""
     return sum(w * cs.lin(v / 255) for w, v in zip(cs.SRGB_TO_XYZ[1], rgb, strict=True))
 
 
@@ -120,8 +87,6 @@ def arc_length(cx, cy, r, centre):
 
 
 def cell(case, origin, fills):
-    """The SVG for one contact, its centre, its unit normal and the edge's
-    length inside the window, in CSS px."""
     _, _, shape, gap, where = case
     (x0, y0), (a, b) = origin, fills
     cx, cy = x0 + HALF, y0 + HALF
@@ -150,8 +115,6 @@ def cell(case, origin, fills):
         )
         normal = (cos, -math.sin(math.radians(where)))
         return svg, (ex + gap / 2, cy), normal, 2 * WIN / cos
-    # A disc of radius `where`, B a square with a hole of where + gap; the
-    # contact at 45 degrees on it.
     cx += SHIFT
     ra, rb = where + over, where + gap
     svg = (
@@ -254,12 +217,12 @@ def measure(run, contact, scale):
             ground_sum += g
             if g < ALL_GROUND:
                 clean = black[y, x] / (1 - g)
-            else:  # the fill on this pixel's side of the contact
+            else:
                 d = (x + 0.5 - mid) * nx + (y + 0.5 - mid) * ny
                 clean = fills[d >= 0]
             yc = luminance(np.clip(clean, 0, 255))
             weber_sum += abs(luminance(drawn[y, x]) - yc) / max(yc, DARK)
-    length = contact["length"] * scale  # device px
+    length = contact["length"] * scale
     return {
         "peak_ground": round(peak, 4),
         "ground_width_css": round(ground_sum / length / scale, 4),
@@ -268,9 +231,6 @@ def measure(run, contact, scale):
 
 
 def blend_check(run):
-    """The edge pixel of blue-orange-on-white's shared-v 0.25 at DPR 1, where
-    A covers 1/4 of it and B 3/4, against source-over blending in
-    sRGB-encoded values and in linear light."""
     a, b, ground = (
         np.array([int(h[i : i + 2], 16) for i in (1, 3, 5)], dtype=float)
         for h in GROUNDS["blue-orange-on-white"]

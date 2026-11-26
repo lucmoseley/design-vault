@@ -1,8 +1,4 @@
 "use strict";
-// gate.js tally on vault.affordance (#162), the one question the look critics answer part by part: each part on
-// parts-map.py's key looks actable or not, and the tally compares that with whether the map says a visitor can act on
-// it. Loosen it and a static pill styled as a button, a control that looks like nothing, or a link going nowhere passes
-// the gate, or a split reaches the founder before a settle critic has looked closer.
 const assert = require("node:assert/strict");
 const { gateScratch, refusedWithout, runGate: run } = require("./gate-files.js");
 const path = require("node:path");
@@ -20,13 +16,11 @@ const { writeSettle, buildBrokenCopy } = gateScratch("gate-affordance-");
 const tally = ({ critics = CRITICS, parts = PARTS, settles = [] } = {}) =>
   run("tally", "--asset", "web-surface", "--answered", ANSWERED, ...critics.flatMap((c) => ["--critic", c]),
     ...Object.entries(parts).flatMap(([c, f]) => ["--parts", `${c}=${f}`]), ...settles.flatMap((s) => ["--settle", s]), GATE);
-// A settle critic's file settling the split candidate's p2 and the unlisted candidate's parts off the key; its path.
 const settleBoth = ({ p2 = "No", offKey = "No" } = {}) => writeSettle({
   split: { "vault.affordance": { parts: { p2: { answer: p2, evidence: `settle on p2: ${p2}` } } } },
   unlisted: { "vault.affordance": { unlisted: { answer: offKey, evidence: `settle off the key: ${offKey}` } } },
 });
 
-// One candidate's block of tally's output.
 const block = (out, candidate) => {
   const start = out.indexOf(`\n${candidate}: `);
   const end = out.slice(start + 1).search(/\n(\S+: \d+ fault|Clashes)/);
@@ -36,7 +30,7 @@ const verdict = (out, candidate, id) => block(out, candidate).match(new RegExp(`
 
 const refused = refusedWithout(/^Tally of/m);
 
-test("a part that cannot be acted on but looks as if it can is false, and one that can but does not look it is hidden: each a fault", () => {
+test("a part that cannot be acted on but looks as if it can is false, and one that can but does not look it is hidden: each a fault (#162)", () => {
   const r = tally();
   assert.equal(r.status, 0, r.out + r.err);
   assert.deepEqual(verdict(r.out, "pill", "vault.affordance"), ["look, part by part", "fault"]);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """check-access.py — measures a web candidate against the access rule records
-in design-critique's rules/ that a script answers (design-vault#163, #164, #189, #200, #315, #316):
+in design-critique's rules/ that a script answers:
 WCAG 2.2 AA text contrast (1.4.3), control edges (1.4.11), target size
 (2.5.8), links told apart by colour alone (1.4.1, by technique G183), reach
 by keyboard (2.1.1), focus shown and not hidden (2.4.7, 2.4.11), a pause
@@ -40,7 +40,7 @@ check-layout.py does, and measures each question at both:
   drawn. Text in a Tab stop hidden at rest, as a skip link is, in a box under
   2 px each way or laid off the page until focus brings it on, is read as it
   shows once focused, from window shots with the window scrolled to it; its
-  generated text cannot be measured (#421).
+  generated text cannot be measured.
   4.5:1 is needed, or 3:1 for large text, 24 px or 18.66 px bold (WCAG's
   18 pt and 14 pt). Text in a disabled control is exempt, and text under a
   --logotype selector, a logotype the project's rules file names, which WCAG
@@ -56,8 +56,7 @@ check-layout.py does, and measures each question at both:
   the box and the 3 px inside it, a line at a time, and its fill too; the best
   of these is the figure. Where the control draws no edge or fill, a box drawn
   close around it, holding no other control, is read as its edge. A control
-  with no edge drawn at all passes, since WCAG asks 3:1 only of an edge that
-  is drawn: whether it looks like a field is a function question's. A disabled
+  with no edge drawn at all passes. A disabled
   control is exempt. A control on or beside something a script moves, such
   as a video or canvas, cannot be measured;
 - vault.target-size: every link, button, form control or element with a
@@ -72,8 +71,7 @@ check-layout.py does, and measures each question at both:
   colour (an underline or overline, a bottom border, an outline or shadow in a
   colour that shows, a background other than the one behind it, bold against
   regular, italic against upright) or reach 3:1 against it. No cue on hover or
-  focus is asked: G183 dropped that step in 2021 (w3c/wcag#1553), and a phone
-  has no hover;
+  focus is asked;
 - vault.contrast-ladder: a link or button named by its icon alone, drawing
   no text, must show the icon at the table's icon figure against the colours
   next to it, read up to access-contrast.py's RING_PX px past its antialiased edge in a shot as
@@ -235,7 +233,7 @@ beside this script or --pointer-table FILE. It reads neither --parts nor
 --contrast-table.
 
 Each question's answer is "pass", "fail" or "cannot measure"; a question
-that cannot be measured goes to the look critics (#154). Pure decoration is
+that cannot be measured goes to the look critics. Pure decoration is
 exempt from contrast but still reported: say so beside it in the round folder.
 
 It writes DIR/access.json, every question's answer with each finding,
@@ -295,33 +293,25 @@ VIEWPORTS = tuple(
         ("phone", layout.PHONE_WIDTH),
     )
 )
-# G183's 3:1 between a link and the text around it.
+# G183 asks 3:1 contrast between a link and the text around it:
+# https://www.w3.org/WAI/WCAG22/Techniques/general/G183
 LINK_RATIO = 3.0
-# WCAG 2.5.8's target, in px.
+# WCAG 2.5.8 sets a pointer target's minimum at 24 by 24 CSS px:
+# https://www.w3.org/TR/WCAG22/#target-size-minimum
 MIN_TARGET = 24
-# The weight a link counts as bold at against regular text around it: G183
-# names bold as a cue but gives no figure, and 600 is CSS's semibold.
-BOLD_CUE = 600
-# How much taller than a control, in px a side, a wrapper drawn around it as
-# its field may be, and how many wrappers out are read. Guesses, unmeasured.
-WRAP, WRAPPERS = 12, 3
-# How far outside a focused element a ring drawn around it is read, in px. A
-# guess, unmeasured: past a 2 px ring at a 3 px offset, with room to spare.
-FOCUS_REACH = 8
-# A cover whose background is at least this opaque hides what is under it; a
-# lighter one is judged by the pixels. A guess, unmeasured.
-OPAQUE = 0.9
-# WCAG 2.2.2's five seconds.
+BOLD_CUE = 600  # guess, #501
+WRAP, WRAPPERS = 12, 3  # guess, #501
+FOCUS_REACH = 8  # guess, #501
+OPAQUE = 0.9  # guess, #501
+# WCAG 2.2.2 covers moving content that starts automatically and lasts more than five seconds:
+# https://www.w3.org/TR/WCAG22/#pause-stop-hide
 LONG_MS = 5000
-# How long the motion check watches a script's motion, and how many controls
-# named for pausing it clicks. Guesses, unmeasured.
-WATCH_MS = 1000
-PAUSE_TRIES = 6
+WATCH_MS = 1000  # guess, #164
+PAUSE_TRIES = 6  # guess, #501
 # Frames a pause control has to hold still in before it counts as moving (#536): a guess.
 PAUSE_FRAMES = 10
 # Frames since the page last asked for one in which its frame loop counts as running (#545): a guess.
 PAGE_LOOP_FRAMES = 2
-# Event types that make an element act on a pointer, and React's props for them.
 ACT_EVENTS = (
     "click",
     "dblclick",
@@ -342,13 +332,8 @@ REACT_PROPS = (
     "onTouchStart",
     "onTouchEnd",
 )
-# Tab stops a walk may take, past twice the focusable elements of the page
-# and of each frame it enters, for the stops a shadow root adds. A guess,
-# unmeasured.
-WALK_SLACK = 20
-# The Tab stops a date or time input takes, one a part, at most: a
-# datetime-local's month, day, year, hour, minute and AM/PM (#188).
-DATE_PARTS = 6
+WALK_SLACK = 20  # guess, #501
+DATE_PARTS = 6  # measured 6 Tab stops in a datetime-local, #501
 
 MEASURE_JS = (
     flow.LABEL_JS
@@ -356,23 +341,18 @@ MEASURE_JS = (
 (LOGOTYPES) => {
   const bad = badSelectors(LOGOTYPES);
   if (bad.length) return { bad };
-  // The --logotype selector text sits under.
   const logotype = (el) => LOGOTYPES.find((s) => el.closest(s)) || null;
   const ancestors = (el) => { const out = []; for (let e = el; e; e = e.parentElement) out.push(e); return out; };
-  // The colour a text's glyphs are filled with, its alpha times `opacity`.
   const fillOf = (cs, opacity) => {
     const color = rgba(cs.webkitTextFillColor && rgba(cs.webkitTextFillColor)[3] > 0 ? cs.webkitTextFillColor : cs.color);
     return [...color.slice(0, 3), color[3] * opacity];
   };
-  // Whether any of these computed styles fills text with its background.
   const clipped = (styles) => styles.some((s) => /text/.test(s.backgroundClip || s.webkitBackgroundClip));
   const FIELD = /^(text|email|search|tel|url|password|number|date|datetime-local|month|week|time)$/;
 
-  // FOCUSED_JS reads the text of the Tab stops hidden at rest.
   const resting = (window.__resting = restingStops());
   const restingIn = (el) => resting.some((r) => r.contains(el));
 
-  // Text under `top`, one entry per element holding it, past those `skip` takes.
   const textsIn = (top, skip) => {
     const replaced = [...document.querySelectorAll('video, canvas')].filter(shown).map((e) => box(e.getBoundingClientRect()));
     const texts = new Map();
@@ -398,8 +378,6 @@ MEASURE_JS = (
       if (!t.why && rects.some((r) => replaced.some((v) => !empty(meet(r, v))))) t.why = 'lies over a video or canvas';
     }
 
-    // A form control's own text: its value, a button's label, a select's
-    // choice, or else its placeholder, read across its content box.
     const OWN = 'input:not([type=hidden]), textarea, select';
     for (const el of [top, ...top.querySelectorAll(OWN)].filter((e) => e.matches(OWN))) {
       if (!shown(el) || disabled(el) || skip(el)) continue;
@@ -421,10 +399,6 @@ MEASURE_JS = (
   window.__restingTexts = (i) => [...textsIn(resting[i], () => false).values()];
   window.__texts = [...texts].map(([el, t]) => ({ el, rects: t.rects }));
 
-  // Generated text: a ::before or ::after whose content, up to any alt text
-  // after a slash, holds a string that is not blank, a counter, an attribute
-  // or a quote mark. Its boxes come from access-boxes.py, so it waits in
-  // window.__generated for GENERATED_JS.
   const TOKEN = /"(?:[^"\\]|\\.)*"|[\w-]+\((?:[^()"]|"(?:[^"\\]|\\.)*")*\)|\/|[\w-]+/g;
   const holdsText = (content) => {
     for (const [t] of content.matchAll(TOKEN)) {
@@ -434,7 +408,6 @@ MEASURE_JS = (
     return false;
   };
   window.__generated = [];
-  // Generated text in a Tab stop hidden at rest, which FOCUSED_JS does not read.
   const unread = [];
   for (const el of [document.body, ...document.body.querySelectorAll('*')]) {
     if (el.closest('svg') || !shown(el) || disabled(el)) continue;
@@ -451,13 +424,9 @@ MEASURE_JS = (
     }
   }
 
-  // Controls whose edge identifies them, each with the boxes drawn around it
-  // that could be its edge: its own, then up to WRAPPERS wrappers holding no other
-  // control and no taller than it by more than WRAP px a side.
   const ROLES = '[role=checkbox], [role=radio], [role=switch]';
   const CONTROL = `input:not([type=hidden]), select, textarea, button, a[href], ${ROLES}`;
   const controls = [];
-  // Each control's element and wrappers, box by box, for HIDE_JS.
   window.__boxEls = [];
   for (const el of document.querySelectorAll(`input, textarea, select, ${ROLES}`)) {
     if (!shown(el) || disabled(el)) continue;
@@ -477,11 +446,7 @@ MEASURE_JS = (
     window.__boxEls.push(els);
   }
 
-  // WCAG 2.5.8's user-agent exception (#188): a form control at "the user
-  // agent default size" (its Understanding page), the size a copy of it takes
-  // in a blank frame, where no author style reaches it or what it holds, and
-  // without the attributes that size it. Its computed `appearance` cannot
-  // tell: a select given a border keeps `auto`.
+  // #188
   const blank = document.createElement('iframe');
   blank.style.cssText = 'position: absolute !important; display: block !important; visibility: hidden !important; left: 0 !important; ' +
     `top: 0 !important; width: ${document.documentElement.clientWidth}px !important; height: 0 !important; border: 0 !important`;
@@ -501,7 +466,6 @@ MEASURE_JS = (
     return Math.abs(c.width - r.width) < PX_SLACK && Math.abs(c.height - r.height) < PX_SLACK;
   };
 
-  // Targets and WCAG 2.5.8's spacing exception.
   const targets = [];
   for (const el of pointerTargets(restingIn)) {
     const r = el.getBoundingClientRect();
@@ -517,7 +481,6 @@ MEASURE_JS = (
     if (near) targetFaults.push({ subject: label(t.el), detail: `is ${Math.round(t.r.width)}x${Math.round(t.r.height)} px, and a ${MIN_TARGET} px circle on it reaches ${label(near.el)}` });
   }
 
-  // Links in a block of text, told from it by colour alone below 3:1.
   const linkFaults = [];
   document.querySelectorAll('a[href]').forEach((a) => {
     if (!shown(a) || !/\S/.test(a.textContent) || !inText(a) || cued(a)) return;
@@ -533,10 +496,6 @@ MEASURE_JS = (
 """
 )
 
-# The generated text MEASURE_JS found, given access-boxes.py's boxes for it:
-# one text entry each, its boxes clipped as a text node's are and kept on
-# window.__generated for HELD_FILL_JS, and added to MEASURE_JS's
-# window.__texts for UNDER_JS.
 GENERATED_JS = r"""
 (boxes) => {
   const replaced = [...document.querySelectorAll('video, canvas')].filter(shown).map((e) => box(e.getBoundingClientRect()));
@@ -551,24 +510,6 @@ GENERATED_JS = r"""
 }
 """
 
-# For each of window.__texts, given its cannot-measure reason: [the fixed or
-# sticky box drawn over it at load that a scroll takes it clear of, named, or
-# null; that reason, dropped where it was a video or canvas inside such a box]
-# (#200, #345). Such boxes, kept on window.__bars for HIDE_JS, are found by
-# hit-testing three points across the middle of each of its rects, at a sixth,
-# a half and five sixths along (a guess, unmeasured), through every box drawn
-# above it there, with pointers let in everywhere so a box that lets them
-# through is still found. A box as tall as the window, a side rail or a layer
-# over the whole page, is no bar. Scrolling down only lifts text, so a line
-# under a bar at load comes clear of it only above the bar's top where it
-# sticks, its load top for a fixed bar or one stuck to the window's foot, its
-# `top` for one stuck to the window's head: it must fit between that and the
-# window's head, or the foot of a bar stuck above it there, within the page's
-# greatest scroll. Residual: a sticky bar is taken as stuck at every scroll,
-# though it lets go at its containing block's end; text in a sticky box not yet
-# stuck, taken as fixed, does scroll with the page until it sticks; and a bar
-# stuck above another is taken as drawn over the text, though it may lie
-# beneath it.
 UNDER_JS = (
     flow.LABEL_JS
     + r"""
@@ -586,7 +527,6 @@ UNDER_JS = (
   const sticksAt = (bar) => {
     const s = css(bar), r = bar.getBoundingClientRect();
     if (s.position === 'fixed') return r.top;
-    // Stuck at the foot at load: PX_SLACK's float rounding covers a box's edge too.
     if (s.bottom !== 'auto' && Math.abs(r.bottom - (innerHeight - parseFloat(s.bottom))) < PX_SLACK) return r.top;
     return s.top === 'auto' ? -Infinity : parseFloat(s.top);
   };
@@ -594,7 +534,6 @@ UNDER_JS = (
   const stuck = [...document.querySelectorAll('*')].filter((e) => BAR.test(css(e).position) && shown(e))
     .map((e) => { const b = box(e.getBoundingClientRect()); return { e, b, foot: sticksAt(e) + b[3] - b[1] }; })
     .filter(({ b }) => b[3] - b[1] < innerHeight);
-  // The lowest foot of any other bar stuck above `top` across r: the head of the window r can rise to.
   const headOf = (bar, r, top) =>
     Math.max(0, ...stuck.filter(({ e, b, foot }) => e !== bar && b[0] < r[2] && r[0] < b[2] && foot <= top + PX_SLACK).map(({ foot }) => foot));
   const clears = (bar, rects) => {
@@ -602,6 +541,7 @@ UNDER_JS = (
     return rects.every((r) => empty(meet(r, b)) || r[3] - top <= Math.min(maxScroll, r[1] - headOf(bar, r, top)));
   };
   const found = window.__texts.map(({ el, rects }) => {
+    // guess, #200
     for (const r of rects) for (const fx of [1 / 6, 1 / 2, 5 / 6]) {
       for (const hit of document.elementsFromPoint(r[0] + fx * (r[2] - r[0]), (r[1] + r[3]) / 2)) {
         if (hit === el || el.contains(hit) || hit.contains(el)) break;
@@ -629,13 +569,9 @@ UNDER_JS = (
 """
 )
 
-# Shared by the page-side calls: WCAG's contrast, and whether a link shows a
-# cue other than its colour against the text around it.
 CUE_JS = r"""
 const css = (el) => getComputedStyle(el);
-// The selectors of a list that are not CSS selectors.
 const badSelectors = (list) => list.filter((s) => { try { document.querySelector(s); return false; } catch (e) { return true; } });
-// Any CSS colour as sRGB [r, g, b, a], whatever space the page wrote it in.
 const ink = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
 const rgbaCache = new Map();
 const rgba = (c) => {
@@ -650,12 +586,10 @@ const rgba = (c) => {
   return rgbaCache.get(c);
 };
 const painted = (c) => rgba(c)[3] > 0;
-// The colour drawn behind an element: its nearest painted background, or the canvas's white.
 const backdrop = (el) => {
   for (let e = el; e; e = e.parentElement) if (painted(css(e).backgroundColor)) return rgba(css(e).backgroundColor);
   return [255, 255, 255, 1];
 };
-// A shadow shows where one of its layers has a painted colour and a length that is not zero.
 const shadowed = (s) => s !== 'none' && s.split(/,(?![^(]*\))/).some((layer) => {
   const c = (layer.match(/rgba?\([^)]*\)/) || ['transparent'])[0];
   return painted(c) && /[1-9]/.test(layer.replace(c, ''));
@@ -679,13 +613,11 @@ const cued = (a) => {
       bold(cs) !== bold(parent) || italic(cs) !== italic(parent);
   });
 };
-// WCAG 2.2's relative luminance and contrast ratio, as access-pixels.py's `luminance` and `contrast`.
 const lum = ([r, g, b]) => {
   const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 };
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-// The inputs whose parts each take a Tab stop while focus stays on the input.
 const DATED = /^(date|datetime-local|month|week|time)$/;
 const TARGET = 'a[href], button, input:not([type=hidden]), select, textarea, summary, [onclick], ' +
   '[role=button], [role=link], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=menuitem], ' +
@@ -702,35 +634,25 @@ const ancestorsOf = (el) => { const out = []; for (let e = el.parentElement; e &
 const disabled = (el) => !!el.closest(':disabled, [aria-disabled="true"]');
 const box = (r) => [r.left, r.top, r.right, r.bottom];
 const meet = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
-// Under DRAWN px either way is a screen reader's clipped text, or nothing.
+// guess, #501
 const DRAWN = 2;
 const empty = (r) => r[2] - r[0] < DRAWN || r[3] - r[1] < DRAWN;
-// What an element's own box and its ancestors let it paint in; a fixed box
-// escapes every ancestor's clip and an absolute one those below its
-// positioned ancestor.
 const clips = (cs) => cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || cs.clipPath !== 'none' || cs.clip !== 'auto';
-// The box inside an element's border and padding, in the window.
 const contentBox = (el) => {
   const r = el.getBoundingClientRect(), cs = css(el), px = (k) => parseFloat(cs[k]);
   return [r.left + px('borderLeftWidth') + px('paddingLeft'), r.top + px('borderTopWidth') + px('paddingTop'),
     r.right - px('borderRightWidth') - px('paddingRight'), r.bottom - px('borderBottomWidth') - px('paddingBottom')];
 };
-// The focused element, inside any shadow roots.
 const focused = () => {
   let el = document.activeElement;
   while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
   return el;
 };
-// Runs each finite animation to its end. finish() throws on one with no
-// effect or played at rate 0 (Web Animations' InvalidStateError), which is
-// left as drawn.
 const finished = (animations) => {
   for (const a of animations) {
     try { if (a.effect.getComputedTiming().endTime !== Infinity) a.finish(); } catch (e) {}
   }
 };
-// A focus style that slides or fades in, as a skip link's does, is read
-// where it ends.
 const settled = async () => {
   finished(document.getAnimations());
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -739,8 +661,6 @@ const blockOf = (el) => {
   for (let e = el; e; e = e.parentElement) { const d = css(e).display; if (d !== 'inline' && d !== 'contents') return e; }
   return document.body;
 };
-// Whether an inline element sits in a line of text: its own block, not one
-// nested in it, holds text in no target.
 const inText = (el) => {
   if (css(el).display !== 'inline') return false;
   const block = blockOf(el);
@@ -750,19 +670,14 @@ const inText = (el) => {
   }
   return false;
 };
-// Under FINDABLE px either way draws nothing a pointer can find: a guess.
+// guess, #501
 const FINDABLE = 0.5;
-// The targets 2.5.8 measures, shown, enabled and drawn on the page, past those `skip` takes.
 const pointerTargets = (skip) => [...document.querySelectorAll(TARGET)].filter((el) => {
   if (!shown(el) || disabled(el) || skip(el)) return false;
   const r = el.getBoundingClientRect();
   return r.width >= FINDABLE && r.height >= FINDABLE && r.right > 0 && r.bottom > 0;
 });
-// Tab stops hidden at rest, a skip link's two ways, which no visitor sees
-// or taps there: a box under DRAWN px each way, clipped to nothing, or one
-// laid off the page that focus, without scrolling, brings onto it (#421).
-// One off the page that only a scroll reaches, in a scrolling strip or an
-// app shell's scrolling main, is a target like any other.
+// #421
 const restingStops = () => {
   const root = document.documentElement;
   const onPage = [-scrollX, -scrollY, root.scrollWidth - scrollX, root.scrollHeight - scrollY];
@@ -795,8 +710,6 @@ const visiblePart = (el, r) => {
 };
 """
 
-# Run before any page script: marks each element given a listener for a
-# click, a press or a touch, which no DOM property shows afterwards.
 LISTEN_JS = r"""
 ((ACT_EVENTS) => {
   const acts = new WeakSet();
@@ -810,14 +723,6 @@ LISTEN_JS = r"""
 })(ACT_EVENTS_JSON);
 """.replace("ACT_EVENTS_JSON", json.dumps(ACT_EVENTS))
 
-# Every part a pointer can work, kept in window.__wanted for
-# KEYBOARD_JS: a native control, an ARIA widget, or an element with a click,
-# press or touch handler of its own, React's included (React 17 and later
-# attach theirs to the root and keep them in the element's __reactProps$
-# key). An element off the page, hidden, inert or disabled is left out.
-# Narrower than TARGET, 2.5.8's list, which also holds every tab stop: an
-# element with a tabindex acts on nothing for being one. Returns the Tab
-# stops the page could hold, a date or time input's parts counted.
 WANTED_JS = (
     flow.LABEL_JS
     + r"""
@@ -851,9 +756,6 @@ WANTED_JS = (
 """
 )
 
-# Whether something opaque other than `shows` lies on top of all of `part`,
-# sampled at nine points, a 3x3 grid at the middles of its sixths (a guess,
-# unmeasured); the cover is named by its fixed or sticky box where it has one.
 COVER_JS = r"""
 const coverOf = (shows, part) => {
   const own = (hit) => hit === shows || shows.contains(hit) || hit.contains(shows);
@@ -865,6 +767,7 @@ const coverOf = (shows, part) => {
     return false;
   };
   let cover = null, covered = true;
+  // guess, #164
   for (const fx of [1 / 6, 1 / 2, 5 / 6]) for (const fy of [1 / 6, 1 / 2, 5 / 6]) {
     const hit = document.elementFromPoint(part[0] + fx * (part[2] - part[0]), part[1] + fy * (part[3] - part[1]));
     if (!hit || own(hit) || !opaque(hit)) { covered = false; continue; }
@@ -877,12 +780,6 @@ const coverOf = (shows, part) => {
 };
 """
 
-# One stop of a Tab walk: the focused element, where it shows, and what covers
-# it. Returns {end} once focus leaves the page or comes back to an element
-# this walk already met, {frame} while focus is in a frame whose page this one
-# can read, which the caller reads it in, {inside} while it moves within
-# a frame it cannot read after the stop on the frame itself, and {datePart}
-# while it moves between a date or time input's parts (#188).
 STOP_JS = (
     flow.LABEL_JS
     + COVER_JS
@@ -893,7 +790,6 @@ async (back) => {
   const el = focused();
   if (!el || el === document.body || el === document.documentElement) return { end: true };
   const frame = el.localName === 'iframe';
-  // Null, not a throw, for a frame whose page this one cannot read.
   const open = frame && !!el.contentDocument;
   if (el === w.last && frame) return open ? { frame: true } : { inside: true };
   if (el === w.last && el.localName === 'input' && DATED.test(el.type)) return { datePart: true };
@@ -915,13 +811,8 @@ async (back) => {
   }
   if (empty(part)) return stop;
   stop.part = part;
-  // The least indicator that counts: a 1 px line along its longer side. A
-  // guess, unmeasured: 2.4.7 sets no area, and 2.4.13 (AAA) a 2 px perimeter.
+  // guess, #501
   stop.need = Math.round(Math.max(part[2] - part[0], part[3] - part[1]));
-  // The region read for its focus indicator: the part showing and up to
-  // WRAPPERS wrappers holding no other tab stop, which a card's :focus-within
-  // outline draws on, each with FOCUS_REACH px around it for a ring drawn
-  // outside.
   const around = (r) => [r[0] - FOCUS_REACH, r[1] - FOCUS_REACH, r[2] + FOCUS_REACH, r[3] + FOCUS_REACH];
   let region = around(part);
   let n = 0;
@@ -936,12 +827,8 @@ async (back) => {
 """
 )
 
-# The focused element, for the frame it may be.
 ACTIVE_JS = "() => focused()"
 
-# A stop read in the focused frame's own window, moved out into this one: cut
-# to where the frame's content box shows, its need taken from what is left,
-# and checked for what lies over the frame there.
 THROUGH_JS = (
     flow.LABEL_JS
     + COVER_JS
@@ -965,10 +852,6 @@ THROUGH_JS = (
 
 REFOCUS_JS = "(i) => window.__walk.els[i].focus({ preventScroll: true })"
 
-# Every part in window.__wanted no Tab walk reached, where neither it, a part
-# it holds or one holding it took focus. A radio, or an item of a composite
-# widget, is reached when any of its group is, as arrow keys move inside the
-# group; and a link when another link to the same address is.
 KEYBOARD_JS = (
     flow.LABEL_JS
     + r"""
@@ -993,10 +876,6 @@ KEYBOARD_JS = (
 """
 )
 
-# On the motion check's load, after its watch: the motions that run long and
-# those that ran long and ended, the
-# elements a script moves frame by frame, the canvases, images and SVGs whose
-# pixels to compare, and how many controls are named for pausing.
 MOTION_JS = (
     flow.LABEL_JS
     + flow.LOOP_JS
@@ -1007,12 +886,7 @@ MOTION_JS = (
   const out = { long: [], ended: [], scripted: [], painted: [] };
   const motions = [];
   const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
-  // Motion running more than LONG_MS from load: a CSS or Web
-  // Animations animation on the document's clock, and a video playing that
-  // loops or runs that long and has no controls of its own. The animations
-  // are every one the collector kept from the first frame, so one that ended
-  // before this late read is still found, as ended, even where the page then
-  // cancelled it or hid its element (#368).
+  // #368
   for (const [a, rec] of f.seen) {
     const el = a.effect && a.effect.target;
     const running = a.playState === 'running';
@@ -1023,8 +897,6 @@ MOTION_JS = (
     const motion = { subject: label(el, a.effect.pseudoElement || ''),
       what: `${name ? `"${name}" ` : ''}${span === Infinity ? 'loops forever' : `runs ${(span / 1000).toFixed(1)} s`}` };
     if (!running) { out.ended.push(motion); continue; }
-    // One that reaches its end while the controls are tried was stopped by
-    // none of them: `ended` tells it apart from one a control paused.
     motions.push({ stopped: () => !rec.ended && (a.playState !== 'running' || !document.getAnimations().includes(a) || !on(el)),
       ended: () => rec.ended });
     out.long.push(motion);
@@ -1035,8 +907,6 @@ MOTION_JS = (
     out.long.push({ subject: label(v), what: v.loop ? 'plays on a loop' : 'plays a video longer than 5 s' });
   }
   window.__motions = motions;
-  // Motion the script cannot time: an element a script rewrites frame by
-  // frame, and a canvas, image or SVG, compared across two screenshots.
   const animated = document.getAnimations().map((a) => a.effect && a.effect.target).filter(Boolean);
   for (const [el, log] of f.rewrites) if (el.isConnected && on(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
   for (const el of document.querySelectorAll('canvas, img, svg')) {
@@ -1044,8 +914,6 @@ MOTION_JS = (
     const r = el.getBoundingClientRect();
     out.painted.push({ subject: label(el), rect: [r.left + scrollX, r.top + scrollY, r.right + scrollX, r.bottom + scrollY].map(Math.round) });
   }
-  // The controls that might pause it: a button, switch or checkbox whose
-  // name says pause, stop, hide or play, or names the motion.
   const name = (el) => [el.getAttribute('aria-label'), el.textContent, el.title, el.value].filter(Boolean).join(' ');
   const PAUSE = /\b(pause|stop|hide|play|resume|freeze|motion|animations?)\b/i;
   window.__pauses = [...document.querySelectorAll('button, input[type=button], input[type=checkbox], [role=button], [role=switch], [role=checkbox], [aria-pressed]')]
@@ -1083,11 +951,9 @@ CLICKABLE_JS = r"""
 })
 """
 
-# Which long motions are stopped now, and which have ended, by their index.
 STOPPED_JS = "() => window.__motions.flatMap((m, i) => (m.stopped() ? [i] : []))"
 ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
 
-# Run before any page script, as a timer or change made at load is missed after.
 TIMERS_JS = r"""
 (() => {
   const live = new Set(), ran = new Map(), set = window.setInterval, clear = window.clearInterval;
@@ -1110,7 +976,8 @@ TIMERS_JS = r"""
     times.push(performance.now());
     changed.set(el, times);
   };
-  // A screenshot hides the caret by a style it writes and takes off again.
+  // Playwright's screenshot hides the caret with a caret-color style it adds, then removes:
+  // https://playwright.dev/python/docs/api/class-page#page-screenshot-option-caret
   const caret = (v) => (v || '').replace(/caret-color: transparent !important;\s*/g, '');
   new MutationObserver((records) => {
     for (const m of records) {
@@ -1144,7 +1011,6 @@ UNSEEN_JS = r"""
 }
 """
 
-# A control that clears the timer and sets another, as a restart does, has not stopped it.
 UNSEEN_RUNNING_JS = r"""
 ({ intervals, timeouts, known, watch }) => {
   const t = window.__timers, fresh = (id) => !known.includes(id);
@@ -1170,7 +1036,6 @@ const changedSince = (since) => {
 };
 """
 
-# A changed element's parent stands for it, as a slide's does for the slide.
 ROTATION_JS = (
     flow.LABEL_JS
     + flow.LOOP_JS
@@ -1209,9 +1074,6 @@ CAROUSEL_JS = (
 BLUR_JS = "() => document.activeElement && document.activeElement.blur()"
 
 
-# Leaves every box as drawn and fills the text's glyphs with one colour, taking
-# off its shadows and decorations, placeholders included; transparent takes the
-# text off. `color` itself is kept, so a border drawn in currentColor stays.
 def text_css(fill):
     return f"""
 *, *::before, *::after, *::placeholder, *::marker {{
@@ -1236,9 +1098,6 @@ def decoded(png):
     return np.asarray(Image.open(io.BytesIO(png)).convert("RGB"))
 
 
-# The boxes of text whose fill the page holds with its own !important rule, so
-# the injected fill did not take, with generated text's where `generated`:
-# those GENERATED_JS kept at load, so this runs after it.
 HELD_FILL_JS = r"""
 ({ fill, generated }) => {
   const out = [], range = document.createRange();
@@ -1255,9 +1114,6 @@ HELD_FILL_JS = r"""
 """
 
 
-# Hides box k of the controls MEASURE_JS found at the indices given, or with
-# "bars" the boxes drawn over text UNDER_JS found, keeping each one's own
-# visibility to put back; null puts them back.
 HIDE_JS = r"""
 (arg) => {
   if (arg === null) {
@@ -1271,27 +1127,10 @@ HIDE_JS = r"""
 """
 
 Shots = collections.namedtuple("Shots", "shot ink held sizes behind again clear")
-# The text fills the contrast shots take: off, then black and white for the ink mask.
 FILLS = ("rgba(0, 0, 0, 0)", "rgb(0, 0, 0)", "rgb(255, 255, 255)")
 
 
 def screenshot(page, controls, covered):
-    """The Shots: the full page with its text taken off, the ink mask
-    access-pixels.py reads it with, the boxes of text the page keeps its own
-    fill on, each text shot's (height, width); for each of `controls`, box by
-    box, the page with its text off and that box hidden, beside those of the
-    other controls in its hide_groups() group; the page with its text off
-    shot again after those; and where `covered`, some text lying under a
-    fixed or sticky box at load, that shot and its ink mask with every such box
-    hidden, or else None. Each shot holds every CSS animation, so only the
-    text's fill, or the hidden boxes, differ between them. An endless one is
-    held by cancelling it, so text is read on the ground the page draws
-    without it, and text that fails only while it runs is not seen, as
-    held.html pins (#252). Motion a script
-    draws still differs: under text more of the text's box is read, and
-    `again` shows it behind a control. Shots of different sizes give no ink
-    mask, and each text's whole box is read: a page the first full-page shot
-    grows is shot again once, and one still growing is read so (#257)."""
     page.evaluate(BLUR_JS)
     groups = maths.hide_groups(controls)
 
@@ -1346,16 +1185,9 @@ def screenshot(page, controls, covered):
 
 
 def viewport_shot(page):
-    """The window as drawn, with every finite animation run to its end and
-    every endless one held at its start, so two shots differ only by what
-    changed between them."""
     return decoded(page.screenshot(animations="disabled"))
 
 
-# Focuses MEASURE_JS's Tab stop i hidden at rest, its focus style run to its
-# end, with the window scrolled to it where it shows above or below it, and
-# gives its text as it then shows, read as MEASURE_JS reads text. Text still
-# beside the window lies off its shot, and cannot be measured.
 FOCUSED_JS = r"""
 async (i) => {
   const el = window.__resting[i];
@@ -1370,10 +1202,6 @@ async (i) => {
 }
 """
 
-# Blurs focus and moves the point the next Tab starts from, which a focused
-# element's blur leaves where it was (HTML's sequential focus navigation
-# starting point), back to the page's top at once, past any smooth scrolling,
-# as at load, for tab_walk and the contrast shots (#421, #316).
 TOP_JS = r"""
 () => {
   const b = document.body, had = b.getAttribute('tabindex');
@@ -1387,10 +1215,6 @@ TOP_JS = r"""
 
 
 def focused_texts(page, hidden_stops):
-    """For each of MEASURE_JS's `hidden_stops` Tab stops hidden at rest, a skip
-    link's two ways, each text it shows when focused with what it is read on:
-    the window shot with the text's fill off and its ink mask, and the boxes
-    of text holding its own fill, as screenshot() takes them (#421)."""
     found = []
     for i in range(hidden_stops):
         texts = page.evaluate(page_js(FOCUSED_JS), i)
@@ -1409,9 +1233,6 @@ def focused_texts(page, hidden_stops):
 
 
 def focus_fault(page, stop, key):
-    """Why a focused element's focus cannot be seen, or None where it can:
-    the pixels around it focused, then blurred in its frame, then it is
-    focused again so the walk goes on from it."""
     if stop["region"] is None:
         return (
             "takes focus outside the window or its clipping box, where its focus cannot be seen",
@@ -1439,11 +1260,6 @@ def focus_fault(page, stop, key):
 
 
 def stop_at(frame, back, entered):
-    """One stop's reading in `frame`, followed down into each frame holding
-    focus whose page it can read and moved back out through each, with "at"
-    the frame it was read in. `entered` is the caller's accumulator: each
-    frame focus first enters, one it cannot read included, is put in it with
-    its focusable elements' count."""
     stop = frame.evaluate(page_js(STOP_JS), back)
     if not (stop.get("frame") or stop.get("unreadable")):
         stop["at"] = frame
@@ -1455,8 +1271,6 @@ def stop_at(frame, back, entered):
         stop["at"] = frame
         return stop
     got = stop_at(inner, back, entered)
-    # A frame whose own page takes the stop, as an empty frame's does, or
-    # whose walk comes round again, is passed through.
     if "subject" not in got:
         return {"inside": True} if got.get("end") else got
     at = got.pop("at")
@@ -1466,16 +1280,10 @@ def stop_at(frame, back, entered):
 
 
 def keys_js(body):
-    """A page-side body for access-keys.py, with this script's helpers."""
     return page_js(flow.LABEL_JS + body)
 
 
 def tab_walk(page, carousels):
-    """vault.keyboard's, vault.focus's and access-keys.py's walked
-    questions' access-answers.py Judged, from a Tab walk forward, which
-    judges every stop's focus and reads its ring, then a Shift+Tab walk back,
-    which judges only a stop something lies over. `carousels` are the
-    declared carousel's selectors."""
     page.add_style_tag(content="*, html { scroll-behavior: auto !important }")
     focusable = page.evaluate(page_js(WANTED_JS))
     keys.mark(page, keys_js, carousels)
@@ -1532,8 +1340,6 @@ def hold_ms(span):
 
 
 def motion_answers(context, url, carousels, *, mouse):
-    """keys.driven's answers, and vault.pause's Judged, which reads the slide
-    spans vault.carousel-focus timed."""
     driven, spans = keys.driven(context, url, keys_js, carousels, mouse=mouse)
     return driven, answering.Judged(
         *pause_answer(context, url, carousels, spans), [], []
@@ -1541,10 +1347,6 @@ def motion_answers(context, url, carousels, *, mouse):
 
 
 def pause_answer(context, url, carousels, spans):
-    """vault.pause's (faults, cannot-measure reasons), from a fresh load of the
-    page, as the module docstring gives them. `spans` are
-    vault.carousel-focus's times from one slide to the next, by carousel, each
-    None or a reason where it timed none."""
     from playwright.sync_api import Error as PlaywrightError
 
     page = context.new_page()
@@ -1570,7 +1372,6 @@ def pause_answer(context, url, carousels, spans):
             unmeasured.append(
                 f"{painted['subject']} changes as it is drawn, which this check cannot time"
             )
-    # Each declared carousel shown, as (subject, its element, its span).
     declared = []
     for n, el in enumerate(
         el for sel in carousels for el in page.query_selector_all(sel)
@@ -1609,8 +1410,6 @@ def pause_answer(context, url, carousels, spans):
             and unseen is None
         ):
             break
-        # Covered, moving or detached: a visitor could not click it either,
-        # so it pauses nothing.
         if not page.evaluate(page_js(CLICKABLE_JS), i):
             unclickable += 1
             continue
@@ -1622,8 +1421,6 @@ def pause_answer(context, url, carousels, spans):
             expected(exc, "counted unclickable")
             unclickable += 1
             continue
-        # Off it, so a carousel held while the pointer is over it is not taken
-        # for one the control stopped.
         page.mouse.move(0, 0)
         page.evaluate(
             "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
@@ -1690,13 +1487,10 @@ def pause_answer(context, url, carousels, spans):
 
 
 def judge(got, shots, measured, table):
-    """One width's {question id: access-answers.py's Judged}, with `measured`
-    holding those other calls' Judged, and access-contrast.py's Reading for
-    each text and control edge read and not faulted."""
     readings = []
     out = {qid: answering.Judged([], [], [], []) for qid, _ in answering.QUESTIONS}
     shot, ink, held, sizes = shots.shot, shots.ink, shots.held, shots.sizes
-    # A fault read over the whole box is otherwise taken for one under the letters (#290).
+    # #290
     if len(set(sizes)) > 1:
         shown = ", ".join(f"{w}x{h}" for h, w in sizes)
         out["vault.contrast"].notes.append(
@@ -1790,8 +1584,6 @@ def judge(got, shots, measured, table):
 
 
 class BadSelectorError(Exception):
-    """Selectors the browser cannot parse, given by `option`."""
-
     def __init__(self, option, selectors):
         super().__init__(selectors)
         self.option = option
@@ -1803,8 +1595,6 @@ def contrast_js(body):
 
 
 def open_page(browser, at, width, height, **scheme):
-    """A context and page at one width, in `scheme`'s colour options, loaded
-    and settled, with how many looping animations never finish."""
     context = browser.new_context(
         viewport={"width": width, "height": height}, **layout.device(width), **scheme
     )
@@ -1820,9 +1610,6 @@ def load(context, url):
 
 
 def read_texts(page, logotype):
-    """MEASURE_JS's result for a settled page, its generated text, the bars
-    over its text and its hidden Tab stops' focused text added, and the Shots
-    it is judged on."""
     got = page.evaluate(page_js(MEASURE_JS), logotype)
     if "bad" in got:
         raise BadSelectorError("--logotype", got["bad"])
@@ -1848,8 +1635,6 @@ def read_texts(page, logotype):
 
 
 def contrast_answers(page, at, texts, table):
-    """access-contrast.py's {question id: Judged} for a settled page, held to
-    `table`, and its Readings."""
     found, readings = contrasts.measure(
         page,
         contrast_js,
@@ -1865,9 +1650,6 @@ def contrast_answers(page, at, texts, table):
 
 
 def theme_answer(browser, at, width, height, *, light, answered, readings):
-    """vault.theme-contrast's Judged at one width: each scheme in contrasts.SCHEMES
-    that changes a colour the `light` signature holds, measured as the light
-    page is, past what the light page's `answered` already finds."""
     out, shipped = answering.unjudged(), []
     for name, options in contrasts.SCHEMES:
         context, page, _ = open_page(browser, at, width, height, **options)
@@ -1898,8 +1680,6 @@ def theme_answer(browser, at, width, height, *, light, answered, readings):
 
 
 def merge(into, more):
-    """`into` is the caller's accumulator, a {question id: Judged}: each of
-    `more`'s findings is added to it, with a Judged for any question it lacks."""
     for qid, judged in more.items():
         for mine, theirs in zip(
             into.setdefault(qid, answering.unjudged()), judged, strict=True
@@ -2039,9 +1819,7 @@ def parse(argv):
 
 
 def pointer_run(at):
-    # A local file's own style sheets are another origin's without it, and
-    # their pointer rules could not be switched off (#317). It also lets the
-    # page under test read other local files while the run lasts.
+    # #317
     with flow.chromium(("--allow-file-access-from-files",)) as browser:
         return pointing.run(
             browser,
@@ -2054,7 +1832,6 @@ def pointer_run(at):
         )
 
 
-# What a run answers and writes: the default run, or --pointer.
 Mode = collections.namedtuple("Mode", "report run questions")
 MODES = {
     False: Mode("access.json", run, answering.QUESTIONS),
@@ -2067,7 +1844,6 @@ def main(argv):
     os.makedirs(at.out, exist_ok=True)
     mode = MODES[at.pointer]
     json_path = os.path.join(at.out, mode.report)
-    # An earlier run's report would reach the critic as this run's.
     pathlib.Path(json_path).unlink(missing_ok=True)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     try:

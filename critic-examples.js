@@ -1,22 +1,18 @@
 #!/usr/bin/env node
 /**
  * critic-examples.js — deals each critic of a design round its own examples of the founder's taste from
- * data/corrections-log.jsonl (#193).
+ * data/corrections-log.jsonl.
  *
  * Usage:
  *   node critic-examples.js --project <key> --asset <class> --brief <file> [--count <n>] [--critics <n>] [--log <file>]
  *
- * Only the project's entries are dealt. They are ranked by relevance to the round, as Liu et al. (2022) chose
- * in-context examples by their closeness to the input: an entry for the brief's asset class first, then by how many
- * words its principle and his words share with the brief, then newest first. Word overlap stands in for their
- * embedding distance, which this vault has no model to compute.
+ * Only the project's entries are dealt, ranked by relevance to the round: an entry for the brief's asset class first,
+ * then by how many words its principle and his words share with the brief, then newest first.
  *
- * Each critic gets as many kept entries as rejected, since an unbalanced set pushes a Yes/No judge toward the
- * majority label (Zhao et al. 2021): `--count` (10, a knob no source sets) halved, or fewer where one stance holds
- * fewer entries. Each critic takes its own window of the most relevant entries of each stance, so three critics read
- * different examples (Jung et al. 2025) where the log holds enough: disjoint sets once each stance holds three
- * critics' share. Each set alternates kept and rejected, the stance it opens with alternating by critic, so neither
- * stance always sits last, where a judge leans most (Zhao et al.'s recency bias).
+ * Each critic gets as many kept entries as rejected: `--count` (10) halved, or fewer where one stance holds fewer
+ * entries. Each critic takes its own window of the most relevant entries of each stance: disjoint sets once each
+ * stance holds three critics' share. Each set alternates kept and rejected, the stance it opens with alternating by
+ * critic.
  *
  * Prints one section per critic, `## Critic a` and on, each entry his words quoted beside its principle, ready to
  * paste into that critic's dispatch. Exits 0 on a deal, empty where the log holds no entry of one stance; 2 on bad
@@ -34,9 +30,8 @@ const { CRITICS } = require("./plugin/skills/design-round/scripts/gate.js");
 const LOG = "data/corrections-log.jsonl";
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 const [KEPT, REJECTED] = STANCES;
-// A word this short is rarely what two texts are about: a guess, not a measurement.
+// guess, #193
 const SHORTEST_WORD = 3;
-// Words too common to make two texts about the same thing.
 const STOPWORDS = new Set(
   "the and for are but not you all any can had her was one our out has his how its may new now see two who did get him let say she too use that with have this will your from they been more when what were than then them into only some such also just over very most must each much well here there their which would could should about after before where these those while being every other".split(" "),
 );
@@ -45,7 +40,6 @@ const USAGE = "usage: node critic-examples.js --project <key> --asset <class> --
 
 const words = (text) => new Set(text.toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= SHORTEST_WORD && !STOPWORDS.has(w)));
 
-/** The project's entries of one stance, most relevant first, as the header ranks them. */
 function rank(entries, asset, briefWords) {
   const scored = entries.map((e, order) => {
     const shared = [...words(`${e.row.principle} ${e.row.words}`)].filter((w) => briefWords.has(w)).length;
@@ -57,17 +51,12 @@ function rank(entries, asset, briefWords) {
   });
 }
 
-/**
- * Each critic's `n` entries of one stance from `ranked`: a window of the pool, the `critics` times `n` most relevant,
- * each critic's window starting a third of the pool (for three critics) after the last one's, and wrapping round.
- */
 function windows(ranked, n, critics) {
   const pool = ranked.slice(0, critics * n);
   const step = Math.floor(pool.length / critics);
   return Array.from({ length: critics }, (_, c) => Array.from({ length: n }, (_, j) => pool[(c * step + j) % pool.length]));
 }
 
-/** The deal, { sets, kept, rejected, n }: each critic's entries in reading order, and how many entries each stance had. */
 function deal(rows, { project, asset, brief, count, critics }) {
   const own = rows.filter(({ row }) => row.project === project);
   const briefWords = words(brief);

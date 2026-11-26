@@ -1,9 +1,4 @@
 "use strict";
-// gate.js tally, which joins the building session's script and code answers with three look critics' into one verdict
-// per candidate and question (#160), and list --answered, which hands the critics what a script could not measure:
-// driven through the CLI on the fixture gate and answer files in test/fixtures/gate/tally, and on copies of them
-// broken one way each. Loosen it and one critic's leniency passes a fault, a split reaches the founder before a
-// settle critic has looked closer, or a question no script could measure goes unanswered.
 const assert = require("node:assert/strict");
 const { gateScratch, refusedWithout, runGate: run } = require("./gate-files.js");
 const fs = require("node:fs");
@@ -20,7 +15,6 @@ const { writeText, writeSettle, buildBrokenCopy } = gateScratch("gate-tally-");
 const tally = ({ answered = ANSWERED, critics = CRITICS, args = ["--asset", "web-surface"], settles = [] } = {}) =>
   run("tally", ...args, "--answered", answered, ...critics.flatMap((c) => ["--critic", c]), ...settles.flatMap((s) => ["--settle", s]), GATE);
 
-// { <candidate>: { <id>: { by, verdict } } } from tally's output.
 function parseVerdicts(out) {
   const found = {};
   let current;
@@ -37,7 +31,7 @@ const said = (answer, evidence = `settled ${answer}`) => ({ answer, evidence });
 
 const refused = refusedWithout(/^Tally of/m);
 
-test("a look question passes on three Yes, is a fault on three No, and is a split for a settle critic on anything else", () => {
+test("a look question passes on three Yes, is a fault on three No, and is a split for a settle critic on anything else (#160)", () => {
   const r = tally();
   assert.equal(r.status, 0, r.out + r.err);
   const v = parseVerdicts(r.out);
@@ -57,7 +51,6 @@ test("a settle critic's Yes passes a split, its No makes it a fault, and only it
   assert.equal(v["v2-water"]["vault.edge-look"].verdict, "pass");
   assert.equal(v["v2-water"]["vault.tone-look"].verdict, "founder");
   assert.match(r.out, /^v2-water: 2 fault\(s\), 0 split, 1 for the founder, 2 pass\.$/m);
-  // The founder still sees the three critics' answers beside the settle critic's.
   assert.match(r.out, /vault\.edge-look \(look\): pass, 2 Yes and 1 No; settled by \S*settle\.json: Yes\n(?: {5}\S*critic-.\.json: .*\n){3} {5}\S*settle\.json: Yes\. at 8x the edge is one clean curve/);
   const no = writeSettle({ "v2-water": { "vault.edge-look": said("No"), "vault.tone-look": said("No") } });
   assert.equal(parseVerdicts(tally({ settles: [no] }).out)["v2-water"]["vault.edge-look"].verdict, "fault");
@@ -124,7 +117,6 @@ test("a fault or a founder question shows each critic's answer and evidence, a p
 
 test("a script or code answer stands without the tally, whatever the critics say", () => {
   const v = parseVerdicts(tally().out);
-  // critic-a.json answers No to v1-arches' contrast, which its script passed.
   assert.deepEqual(v["v1-arches"]["vault.contrast"], { by: "script", verdict: "pass" });
   assert.deepEqual(v["v1-arches"]["vault.proof"], { by: "code", verdict: "pass" });
   assert.deepEqual(v["v2-water"]["vault.focus"], { by: "script", verdict: "pass" });
@@ -194,7 +186,6 @@ test("list --answered adds each question a script could not measure to the criti
 });
 
 test("a question the asset's facts drop is owed by no one", () => {
-  // No critic answers vault.motion-look, which a still asset leaves off the list.
   assert.equal(tally().status, 0);
   refused(tally({ args: ["--asset", "web-surface", "--fact", "has-motion"] }), /critic-a\.json: gives v1-arches no answer to vault\.motion-look/);
 });

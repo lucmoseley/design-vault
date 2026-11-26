@@ -1,12 +1,10 @@
-"""#139's loop: #136's stalled screenshot pointed at check-frames, contact-sheet and check-layout.
-Run by hand, never by the gate:
+"""Run by hand, never by the gate:
     python3 test/load/sibling-shots.py <frames-last|frames-hash|sheet|layout> [runs=30] [busy=16]
 
 Runs the script's own main() in-process on a fixture from its suite, beside <busy> CPU busy loops at the
 lowest priority, with check-overlay-shot.py's stall on every page.screenshot() call. Prints the exit counts
 and each screenshot line's outcomes. An exit 5 with "Unable to capture screenshot" means that script needs
 check-overlay's SHOTS retry; none, over the stalled first shots the counts show, means it is not exposed.
-#139 has the counts, taken with the loops at normal priority; #147 has check-overlay's at the lowest.
 """
 
 import importlib.util
@@ -31,8 +29,6 @@ def load(name, path):
 
 shot = load("check_overlay_shot", os.path.join(HERE, "check-overlay-shot.py"))
 
-# name: (script, its arguments before --out, the exit its suite expects). layout is check-layout.test.py's
-# "shots", the one case that reaches all six screenshot widths at a quick step.
 TARGETS = {
     "frames-last": (
         "check-frames.py",

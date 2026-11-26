@@ -1,11 +1,3 @@
-"""Pins probe.py (#300): python3 test/probe.test.py
-
-It is a suite of the commit gate (test/all.sh): loosening it lets a family
-script's rule pass a page that misses it, or fail one that meets it. The rule
-table runs on test/fixtures/probe/runner.html, whose every planted miss sits
-beside a twin that meets the rule, and must name exactly those misses.
-"""
-
 import contextlib
 import json
 import os
@@ -17,7 +9,7 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "probe.py"
@@ -29,7 +21,6 @@ CASCADE = pathlib.Path(FIXTURES, "cascade.html").resolve().as_uri()
 CONDITIONS = (
     pathlib.Path(HERE, "fixtures", "drivers", "conditions.html").resolve().as_uri()
 )
-# Five widths, two of them in the phone band and one at the stepped top.
 SWEEP = ["--widths", "320-1920", "--step", "400"]
 
 
@@ -53,8 +44,7 @@ def tearDownModule():
     STACK.close()
 
 
-# A guess at a ceiling no run on these fixtures nears.
-RUN_TIMEOUT_S = 120
+RUN_TIMEOUT_S = 120  # guess, #300
 
 
 def run(*args):
@@ -62,8 +52,6 @@ def run(*args):
 
 
 def declaring(out):
-    """A run of the program on runner.html into `out`, given the parts
-    declaration `text` as --parts (None gives none) before `args`."""
 
     def run_at(text, *args):
         given = []
@@ -77,8 +65,6 @@ def declaring(out):
 
 
 def values(url, table, parts=None):
-    """{subject: (value, verdict)} for each line, read once on `url`, its
-    part: lines through `parts`, a name-to-selector map (None declares none)."""
     page = BROWSER.new_page()
     try:
         page.goto(url)
@@ -109,7 +95,7 @@ class TheTable(unittest.TestCase):
         with open(os.path.join(cls.out, "probe.json"), encoding="utf8") as fh:
             cls.got = json.load(fh)
 
-    def test_names_exactly_the_planted_misses(self):
+    def test_names_exactly_the_planted_misses_300(self):
         misses = {
             (f["id"], m["subject"], m["value"], m["from"], m["to"])
             for f in self.got["findings"]
@@ -463,13 +449,7 @@ class Refusals(unittest.TestCase):
 
 
 class Grammar(unittest.TestCase):
-    """The table grammar check-style.table runs on (#309), judged on rows
-    built by hand, as the browser hands them back."""
-
     def judge(self, line, got, refs=None):
-        """The verdict and value `line` makes of one element whose reads,
-        in probe.wanted()'s order, gave `got`; None where a where filter
-        drops it."""
         rule = probe.parse(line)[0]
         self.assertEqual(len(got), len(probe.wanted(rule)))
         row = {
@@ -483,7 +463,7 @@ class Grammar(unittest.TestCase):
         found = probe.judged(rule, [row], refs)
         return (found[0].verdict, found[0].value) if found else None
 
-    def test_where_filters_take_the_shortest_read_that_leaves_a_must(self):
+    def test_where_filters_take_the_shortest_read_that_leaves_a_must_309(self):
         rule = probe.parse(
             "A | css:p where style:font-size < 16px where lines >= 2 | text | present"
         )[0]
@@ -574,8 +554,7 @@ class Grammar(unittest.TestCase):
             self.judge(line, [{"value": "15px"}, {"value": "16px"}])[0], "miss"
         )
 
-    def test_a_scope_word_alone_is_a_value_not_a_read(self):
-        """check-dom.table's vault.enter-key MUST `= next` is a value (#520)."""
+    def test_a_scope_word_alone_is_a_value_not_a_read_520(self):
         must = probe.parse("A | css:input | attr:enterkeyhint | = next")[0].must
         self.assertEqual((must.values, must.ref), (("next",), None))
         must = probe.parse("A | css:p | style:color | = next style:color")[0].must

@@ -1,15 +1,8 @@
 'use strict';
-/**
- * view.js — what the library page shows and copies, shared by the page (app.js) and its tests (#84):
- * the ways in and their counts, the sort, the view hash, and the briefs the copy buttons write.
- * Every function takes the page's view first: { data, styles, project, pick, fit, sort, showStyles, queryTests, prefs },
- * and none reads the page, storage or the network.
- */
 (function (exports) {
   const search = typeof module === 'object' ? require('./search.js') : window.VaultSearch;
   const VAULT = '~/design-vault';
 
-  // A reference kept for one project shows only while that project is chosen.
   const inProject = (v, e) => !e.project || e.project === v.project;
   const libraryEntries = v => v.data.entries.filter(e => inProject(v, e));
   const fitOf = (v, e) => e.fit?.[v.project];
@@ -21,31 +14,24 @@
   const partNames = (v, e) => named(v.data.page_parts, e.page_parts);
   const kindsOf = e => e.motion?.kinds || [];
   const kindNames = (v, e) => named(v.data.motion_kinds, kindsOf(e));
-  // A look names the Style guide styles its pages share; the link lives on the look alone (#24 Q1).
   const styleNames = (v, c) => named(v.styles.styles, c.styles);
   const collectionLine = (v, c) => c.name + (c.styles?.length ? ` (Style guide: ${styleNames(v, c).join(', ')})` : '');
-  // A site entry's url, or the site a screenshot was taken from; the scheme check keeps a javascript: address out of the link.
   const siteAddress = e => [e.url, e.site_url].find(u => /^https?:\/\//i.test(u || ''));
   const referencePath = e => 'images/' + (e.file || e.still);
   const motionSummary = (v, e) => [kindNames(v, e).join(', '), [e.motion.trigger, e.motion.property].filter(Boolean).join(' · '), e.motion.from_to,
     e.motion.easing && 'easing ' + e.motion.easing, e.motion.purpose && 'purpose ' + e.motion.purpose + (e.motion.purpose_note ? ': ' + e.motion.purpose_note : ''),
     e.motion.reduced && 'reduced motion: ' + e.motion.reduced].filter(Boolean).join(' — ');
 
-  // The ways in (#23): one pick in each, and the picks combine. A new way in is one more row here, plus its look in
-  // app.js's WAY_LOOKS. A project-scoped way's ids change with the project, so its pick carries the project into the hash.
   const WAYS = [
     { key: 'look', ids: v => v.data.collections.map(c => c.id), has: (v, e, id) => e.collection === id },
-    // Only the page parts the library holds are offered (#29 Q2).
     { key: 'part', projectScoped: true, has: (v, e, id) => (e.page_parts || []).includes(id),
       ids: v => v.data.page_parts.filter(p => libraryEntries(v).some(e => (e.page_parts || []).includes(p.id))).map(p => p.id) },
-    // Only the motion kinds the library holds are offered (#37).
     { key: 'motion', projectScoped: true, has: (v, e, id) => kindsOf(e).includes(id),
       ids: v => v.data.motion_kinds.filter(k => libraryEntries(v).some(e => kindsOf(e).includes(k.id))).map(k => k.id) },
     { key: 'group', projectScoped: true, ids: v => projectGroups(v).map(g => g.id), has: (v, e, id) => (fitOf(v, e)?.groups || []).includes(id) },
   ];
   const picked = v => WAYS.filter(w => v.pick[w.key]);
 
-  // A reference's searchable text is built once per library and project, not on each of the thousands of counts a keystroke re-renders.
   const searchTexts = new WeakMap();
   function searchText(v, e) {
     if (!searchTexts.has(v.data)) searchTexts.set(v.data, new Map());
@@ -55,7 +41,6 @@
   }
   const matchesQuery = (v, e) => !v.queryTests.length || search.matches(v.queryTests, searchText(v, e));
   const fitPasses = (v, e) => v.fit === 'any' || verdictOf(v, e) === v.fit;
-  // Every pick but the one in the way named, so a count can say what a value in that way would leave.
   const passes = (v, e, exceptKey) => WAYS.every(w => w.key === exceptKey || !v.pick[w.key] || w.has(v, e, v.pick[w.key])) && fitPasses(v, e) && matchesQuery(v, e);
   const countFor = (v, key, id) => libraryEntries(v).filter(e => passes(v, e, key) && WAYS.find(w => w.key === key).has(v, e, id)).length;
   const visibleEntries = v => libraryEntries(v).filter(e => passes(v, e))
@@ -63,15 +48,12 @@
   const visibleStyles = v => v.styles.styles.filter(s => search.matches(v.queryTests, search.searchable([s.name, ...s.vocabulary, ...s.recognize])))
     .sort(v.sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : () => 0);
 
-  // The view lives in the hash, so a reload or a shared link lands on it.
   function viewHash(v) {
     if (v.showStyles) return 'styles';
     const params = new URLSearchParams(picked(v).map(w => [w.key, v.pick[w.key]]));
     if (picked(v).some(w => w.projectScoped)) params.set('project', v.project);
     return params.toString() || 'all';
   }
-  // The view a hash names: its project when the library has it, and each pick the library offers under that project.
-  // Also reads the hashes the page wrote when it held one view at a time: #flat-poster and #group:hero-art.
   const OLD_GROUP_HASH = 'group:';
   function readHash(v, hash) {
     const params = new URLSearchParams(hash.includes('=') ? hash : ''), linked = params.get('project') ?? '';
@@ -92,7 +74,6 @@
     return parts.length ? [...parts, 'Follow the selected references and explicit project directions when they differ from general preferences.'].join('\n\n') + '\n\n' : '';
   }
   const sheetCite = f => f.sheet_section ? ` (brand sheet ${f.sheet_section})` : '';
-  // The fit line's group (#30 Q3); a judged reference may have none (#28 Q5).
   const groupCite = (v, f) => f.groups.length ? `, group${f.groups.length > 1 ? 's' : ''} ${f.groups.map(id => groupLabel(v, id)).join(', ')}` : '';
   function entrySection(v, e) {
     const f = fitOf(v, e), collection = v.data.collections.find(c => c.id === e.collection);

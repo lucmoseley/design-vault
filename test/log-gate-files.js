@@ -1,6 +1,4 @@
 "use strict";
-// Copies a log's gate, and every file it loads, into a scratch directory: the one list to grow when log-gate.js
-// loads another file.
 const fs = require("node:fs");
 const path = require("node:path");
 

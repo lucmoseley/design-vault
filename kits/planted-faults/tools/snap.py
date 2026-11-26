@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""snap.py — fixture capture for the #224 critic-shape test.
-snap.py save  <url> <out.html> <base>   static, script-free DOM snapshot with <base href>
-snap.py shots <url-or-file> <outdir>    desktop 1440x900 slices (900 px) and phone 390x844 slices (1688 px)
+"""Usage:
+python3 kits/planted-faults/tools/snap.py save  <url> <out.html> <base>   static, script-free DOM snapshot with <base href>
+python3 kits/planted-faults/tools/snap.py shots <url-or-file> <outdir>    desktop 1440x900 slices (900 px) and phone 390x844 slices (1688 px)
 """
 
 import sys

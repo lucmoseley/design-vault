@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """look.py — a gate critic's view tools: zoom into a page, scrub its motion,
-and measure a part or two pixels, so a critic settles a question by looking
-closer rather than guessing (design-vault#169 Q1 (A), #170).
+and measure a part or two pixels.
 
 USAGE
   python3 look.py zoom <url or file> --clip X,Y,W,H --out FILE.png [--scale 4]
@@ -20,10 +19,7 @@ USAGE
       motion at any speed they are played. --wait waits for the element that
       marks a start later than check-frames.py's QUIET_MS. A page that starts
       an animation when another finishes, or after its timeline was read, is
-      refused and its frames are not written. Residual: a timer fires a few
-      ms late or early from load to load, so a move it starts sits a few px
-      apart from run to run; and a start later than the scrub watches is
-      missed, as in check-frames.py.
+      refused and its frames are not written.
   python3 look.py measure <url or file> --at X,Y [--width W] [--height H]
       The part under the point (CSS px, page coordinates) on the settled page:
       its element, box, font size and weight, and colour.
@@ -61,18 +57,14 @@ try:
 except ImportError as err:
     sys.exit(flow.missing(err))
 
-# The width a critic's desktop screenshots are taken at (#197).
 WIDTH = layout.DESKTOP_WIDTH
-# How long a page is left to finish its entrance before a still is taken. A
-# guess, unmeasured.
-SETTLE_MS = 4000
+SETTLE_MS = 4000  # guess, #170
 FIRST_SCREEN = {
     "zoom": ("check-layout.py's first screen", layout.HEIGHTS),
     "measure": ("check-layout.py's first screen", layout.HEIGHTS),
     "scrub": ("the motion scripts' window", layout.MOTION_HEIGHTS),
 }
 
-# The part under a point, and the font and colour it is drawn in.
 MEASURE_JS = r"""
 ([x, y]) => {
   window.scrollTo(0, Math.max(0, y - innerHeight / 2));
@@ -117,14 +109,12 @@ def parse(argv):
         )
         pages[name] = s
     pages["zoom"].add_argument("--clip", required=True)
-    # Guesses, unmeasured: 4x shows a joint a 1x shot hides, and 50 ms steps to
-    # 2500 ms cover vault.length's 1.6 s of motion after a short wait.
-    pages["zoom"].add_argument("--scale", type=int, default=4)
+    pages["zoom"].add_argument("--scale", type=int, default=4)  # guess, #501
     pages["zoom"].add_argument("--out", required=True)
     pages["zoom"].add_argument("--after", type=int, default=SETTLE_MS)
     pages["scrub"].add_argument("--out", required=True)
-    pages["scrub"].add_argument("--step", type=int, default=50)
-    pages["scrub"].add_argument("--until", type=int, default=2500)
+    pages["scrub"].add_argument("--step", type=int, default=50)  # guess, #501
+    pages["scrub"].add_argument("--until", type=int, default=2500)  # guess, #501
     pages["scrub"].add_argument("--wait")
     pages["measure"].add_argument("--at", required=True)
     px = sub.add_parser("pixels")
@@ -223,7 +213,7 @@ def pixels(args):
         from PIL import Image
     except ImportError as err:
         sys.exit(flow.missing(err))
-    import numpy as np  # loaded, guarded, with access-pixels.py
+    import numpy as np
 
     try:
         shot = np.asarray(Image.open(args.png).convert("RGB"))

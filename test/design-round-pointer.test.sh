@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# By-hand test of plugin/hooks/design-round-pointer.sh (design-vault#5):
-#   bash test/design-round-pointer.test.sh
-# TMPDIR and HOME are throwaway, so no real marker or vault is touched.
 
 set -u
 hook="$(cd "$(dirname "$0")/.." && pwd)/plugin/hooks/design-round-pointer.sh"
@@ -17,7 +14,6 @@ absent='not at ~/design-vault'
 skill() { jq -nc --arg s "$1" --arg id "$2" '{hook_event_name:"PreToolUse",tool_name:"Skill",tool_input:{skill:$s},session_id:$id}'; }
 prompt() { jq -nc --arg p "$1" --arg id "$2" '{hook_event_name:"UserPromptSubmit",prompt:$p,session_id:$id}'; }
 
-# expect <name> <home|unset> <payload> <inject|silent> [<substring that must be present>] [<substring that must be absent>]
 expect() {
   local name="$1" home="$2" payload="$3" want="$4" has="${5:-}" hasnt="${6:-}" out status
   if [[ "$home" == unset ]]; then

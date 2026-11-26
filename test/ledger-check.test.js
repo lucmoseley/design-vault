@@ -1,7 +1,4 @@
 "use strict";
-// ledger-upkeep.js --check's ledger check (#266), run on small fixture ledgers, stores and libraries, one fixture per refusal.
-// Loosen it and "covered" drifts from what the rule store holds, or a fill job closes with rows unfilled or research
-// stranded in docs/research/.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -18,7 +15,6 @@ after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 const LIBRARY = path.join(scratch, "gallery.json");
 fs.writeFileSync(LIBRARY, JSON.stringify({ projects: { manta: { rules: "docs/brand/brand-sheet.md in lucmoseley/mantahostels" } } }));
 
-// A rule record in the store's form; `fields` overrides or, given null, drops a field.
 function record(id, fields = {}) {
   const all = {
     "applies-when": "web-surface; every button",
@@ -45,7 +41,6 @@ const GAP = {
 };
 const OPEN_JOB = { id: "open-job", rows: 1, tier: 0, rank: 1 };
 
-// A fixture ledger, store and library written to scratch, checked; returns the run.
 let written = 0;
 function check({ rows = [COVERED], jobs = [OPEN_JOB], store = [record("vault.a")], library = LIBRARY } = {}) {
   const dir = path.join(scratch, `case-${written++}`);
@@ -73,12 +68,11 @@ function passes(fixture) {
   assert.equal(result.status, 0, result.stderr);
 }
 
-// A job marked done, its one row covered and the row's research lines given `destinations`.
 const DONE_ROW = { ...COVERED, research: ["docs/research/notes.md:40"], tag: { job: "done-job" }, ruling: { fill: true } };
 const DONE_JOB = { id: "done-job", rows: 1, tier: 0, rank: 2, done: "#275", destinations: { "docs/research/notes.md:40": "vault.a" } };
 const done = (job = {}, rows = [DONE_ROW]) => ({ rows, jobs: [OPEN_JOB, { ...DONE_JOB, ...job }] });
 
-test("a fixture whose rows and done job its records support passes, and an open job's undisposed gap is not refused", () => {
+test("a fixture whose rows and done job its records support passes, and an open job's undisposed gap is not refused (#266)", () => {
   passes({});
   passes(done());
 });

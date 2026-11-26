@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""palette.py — measures a palette against a client's fixed colours: the ΔE00
-between every pair of colours, each logo colour's lightness, and which grounds
-the full-colour logo clears at 3:1 (design-vault#175). design-project step 2
-writes its tables into a project's rules file, and the client-fit gate's
-`<key>.colours-script` question is answered by its exit code.
+"""Measures a palette against a client's fixed colours: the ΔE00 between every
+pair of colours, each logo colour's lightness, and which grounds the
+full-colour logo clears at 3:1.
 
 USAGE
   python3 palette.py [--logo NAME=#HEX]… [--fixed NAME=#HEX]…
@@ -18,8 +16,7 @@ logo must sit on.
 
 Each pair of colours is the same colour under ΔE00 2, a near-miss from 2 up to
 its line, and apart from the line up. The line is 10, or 3 where both colours
-are greys and both are surfaces (design-critique's vault.colour-distance record,
-and the founder's rulings on #178). A full-colour logo clears a ground where
+are greys and both are surfaces. A full-colour logo clears a ground where
 every logo colour reaches 3:1 against it.
 
 EXITS 0 every --colour is a fixed colour exactly or past the line from each /
@@ -43,17 +40,17 @@ from colour_space import (
     oklch,
 )
 
-# CSS Color 4 §14.2.1: "using deltaE2000, one JND is 2".
+# CSS Color 4 takes one JND as ΔE2000 2: https://www.w3.org/TR/css-color-4/#color-difference-2000
 SAME = 2.0
-# The near-miss lines, founder rulings on #178 (docs/research/de00-thresholds.md, de00-greys.md).
+# #178
 NEAR_MISS = 10.0
+# #178
 NEAR_MISS_SURFACES = 3.0
-# Two meanings in one view, founder ruling on #178: 10 for large areas, 20 for small marks.
+# #178
 MEANINGS_LARGE, MEANINGS_SMALL = 10.0, 20.0
-# Borrowed, unmeasured: the top of the house text-tint range (design-critique's vault.text-tint record), so a
-# grey tinted by that rule still takes the grey line. No source sets where a tinted grey stops being a grey.
+# guess, #175
 GREY_CHROMA = 0.05
-# WCAG's level for graphical objects, borrowed for a logo on its ground (vault.logo-ground).
+# WCAG 1.4.11's level for graphical objects: https://www.w3.org/TR/WCAG22/#non-text-contrast
 LOGO_CONTRAST = 3.0
 
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -79,7 +76,6 @@ def meanings(de):
 
 
 def anchor_and_other(a, b):
-    """(the fixed colour, the palette colour) where the pair is one of each, else None."""
     if a.source in ANCHORS and b.source == "palette":
         return a, b
     if b.source in ANCHORS and a.source == "palette":
@@ -88,7 +84,6 @@ def anchor_and_other(a, b):
 
 
 def pairs(colours, surfaces):
-    """Every pair of Colours in the order given, each { a, b, de, line, verdict, miss }; miss is the way out, or None."""
     out = []
     for i, a in enumerate(colours):
         for b in colours[i + 1 :]:
@@ -119,7 +114,6 @@ def pairs(colours, surfaces):
 
 
 def ground_limits(logo_hexes):
-    """(lightest L* a dark ground may have, darkest L* a light ground may have) for every logo colour to reach 3:1; None where no ground can."""
     ys = [luminance(h) for h in logo_hexes]
     light = LOGO_CONTRAST * (max(ys) + 0.05) - 0.05
     dark = (min(ys) + 0.05) / LOGO_CONTRAST - 0.05
@@ -215,7 +209,6 @@ def logo_section(logos, grounds):
 
 
 def report(colours, surfaces, grounds):
-    """(the Markdown report, whether any palette colour misses a fixed colour)."""
     found = pairs(colours, surfaces)
     lines = colour_table(colours, surfaces)
     if found:

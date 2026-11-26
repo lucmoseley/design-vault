@@ -1,11 +1,10 @@
-"""#472's loop: check-flow's renderer-killed-at-start test exited 5 on a loaded machine.
-Run by hand, never by the gate:
+"""Run by hand, never by the gate:
     python3 test/load/renderer-kill.py [runs=30] [busy=16]
 
-Runs the test's case, new_page on a browser holding each renderer at its start, through check-overlay-shot.py's
+Runs check-flow's renderer-killed-at-start case, new_page on a browser holding each renderer at its start, through check-overlay-shot.py's
 loop(), SIGTERMing each renderer as /proc first shows it, every KILL_POLL_S. Each run's outcome is its exit and,
 for an exit 7, the route: "waited", the watch's, or "raised", new_page raising once its renderer died. Runs
-other than "7 waited" are printed. #472 has the counts.
+other than "7 waited" are printed.
 """
 
 import contextlib
@@ -39,19 +38,17 @@ import siblings  # noqa: E402
 
 flow = siblings.load(SCRIPTS, "check-flow.py")
 
-# A guess, far under the test's own 0.05 s, so most kills land in a renderer's first milliseconds.
+# guess, #472
 KILL_POLL_S = 0.001
 
 
 def run():
-    """One run's outcome: its exit, and for an exit 7 the route its message names."""
     stop = threading.Event()
 
     def kill():
         while not stop.wait(KILL_POLL_S):
             for pid in flow.descendants(os.getpid()):
                 if "--type=renderer" in flow.process_args(pid):
-                    # A renderer that exited since the read is already gone.
                     with contextlib.suppress(ProcessLookupError):
                         os.kill(pid, signal.SIGTERM)
 

@@ -1,7 +1,4 @@
 "use strict";
-// test/select-suites.js and test/all.sh's use of it (#146): a commit runs only the suites its staged files can break.
-// Loosen a rule and a change lands with its own tests unrun, or the slow suites run on every commit again.
-// And all.sh's --shard=k/n (#462): a suite in no shard is never run by the lander's whole run, one in two runs twice.
 require("./no-git-env");
 // #348 #457
 const { VAULT_ALL_SUITES, WFC_GATE_SEAT, WFC_MERGE_PARENTS, ...HAND_ENV } = process.env;
@@ -18,7 +15,6 @@ const SCRIPTS = "plugin/skills/design-round/scripts";
 const allSh = (args, { cwd, env } = {}) => spawnSync("bash", [path.join(cwd ?? ROOT, "test", "all.sh"), ...args],
   { cwd, encoding: "utf8", env: { ...HAND_ENV, ...env } });
 
-// all.sh's own list, as it prints it run by hand: every suite.
 const byHand = allSh(["--plan"]);
 const SUITES = byHand.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4));
 const PYTHON = SUITES.filter((s) => s.startsWith("python3 "));
@@ -28,7 +24,6 @@ const ran = (staged) => {
   return p.all ? SUITES : p.suites.filter((s) => !s.why).map((s) => s.suite);
 };
 
-// The Python suites that never load check-flow.py.
 const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/video-sheet.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
@@ -60,8 +55,6 @@ test("--shard refuses a shard past its count, a zero, and test files beside it, 
 
 test("run by hand, all.sh runs every suite file git tracks in test/ and skips none", () => {
   assert.equal(byHand.status, 0);
-  // Tracked files only, so a suite another session is still writing does not fail this session's commit. A listed
-  // suite need only be on disk: the commit that adds one runs this before git tracks it, and no-git-env hides its index.
   const tracked = execFileSync("git", ["ls-files", "test/*.test.py", "test/*.test.sh"], { cwd: ROOT, encoding: "utf8", env: HAND_ENV })
     .split("\n").filter((f) => /^test\/[^/]+$/.test(f)).map((f) => `${f.endsWith(".py") ? "python3" : "bash"} ${f}`);
   assert.deepEqual(tracked.filter((s) => !SUITES.includes(s)), [], "a tracked suite all.sh does not list");
@@ -70,7 +63,7 @@ test("run by hand, all.sh runs every suite file git tracks in test/ and skips no
   assert.doesNotMatch(byHand.stdout, /SKIP/);
 });
 
-test("a commit staging only docs/, data/ or images/ files runs the fast checks alone", () => {
+test("a commit staging only docs/, data/ or images/ files runs the fast checks alone (#146)", () => {
   const p = plan(SUITES, ["docs/research/adopt-or-build.md", "data/gallery.json", "images/a.png"]);
   assert.deepEqual(ran(["docs/research/adopt-or-build.md", "data/gallery.json", "images/a.png"]), [NODE, "bash test/design-round-pointer.test.sh"]);
   assert.ok(p.suites.filter((s) => s.why).every((s) => /none of the 3 staged file\(s\) is one it reads/.test(s.why)));
@@ -127,7 +120,6 @@ test("a file only the fast checks read is recognised, so it runs no Python suite
   }
 });
 
-// all.sh as written, and as an edit to its list alone leaves it (#363).
 const ALL_SH = fs.readFileSync(path.join(ROOT, "test", "all.sh"), "utf8");
 const relist = (from, to) => {
   assert.equal(ALL_SH.split(from).length, 2, from);
@@ -135,14 +127,12 @@ const relist = (from, to) => {
 };
 
 const FAST = [NODE, "bash test/design-round-pointer.test.sh"];
-// What a commit staging contact-sheet.py alone runs.
 const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
 const relisting = (after) => plan(SUITES, ["test/all.sh"], { before: ALL_SH, after });
 const runs = (p) => p.suites.filter((s) => !s.why).map((s) => s.suite);
 
 test("a commit editing only all.sh's list runs the fast checks and the suites on the lines it added or changed", () => {
   const added = relist("python3 test/palette.test.py\n", "python3 test/palette.test.py\npython3 test/new.test.py\tchromium\n");
-  // A suite all.sh does not list yet is the next all.sh's to run; this one plans only the suites it lists.
   assert.deepEqual(runs(relisting(added)), FAST);
   const needs = relist("python3 test/palette.test.py\n", "python3 test/palette.test.py\timages\n");
   assert.deepEqual(runs(relisting(needs)), [...FAST, "python3 test/palette.test.py"]);
@@ -162,19 +152,15 @@ test("a merge runs a suite only where the plan against every parent runs it, and
   const side = (label, staged) => ({ label, staged, before: ALL_SH });
   const flow = `${SCRIPTS}/check-flow.py`;
   const sheet = `${SCRIPTS}/contact-sheet.py`;
-  // Main brought the runner and a checker in; the branch changed contact-sheet.py alone.
   const merged = planSides(SUITES, [side("HEAD", ["test/all.sh", flow, "docs/a.md"]), side("abc1234", [sheet])], ALL_SH);
   assert.deepEqual(runs(merged), SHEET);
   assert.match(merged.suites.find((s) => s.suite === "python3 test/check-flow.test.py").why, /^against abc1234, none of the 1 staged file\(s\) is one it reads/);
-  // Both sides changed a checker: only the suites that read both run.
   assert.deepEqual(runs(planSides(SUITES, [side("HEAD", [flow]), side("abc1234", [sheet])], ALL_SH)),
     ran([flow]).filter((s) => ran([sheet]).includes(s)));
   assert.match(planSides(SUITES, [side("HEAD", ["package.json"]), side("abc1234", ["package-lock.json", "docs/a.md"])], ALL_SH).all, /^package\.json is staged/);
-  // One parent is a commit's plain plan, worded as it always was.
   assert.deepEqual(planSides(SUITES, [side("HEAD", [sheet])], ALL_SH), plan(SUITES, [sheet], { before: ALL_SH, after: ALL_SH }));
 });
 
-// A throwaway repo holding the vault's test/ and plugin/, its pre-commit hook writing all.sh's --plan.
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "select-suites-"));
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 const repo = path.join(scratch, "repo");
@@ -206,7 +192,6 @@ test("a script a followed directory holds, named by no suite, still runs every s
 });
 
 test("a commit through its own index file, as commit-paths.js makes, is judged on that index, not the shared one", () => {
-  // The shared index stages check-flow.py; the private one stages contact-sheet.py alone.
   touch(`${SCRIPTS}/check-flow.py`);
   git(["add", `${SCRIPTS}/check-flow.py`]);
   touch(`${SCRIPTS}/contact-sheet.py`);
@@ -234,7 +219,6 @@ test("in workflow-core's gate, which drops GIT_INDEX_FILE and sets WFC_GATE_SEAT
     assert.equal(r.status, 0, r.stderr);
     return { runs: r.stdout.split("\n").filter((l) => l.startsWith("RUN ")).map((l) => l.slice(4)), out: r.stdout };
   };
-  // The cases above share this repo's index; one left staged would read as this case's commit.
   assert.equal(git(["diff", "--cached", "--name-only"]), "");
   const gate = { WFC_GATE_SEAT: path.join(scratch, "seat.json") };
   assert.deepEqual(planIn(gate).runs, FAST);
@@ -302,7 +286,6 @@ test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate
   };
   const seat = { WFC_GATE_SEAT: path.join(scratch, "seat.json") };
   try {
-    // The gate's own worktree has no MERGE_HEAD; the variable stands for it, read first.
     assert.deepEqual(planIn({ ...seat, WFC_MERGE_PARENTS: main }).runs, SHEET);
     assert.deepEqual(planIn({ ...seat, WFC_MERGE_PARENTS: "" }).runs, SUITES);
     const unread = planIn({ ...seat, WFC_MERGE_PARENTS: "unread: no git" });
@@ -311,7 +294,6 @@ test("a merge commit through all.sh is judged against MERGE_HEAD, or in the gate
     const bad = planIn({ ...seat, WFC_MERGE_PARENTS: "f".repeat(40) });
     assert.deepEqual(bad.runs, SUITES);
     assert.match(bad.out, /^merge parent f{40} will not read/m);
-    // A hook `git merge` runs before writing MERGE_HEAD sees the merged head as GITHEAD_<sha> alone.
     const mergeHead = path.join(repo, ".git", "MERGE_HEAD");
     const heads = fs.readFileSync(mergeHead, "utf8");
     fs.rmSync(mergeHead);

@@ -1,10 +1,3 @@
-"""Pins check-access.py's tier 0 and 1 contrast questions (#316): python3 test/check-access-contrast.test.py
-
-contrast-tier01-fault.html marks each plant data-record with the record it
-fails. It is a suite of the commit gate (test/all.sh): loosening a figure here lets a control
-a visitor cannot see reach the critic as a pass.
-"""
-
 import concurrent.futures
 import json
 import os
@@ -21,7 +14,7 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-access.py"
 )
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 FIXTURES = os.path.join(HERE, "fixtures", "access")
 PARTS = os.path.join(FIXTURES, "contrast-tier01-parts.json")
@@ -37,9 +30,7 @@ with open(contrasts.TABLE, encoding="utf8") as fh:
     TABLE_TEXT = fh.read()
 TABLE = contrasts.parse_table(TABLE_TEXT)
 
-# How long one run may take, in s: a fixture's whole check, or one that stops
-# on its arguments. Guesses, unmeasured.
-RUN_S, ARGUMENT_RUN_S = 600, 120
+RUN_S, ARGUMENT_RUN_S = 600, 120  # guess, #501
 SCRATCH = tempfile.TemporaryDirectory()
 DONE = {}
 
@@ -88,7 +79,7 @@ def solid(rgb, w=40, h=20):
 
 
 class Table(unittest.TestCase):
-    def test_every_figure_comes_from_its_line(self):
+    def test_every_figure_comes_from_its_line_316(self):
         self.assertEqual(TABLE.floors.body, 4.5)
         self.assertEqual(TABLE.icon, 3)
         self.assertEqual(TABLE.split, 0.179)
@@ -221,7 +212,7 @@ class Figures(unittest.TestCase):
         glyph[5:15, 15:25] = True
         got = contrasts.glyph_figure(drawn, glyph, [10, 0, 30, 20])
         self.assertAlmostEqual(got.ratio, 1.61, places=2)
-        drawn[0:20, 10:30] = 0x22  # a dark backdrop of its own counts
+        drawn[0:20, 10:30] = 0x22
         drawn[5:15, 15:25] = 0xCC
         self.assertGreater(
             contrasts.glyph_figure(drawn, glyph, [10, 0, 30, 20]).ratio, 3
@@ -257,7 +248,7 @@ class Figures(unittest.TestCase):
         lightness, c, _ = contrasts.oklch([255, 255, 255])
         self.assertAlmostEqual(lightness, 1.0, places=3)
         self.assertLess(c, 1e-3)
-        lightness, c, h = contrasts.oklch([255, 0, 0])  # oklch(62.8% 0.2577 29.23)
+        lightness, c, h = contrasts.oklch([255, 0, 0])
         self.assertAlmostEqual(lightness, 0.628, places=3)
         self.assertAlmostEqual(c, 0.2577, places=3)
         self.assertAlmostEqual(h, 29.23, places=1)
@@ -304,7 +295,7 @@ class Chart(unittest.TestCase):
     def chart(self, fill):
         ground = solid(255)
         ids = ground.copy()
-        ids[5:15, 10:20] = (1, 0, contrasts.ID_BLUE)  # mark 0, its fill
+        ids[5:15, 10:20] = (1, 0, contrasts.ID_BLUE)
         mark = {"index": 0, "subject": "rect#bar", "fill": [*fill, 1], "stroke": None}
         return contrasts.chart_faults(
             {"rect": [0, 0, 40, 20], "marks": [mark]}, ids, ground, TABLE

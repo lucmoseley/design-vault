@@ -1,85 +1,31 @@
-"""drive-form.py — fills a candidate's form and submits it, for the checks
-that judge what a form does with good and bad input (#302): where an error
-shows, where focus goes, whether typed values survive. A library the check
-scripts load; it judges nothing itself.
-
-Its only I/O is the Playwright page it is handed, which the caller opens
-and closes, as check-flow.py's chromium() does. A check loads it through siblings.py:
-
-    form = siblings.load(HERE, "drive-form.py")
-
-    form.fill(page, "#book", bad=["#email"])
-    settled = form.submit(page, "#book")   # read settled.state: errors, focus, values
-
-- fields(page, form) lists a form's fields: every input, select and textarea
-  in `form.elements` a visitor can type into or choose. A field that is
-  disabled, read-only, not drawn, or a hidden, file, range, colour or button
-  input is left out, and a radio group is one field.
-- fill(page, form, bad=…, values=…) gives each field a valid value, or a
-  planted invalid one for each key in `bad`, chosen by its autocomplete token
-  and its type, then its constraints. It types text key by key, so the page's
-  input handlers see each key. A field it knows no valid value for is left as
-  it is and reported; `values` gives such a field its own.
-- submit(page, form, by=…) clicks the form's submit button, or presses Enter
-  in its last single-line field, and returns once the page has settled: what
-  the caller reads.
-- after(page, action) runs any other action, a blur, a reload or Back, and
-  returns read() once the page has settled, as submit() does.
-- read(page) reads every field on the page, focus and live regions.
-
-`form` is a CSS selector, and None takes the page's first <form>. A field's
-key is a CSS selector for it: a radio group's `input[name="…"]`, else
-`#id` where its id is unique, else `tag[name="…"]` where its name is, else
-its path from the body. A form built without <form> is not driven.
-"""
-
 import collections
 import contextlib
 import time
 
-# How long, in ms, the page's markup must go unchanged, with no request in
-# flight, before a submit counts as settled: check-frames.py's quiet window
-# for animations, a guess for forms. An error shown later than this after the
-# last change is missed.
+# guess, #501
 QUIET_MS = 500
-# How often, in ms, an in-flight request is looked at again: a guess.
+# guess, #501
 POLL_MS = 50
-# The longest a submit may take to settle, in ms: Playwright's own default.
+# Playwright actions default to a 30000 ms timeout: https://playwright.dev/python/docs/api/class-page
 TIMEOUT_MS = 30000
-# How many characters of the focused element's text read() keeps: a guess,
-# enough to tell an error summary from a field.
+# guess, #501
 FOCUS_TEXT_CHARS = 200
-# `bad` for planting a bad value in every field.
 ALL = "all"
 
 Field = collections.namedtuple(
     "Field",
     "key tag type token value required pattern min_length max_length min max options",
 )
-# What fill() did to one field: `value` typed or chosen (True or False for a
-# checkbox), None where nothing was; `planted` names how a bad value breaks
-# the field; `valid` is the browser's own verdict after it, None where the
-# page moved on; `note` says why a field was left, refused its good value,
-# or ended the fill.
 Filled = collections.namedtuple("Filled", "key value planted valid note")
-# What submit() leaves: whether the page went to a new document (a history
-# push is not one), the URL it settled on, how many submit events reached
-# the page (none where the browser's own validation stopped the submit), and
-# after()'s read.
 Settled = collections.namedtuple("Settled", "navigated url submits state")
 
 
 class FormError(Exception):
-    """The page holds no such form or field, or the form has no way to
-    submit. `what` holds the selector or keys at fault."""
-
     def __init__(self, message, what=()):
         super().__init__(message)
         self.what = tuple(what)
 
 
-# Autocomplete tokens' detail words: the field name is the last word left
-# once these are dropped (HTML's autofill detail tokens).
 DETAIL_TOKENS = {
     "shipping",
     "billing",
@@ -91,7 +37,6 @@ DETAIL_TOKENS = {
     "webauthn",
 }
 
-# A valid value for each autocomplete field name the house's forms use.
 TOKEN_GOOD = {
     "name": "Ada Lovelace",
     "honorific-prefix": "Dr",
@@ -124,8 +69,6 @@ TOKEN_GOOD = {
     "tel-national": "020 7946 0958",
     "tel-local": "7946 0958",
 }
-# A malformed value for each field name a page can tell malformed: what a
-# visitor's slip looks like, not a value no visitor would type.
 TOKEN_BAD = {
     "email": "ada.lovelace@",
     "url": "example com",
@@ -137,7 +80,6 @@ TOKEN_BAD = {
     "new-password": "abc",
     "bday-year": "19",
 }
-# A valid value for each input type a token does not settle.
 TYPE_GOOD = {
     "text": "Example text",
     "search": "dorm bed",
@@ -157,15 +99,10 @@ TYPE_BAD = {
     "url": TOKEN_BAD["url"],
     "tel": TOKEN_BAD["tel"],
 }
-# Types whose value is set whole, as their picker sets it, never typed.
 PICKED = {"date", "time", "datetime-local", "month", "week"}
-# Types the browser holds to a syntax of their own, which a token's value
-# need not meet (`username` on an email field): the type's value wins.
 SYNTAX = PICKED | {"email", "url"}
-# A value no pattern a page sets for names, numbers or codes accepts.
 OFF_PATTERN = "!!"
 
-# keyOf(el): a field's key, as the module docstring gives it.
 KEY_JS = r"""
 const keyOf = (el) => {
   const unique = (sel) => document.querySelectorAll(sel).length === 1;
@@ -183,7 +120,6 @@ const keyOf = (el) => {
 };
 """
 
-# formOf(form): the form a selector names, or why there is none.
 FORM_JS = r"""
 const formOf = (form) => {
   const root = form === null ? document.querySelector("form") : document.querySelector(form);
@@ -192,8 +128,6 @@ const formOf = (form) => {
 };
 """
 
-# valueOf(el): a checkbox's checked state, a radio group's chosen value or
-# null, else the value. BUTTONS: the input types that act rather than hold.
 VALUE_JS = r"""
 const valueOf = (el) => {
   if (el.type === "checkbox") return el.checked;
@@ -207,8 +141,6 @@ const BUTTONS = ["submit", "reset", "button", "image"];
 
 
 def _script(params, *helpers, body):
-    """A JavaScript arrow function of `params` holding the helper snippets
-    above, then `body`."""
     return f"({params}) => {{\n{''.join(helpers)}{body}}}"
 
 
@@ -262,7 +194,6 @@ MATCHES_JS = r"""
 }
 """
 
-# The form's first submit button's key, null where it has none.
 BUTTON_JS = _script(
     "form",
     KEY_JS,
@@ -277,8 +208,6 @@ BUTTON_JS = _script(
 """,
 )
 
-# Reports each submit event: a capture listener on window hears it before
-# any handler of the page's can stop it.
 ARM_JS = r"""
 () => {
   if (window.__driveFormArmed) return;
@@ -287,13 +216,9 @@ ARM_JS = r"""
 }
 """
 
-# Marks the document an action starts in, so a later look can tell a new
-# document (unmarked) from a history push in the same one.
 MARK_JS = "() => { window.__driveFormMark = true; }"
 MARKED_JS = "() => window.__driveFormMark === true"
 
-# Resolves true once the markup has gone `quiet` ms without a change, or false
-# at `limit` ms with it still changing.
 QUIET_JS = r"""
 ([quiet, limit]) => new Promise((done) => {
   let last = performance.now();
@@ -355,7 +280,6 @@ READ_JS = _script(
 
 
 def fields(page, form=None):
-    """The fields of `form` a visitor fills, as Field records in its order."""
     found = page.evaluate(FIELDS_JS, form)
     if "error" in found:
         raise FormError(found["error"], [form] if form else [])
@@ -363,9 +287,6 @@ def fields(page, form=None):
 
 
 def name_of(token):
-    """An autocomplete attribute's field name: `section-a shipping email` is
-    `email`, `username webauthn` is `username`, and `off`, `on` or a bare
-    detail word is none."""
     words = [
         w
         for w in token.lower().split()
@@ -375,11 +296,6 @@ def name_of(token):
 
 
 def _good_value(field):
-    """A value `field` should accept: its autocomplete token's, unless its
-    type holds it to a syntax of its own, else its type's, fitted to its
-    length limits; None where none is known. A checkbox is True, a radio
-    group or select its first choice with a value, a number its minimum or
-    else 1."""
     if field.type == "checkbox":
         return True
     if field.type in ("radio", "select"):
@@ -404,12 +320,6 @@ def _good_value(field):
 
 
 def _bad_value(field):
-    """A value `field` should refuse and how it breaks the field, as
-    (value, how), or (None, why none is known). In order: a malformed value
-    for its token or type, a value off its pattern, one under its minimum
-    length, one past its numeric bound, and, where it is required, nothing.
-    A required checkbox is False, a required radio group or select left
-    unchosen."""
     if field.type in ("checkbox", "radio", "select"):
         if not field.required:
             return None, "it is optional, so no choice is wrong"
@@ -426,7 +336,8 @@ def _bad_value(field):
             return TYPE_BAD[field.type], f"malformed {field.type}"
     if field.pattern is not None:
         return OFF_PATTERN, f"off its pattern {field.pattern}"
-    # The browser checks a minimum length only on a value of one character or more.
+    # The browser checks minlength only on a non-empty value:
+    # https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#setting-minimum-input-length-requirements:-the-minlength-attribute
     if field.min_length and field.min_length >= 2:
         short = "x" * (field.min_length - 1)
         return short, f"under its minimum length {field.min_length}"
@@ -440,13 +351,6 @@ def _bad_value(field):
 
 
 def fill(page, form=None, *, bad=(), values=None):
-    """Fills each field of `form`: a planted invalid value for each key in
-    `bad` (ALL for every field), `values[key]` where given, else a valid
-    one. Returns a Filled record for each field, in the form's order. A good
-    value off the field's own pattern is not typed, nor is a bad one on it.
-    A key in `bad` or `values` the form does not have is refused. Where
-    setting a field submits the form or leaves the page, its record says so
-    and is the last."""
     if isinstance(bad, str) and bad != ALL:
         raise TypeError(f"bad is a list of keys or ALL, not the string {bad!r}")
     found = fields(page, form)
@@ -479,7 +383,6 @@ def fill(page, form=None, *, bad=(), values=None):
 
 
 def _choose(page, field, bad, values):
-    """What fill() sets `field` to, as (value, planted, note)."""
     if field.key in values:
         return values[field.key], None, None
     if bad == ALL or field.key in bad:
@@ -503,9 +406,6 @@ def _choose(page, field, bad, values):
 
 
 def _moved(page, submitted, flying):
-    """Why setting a field ended the fill, None where it did not: it fired a
-    submit event, or set the page loading another document. The round trip
-    to the page first hands over the events the set raised."""
     from playwright.sync_api import Error as PlaywrightError
 
     try:
@@ -522,17 +422,10 @@ def _moved(page, submitted, flying):
 
 
 def _matches(page, field, value):
-    """Whether `value` meets `field`'s pattern as the browser reads it (a
-    JavaScript regular expression with the v flag), or None where the browser
-    cannot read the pattern."""
     return page.evaluate(MATCHES_JS, [field.pattern, value])
 
 
 def _set_field(page, field, value):
-    """Sets one field as a visitor would: checks or unchecks a box, picks a
-    radio or option, sets a picker's value whole, or clears a text field and
-    types the value key by key. A radio group left unchosen, or a select
-    left on the choice it holds, is not touched."""
     if (field.type == "radio" and value == "") or (
         field.type == "select" and value == field.value
     ):
@@ -553,11 +446,6 @@ def _set_field(page, field, value):
 
 
 def submit(page, form=None, *, by="button", timeout=TIMEOUT_MS):
-    """Submits `form` and returns a Settled once the page has. `by="button"`
-    clicks the form's first submit button, the one Enter would press;
-    `by="enter"` presses Enter in its last single-line text field. Raises
-    FormError where the form has neither, and Playwright's TimeoutError where
-    the page has not settled in `timeout` ms."""
     at = [form] if form else []
     if by == "button":
         found = page.evaluate(BUTTON_JS, form)
@@ -591,28 +479,17 @@ def submit(page, form=None, *, by="button", timeout=TIMEOUT_MS):
 
 
 def after(page, action, *, timeout=TIMEOUT_MS):
-    """Runs `action()` and returns read() once the page has settled after it:
-    loaded, its markup QUIET_MS without a change, and no request in flight,
-    across any document it goes to. The read adds `kept`, whether the page
-    still holds the document the action started in. Raises Playwright's
-    TimeoutError where the page has not settled in `timeout` ms."""
     page.evaluate(MARK_JS)
-    # Watched from before the action: a request it starts is announced while
-    # the action is still under way.
     with _watch(page) as flying:
         action()
         return _settle(page, flying, timeout)
 
 
 class _Submits:
-    """How many submit events a page has heard since _arm() set it up."""
-
     count = 0
 
 
 def _arm(page):
-    """The _Submits each submit event on `page` adds one to, from now on and
-    in every document it goes on to load; set up on the page's first use."""
     if not hasattr(page, "_drive_form_submits"):
         submits = _Submits()
 
@@ -628,11 +505,8 @@ def _arm(page):
 
 @contextlib.contextmanager
 def _watch(page):
-    """While open, the set it yields holds `page`'s requests not yet
-    answered."""
     flying = set()
 
-    # Playwright takes a Python function as a handler, never a built-in.
     def started(request):
         flying.add(request)
 
@@ -654,9 +528,6 @@ def _watch(page):
 
 
 def _settle(page, flying, timeout):
-    """after()'s wait and read; `flying` is _watch()'s requests in flight."""
-    # Imported here, not at the top, so a machine without Playwright reaches
-    # check-flow.py's run_browser(), which names the install, before this runs.
     from playwright.sync_api import Error as PlaywrightError
     from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
@@ -670,8 +541,6 @@ def _settle(page, flying, timeout):
             if page.evaluate(QUIET_JS, [QUIET_MS, left]) and not flying:
                 return {**read(page), "kept": page.evaluate(MARKED_JS)}
         except PlaywrightError as exc:
-            # A navigation mid-read destroys the document the read ran in:
-            # read the new one once it has loaded.
             if "context was destroyed" not in str(exc):
                 raise
         if flying:
@@ -679,9 +548,4 @@ def _settle(page, flying, timeout):
 
 
 def read(page):
-    """Every field on the page with its value (a checkbox's checked state, a
-    radio group's chosen value or None), the browser's validity and message,
-    its aria-invalid and the text its aria-describedby and aria-errormessage
-    name; where focus is (None on the body); and the text of each drawn live
-    region (role alert or status, or aria-live). Keys as fields() gives them."""
     return page.evaluate(READ_JS)

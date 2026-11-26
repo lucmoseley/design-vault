@@ -1,7 +1,4 @@
 "use strict";
-// Test support for the suites that read the vault's store of rule records (#265): where it is, how many records it
-// holds, and its records read the way gate.js reads a directory, every .md file in name order.
-// node --test with no arguments also loads this file as a test file of no tests, which is harmless.
 const fs = require("node:fs");
 const path = require("node:path");
 const { parseGate } = require("../plugin/skills/design-round/scripts/gate-form.js");

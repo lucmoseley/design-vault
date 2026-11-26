@@ -1,13 +1,3 @@
-"""Pins check-markup.py (#307): python3 test/check-markup.test.py
-
-Loosen the markup adapter and a page whose paragraphs pose as headings,
-whose language tags name no language, whose tables lose their headers, whose
-logo link has no name, whose links' names drop their visible labels, whose
-content sits outside its landmarks or whose progress bar has no name passes
-the gate unseen, or a needs-review result axe could not decide fails a
-candidate on no evidence.
-"""
-
 import contextlib
 import io
 import json
@@ -48,14 +38,10 @@ RECORDS = [
 LOGO = ("--part", "logo=header img.logo")
 PHONE, DESKTOP = 390, 1920
 RUNS = {}
-# How long one command run may take, in s: a guess, about ten times the
-# fault page's run on this machine.
-CLI_TIMEOUT_S = 300
+CLI_TIMEOUT_S = 300  # guess, #501
 
 
 def run(page, *argv, table=None):
-    """main()'s exit code, its stdout and stderr, and markup.json's contents
-    (None where it wrote none), run in-process; each distinct run once."""
     key = (str(page), argv, table)
     if key in RUNS:
         return RUNS[key]
@@ -84,7 +70,6 @@ def found(page, *argv, table=None):
 
 
 def faults(page):
-    """Each record id the page marks as planted: `fault: <id>:`."""
     return set(re.findall(r"<!-- fault: (\S+?):", page.read_text()))
 
 
@@ -102,7 +87,7 @@ class TheFixtures(unittest.TestCase):
         self.assertEqual(faults(FAULT), set(RECORDS))
         self.assertEqual(faults(CLEAN), set())
 
-    def test_every_record_fails_on_the_fault_page_on_its_marked_element(self):
+    def test_every_record_fails_on_the_fault_page_on_its_marked_element_307(self):
         code, stdout, _, data = run(FAULT, *LOGO)
         self.assertEqual(code, 1)
         self.assertEqual(data["answers"], dict.fromkeys(RECORDS, "fail"))
@@ -118,7 +103,6 @@ class TheFixtures(unittest.TestCase):
         self.assertEqual(
             {m["width"] for m in got["vault.lang-parts"]["misses"]}, {PHONE, DESKTOP}
         )
-        # The phone menu's link is drawn at phone width alone.
         self.assertEqual(
             [m["width"] for m in got["vault.label-in-name"]["misses"]], [PHONE]
         )
@@ -186,7 +170,6 @@ class TheTableGivesTheRules(unittest.TestCase):
     def test_an_experimental_rule_runs_where_a_line_names_it(self):
         with open(AXE_FILE, encoding="utf8") as fh:
             axe = fh.read()
-        # Each rule's metadata sits in the file as {id:"…",…,tags:[…]}.
         for rule in ("label-content-name-mismatch", "p-as-heading"):
             with self.subTest(rule):
                 meta = re.search(r'id:"' + rule + r'",[^{}]*?tags:\[([^\]]*)\]', axe)

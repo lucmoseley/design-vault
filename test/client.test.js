@@ -1,7 +1,4 @@
 "use strict";
-// client.js, which reads the rules file's `Client:` line, the switch for design-round's client-only steps (#114):
-// driven through its CLI on three fixture rules files and on one-line files written per test. Loosen it and a project
-// the founder designs for himself gets client questions, or a client is shown a round no one screened.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
@@ -17,7 +14,6 @@ const client = (file) => {
   const r = runInProcess(SCRIPT, [file]);
   return { status: r.status, out: r.stdout, err: r.stderr };
 };
-// client.js run on a throwaway rules file holding `text`.
 const clientOn = (text) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "client-"));
   const file = path.join(dir, "brand-sheet.md");
@@ -41,7 +37,7 @@ test("a Client: line naming the founder skips the client steps", () => {
   assert.match(r.out, /^founder: skip the client steps \(Client: the founder, for himself\)\n$/);
 });
 
-test("a Client: line naming someone else runs them, bold and bulleted as mmm-infra writes it", () => {
+test("a Client: line naming someone else runs them, bold and bulleted as mmm-infra writes it (#114)", () => {
   const r = client(path.join(FIXTURES, "outside.md"));
   assert.equal(r.status, 0, r.err);
   assert.equal(r.out, "outside: run the client steps for Mark M Moseley, trading as MMM Infra.\n");

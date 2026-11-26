@@ -1,5 +1,4 @@
 "use strict";
-// It reads the live plugin tree, not fixtures, so the commit that adds a stale pointer is the one refused.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -9,7 +8,6 @@ const { RECORD_COUNT, storeRecords } = require("./rule-store.js");
 const ROOT = path.join(__dirname, "..");
 const SKILLS = path.join(ROOT, "plugin", "skills");
 
-/** Every file under `dir` whose name matches `pattern`, as absolute paths. */
 function walk(dir, pattern) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const full = path.join(dir, e.name);
@@ -18,7 +16,6 @@ function walk(dir, pattern) {
   });
 }
 
-/** A heading's anchor as GitHub renders it: lower-cased, punctuation but hyphens dropped, spaces as hyphens. */
 const anchor = (heading) => heading.trim().toLowerCase().replace(/[^\p{L}\p{N} -]/gu, "").replace(/ /g, "-");
 const parseTicked = (line) => [...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
 const parseReasons = (q) => {
@@ -44,15 +41,13 @@ function readSections(file) {
 const anchors = (file) => new Set(readSections(file).keys());
 const REFERENCE = /\/references\/[^/]+\.md$/;
 
-// The old home's name, not a project's fit-gate.md.
 const OLD_HOME = /(?<![\w-])gate\.md\b/;
 
-// The calibration run reads an old round's gate from git history, where it was this one file.
 const HISTORY_READERS = ["plugin/skills/design-round/references/calibration.md"];
 
 test("no file a round reads names gate.md, the store's old home, save to read it from history", () => {
   const read = [...walk(path.join(ROOT, "plugin"), /\.(md|js|py|sh|json)$/), ...fs.readdirSync(ROOT).filter((n) => n.endsWith(".js")).map((n) => path.join(ROOT, n))];
-  // A guess well under the 60-odd files the plugin and the root held at #265: fewer means the walk went wrong.
+  // measured 60-odd at #265; 40 a guess under it
   assert.ok(read.length > 40, `only ${read.length} files read`);
   const naming = read.map((f) => path.relative(ROOT, f)).filter((f) => !HISTORY_READERS.includes(f) && OLD_HOME.test(fs.readFileSync(path.join(ROOT, f), "utf8")));
   assert.deepEqual(naming, []);
@@ -117,6 +112,6 @@ test("every link the plugin makes into the store, or to rules.md, lands on a fil
       if (hash) assert.ok(anchors(resolved).has(hash), `${path.relative(ROOT, file)} links ${href}, which has no such heading`);
     }
   }
-  // Each store file's own link to rules.md makes 10 at #265: fewer means the match went wrong.
+  // measured 10 at #265
   assert.ok(links >= 10, `only ${links} links into the store found`);
 });

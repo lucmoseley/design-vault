@@ -1,11 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-measure.py (#86): python3 test/check-measure.test.py
-
-The pages are synthetic, in test/fixtures/measure/: monospace, set in `ch`, of
-four-letter words, so a line of N ch holds a known count. Loosen one and a
-critic's Measure lens (design-critique §2) passes body text set too wide or too
-narrow, or fails a page for its headings and last lines.
-"""
-
 import argparse
 import contextlib
 import io
@@ -17,7 +9,7 @@ import unittest
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-import child  # noqa: E402 - imported after the sys.path.insert above puts test/ on the path
+import child  # noqa: E402
 
 SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-measure.py"
@@ -28,21 +20,18 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 measure = siblings.load(SCRIPTS, "check-measure.py")
+RUN_TIMEOUT_S = 180  # guess, #501
 
 
 def run(page, *args):
-    # A guess for check-measure.py alone, not taken from the other tests' timeouts: one run takes seconds here.
     return child.run(
         [sys.executable, SCRIPT, os.path.join(FIXTURES, page), *args],
-        timeout=180,
+        timeout=RUN_TIMEOUT_S,
     )
 
 
 class Lines(unittest.TestCase):
-    def test_full_lines_in_range_pass_and_the_rest_is_not_running_text(self):
-        # Headings, nav, tables, pre, hidden and clipped text, last lines, a
-        # line a <br> ends and a one-line block would each add a count outside
-        # 59; inline code left out would set one short.
+    def test_full_lines_in_range_pass_and_the_rest_is_not_running_text_86(self):
         proc = run("ok.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn(
@@ -96,9 +85,7 @@ class Lines(unittest.TestCase):
             "\n1440px: 62–63 characters, 4 full lines in 1 block(s)", proc.stdout
         )
 
-    def test_phone_widths_count_the_lines_a_touch_screen_sets(self):
-        # The text doubles under (pointer: coarse): 29 characters through the
-        # phone band, 59 from 768 px, where the touch screen ends (#230).
+    def test_phone_widths_count_the_lines_a_touch_screen_sets_230(self):
         proc = run("touch.html")
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn("breakpoints: 768px\n", proc.stdout)
@@ -214,8 +201,6 @@ class Breakpoints(unittest.TestCase):
         )
 
     def test_a_sheet_that_cannot_be_fetched_is_named_with_the_way_round_it(self):
-        # Unverified end to end: no fixture makes a sheet both unreadable to the
-        # page and unfetchable, so fetch() and report() are checked apart.
         missing = pathlib.Path(FIXTURES, "missing.css").resolve().as_uri()
         err = io.StringIO()
         with contextlib.redirect_stderr(err):

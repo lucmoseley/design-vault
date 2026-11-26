@@ -1,45 +1,9 @@
-"""conditions.py — opens a page under the conditions a rule record loads it in
-(#304), one way for every family script. Each value of the `conditions`
-column of docs/data/script-families-tier01-2026-10-15.csv has an argument:
-
-    forcedcolours  forced_colours=True
-    colorscheme    scheme="light" or "dark"
-    print          print_media=True
-    locale         locale="de-DE", any BCP 47 tag
-    rtl            rtl=True
-    pointer        pointer="coarse" or "fine"
-    block          block=("script",) or ("image",); scripts_off=True
-
-A row that compares, as COL-53's each theme or STA-49's coarse against fine,
-opens the page once under each.
-
-A family script opens one page under a set of conditions:
-
-    with flow.chromium() as browser:
-        with conditions.open_page(browser, url, scheme="dark", rtl=True) as page:
-            ...
-
-Right-to-left sets `dir="rtl"` on the root element before
-the page's own scripts run, so a page that reads its direction at load reads
-rtl. An inner element's authored `dir` stands.
-
-A block aborts each request of that Playwright resource type: the page as it
-is when its script or image files fail to load. An inline script still
-runs and `<noscript>` stays hidden. scripts_off turns scripting off instead,
-so no script runs and `<noscript>` shows (LAY-74: with script blocked every
-panel shows).
-"""
-
 import contextlib
 
 SCHEMES = ("light", "dark")
 POINTERS = ("coarse", "fine")
-# Playwright's resource types the tier 0 and 1 rows block: script (LAY-74)
-# and image (COL-12).
 BLOCKABLE = ("script", "image")
 
-# The root element does not exist yet; the observer sets its direction once
-# the parser inserts it.
 RTL_JS = r"""
 (() => {
   const set = () => document.documentElement.setAttribute('dir', 'rtl');
@@ -74,17 +38,6 @@ def open_page(
     init_scripts=(),
     **context_options,
 ):
-    """The page at `url`, loaded, under the conditions given, in a context of
-    its own that is closed on leaving. With none given it loads as Playwright's
-    default: no forced colours, a light scheme, screen media, the machine's
-    locale, the page's own direction, a fine pointer and every request let
-    through.
-
-    A value it cannot emulate raises ValueError before the browser is touched.
-    `init_scripts` run before the page's own, after the right-to-left one, as
-    check-flow.py's collector does. `context_options` go to
-    browser.new_context() as they are (viewport, reduced_motion…); a condition
-    named here wins over the same option there."""
     if scheme is not None:
         one_of("scheme", scheme, SCHEMES)
     if pointer is not None:

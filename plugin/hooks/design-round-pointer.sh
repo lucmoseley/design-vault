@@ -1,24 +1,11 @@
 #!/usr/bin/env bash
-# design-round-pointer.sh — points a session at the design-round skill the first time it reaches for a
-# rendering skill (lucmoseley/mantahostels#3537).
-#
-# The first rendering-skill call is the moment the rule line names ("before
-# rendering a candidate"), so the pointer lands there and nowhere else.
-#
-# Two routes, one marker:
-#   PreToolUse, matcher Skill — the model loads a skill. The name arrives as
-#     `.tool_input.skill`, namespaced for a plugin skill (`workflow-core:animate`).
-#   UserPromptSubmit — the founder types `/design` or another matched command,
-#     which expands in the prompt and makes no Skill call.
-#
-# IMPLICIT:  injects the design-round pointer, once per session, into a session that loads or types `design`, `prototype`, `animate`, `design-mode` or an `impeccable` skill — plus one clause when ~/design-vault is absent.
-# JUSTIFIED: fail-safe — a round rendered without the method skips the direction cards, the fresh critic and the record, and nothing downstream notices.
-# DEFEAT:    none needed; it only points. Loading `design-vault:design-round` first spends the marker, so the pointer never repeats what the session already holds.
-#
-# It never refuses the call and never reads the tracker: every path exits 0, but for
-# an unset variable under -u, which exits 1, a non-blocking error to Claude Code.
+# Usage: printf '%s' "$hook_payload_json" | bash design-round-pointer.sh
+#   PreToolUse, matcher Skill: reads `.tool_input.skill`.
+#   UserPromptSubmit: reads a `/command` at the start of `.prompt`.
+#   Prints `{hookSpecificOutput: {hookEventName, additionalContext}}` once per `.session_id` for a rendering skill,
+#   nothing otherwise. Exits 0 on every path, 1 on an unset variable.
 
-# No -e: a hook goes on past a failure rather than stop at an untested one (workflow-core#1315).
+# workflow-core#1315
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -28,13 +15,8 @@ field() { printf '%s' "$payload" | jq -r "$1 // \"\"" 2>/dev/null; }
 
 event="$(field '.hook_event_name')"
 
-# The rendering skills, by bare name. A plugin skill arrives namespaced
-# (`workflow-core:animate`), so the part after the last colon is what matches;
-# any skill of the impeccable plugin matches on the plugin's name.
 RENDERING=(design prototype animate design-mode)
 
-# classify <name> — sets `matched` for a rendering skill, `spent` for
-# design-round itself, neither for anything else.
 matched=""
 spent=""
 classify() {
@@ -61,8 +43,6 @@ case "$event" in
     classify "$(field '.tool_input.skill')"
     ;;
   UserPromptSubmit)
-    # Anchored at the prompt's start: a typed command runs only from there, and a
-    # prompt that merely mentions `/design` is not loading it.
     if [[ "$(field '.prompt')" =~ ^[[:space:]]*/([A-Za-z0-9_:-]+)([[:space:]]|$) ]]; then
       classify "${BASH_REMATCH[1]}"
     fi
@@ -72,12 +52,9 @@ esac
 
 [[ -n "$matched$spent" ]] || exit 0
 
-# Built before the marker is reserved: a firing that produces no text spends
-# nothing, so the next one still injects.
 out=""
 if [[ -n "$matched" ]]; then
-  # shellcheck disable=SC2016 # the backticks are markdown, not a substitution
-  text='This project runs design rounds through `design-vault:design-round`; invoke it before rendering a candidate.'
+  text="This project runs design rounds through \`design-vault:design-round\`; invoke it before rendering a candidate."
   if [[ ! -d "${HOME-}/design-vault" ]]; then
     text+=' The design vault is not at ~/design-vault on this machine: for the brief'"'"'s Reference field, read the project'"'"'s derived export of the library where it has one, or write "none cited".'
   fi
@@ -86,13 +63,7 @@ if [[ -n "$matched" ]]; then
   [[ -n "$out" ]] || exit 0
 fi
 
-# Once per session: a marker keyed on the session id, outside the repo, reserved
-# with noclobber so two firings racing each other cannot both win. Only a marker
-# that already exists means "said": no session id, or a marker that cannot be
-# written, and the pointer is said anyway rather than never.
-#
-# RESIDUAL: the marker outlives a compaction, so a session whose context was
-# summarised away does not get the pointer again.
+MARKER_MAX_AGE_MINUTES=1440 # guess, #5
 session="$(field '.session_id')"
 if [[ -n "$session" ]]; then
   state_dir="${TMPDIR:-/tmp}/design-round-pointer-${UID:-0}"
@@ -103,8 +74,7 @@ if [[ -n "$session" ]]; then
     [[ -e "$marker" ]] && exit 0
   fi
   set +o noclobber
-  # Markers over a day old are swept: a guess. A session running longer may get the pointer again.
-  find "$state_dir" -maxdepth 1 -type f -mmin +1440 -delete 2>/dev/null
+  find "$state_dir" -maxdepth 1 -type f -mmin "+$MARKER_MAX_AGE_MINUTES" -delete 2>/dev/null
 fi
 
 [[ -n "$out" ]] && printf '%s\n' "$out"

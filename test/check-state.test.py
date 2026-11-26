@@ -1,11 +1,3 @@
-"""Pins check-state.py (#312): python3 test/check-state.test.py
-
-Loosen the driven-state checks and a page whose tooltip shows on hover
-alone, whose slider stops when the pointer leaves it, whose form clears its
-answers on an error, or whose toast steals focus passes the gate unseen, as
-no static read of a page reaches the states only a visitor drives it into.
-"""
-
 import concurrent.futures
 import contextlib
 import io
@@ -47,11 +39,8 @@ PARTS = {
     "select-all": ".select-all",
     "toast": ".toast",
 }
-# The record whose fault is the page's own: its timer leaves the page, so its
-# miss names no part.
 PAGE_FAULTS = {"vault.time-limit"}
-# How long one whole-table run may take, in s: a guess, about three times
-# the fault page's run on this machine.
+# guess, #312
 CLI_TIMEOUT_S = 2400
 RUNS = {}
 OPEN = contextlib.ExitStack()
@@ -65,7 +54,6 @@ def command(page, out, *extra):
 
 
 def setUpModule():
-    # Each a process of its own, as the command is what a design round runs.
     folder = pathlib.Path(OPEN.enter_context(tempfile.TemporaryDirectory()))
     stale = folder / "fault" / "state.json"
     stale.parent.mkdir()
@@ -97,7 +85,7 @@ class TheFixtures(unittest.TestCase):
         self.assertEqual(marked(FAULT), set(RECORDS))
         self.assertEqual(marked(CLEAN), set())
 
-    def test_every_record_fails_on_the_fault_page_naming_its_own_plant(self):
+    def test_every_record_fails_on_the_fault_page_naming_its_own_plant_312(self):
         got = found("fault")
         for record in RECORDS:
             with self.subTest(record):
@@ -122,15 +110,13 @@ class TheFixtures(unittest.TestCase):
             miss["what"], r"leaves itself 1800 s after load, with no warning"
         )
 
-    def test_the_clean_page_passes_every_record(self):
+    def test_the_clean_page_passes_every_record_307(self):
         got = found("clean")
         self.assertEqual(
             {r: f["answer"] for r, f in got.items()}, dict.fromkeys(RECORDS, "pass")
         )
         for f in got.values():
             self.assertEqual((f["misses"], f["unjudged"]), ([], []), f["id"])
-            # axe hands some checks to a person on any page, as aria-controls
-            # on a menu trigger; that is review, never a finding (#307).
             for r in f["review"]:
                 self.assertRegex(r["what"], r"^axe \S+ could not decide: ", f["id"])
 
@@ -264,9 +250,7 @@ class TheRulesExemptions(unittest.TestCase):
         self.assertNotIn("button#peek", printed)
         self.assertNotIn("button#delete", printed)
 
-    def test_a_delete_whose_press_adds_an_undo_is_no_disclosure(self):
-        # #423; pair: the fault page's "More about lists" in
-        # test_every_record_fails_on_the_fault_page_naming_its_own_plant
+    def test_a_delete_whose_press_adds_an_undo_is_no_disclosure_423(self):
         code, printed, _ = self.run_line(
             EXEMPT, "vault.expanded-state | expanded | axe aria-valid-attr-value"
         )
@@ -287,10 +271,9 @@ class TheRulesExemptions(unittest.TestCase):
         self.assertIn("vault.hover-reveal: not judged", printed)
         self.assertIn('span#covered "Fees": the pointer cannot reach it', printed)
 
-    def test_a_track_click_that_leaves_the_page_fails_and_the_next_slider_is_still_judged(
+    def test_a_track_click_that_leaves_the_page_fails_and_the_next_slider_is_still_judged_458(
         self,
     ):
-        # #458: the check goes on to the next slider on the page loaded afresh.
         code, printed, _ = self.run_line(EXEMPT, "vault.slider-keys | slider-keys")
         self.assertEqual(code, 1, printed)
         self.assertIn('span "Rooms": a click on its track (leaves the page)', printed)

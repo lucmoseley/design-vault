@@ -1,13 +1,3 @@
-"""Tests plugin/skills/design-round/scripts/check-overlay.py (#73): python3 test/check-overlay.test.py
-
-Loosen the limit (0.5 px against a raster source, 0.1 px against an SVG one, #195) and a
-traced mark shifted off its source, or a polygon chain passed off as a circle, passes the
-craft gate (gate question vault.curves-script). Drop the
-screenshot retry and a loaded machine turns the commit gate red (#136): those cases
-run draw() in-process on a stand-in page, since only a stalled renderer makes a real
-one fail (test/load/check-overlay-shot.py).
-"""
-
 import base64
 import io
 import math
@@ -54,13 +44,11 @@ ELLIPSE = (
 
 
 def run(*args):
-    # A guess for check-overlay.py alone, not taken from the other tests' timeouts: one run takes seconds here.
+    # guess, #501
     return child.run([sys.executable, SCRIPT, *args], timeout=120)
 
 
-# Runs argv[2:] as a script once argv[1] is made unimportable. Such a run stops
-# before any browser starts; its timeout, in s, is a guess, unmeasured.
-BLOCKED_RUN_S = 60
+BLOCKED_RUN_S = 60  # guess, #501
 BLOCKED = (
     "import runpy, sys; sys.modules[sys.argv[1]] = None; sys.argv = sys.argv[2:]; "
     "runpy.run_path(sys.argv[0], run_name='__main__')"
@@ -68,7 +56,6 @@ BLOCKED = (
 
 
 def without(package, *args):
-    """The script run with `package` unimportable, as on a machine that lacks it (#256)."""
     return subprocess.run(
         [sys.executable, "-c", BLOCKED, package, SCRIPT, *args],
         capture_output=True,
@@ -99,7 +86,6 @@ class Overlay(unittest.TestCase):
         return path
 
     def smooth_png(self, name, dx):
-        """ELLIPSE drawn at 8x and shrunk, so its edge carries a shift under a pixel."""
         image = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
         ImageDraw.Draw(image).ellipse(
             ((30 + dx) * 8, 15 * 8, (90 + dx) * 8, 65 * 8), fill=(30, 30, 30, 255)
@@ -126,7 +112,6 @@ class Overlay(unittest.TestCase):
         )
 
     def test_against_an_svg_source_a_shift_of_0_02_px_passes_and_0_2_px_fails(self):
-        # The measure reads up to 0.05 px high at 8x, so 0.02 px reads under the 0.1 px limit.
         source = self.file("source.svg", ARCH.format(dx=0))
         self.assertEqual(
             run(self.file("near.svg", ARCH.format(dx=0.02)), source).returncode, 0
@@ -171,7 +156,9 @@ class Overlay(unittest.TestCase):
                 "the limit is 0.5 px against a raster source", proc.stdout, name
             )
 
-    def test_the_0_3_px_shift_a_raster_source_allows_fails_against_an_svg_source(self):
+    def test_the_0_3_px_shift_a_raster_source_allows_fails_against_an_svg_source_195(
+        self,
+    ):
         proc = run(
             self.file("near.svg", ELLIPSE.format(dx=0.3)),
             self.file("source.svg", ELLIPSE.format(dx=0)),
@@ -183,7 +170,6 @@ class Overlay(unittest.TestCase):
         )
 
     def test_a_light_part_on_white_moved_5_px_fails(self):
-        # #73 review: cut at half the darkest part's strength, a #bbb part on white had no edge, and passed.
         light = ARCH.format(dx=0).replace(
             "<g ", '<rect width="120" height="80" fill="#fff"/><g '
         )
@@ -211,7 +197,6 @@ class Overlay(unittest.TestCase):
         self.assertIn("a scale under 4 reads the offset up to 0.3 px high", proc.stderr)
 
     def test_ink_the_mark_adds_beyond_the_source_fails(self):
-        # Every source edge has a mark edge on it; only the mark's own dot strays.
         source = self.file("source.svg", ARCH.format(dx=0))
         proc = run(
             self.file(
@@ -225,7 +210,7 @@ class Overlay(unittest.TestCase):
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn("a mark edge lies that far from the other's nearest", proc.stdout)
 
-    def test_a_raster_source_and_its_copy_pass_and_a_1_px_shift_fails(self):
+    def test_a_raster_source_and_its_copy_pass_and_a_1_px_shift_fails_73(self):
         source = self.png("source.png", 0)
         self.assertEqual(run(self.png("copy.png", 0), source).returncode, 0)
         proc = run(self.png("shifted.png", 1), source)
@@ -235,8 +220,6 @@ class Overlay(unittest.TestCase):
     def test_94_a_30_segment_chain_fails_against_its_circle_though_it_overlaps_above_0_9(
         self,
     ):
-        # #94 (the builder's "mark overlap 0.90" and the critic's "IoU 0.96" both passed a faceted mark);
-        # its positive pair is test_a_copy_of_an_svg_source_passes.
         r, c = 200, 220
         ring = " ".join(
             f"{c + r * math.cos(2 * math.pi * k / 30):.3f},{c + r * math.sin(2 * math.pi * k / 30):.3f}"
@@ -255,7 +238,6 @@ class Overlay(unittest.TestCase):
         self.assertGreater((disc & chain).sum() / (disc | chain).sum(), 0.9)
         proc = run(mark, source)
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
-        # The chain's chords sit r(1 - cos 6°) = 1.10 px inside the circle at their middles.
         self.assertRegex(proc.stdout, r"largest edge offset: 1\.\d+ px \(FAIL")
         self.assertNotIn("IoU", proc.stdout)
 
@@ -268,7 +250,6 @@ class Overlay(unittest.TestCase):
             self.assertEqual(image.size, (960, 640))
 
     def test_a_mark_framed_in_another_viewbox_is_drawn_into_the_source_box(self):
-        # The same arch at twice the coordinates, viewBox scaled to match, lands on the source.
         source = self.file("source.svg", ARCH.format(dx=0))
         big = (
             ARCH.format(dx=0)
@@ -281,7 +262,6 @@ class Overlay(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
     def test_a_transparent_mark_matches_its_source_drawn_on_white(self):
-        # Guards against judging each file's ground alone (#73 review).
         source = self.file(
             "source.svg",
             ARCH.format(dx=0).replace(
@@ -290,7 +270,6 @@ class Overlay(unittest.TestCase):
         )
         proc = run(self.file("mark.svg", ARCH.format(dx=0)), source)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        # Laid on white and drawn on white round apart by a thousandth of a pixel.
         self.assertRegex(proc.stdout, r"largest edge offset: 0\.00\d px \(PASS")
 
     def test_a_transparent_mark_shifted_1_px_off_its_source_on_white_fails(self):
@@ -362,7 +341,7 @@ class UncapturedScreenshots(unittest.TestCase):
 
     FILE = {"mime": "image/svg+xml", "data": b"<svg/>"}
 
-    def test_a_screenshot_the_browser_could_not_capture_is_taken_again(self):
+    def test_a_screenshot_the_browser_could_not_capture_is_taken_again_136(self):
         page = self.Page(fails=1)
         self.assertEqual(overlay.draw(page, self.FILE, (2, 2)).shape, (2, 2, 4))
         self.assertEqual(page.shots, 2)

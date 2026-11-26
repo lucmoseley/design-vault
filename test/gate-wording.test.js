@@ -1,10 +1,4 @@
 "use strict";
-// One home per gate question (#103 Q6 (A), #165): a gate question's wording lives only in its gate file, and every
-// other file in the plugin or the library data cites its id. Loosen it and the pre-commit gate, which runs every
-// JavaScript suite, lets a copy land.
-// A gate file is any file with a `- question:` line, so a project gate template is guarded once it takes the form.
-// The refusals are tested by planting a copy into an in-memory version of the real tree, so the tree's own text is
-// what each plant must be told apart from.
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
@@ -14,25 +8,15 @@ const { parseGate } = require("../plugin/skills/design-round/scripts/gate-form.j
 const { RECORD_COUNT } = require("./rule-store.js");
 
 const ROOT = path.join(__dirname, "..");
-// What a round reads (#154). README.md and docs/ quote rules as history and research, which no round obeys.
-const SCANNED = ["plugin", "data"];
-// Leaves out .jsonl, the append-only logs: they hold the founder's words verbatim, which a question may be drafted
-// from, and a logged row cannot be reworded.
+const SCANNED = ["plugin", "data"]; // #154
 const TEXT = /\.(md|js|json|py|sh|html|css|txt)$/;
-// gallery.json and styles.json bundled, so a copy there is already a copy in them.
 const BUNDLE = "data/vault-data.js";
-// The shortest run of a question's words that counts as a copy; a question this short or shorter must appear whole.
-// Short enough that a copy with its opening or closing clause reworded still holds one; one word longer than a
-// measuring script's name for the fault it reports, check-layout.py's "text cut off at the screen's edge".
-const RUN = 8;
+const RUN = 8; // guess, #165
 
-/** The words of `text`, lower-cased, with markdown and punctuation dropped, joined by single spaces. */
 const normalised = (text) =>
   text.normalize("NFKC").toLowerCase().replace(/['’]/g, "").split(/[^\p{L}\p{N}]+/u).filter(Boolean).join(" ");
-// A `<…>` slot in a template's question is filled by the project, so it is not the question's wording.
 const SLOT = /<[^<>]*>/g;
 
-/** A JSON file's readable text is its string values; a copy there is JSON-escaped. */
 function stringValues(value) {
   if (typeof value === "string") return [value];
   if (value && typeof value === "object") return Object.values(value).flatMap(stringValues);
@@ -41,7 +25,6 @@ function stringValues(value) {
 
 const readable = (file, raw) => (file.endsWith(".json") ? stringValues(JSON.parse(raw)).join("\n") : raw);
 
-/** Every scanned file under the vault root `root`, each { file (repo-relative), text }. */
 function scannedFiles(root) {
   const out = [];
   const walk = (rel) => {
@@ -58,10 +41,7 @@ function scannedFiles(root) {
   return out;
 }
 
-// copies() runs four times for every vault question, each on the tree with at most one file changed, so each file's
-// hash is kept by the file's own object, which plant() passes on untouched, and its matches and the questions' windows
-// by a hash of its text and of the questions: a call re-reads only the file a test planted into (#349, #462).
-// Residual: nothing is ever dropped, which one test process holding a few hundred small entries can afford.
+// #349, #462
 const digest = (text) => crypto.createHash("sha1").update(text).digest("hex");
 const hashes = new WeakMap();
 const hashOf = (file) => {
@@ -74,17 +54,14 @@ const keep = (key, make) => {
   return kept.get(key);
 };
 
-/** A gate file's questions, each { id, words }: its wording's words with the slots dropped. */
 const questionsIn = (text) =>
   parseGate(text).questions.map((q) => ({
     id: q.id,
     words: normalised((q.fields.question?.value ?? "").replace(SLOT, " ")).split(" ").filter(Boolean),
   }));
 
-/** The `size` words of `words` from `start`, joined as normalised() joins them. */
 const runAt = (words, start, size) => words.slice(start, start + size).join(" ");
 
-/** The first window of each question in `windows` (run → [[question, window]]) found in `words`: question → window. */
 function firstWindows(words, windows, sizes) {
   const first = new Map();
   for (const size of sizes) {
@@ -98,10 +75,6 @@ function firstWindows(words, windows, sizes) {
   return first;
 }
 
-/**
- * Every copy of a gate question's wording outside its own gate file: { file, id, gate, words }, where `words` is the
- * question's first window found in the file. A question with no words outside its slots has no wording to copy.
- */
 function copies(files) {
   const hashed = files.map((f) => ({ ...f, hash: hashOf(f) }));
   const questions = hashed
@@ -141,7 +114,7 @@ const textOf = (files, file) => files.find((f) => f.file === file).text;
 const fileAndId = (found) => found.map((c) => [c.file, c.id]);
 const vaultQuestions = tree.filter((f) => f.file.startsWith(VAULT_STORE)).flatMap((f) => parseGate(f.text).questions);
 
-test("no gate question's wording appears outside its gate file in the plugin or the library data", () => {
+test("no gate question's wording appears outside its gate file in the plugin or the library data (#103)", () => {
   assert.ok(tree.length > 20, `only ${tree.length} files scanned`);
   assert.equal(vaultQuestions.length, RECORD_COUNT);
   const found = copies(tree);
@@ -165,7 +138,6 @@ for (const q of vaultQuestions) {
     const wording = q.fields.question.value;
     const inSkill = copies(plant("plugin/skills/design-round/SKILL.md", (t) => `${t}\n\nAlways ask: *${wording}*\n`));
     assert.deepEqual(fileAndId(inSkill), [["plugin/skills/design-round/SKILL.md", q.id]]);
-    // A DNA line in gallery.json, wrapped at every word, so the copy reaches the scan only through the JSON escapes.
     const gallery = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "gallery.json"), "utf8"));
     gallery.dna.never.push(`"${wording.replace(/ /g, "\n")}"`);
     const inData = copies(plant("data/gallery.json", () => readable("data/gallery.json", JSON.stringify(gallery, null, 2))));
@@ -211,7 +183,6 @@ test("a copy is reported by the first run of the question's words the file holds
 });
 
 test("a gate added after a search is looked for in the files that search already read", () => {
-  // A line no earlier test plants, so no earlier search has read this file with the gate present.
   const copied = plant("plugin/skills/design-round/SKILL.md", (t) => `${t}\nEach page should keep a single quiet accent colour against its white ground.\n`);
   assert.deepEqual(copies(copied), []);
   assert.deepEqual(fileAndId(copies([...copied, CALM_GATE])), [["plugin/skills/design-round/SKILL.md", "demo.calm"]]);

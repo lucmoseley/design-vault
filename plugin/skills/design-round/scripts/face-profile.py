@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""face-profile.py — reads the face profile of every typeface setting a page
-renders its text in: x-height, width, weight and optical size, from the font
-the browser actually draws (#282). The typeface-traits rule records read it
-as their inputs.
-
-USAGE
+"""USAGE
   python3 face-profile.py <url or file> --out DIR [--widths W,W,…] [--wait SEL]
         [--timeout MS]
 
@@ -16,7 +11,7 @@ font-size-adjust, font-variation-settings and font-optical-sizing. A setting
 is read once, through a ruler element given those properties and no
 letter-spacing, word-spacing or text-transform:
 
-  x-height  the ex unit over the font size (#247), so font-size-adjust counts
+  x-height  the ex unit over the font size, so font-size-adjust counts
   width     a pangram's width over its characters and the font size: the
             average character, spaces included, as check-measure.py counts
             characters
@@ -27,7 +22,7 @@ letter-spacing, word-spacing or text-transform:
             where pushing the axis past both ends of any range moves the
             pangram's width or the stem
   opsz      with an opsz axis, the value in use (font-optical-sizing: auto
-            sets it to the used size in px, CSS Fonts 4 §8.1; an opsz in
+            sets it to the used size in px; an opsz in
             font-variation-settings overrides it) and the range the font
             clamps it to, read off a ladder of values by where the width
             stops moving; null where opsz moves the ink alone
@@ -64,19 +59,13 @@ layout = siblings.load(HERE, "check-layout.py")
 flow = layout.flow
 
 AXES = ("wght", "wdth", "opsz", "GRAD")
-# Values past every range a font may give each axis, so the font clamps both
-# to its own ends: OpenType allows any Fixed value, and these sit outside the
-# registered axes' ranges and Google Fonts' GRAD (-200 to 150).
-BEYOND = {
+BEYOND = {  # guess, #501
     "wght": (1, 1000),
     "wdth": (1, 1000),
     "opsz": (0.1, 1000),
     "GRAD": (-1000, 1000),
 }
-# The opsz values tried for the range: OpenType's registered range is any
-# positive size, and fonts ship ends from 5 to 1000 (Roboto Flex 8–144,
-# Nunito Sans 6–12, Inter 14–32).
-LADDER = (
+LADDER = (  # guess, #501
     1,
     5,
     6,
@@ -101,20 +90,14 @@ LADDER = (
     288,
     1000,
 )
-# An l drawn this large gives a regular stem of about 0.1 em some 20 px, so its
-# anti-aliased edges are a small share of the ink: a first guess, not measured.
-STEM_PX = 200
-# Chromium on Linux rounds each glyph's advance to a whole pixel, which at
-# 100 px moved a pangram's width by up to 1% on the fixture font: at 1000 px
-# the rounding is under 0.1%.
-WIDTH_PX = 1000
-# Less than a 200 px stem or a 1000 px pangram moves by when an axis changes
-# the drawing at all: rendering the same text twice moves neither.
-MOVED_PX = 0.5
+STEM_PX = 200  # guess, #501
+WIDTH_PX = 1000  # measured 1% rounding at 100 px, #501
+MOVED_PX = 0.5  # guess, #501
+AT_END_PX = MOVED_PX / 10  # guess, #501
+INKED = 0.5  # guess, #501
 PANGRAM = "the quick brown fox jumps over the lazy dog"
 ROLES = ("body", "heading", "code", "control")
 
-# Every element drawing text of its own, with its setting and role.
 TEXT_JS = r"""
 () => {
   const SETTING = ['font-family', 'font-weight', 'font-style', 'font-stretch', 'font-size',
@@ -129,7 +112,6 @@ TEXT_JS = r"""
     if (!chars && !field) continue;
     if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
     const r = el.getBoundingClientRect();
-    // A box of 1 px or less is the visually-hidden pattern, not text anyone sees.
     if (r.width <= 1 && r.height <= 1) continue;
     const cs = getComputedStyle(el);
     const role = el.closest('h1, h2, h3, h4, h5, h6, [role=heading]') ? 'heading'
@@ -143,15 +125,12 @@ TEXT_JS = r"""
 }
 """
 
-# The ruler: a hidden box for ex and a hidden line for the pangram, set from a
-# setting; window.__faceRuler measures, window.__faceShow draws an l to shoot.
 RULER_JS = r"""
 () => {
   const base = 'position:absolute;left:0;top:0;margin:0;padding:0;border:0;letter-spacing:normal;' +
     'word-spacing:normal;text-transform:none;line-height:normal;white-space:pre;';
   const box = document.createElement('div');
   const line = document.createElement('span');
-  // 1000ex wide, so the ex reads past Chromium's whole-pixel rounding as the pangram does at WIDTH_PX.
   box.style.cssText = base + 'visibility:hidden;height:0;width:1000ex';
   line.style.cssText = base + 'visibility:hidden';
   document.body.append(box, line);
@@ -173,8 +152,7 @@ RULER_JS = r"""
       document.body.append(shot);
     }
     shot.style.cssText = base + 'position:fixed;z-index:2147483647;background:#fff;color:#000;' +
-      'text-shadow:none;-webkit-text-stroke:0;filter:none;transform:none;opacity:1;padding:8px 40px';
-    // The padding keeps an italic or overhanging l inside the shot: a guess, not measured.
+      'text-shadow:none;-webkit-text-stroke:0;filter:none;transform:none;opacity:1;padding:8px 40px'; // guess, #501
     apply(shot, setting, extra);
     shot.textContent = 'l';
     const r = shot.getBoundingClientRect();
@@ -190,7 +168,6 @@ RULER_JS = r"""
 
 
 def variations(setting):
-    """The setting's font-variation-settings as tag → value."""
     held = {}
     text = setting.get("font-variation-settings", "normal").strip()
     if text != "normal":
@@ -201,28 +178,22 @@ def variations(setting):
 
 
 def variation(setting, **axes):
-    """The setting's font-variation-settings with `axes` set over it."""
     held = {**variations(setting), **axes}
     return ", ".join(f'"{tag}" {value:g}' for tag, value in held.items()) or "normal"
 
 
 def stem_of(png):
-    """An l's stroke width in px: the ink summed across the middle row of its
-    inked rows, so anti-aliased edges count by their coverage. A row counts as
-    inked past half coverage, a guess that skips rows the edges only graze."""
     import numpy as np
     from PIL import Image
 
     ink = 1 - np.asarray(Image.open(io.BytesIO(png)).convert("L"), dtype=float) / 255
-    rows = np.flatnonzero(ink.max(axis=1) > 0.5)
+    rows = np.flatnonzero(ink.max(axis=1) > INKED)
     if not len(rows):
         return 0.0
     return float(ink[(rows[0] + rows[-1]) // 2].sum())
 
 
 class Ruler:
-    """Reads a setting's figures on a page whose RULER_JS has run."""
-
     def __init__(self, page):
         self.page = page
 
@@ -267,30 +238,20 @@ class Ruler:
         return found
 
     def opsz_range(self, setting):
-        """The opsz ends the font clamps to, to the nearest ladder value, or
-        None where opsz moves no width."""
         widths = [self.width_at(setting, {"opsz": v}) for v in LADDER]
         low, high = widths[0], widths[-1]
         if abs(low - high) <= MOVED_PX:
             return None
-        # A value is at an end when its width is within a tenth of MOVED_PX of
-        # that end's, so the last step inside the range still reads as moved:
-        # a guess, not measured.
         lo = max(
-            v
-            for v, w in zip(LADDER, widths, strict=True)
-            if abs(w - low) <= MOVED_PX / 10
+            v for v, w in zip(LADDER, widths, strict=True) if abs(w - low) <= AT_END_PX
         )
         hi = min(
-            v
-            for v, w in zip(LADDER, widths, strict=True)
-            if abs(w - high) <= MOVED_PX / 10
+            v for v, w in zip(LADDER, widths, strict=True) if abs(w - high) <= AT_END_PX
         )
         return [lo, hi]
 
 
 def rendered(page, mark):
-    """The faces DevTools says drew the marked element's text."""
     devtools = page.context.new_cdp_session(page)
     try:
         devtools.send("DOM.enable")
@@ -307,9 +268,6 @@ def rendered(page, mark):
 
 
 def profile(page):
-    """The page's settings as it stands, loaded and settled: each with its
-    figures, its roles' characters and how many elements hold it, the body
-    setting first and the rest by characters."""
     texts = page.evaluate(TEXT_JS)
     groups = {}
     for t in texts:
@@ -322,9 +280,6 @@ def profile(page):
         g["roles"][t["role"]] += t["chars"]
     page.evaluate(RULER_JS)
     ruler = Ruler(page)
-    # The axes and opsz range belong to the font file, which family, weight,
-    # style and stretch pick; size, size-adjust and variation settings only
-    # choose the instance drawn from it.
     by_font = {}
     out = []
     try:

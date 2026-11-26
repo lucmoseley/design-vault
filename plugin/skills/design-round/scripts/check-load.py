@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""check-load.py — times how long a web candidate makes a phone visitor wait
-for its main content, answering gate question vault.load (#169 Q3 (A), #170).
+"""Times how long a web candidate makes a phone visitor wait for its main
+content, answering gate question vault.load.
 
 USAGE
   python3 check-load.py <url or file> [--runs N] [--limit MS] [--timeout MS]
@@ -10,12 +10,11 @@ throttled phone (below), and reads Largest Contentful Paint (LCP): the moment
 the largest text block or image in the first screen is drawn, timed from
 navigation. It prints each run's LCP and the element drawn, and passes when the
 median is at most --limit ms (2500, web.dev's "good" LCP). A local file is
-served over HTTP from its own folder, so the throttled network applies to it.
+served over HTTP from its own folder.
 
-The phone is Lighthouse's default mobile run, its figures in the constants
-below (#169). Lighthouse estimates its throttled timings by simulation; this
-script applies them to a real load instead (Lighthouse's "devtools" throttling),
-so its LCP can differ from a Lighthouse report's.
+The phone is Lighthouse's default mobile run, applied to a real load
+(Lighthouse's "devtools" throttling), so its LCP can differ from a Lighthouse
+report's, which is simulated.
 
 The last LCP entry counts: the browser reports a larger element as it is
 drawn, so a page that hides its headline behind a fade or a font wait reports
@@ -27,7 +26,7 @@ wrong / 3 Playwright or its browser is missing / 4 the page did not load in time
 / 5 the browser refused the page / 6 the page drew no LCP element / 7 a call
 hung that would never return.
 
-FILES MODE (#313)
+FILES MODE
   python3 check-load.py <url or file> --files --out DIR [--parts FILE]
         [--table FILE] [--timeout MS]
 
@@ -112,34 +111,30 @@ fontfile = siblings.load(HERE, "font-file.py")
 probe = siblings.load(HERE, "probe.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
-# web.dev's "good" LCP, at the 75th percentile of page loads.
+# web.dev's "good" LCP, at the 75th percentile of page loads: https://web.dev/articles/lcp
 LIMIT_MS = 2500
-# Lighthouse runs one load per report; its docs advise the median of five
-# runs. Three is a guess at the fewest whose median steadies one slow load.
+# guess, #501
 RUNS = 3
-# mobileSlow4G, scaled as Lighthouse scales it (devtools-frontend
-# lantern/simulation/Constants.ts). CDP takes bytes per second.
+# Lighthouse's mobileSlow4G, devtools-scaled, in the bytes per second CDP takes:
+# https://github.com/GoogleChrome/lighthouse/blob/main/core/config/constants.js
 LATENCY_MS = 150 * 3.75
 DOWN_BYTES = 1.6 * 1024 * 0.9 * 1024 / 8
 UP_BYTES = 750 * 0.9 * 1024 / 8
 CPU_SLOWDOWN = 4
-# Lighthouse's mobile screen and user agent (core/config/constants.js).
+# Lighthouse's mobile screen and user agent: https://github.com/GoogleChrome/lighthouse/blob/main/core/config/constants.js
 SCREEN = {"width": 412, "height": 823}
 SCALE = 1.75
 USER_AGENT = (
     "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36"
 )
-# How long after load a run waits for a later, larger paint. A guess,
-# unmeasured: longer than any entrance the brief allows (1.6 s), with room for
-# a font that arrives late on the throttled network.
+# guess, #501
 QUIET_MS = 5000
-# Guesses, unmeasured: a run's ceiling, many times the limit on the throttled
-# network, and how often a run looks for a new entry.
+# guess, #501
 TIMEOUT_MS = 60000
+# guess, #501
 POLL_MS = 250
 
-# The last LCP entry so far, buffered from before the page's own scripts run.
 OBSERVE_JS = r"""
 window.__lcp = null;
 new PerformanceObserver((list) => {
@@ -204,8 +199,6 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 
 
 def serve(url):
-    """An HTTP server for a file:// URL's folder and the page's URL on it, or
-    None and the URL as given."""
     parts = urllib.parse.urlparse(url)
     if parts.scheme != "file":
         return None, url
@@ -261,8 +254,6 @@ def one_run(browser, url, timeout):
         context.close()
 
 
-# The files mode (#313). Its table, and each check's value shape: None reads
-# no value; a pattern's groups are the value.
 TABLE = os.path.join(HERE, "check-load.table")
 CHECKS = {
     "coverage": None,
@@ -276,8 +267,8 @@ CHECKS = {
     "banner": re.compile(r"(\S.*)"),
     "cookies-page": re.compile(r"(\S.*)"),
 }
-# CSS Fonts 4's generic families and the system-font keywords browsers read
-# as one: the face behind each is the browser's pick.
+# CSS Fonts 4's generic families, and two vendor system-font keywords:
+# https://www.w3.org/TR/css-fonts-4/#generic-font-families
 GENERIC = {
     "serif",
     "sans-serif",
@@ -295,8 +286,7 @@ GENERIC = {
     "-apple-system",
     "blinkmacsystemfont",
 }
-# Each feature tag a CSS property switches on, so font-feature-settings is
-# not wanted for it: CSS Fonts 4 §6.3–6.11 (16 Oct 2026).
+# The feature tag each CSS font-variant property switches on: https://www.w3.org/TR/css-fonts-4/
 EQUIVALENT = {
     **dict.fromkeys(("kern",), "font-kerning"),
     **dict.fromkeys(("liga", "clig", "dlig", "hlig", "calt"), "font-variant-ligatures"),
@@ -317,8 +307,7 @@ EQUIVALENT = {
 FEATURE_PROPERTY = re.compile(r"font-feature-settings|font-variant(-[a-z-]+)?")
 PAIRS = (("I", "l"), ("I", "1"), ("l", "1"))
 SMALL_CAPS = {"small-caps": ("smcp",), "all-small-caps": ("smcp", "c2sc")}
-# File signatures (WHATWG MIME Sniffing §6.1) of the raster formats a page
-# can draw an icon from.
+# Image file signatures: https://mimesniff.spec.whatwg.org/#matching-an-image-type-pattern
 RASTER = (
     (b"\x89PNG\r\n\x1a\n", "PNG"),
     (b"\xff\xd8\xff", "JPEG"),
@@ -333,7 +322,6 @@ TableError = rule_table.TableError
 
 
 def parse_table(text):
-    """The table's lines as Line records, in order."""
     return rule_table.parse(text, CHECKS, _line_value)
 
 
@@ -355,8 +343,6 @@ def _line_value(n, check, m):
         ) from exc
 
 
-# Each element with text of its own is marked
-# data-vault-net="<n>" so CDP can find it.
 READ_JS = r"""
 ({ icon, banner }) => {
   const drawn = (el) => el.getClientRects().length > 0
@@ -385,7 +371,7 @@ READ_JS = r"""
     }
   };
   for (const sheet of document.styleSheets) {
-    try { walk(sheet.cssRules, sheet.href || location.href); } catch (e) { /* another origin's sheet: its @font-face rules are not read, so its faces are matched by family name alone */ }
+    try { walk(sheet.cssRules, sheet.href || location.href); } catch (e) { continue; }
   }
   const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "TITLE"]);
   const NUMBERS = 'td, th, output, [aria-live]:not([aria-live="off"]), [role="status"], [role="timer"], [role="log"], [role="marquee"]';
@@ -427,7 +413,6 @@ READ_JS = r"""
     images.push({ where: where(el), src, width: box.width, height: box.height,
       action: !!el.closest(ACTION), declared: declared.some((d) => d === el || d.contains(el)) });
   }
-  // A page whose storage the browser refuses (an opaque origin) gives null, and vault.cookie-banner is not judged.
   const keys = (store) => { try { return Object.keys(store()); } catch (e) { return null; } };
   const local = keys(() => localStorage), session = keys(() => sessionStorage);
   const footer = [...document.querySelectorAll('footer, [role="contentinfo"]')];
@@ -444,12 +429,8 @@ READ_JS = r"""
 }
 """
 
-# How far apart I, l and 1 are drawn in one face: two glyphs, scaled to one
-# height, differ by the share of their joint ink that only one covers.
 DISTINCT_JS = r"""
 async ({ family, weight, style }) => {
-  // The sizes and the half-coverage ink cut (127 of 255) check-load.table's
-  // distinct value was measured at: change one and remeasure it.
   const S = 200, N = 64;
   const font = `${style} ${weight} ${S}px ${family}`;
   await document.fonts.load(font, "Il1");
@@ -483,7 +464,6 @@ UNBROTLI_JS = r"""
 async (url) => {
   const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
   let s = "";
-  // In chunks: a spread of the whole file would pass more arguments than an engine takes.
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s);
 }
@@ -510,9 +490,6 @@ class _Brotli(http.server.BaseHTTPRequestHandler):
 
 @contextlib.contextmanager
 def unbrotli(context):
-    """A Brotli decoder for font-file.read(): the standard library has none,
-    so a local server sends each stream with Content-Encoding: br, and a page
-    fetches it back decoded."""
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Brotli)
     server.blobs = {}
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -533,10 +510,6 @@ def unbrotli(context):
 
 
 def read_files(browser, url, *, declared, timeout):
-    """What the files checks read of the page at `url`: the page's own read
-    (READ_JS), each text's faces from CDP, each face's I l 1 distances, the
-    cookies set, the URLs requested and the body of each font, image,
-    stylesheet and script file fetched."""
     context = browser.new_context()
     try:
         page = context.new_page()
@@ -570,8 +543,6 @@ def read_files(browser, url, *, declared, timeout):
                 try:
                     bodies[r.url] = (r.request.resource_type, r.body())
                 except PlaywrightError as exc:
-                    # A body the browser no longer holds leaves the lines that
-                    # read it not judged, never passed (#313).
                     expected(exc, "said as not judged")
                     unread.append(
                         (r.url, r.request.resource_type, flow.first_line(exc))
@@ -590,8 +561,6 @@ def read_files(browser, url, *, declared, timeout):
                 try:
                     fonts[src] = fontfile.read(data, decode)
                 except fontfile.FontError as exc:
-                    # A file no reader here opens is reported by name, and the
-                    # lines on it are not judged (#313).
                     expected(exc, "said as not judged")
                     fonts[src] = str(exc)
         faces = sorted(
@@ -625,7 +594,6 @@ def read_files(browser, url, *, declared, timeout):
 
 
 def _data_url(src):
-    """A data: URL's bytes, or None for any other URL."""
     if not src.startswith("data:"):
         return None
     head, _, payload = src[5:].partition(",")
@@ -635,7 +603,6 @@ def _data_url(src):
 
 
 def _stack(value):
-    """A computed font-family's families, in order, unquoted."""
     return [
         f.strip().strip("\"'")
         for f in re.findall(r'"[^"]*"|\'[^\']*\'|[^,]+', value)
@@ -650,9 +617,6 @@ def _css_family(family):
 
 
 class _Faces:
-    """The loaded font files behind the faces CDP names, by PostScript name,
-    and the @font-face families and styles each file is loaded as."""
-
     def __init__(self, read):
         self.by_name = collections.defaultdict(list)
         self.families = collections.defaultdict(set)
@@ -668,7 +632,6 @@ class _Faces:
         self.web = {face["family"].lower() for face in read["faces"]}
 
     def files(self, used):
-        """The (src, Font) pairs behind one CDP font entry."""
         return (
             self.by_name.get(used.get("postScriptName"), [])
             if used["isCustomFont"]
@@ -676,7 +639,6 @@ class _Faces:
         )
 
     def is_family(self, used, family):
-        """Whether CDP's font entry `used` is a face of `family`."""
         family = family.lower()
         files = self.files(used)
         if files:
@@ -684,7 +646,6 @@ class _Faces:
         return used["familyName"].lower() == family
 
     def first(self, text):
-        """The font entries CDP gives for `text` that its first family draws."""
         stack = _stack(text["family"])
         if not stack:
             return []
@@ -694,10 +655,6 @@ class _Faces:
 
 
 def findings(table, read, *, declared, undeclared):
-    """One finding per record id, in table order: {"id", "answer", "misses",
-    "unjudged"}, each miss and unjudged entry {"check", "where", "what"}.
-    `declared` and `undeclared` are the parts declaration's
-    (probe.declared_parts())."""
     answers = rule_table.Answers(table, "where")
     faces = _Faces(read)
     checks = {
@@ -893,7 +850,6 @@ def _tabular(answers, line, read, faces):
 
 
 def _drawn_by(read, faces):
-    """Each loaded variable file's src and Font, and the texts it draws."""
     out = collections.defaultdict(list)
     for t in read["texts"]:
         for used in faces.first(t):
@@ -957,9 +913,6 @@ def _vector(answers, line, read, faces):
 
 
 def _raster(data):
-    """The raster format `data` begins with, None for SVG, or 'a file of no format read here'."""
-    # Every signature below lies in the first 12 bytes; an SVG's root tag
-    # follows at most an XML declaration, a doctype and a comment.
     head = bytes(data[:64])
     for magic, name in RASTER:
         if head.startswith(magic):
@@ -1042,7 +995,7 @@ def _cookies_page(answers, line, read, faces):
         answers.miss(line, "footer", f"no footer link matches {line.value.pattern}")
 
 
-# Quoted text and data: URLs are cut to 40 characters, so a finding stays one line.
+# guess, #313
 def _quote(text):
     return repr(text if len(text) <= 40 else text[:39] + "…")
 

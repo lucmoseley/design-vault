@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
- * calibration-log.js — the calibration log's gate: data/calibration-log.jsonl holds one row per calibration run, the agreement of three
- * fresh critics with the founder's verdicts on the rounds it re-judged (design-vault#168). It refuses a malformed
- * row, and any change to a row HEAD holds: a run's figures are what it measured.
+ * Checks data/calibration-log.jsonl, one row per calibration run: refuses a malformed row, and any change to a row HEAD holds.
  *
  * Usage:
  *   node calibration-log.js                         the working tree's data/calibration-log.jsonl against HEAD's
@@ -19,17 +17,15 @@
  *   questions: { <gate question id>: { agree, of, unsure } }, and entries: { <corrections-log line>: { agree, of,
  *     unsure } }, each critic's answer where his verdict is known;
  *   new_questions: { <gate question id>: { yes, no, unsure } }, the critics' answers on his first picks to a question
- *     added or reworded since the round, a test of the rule rather than the critics (#232);
+ *     added or reworded since the round;
  *   critics: three { unsure, answers }, how often each critic answered Unsure;
  *   settles: { splits, settled }, summed over the rounds' round-log rows that count them: how many gate-critic splits
- *     a settle critic answered Yes or No (#170);
+ *     a settle critic answered Yes or No;
  *   disagreements: one per critic answer against his verdict, of a kind in KINDS: "pick", "question" or "entry", an
  *     entry's rule "unlanded" or his "rule: …" ruling and its founder Yes where he kept the trait, No where he rejected
  *     it;
  *   where: the comment's link, or the session and date he was told the result in.
  * Each figure's disagreements number of − agree − unsure (of − agree for pick).
- *
- * The command line, its exit codes and the reading of the log from git are log-gate.js's.
  */
 "use strict";
 const { isText, isDate, parseRows, runGate } = require("./log-gate.js");
@@ -38,7 +34,6 @@ const LOG = "data/calibration-log.jsonl";
 const FIELDS = ["date", "round_log_rows", "model", "canary_held_on", "rounds", "pick", "questions", "entries", "new_questions", "critics", "disagreements", "settles", "where"];
 const ROUND = /^[\w.-]+\/[\w.-]+#[1-9]\d* r[1-9]\d*$/;
 const VERSION = /^\d+\.\d+\.\d+$/;
-// The three critics of a run, by letter, as calibration-critic.js names their answers files.
 const CRITICS = ["a", "b", "c"];
 const ANSWERS = ["yes", "no"];
 const KINDS = {
@@ -51,7 +46,6 @@ const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v)
 const isCount = (v) => Number.isInteger(v) && v >= 0;
 const isName = (v) => v === null || isText(v);
 
-/** The faults in one figure, { agree, of[, unsure] }, which `disagreed` answers disagreed with. */
 function figureFaults(at, figure, withUnsure, disagreed) {
   const keys = withUnsure ? ["agree", "of", "unsure"] : ["agree", "of"];
   if (!isObject(figure) || Object.keys(figure).sort().join() !== [...keys].sort().join() || !keys.every((k) => isCount(figure[k])))
@@ -86,10 +80,6 @@ function disagreementFaults(at, d, rounds) {
   return faults;
 }
 
-/**
- * Returns every fault in the log `text`. `previousText` is the log HEAD holds: each of its rows must stand
- * unchanged at the same place.
- */
 function checkCalibrationLog(text, previousText = "") {
   const faults = [];
   const fault = (rule, message) => faults.push(`${rule}: ${message}`);

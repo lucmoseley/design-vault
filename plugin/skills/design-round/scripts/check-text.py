@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""check-text.py — the text family script (#314): reads a rendered page's
-words, characters, case, number and date formats against the rule records
-its table names.
+"""Reads a rendered page's words, characters, case, number and date formats
+against the rule records its table names.
 
 USAGE
   python3 check-text.py <page> --out DIR [--parts FILE] [--part NAME=SELECTOR]…
@@ -29,8 +28,8 @@ or a repeated key is refused before any page loads.
 THE WORD LISTS, by default check-text.words beside this script, give a
 `[list]` header and one entry a line.
 
---parts is the building session's parts declaration (design-round §1c,
-#274); --part gives one part's selector and wins. vault.offer-end-date reads
+--parts is the building session's parts declaration (design-round §1c);
+--part gives one part's selector and wins. vault.offer-end-date reads
 the part its table line names: a part the declaration does not name is
 absent, so the record has no match; one declared with no selector is not
 judged. --own-case says the project's rules file names a case other than
@@ -73,8 +72,6 @@ WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
 PAGE, RTL, Load = checks.PAGE, checks.RTL, checks.Load
 
 
-# ---------------------------------------------------------------- the page
-
 PRELUDE = r"""
 const SKIP = 'script, style, noscript, template, svg, math, textarea, select';
 const CODE = 'code, pre, kbd, samp';
@@ -96,7 +93,6 @@ const place = (el) => {
   return parts.join(' > ');
 };
 const langOf = (el) => (el.closest('[lang]') || {}).lang || '';
-// Line boxes: rects whose middles fall inside one row are one line.
 const lines = (el) => {
   const range = document.createRange();
   range.selectNodeContents(el);
@@ -226,7 +222,6 @@ READ_JS = (
       const names = new Map();
       for (const style of ['long', 'short']) {
         const f = new Intl.DateTimeFormat(lang || undefined, { weekday: style, timeZone: 'UTC' });
-        // 1 January 2024 was a Monday, so day d of that month is ISO weekday d.
         for (let d = 1; d <= 7; d++) names.set(f.format(new Date(Date.UTC(2024, 0, d))).toLocaleLowerCase().replace(/\.$/, ''), d);
       }
       weekdays.set(lang, names);
@@ -256,11 +251,9 @@ READ_JS = (
     };
   };
   const safe = (tag) => { try { return info(tag); } catch { return null; } };
-  // A POSIX locale suffix (en-US@posix, under LANG=C) is no BCP 47 tag.
   const browser = safe(navigator.language.split('@')[0]);
   const locales = {};
   for (const lang of new Set([...blocks.map((b) => b.lang), ...calendars.map((c) => c.lang)])) {
-    // A lang the browser cannot read maps to null: the checks report it not judged.
     locales[lang] = lang ? safe(lang) : browser;
   }
   return { blocks, caps, fractions, rtl, calendars, locales, browser };
@@ -299,11 +292,7 @@ def read_page(page, values):
     )
 
 
-# ------------------------------------------------------------------- sweep
-
-
 def sweep(browser, url, *, values, words, parts, nulls, timeout):
-    """Every load the table's records read, as Load(condition, width, data)."""
     loads = []
 
     def one(condition, width, **given):
@@ -362,8 +351,6 @@ def sweep(browser, url, *, values, words, parts, nulls, timeout):
 
 
 def read_offer(page, v, parts, nulls):
-    """The declared part's texts, each read again once the watch has passed;
-    None where the part is absent, or why it is not judged."""
     name = v["part"]
     if name in nulls:
         return f"the part {name} is declared with no selector"

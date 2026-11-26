@@ -1,8 +1,4 @@
 "use strict";
-// gate.js list, which joins the vault's gate and a project's into one numbered list for an asset (#158): driven
-// through its CLI on the vault's store of rule records and on two fixture gates that hold every kind of clash.
-// Loosen it and a critic answers a question that does not apply, two critics number one list differently, or two rules
-// that cannot both hold reach a round with nobody told.
 const assert = require("node:assert/strict");
 const { runInProcess } = require("./core-run-in-process.js");
 const path = require("node:path");
@@ -19,10 +15,8 @@ const list = (args, files = [VAULT_GATE]) => {
   const r = runInProcess(SCRIPT, ["list", ...args, ...files]);
   return { status: r.status, out: r.stdout, err: r.stderr };
 };
-// The ids a list holds, in its numbered order.
 const ids = (out) => [...out.matchAll(/^\d+\. (\S+?)(?: \(\w+\))?:/gm)].map((m) => m[1]);
 const clashLines = (out) => out.slice(out.indexOf("Clashes, for the reveal:")).split("\n").filter((l) => l.startsWith("- "));
-// The one clash line naming both ids, its numbers blanked to N.
 const clash = (lines, a, b) => {
   const found = lines.filter((l) => l.includes(` ${a} `) && l.includes(` ${b} `)).map((l) => l.replace(/\d+\. /g, "N. "));
   assert.equal(found.length, 1, `${a} with ${b}:\n${lines.join("\n")}`);
@@ -32,11 +26,10 @@ const fixtureClashes = () => clashLines(list(["--asset", "web-surface"], FIXTURE
 
 const BRAND_MOTION_ONLY = ["vault.flow-script", "vault.flow-code", "vault.fall-script", "vault.flow-look", "vault.length-range", "vault.length", "vault.end-frame"];
 
-test("list keeps the motion questions only for an asset with brand motion", () => {
+test("list keeps the motion questions only for an asset with brand motion, not for interface motion alone (#158, #183)", () => {
   const still = list(["--asset", "web-surface"]);
   assert.equal(still.status, 0, still.out + still.err);
   for (const id of BRAND_MOTION_ONLY) assert.ok(!ids(still.out).includes(id), `${id} in a still asset's list`);
-  // #183 Q3 (B): interface motion alone, such as a hover, takes the project's motion tokens, not the craft gate.
   const interfaceOnly = list(["--asset", "web-surface", "--fact", "has-motion"]);
   assert.equal(interfaceOnly.status, 0, interfaceOnly.out + interfaceOnly.err);
   for (const id of BRAND_MOTION_ONLY) assert.ok(!ids(interfaceOnly.out).includes(id), `${id} in an interface-motion asset's list`);
@@ -146,7 +139,6 @@ test("the sweep's reflow question stands at level 1, against the project, and it
   const lines = clashLines(list(["--asset", "web-surface", "--fact", "has-cta"], [VAULT_GATE, path.join(FIXTURES, "layout-rivals.md")]).out);
   assert.equal(clash(lines, "vault.reflow", "demo.reflow"),
     "- Settled by precedence (within one step, law and WCAG beat every other rule): N. vault.reflow and N. demo.reflow both write reflow and neither yields to the other; vault.reflow stands.");
-  // The rival yields to every level and vault.layout to level 2, so the project stands only over a vault question below it.
   assert.equal(clash(lines, "vault.layout", "demo.first-screen"),
     "- Settled by precedence (within one step, the project beats every vault question but law and WCAG, and domain evidence only on evidence of its own): N. vault.layout and N. demo.first-screen both write first screen and each yields to the other; demo.first-screen stands.");
 });

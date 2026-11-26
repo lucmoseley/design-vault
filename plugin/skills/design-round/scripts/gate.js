@@ -1,109 +1,27 @@
 #!/usr/bin/env node
-/**
- * gate.js — the join script for gate questions (#154): every gate question a
- * round asks, the vault's rule records and the project's questions, in the
- * form design-critique's rules.md sets out.
- *
- * Usage: USAGE below, which bad usage prints.
- *
- * `check` refuses a gate file that breaks the form. Ids are resolved across
- * every file given, so a project's gate is checked beside the vault's when it
- * yields to a vault id. A directory given stands for every .md file in it, in
- * name order: the vault's gate is its store of rule records,
- * design-critique/rules/ (#265).
- *
- * `list` is the selector (#273): it hands each reader only the records whose
- * asset condition holds for the class and facts given, leaving out a staged
- * record unless `--staged` is given (#258). `--reader gate`, the default, joins
- * the gate files into one numbered list, so every critic answers the identical
- * list and no two rules that cannot both hold reach a round unseen (#158): look
- * questions first, then script and code questions, each in file order, and the
- * clashes among them (see clashes()). A record answered by a script that is
- * `owed` is a look question marked "script owed" until its script lands (#212
- * Q6 (A)). A record the whole-page critic, the type critic or the builder
- * answers is no gate question. `--look` prints the look questions alone, the
- * list a critic is given, in as many passes of at most LOOK_LIMIT as it needs,
- * by stage then area, where there are more than LOOK_LIMIT (#225, #414; see
- * lookPasses()), and `--pass` prints one pass alone (#268). With `--answered`, the building session's script and code
- * answers, every question they could not measure for some candidate joins the
- * look questions, so a critic answers it. The other readers are
- * pickRecords()'s.
- *
- * `tally` joins those answers with the three gate critics' into one verdict per
- * candidate and question (#160, see tallyGates()), and prints every clash a
- * critic named. On a list split into passes it tallies the one `--pass` names. A critic whose candidates were split across dispatches gives its
- * files as one `--critic`, comma-joined. An answers file is
- * JSON, `{ "answers": { <candidate>: { <question id>: { "answer", "evidence" } } } }`:
- * the building session's answers are `pass`, `fail` or `cannot measure`, a
- * critic's are `yes`, `no` or `unsure` and its file adds `"clashes": [{
- * "candidate": <name or null>, "quotes": [<rule>, <rule>] }]`, empty where it
- * named none. design-round's references/gate-check.md runs it.
- *
- * vault.affordance alone is answered part by part (#162): a critic's answer to it is `{ "parts": { <part id>: {
- * "answer", "evidence" } }, "unlisted": [<a part off the key that looks actable>] }`, one Yes, No or Unsure for each
- * part on the candidate's parts map, `parts.json` from parts-map.py, given as `--parts <candidate>=<file>` for every
- * candidate where the question is on the list. A part the map marks `dead`, a link going nowhere, fails it whatever the
- * critics answer (#236). See affordanceRow().
- *
- * `recheck` tallies three fresh critics' re-check of the faults fixed (#193), so a fault clears on Yes, three or a settle critic's (see
- * recheckFaults()). `--answered` is the building session's answers re-run after the fix,
- * `--before` its answers before it, in the same form. Where PARTS_QUESTION is on the list, `--parts` gives parts-map.py's
- * re-run map for each candidate fixed, and `--before-parts` its map from before the fix. A part the re-run map marks
- * `dead` keeps a PARTS_QUESTION fault whatever the critics answer (#260), and a link dead now that was not before stops
- * every other fault on the candidate, as a fix that broke another question (#264).
- * A re-check critic's file is `{ "answers": { <candidate>: { <fault id>: { "answer", "evidence" }, "others": {
- * "answer", "evidence" } } } }`, answered Yes, No or Unsure: Yes to a fault id says the fault is gone, Yes to
- * `others` that the change left every other question on the critics' list no worse. It answers each fault id whose
- * re-run cannot measure it, or that is a look question, and `others` for each candidate fixed; nothing else.
- *
- * A split, three critics' answers not all alike, goes to one fresh settle critic before the founder (#170, #169 Q1
- * (A)): run `tally` or `recheck` again with each settle critic's file as a `--settle`. Its file is the gate critic's
- * form, with no clashes, answering only the split questions: Yes passes, No is a fault, Unsure goes to the founder.
- * Under vault.affordance it answers each split part under `parts`, and, where a critic named a part off the key,
- * `"unlisted": { "answer", "evidence" }` to "Does any part off the key look as if a visitor can act on it?", where
- * Yes is a false part. A tally's settle file may also answer a look question the panel passed. Once any `--settle`
- * is given, every split must be answered. See settleKeys().
- *
- * Exits 0 when every file passes (`list` with clashes too, `tally` and `recheck`
- * whatever their verdicts), 1 with one or more faults (each printed as file:line, or file: for
- * an answers file), 2 on bad usage or an unreadable file.
- */
 "use strict";
 const fs = require("node:fs");
 const { parseArgs } = require("node:util");
 const path = require("node:path");
 const { ASSET_CLASSES, ASSET_FACTS, LEVELS, STAGES, OWED, MAPPED_PARTS, PARTS, isBuilderLoaded, parseGate, splitAppliesWhen, checkGates, applies, isGateQuestion } = require("./gate-form.js");
 
-// gate-form.js's LEVELS: #154 §The gate list's levels, of which these three a question's own source can set.
 const [LAW_LEVEL, PROJECT_LEVEL, EVIDENCE_LEVEL] = [1, 2, 3];
 const CANNOT_MEASURE = "cannot measure";
 const MEASURED = ["pass", "fail", CANNOT_MEASURE];
 const LOOKED = ["yes", "no", "unsure"];
-// #154: three fresh gate critics answer each look question.
+// #154
 const CRITICS = 3;
-// The question a critic answers part by part, compared with parts-map.py's map of what a visitor can act on (#162).
 const PARTS_QUESTION = "vault.affordance";
-// A critic's evidence that opens so marks a minor case it passed, which the tally reports (rules.md's function walk).
 const MINOR = /^minor:/i;
-// A re-check critic's answer on the candidate's other questions, beside its fault ids.
 const OTHERS = "others";
 // The most look questions one pass asks, as #225 measured recall.
 const LOOK_LIMIT = 20;
 const READERS = ["gate", "builder", "whole-page", "type", "script"];
 const BUILDER_STAGES = ["direction", "build", "finish"];
-// A settle critic's answer to a split (#169 Q1 (A)).
 const SETTLE_VERDICT = { yes: "pass", no: "fault", unsure: "founder" };
-// Its answer on parts off the key reads the other way round: Yes, one looks actable, is a false part.
 const OFF_KEY_VERDICT = { yes: "fault", no: "pass", unsure: "founder" };
-// The key in a settle answer's place for vault.affordance's parts off the key.
 const UNLISTED = "unlisted";
 
-/**
- * A question's own precedence level, read from its source's strength and its owner, so the form needs no tenth field
- * (#158): 1 where the strength begins `law` or `WCAG`, 2 for any other question a project owns, 3 for a vault question
- * whose strength begins `domain evidence` (#192), and null for any other vault question, which ranks below the project
- * at a level from 3 to 6 the form does not record.
- */
 function ownLevel(q) {
   if (/^(law|WCAG)\b/.test(strength(q))) return LAW_LEVEL;
   if (q.fields.owner.value !== "vault") return PROJECT_LEVEL;
@@ -113,10 +31,6 @@ function ownLevel(q) {
 const strength = (q) => q.fields.source.value.split("; strength: ")[1];
 const evidenced = (q) => /^domain evidence\b/.test(strength(q));
 
-/**
- * Whether question `a` gives way to question `b`: true where it names `b`'s id or a level `b` stands at or above,
- * null where that turns on `b`'s unrecorded vault level (`level 3` to `level 5` against a null level), else false.
- */
 function yieldsTo(a, b) {
   const bLevel = ownLevel(b);
   let unread = false;
@@ -130,17 +44,6 @@ function yieldsTo(a, b) {
   return unread ? null : false;
 }
 
-/**
- * The static clashes among questions that all apply to one asset (#158): two that write the same property where
- * neither gives way to the other, or each does, or whether one does turns on an unrecorded level. Each is { a, b,
- * yielding, reason, winner }: `yielding` is `neither`, `each` or `unread`. Precedence keeps `winner`: `reason` is
- * `stage` where two records, not both one project's, give different stages, the earlier standing where it does not give way or the
- * later does; else, where the two stand at different levels, a null level ranking below 2, `reason` is `law` where the winner is law or WCAG,
- * `project` where it is the project's. Otherwise `winner` is null and the founder settles it,
- * `reason` saying why: `same-owner` within one project's gate (#154 story 34), `same-level`, `vault-levels` for two vault questions below
- * level 1, `unread`, or `evidence` where the project's, resting on no domain evidence of its own, would beat a level-3
- * vault question that does not give way to the project (#192).
- */
 function clashes(questions) {
   const found = [];
   questions.forEach((a, i) => {
@@ -169,21 +72,12 @@ function clashes(questions) {
 const answererOf = (q) => q.fields["answered-by"].value;
 const isScriptOwed = (q) => answererOf(q) === "script" && q.fields.script?.value === OWED;
 
-/**
- * The records in gate files that pass `check` whose asset condition holds, in file order, staged ones only where
- * `staged`, each with its `area`: its file's name, one ledger area to a file of the vault's store (rules.md).
- */
 const assetRecords = (files, asset, facts, staged) =>
   files
     .flatMap(({ file, text }) => parseGate(text).questions.map((q) => Object.assign(q, { area: path.basename(file, ".md") })))
     .filter((q) => staged || q.fields.status?.value !== "staged")
     .filter((q) => applies(q.fields["applies-when"].value, asset, facts));
 
-/**
- * The joined list for an asset of class `asset` with the facts given, from gate files that pass `check`: { look,
- * answered, clashes }, `look` the look questions, those whose script is owed included, and `answered` the script and
- * code ones, each question numbered `n` from 1 across both.
- */
 function listGates(files, asset, facts, staged = false) {
   const kept = assetRecords(files, asset, facts, staged).filter((q) => isGateQuestion(q, staged));
   const look = kept.filter((q) => answererOf(q) === "look" || isScriptOwed(q));
@@ -193,19 +87,10 @@ function listGates(files, asset, facts, staged = false) {
   return { look, answered, clashes: clashes(numbered) };
 }
 
-// #121's dependency order, coarse to fine; a project's record with no stage comes last.
 const hasStage = (q) => STAGES.includes(q.fields.stage?.value);
 const stageRank = (q) => (hasStage(q) ? STAGES.indexOf(q.fields.stage.value) : STAGES.length);
 const coarseToFine = (records) => [...records].sort((a, b) => stageRank(a) - stageRank(b));
 
-/**
- * The records a reader other than the gate's is given, from assetRecords(): the builder's targets at `stage`, its
- * function and role records whatever answers them (whole-page records included, so it can be told to draw a part that
- * does not exist yet) at direction, and at build those, the treatment records whose `parts` the candidate has (all of them
- * where a record names none), and the builder's own records at value or no stage; at finish the records a script
- * answers, owed ones included, which printScripts() prints as scripts alone. The critics' readers are the records they
- * answer, and `script`'s the records a script answers. Each is coarse to fine.
- */
 function pickRecords(records, reader, stage, partsPresent) {
   const atStage = (q, ...stages) => stages.includes(q.fields.stage?.value);
   const forParts = (q) => !q.fields.parts || q.fields.parts.value.split(",").some((p) => partsPresent.includes(p.trim()));
@@ -218,10 +103,6 @@ function pickRecords(records, reader, stage, partsPresent) {
   return coarseToFine(kept);
 }
 
-/**
- * The part names a parts map or a parts declaration gives, { names, faults }: each MAPPED_PARTS role parts-map.py gives a
- * part under `parts`, and each part `declared` names, an object of PARTS names to the part's CSS selector or null.
- */
 function parsePartsPresent(text) {
   let data;
   try {
@@ -247,10 +128,6 @@ function parsePartsPresent(text) {
 
 const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/**
- * One answer's { answer, evidence }, the answer lower-cased, or null where it breaks the form.
- * @param faults accumulator: why it breaks the form is added.
- */
 function readAnswer(a, vocabulary, what, candidate, faults) {
   const answer = typeof a?.answer === "string" ? a.answer.trim().toLowerCase() : null;
   const evidence = typeof a?.evidence === "string" ? a.evidence.trim() : "";
@@ -260,11 +137,6 @@ function readAnswer(a, vocabulary, what, candidate, faults) {
   return null;
 }
 
-/**
- * A critic's part-by-part answer to PARTS_QUESTION, { parts: { <part id>: { answer, evidence } }, unlisted }, or null
- * where it breaks the form.
- * @param faults accumulator, as readAnswer()'s.
- */
 function readByPart(a, candidate, faults) {
   if (!isObject(a?.parts)) {
     faults.push(`answers ${PARTS_QUESTION} for ${candidate} whole, not part by part under \`parts\``);
@@ -279,11 +151,6 @@ function readByPart(a, candidate, faults) {
   return faults.length > before ? null : { parts, unlisted: unlisted.map((u) => u.trim()) };
 }
 
-/**
- * A settle critic's answer to PARTS_QUESTION, { parts: { <part id>: { answer, evidence } }, unlisted }, `unlisted`
- * its one { answer, evidence } on the parts off the key or null, or null where it breaks the form.
- * @param faults accumulator, as readAnswer()'s.
- */
 function readSettledParts(a, candidate, faults) {
   if (!isObject(a) || !(isObject(a.parts) || UNLISTED in a) || ("parts" in a && !isObject(a.parts))) {
     faults.push(`settles ${PARTS_QUESTION} for ${candidate} with no \`parts\` object and no \`unlisted\` answer`);
@@ -295,7 +162,6 @@ function readSettledParts(a, candidate, faults) {
   return faults.length > before ? null : { parts, unlisted };
 }
 
-/** A parts map's text read against parts-map.py's form, { parts: [{ id, actable, href, dead, text }], faults }. */
 function parseParts(text) {
   try {
     return partsOf(JSON.parse(text));
@@ -304,7 +170,6 @@ function parseParts(text) {
   }
 }
 
-/** parseParts() on a parts map's parsed JSON. */
 function partsOf(data) {
   if (!Array.isArray(data?.parts)) return { parts: [], faults: ["has no `parts` list"] };
   const faults = [];
@@ -319,13 +184,6 @@ function partsOf(data) {
   return { parts: data.parts.map((p) => ({ id: p.id, actable: p.actable, href: p.href || null, dead: p.dead ?? null, text: p.text })), faults };
 }
 
-/**
- * One answers file's text read against the form, { answers, clashes, faults }: `answers[candidate][id]` is { answer,
- * evidence }, the answer lower-cased, or null where it breaks the form. `kind` is `measured` for the building
- * session's file, `critic` for a gate critic's, answered Yes, No or Unsure and listing the clashes it named, each {
- * candidate, quotes }, `recheck` for a re-check critic's, answered as a critic's with no clashes, and `settle` for a
- * tally's settle critic, answered as a re-check critic's save PARTS_QUESTION, which readSettledParts() reads.
- */
 function parseAnswers(text, kind) {
   const critic = kind === "critic";
   const byPart = { critic: readByPart, settle: readSettledParts }[kind];
@@ -364,7 +222,6 @@ function parseAnswers(text, kind) {
   return { answers, clashes, faults };
 }
 
-/** The faults in the building session's answers against the list: each candidate answers every script and code question on it, and nothing else. */
 function answeredFaults({ answered }, answers) {
   const faults = [];
   const ids = new Set(answered.map((q) => q.id));
@@ -376,27 +233,17 @@ function answeredFaults({ answered }, answers) {
   return faults;
 }
 
-// The two phases a look list's passes run in, coarse to fine (#225): every pass of the first, then, once their fixes
-// land, every pass of the second. A record with no stage, which only a project's may lack, is asked in the first: a
-// guess, unmeasured, that a fault found before the fixes costs least.
 const PHASES = [
   { name: "function and role", holds: (q) => stageRank(q) < STAGES.indexOf("treatment") || !hasStage(q) },
   { name: "treatment and value", holds: (q) => !PHASES[0].holds(q) },
 ];
 
-/**
- * One phase's questions cut into passes of at most LOOK_LIMIT, ordered by stage, then by area in the order the files
- * give them, then file order (#414): the fewest passes, then the fewest cuts inside a stage, then the fewest inside
- * one stage's area, then the evenest sizes, so that a pass asks related questions and none is a short tail.
- * Residual: a stage's or an area's edge is kept at evenness's cost, so passes may be far from even.
- */
 function cutPasses(questions) {
   const areas = [...new Set(questions.map((q) => q.area))];
   const ordered = [...questions].sort((a, b) => stageRank(a) - stageRank(b) || areas.indexOf(a.area) - areas.indexOf(b.area));
   const inside = (j, key) => (j > 0 && key(ordered[j - 1]) === key(ordered[j]) ? 1 : 0);
   const stage = (q) => stageRank(q);
   const area = (q) => `${stageRank(q)} ${q.area}`;
-  // best[i]: the cheapest cut of ordered's first i questions, and its cost.
   const best = [{ cost: [0, 0, 0, 0], from: null }];
   const cheaper = (a, b) => a.reduce((d, x, k) => d || x - b[k], 0);
   for (let i = 1; i <= ordered.length; i++) {
@@ -411,14 +258,6 @@ function cutPasses(questions) {
   return passes;
 }
 
-/**
- * The look questions the critics are given, `answers` the building session's or undefined: { looked, unmeasured, split,
- * passes }, `unmeasured` each script or code question some candidate could not be measured on, mapped to those
- * candidates, `looked` the look questions and those, `split` whether there are more than LOOK_LIMIT, and `passes` each
- * { questions, phase }, PHASES' passes in order, each cutPasses()'s. The passes are cut whatever the list's length,
- * so a second-phase pass whose fixes left LOOK_LIMIT or fewer still runs. A pass's number holds only for the answers
- * it was listed with: list and tally it from one answers file.
- */
 function lookPasses({ look, answered }, answers) {
   const unmeasured = new Map();
   for (const [candidate, given] of Object.entries(answers ?? {})) {
@@ -429,21 +268,11 @@ function lookPasses({ look, answered }, answers) {
   return { looked, unmeasured, split: looked.length > LOOK_LIMIT, passes };
 }
 
-/**
- * Whether `q` is asked in the pass whose ids `pass` holds, or null where no pass is named, `measured` the building
- * session's answer to it for one candidate: every question where no pass is named, else one of that pass's, and any
- * script or code question it measured, which every pass's tally reports.
- */
 const inPass = (pass, q, measured) => !pass || pass.has(q.id) || (measured !== undefined && measured.answer !== CANNOT_MEASURE);
 
-/** The questions the gate critics answer for `candidate`: the look questions, and each script or code question it could not be measured on, in `pass` (inPass()). */
 const lookedAt = (list, answers, candidate, pass) =>
   [...list.look, ...list.answered.filter((q) => answers[candidate][q.id].answer === CANNOT_MEASURE)].filter((q) => inPass(pass, q, answers[candidate][q.id]));
 
-/**
- * The faults in one critic's answers against the list and the building session's answers: it answers for exactly
- * their candidates, every question lookedAt() gives each, and no id off the list; each clash names one of them or none.
- */
 function criticFaults(list, answers, critic, maps, pass) {
   const faults = [];
   const candidates = Object.keys(answers);
@@ -467,39 +296,24 @@ function criticFaults(list, answers, critic, maps, pass) {
   return faults;
 }
 
-/** Three critics' answers to one question as one verdict: `pass` on three Yes, `fault` on three No, else `split`. */
 function panelVerdict(looked) {
   const all = (answer) => looked.every((l) => l.answer === answer);
   return all("yes") ? "pass" : all("no") ? "fault" : "split";
 }
 
-// The key a settle answer is filed under: a candidate, a question or fault id, and for PARTS_QUESTION a part or UNLISTED.
 const settleKey = (...at) => at.join("\u0000");
 
-/**
- * A look verdict, `settled` the settle critic's answer or undefined: the three critics' panelVerdict(), else the settle
- * critic's verdict, { verdict, panel, settled }.
- */
 function lookVerdict(looked, settled) {
   const panel = panelVerdict(looked);
   return { verdict: settled ? SETTLE_VERDICT[settled.answer] : panel, panel, settled };
 }
 
-/**
- * One question's row { q, verdict, measured, looked, panel, settled } for a candidate: its script or code answer
- * `measured` of pass or fail stands with no tally; else `look()`, the three critics' answers, and `settled` give
- * lookVerdict()'s verdict.
- */
 function verdictOf(q, measured, look, settled) {
   if (measured && measured.answer !== CANNOT_MEASURE) return { q, verdict: measured.answer === "pass" ? "pass" : "fault", measured };
   const looked = look();
   return { q, ...lookVerdict(looked, settled), measured, looked };
 }
 
-/**
- * Each candidate's verdict on every question on the list (#160), { candidate, rows }, each row verdictOf()'s, given
- * the settle critics' answers in `settled`, filed by settleKey().
- */
 function tallyGates(list, answers, critics, maps, settled, pass) {
   return Object.keys(answers).map((candidate) => {
     const rows = [...list.look, ...list.answered].filter((q) => inPass(pass, q, answers[candidate][q.id])).map((q) =>
@@ -511,17 +325,6 @@ function tallyGates(list, answers, critics, maps, settled, pass) {
   });
 }
 
-/**
- * PARTS_QUESTION's row for one candidate (#127 D2): each part's look, `true` on three Yes that it looks actable,
- * `false` on three No, null on a split or any Unsure, and so the settle critic's answer where it gave one, set beside
- * whether the map says a visitor can act on it. Its `cell` is `pass` where the two agree, `hidden` where it is actable
- * and looks static, `false` where it is static and looks actable, `split` on a split not yet settled, `founder` where
- * the settle critic is Unsure, `minor` for a hidden part a part that looks actable shares its `href` with,
- * reported and not failing (rules.md), and `dead` for a link the map marks as going nowhere, whatever its look (#236).
- * Parts a critic names off the key are `offKey`, a fault where the settle critic answers Yes, that one looks actable,
- * as the map lists every part a visitor can act on. The question is a `fault` on any hidden, false or dead part, else
- * a `split`, else the `founder`'s, else `pass`.
- */
 function affordanceRow(q, candidate, critics, map, settled) {
   const parts = map.map((p) => {
     const looked = critics.map(({ name, answers: given }) => ({ name, ...given[candidate][q.id].parts[p.id] }));
@@ -542,11 +345,6 @@ function affordanceRow(q, candidate, critics, map, settled) {
   return { q, verdict, parts, unlisted, offKey };
 }
 
-/**
- * The splits a settle critic owes, from rows tallied with no settle answer: { owed, open }, each a Map of settleKey()
- * to what it names. `owed` holds each split; `open` adds each look question the panel passed, which a tally's settle
- * critic may also answer. `results` are tallyGates()'s, or recheckFaults()'s where `recheck` is true.
- */
 function settleKeys(results, recheck) {
   const owed = new Map();
   const open = new Map();
@@ -567,11 +365,6 @@ function settleKeys(results, recheck) {
   return { owed, open: recheck ? owed : open };
 }
 
-/**
- * The settle critics' answers, `files` each parseAnswers()'s, as one Map of settleKey() to { name, answer, evidence },
- * and the faults against `results`' splits: each answer settles a key settleKeys() leaves open, once, and every key it
- * owes is answered.
- */
 function readSettles(files, results, recheck) {
   const { owed, open } = settleKeys(results, recheck);
   const settled = new Map();
@@ -596,10 +389,6 @@ function readSettles(files, results, recheck) {
   return { settled, faults };
 }
 
-/**
- * The faults fixed, from `--fault <candidate>:<id>` values, as a Map of candidate to fault ids, and why any breaks the
- * form: each names a candidate the building session's answers name and a question on the list, once.
- */
 function parseFixed(values, list, answers) {
   const fixed = new Map();
   const faults = [];
@@ -615,13 +404,11 @@ function parseFixed(values, list, answers) {
   return { fixed, faults };
 }
 
-/** The ids a re-check critic owes `candidate`: each fault id fixed on it that its re-run did not settle, and `others`. */
 function recheckOwed(list, answers, candidate, ids) {
   const looks = new Set(list.look.map((q) => q.id));
   return [...ids.filter((id) => looks.has(id) || answers[candidate][id].answer === CANNOT_MEASURE), OTHERS];
 }
 
-/** The faults in one re-check critic's answers: it answers for exactly the candidates fixed, each id recheckOwed() gives, and nothing else. */
 function recheckCriticFaults(list, answers, fixed, critic) {
   const faults = [];
   for (const candidate of Object.keys(critic.answers)) if (!fixed.has(candidate)) faults.push(`answers for ${candidate}, which no --fault names`);
@@ -638,20 +425,8 @@ function recheckCriticFaults(list, answers, fixed, critic) {
   return faults;
 }
 
-// design-round's references/gate-check.md §5 numbers the stop signals; a clash named is the fourth, which no re-check asks.
 const STOPS = { 1: "the fix breaks another question", 2: "the same question fails again", 3: "the critics split and the settle critic is unsure" };
 
-/**
- * Each candidate's re-check (#193), { candidate, faults, others, broken, newDead }. `others` is the critics' verdict that the
- * change left every other question no worse, as lookVerdict() gives it. Each fault is verdictOf()'s row plus `stops`:
- * a re-run's pass or fail stands, else the critics' verdict that it is gone. `stops` holds the stop signals it meets
- * (STOPS): 2 where it is not gone, 1 where `others` is a fault or `broken` holds a question, 3 where either half is
- * the founder's. A fault with none is cleared, unless either half is still a `split` for a settle critic. `broken` is
- * each script or code question the candidate passed in `before` and fails now. A PARTS_QUESTION fault whose re-run map
- * in `maps.now` still marks a part dead is not gone, whatever the critics answer, and holds those parts as `deadParts`
- * (#260). `newDead` is { q, parts }, PARTS_QUESTION and newlyDead()'s parts, where it is on the list and another fault
- * is fixed on the candidate; any part there meets stop 1 for every fault but PARTS_QUESTION's (#264).
- */
 function recheckFaults(list, answers, before, fixed, critics, settled, maps) {
   const byId = new Map([...list.look, ...list.answered].map((q) => [q.id, q]));
   return [...fixed].map(([candidate, ids]) => {
@@ -674,11 +449,6 @@ function recheckFaults(list, answers, before, fixed, critics, settled, maps) {
   });
 }
 
-/**
- * The parts the map `now` marks dead beyond those `before` marked dead to the same target, matched by target alone, as
- * parts-map.py numbers parts afresh on every run and a fix may reword them. Residual: a fix that mends one link to a
- * missing place and breaks another to the same place goes unseen (#264).
- */
 function newlyDead(before, now) {
   const left = before.filter((p) => p.dead).map((p) => p.dead);
   return now.filter((p) => {
@@ -711,7 +481,6 @@ const USAGE = `usage: node gate.js check <gate file> [<gate file> ...]
   alone and tally then tallies, with every script and code answer; tally needs one on a list of more than ${LOOK_LIMIT};
   <class> is one of ${ASSET_CLASSES.join(", ")}; <fact> one of ${ASSET_FACTS.join(", ")}`;
 
-/** Why list's reader options are bad usage, or null. */
 function readerFault({ reader = "gate", stage, look, answered, pass, parts }) {
   if (!READERS.includes(reader)) return `--reader is ${reader}, not one of ${READERS.join(", ")}`;
   if (reader === "builder" && !BUILDER_STAGES.includes(stage)) return `--reader builder takes --stage ${BUILDER_STAGES.join(", ")}, not ${stage ?? "none"}`;
@@ -723,14 +492,12 @@ function readerFault({ reader = "gate", stage, look, answered, pass, parts }) {
   return null;
 }
 
-/** `list`'s, `tally`'s or `recheck`'s asset class and facts, { asset, facts }, or { why } they are bad usage. */
 function readAssetArgs({ asset, fact: facts = [] }) {
   if (!ASSET_CLASSES.includes(asset)) return { why: `--asset is ${asset ?? "missing"}, not one of ${ASSET_CLASSES.join(", ")}` };
   const unknown = facts.filter((f) => !ASSET_FACTS.includes(f));
   if (unknown.length) return { why: `--fact ${unknown.join(", ")} is not one of ${ASSET_FACTS.join(", ")}` };
   const motionNeededBy = asset === "motion" ? "a motion asset" : ["has-motion-over-5s", "has-brand-motion"].find((f) => facts.includes(f));
   if (motionNeededBy && !facts.includes("has-motion")) return { why: `${motionNeededBy} needs --fact has-motion too` };
-  // A motion asset is an intro, a hero clip or another brand piece (design-round §6), so the craft gate's motion flow binds it.
   if (asset === "motion" && !facts.includes("has-brand-motion")) return { why: "a motion asset needs --fact has-brand-motion too" };
   return { asset, facts: [...new Set(facts)] };
 }
@@ -745,7 +512,6 @@ const FOR_FOUNDER = {
 };
 const YIELDING = { neither: "neither yields to the other", each: "each yields to the other", unread: "whether one yields to the other is not read" };
 
-/** A pass's heading: its phase, when it runs, and the stages and areas it asks. */
 function passLabel({ questions, phase }) {
   const asked = new Map();
   for (const q of questions) asked.set(stageOf(q), new Set([...(asked.get(stageOf(q)) ?? []), q.area]));
@@ -783,11 +549,9 @@ function printList({ look, answered, clashes: found }, { asset, facts }, lookOnl
 }
 
 const assetLine = ({ asset, facts }) => [asset, ...facts].join(", ");
-// What names a project's record answered by a script whose `script` it leaves out, as only a vault record must give one.
 const UNNAMED_SCRIPT = "a project's script, unnamed";
 const appliesTo = (q) => `   Applies to: ${splitAppliesWhen(q.fields["applies-when"].value).part}`;
 const stageOf = (q) => q.fields.stage?.value ?? "no stage";
-// Each record's id, filed under what `key` gives it, in first-seen order.
 function groupIds(records, key) {
   const groups = new Map();
   for (const q of records) groups.set(key(q), [...(groups.get(key(q)) ?? []), q.id]);
@@ -795,14 +559,12 @@ function groupIds(records, key) {
 }
 const numberedLines = (records, line) => (records.length ? records.map((q, i) => `${i + 1}. ${line(q)}\n${appliesTo(q)}`).join("\n") : "None.");
 
-/** The builder's targets at the direction or build stage, `partsPresent` the parts the candidate has at build. */
 function printTargets(records, given, stage, partsPresent) {
   const parts = stage === "build" ? `, for a candidate with ${partsPresent.length ? partsPresent.join(", ") : "none of the parts the records name"}` : "";
   console.log(`Targets for the building session, ${assetLine(given)}, at the ${stage} stage${parts}: ${records.length} record(s).\n`);
   console.log(numberedLines(records, (q) => `${q.id} (${stageOf(q)}): ${(q.fields.target ?? q.fields.question).value}`));
 }
 
-/** The finish stage's fix loop: each script with the records it answers, never their text, and the records whose script is owed. */
 function printScripts(records, given) {
   const scripts = groupIds(records.filter((r) => !isScriptOwed(r)), (q) => q.fields.script?.value ?? "");
   console.log(`Scripts for the building session to run at the finish stage, ${assetLine(given)}, each until it passes: ${scripts.size} script(s).\n`);
@@ -813,7 +575,6 @@ function printScripts(records, given) {
 
 const READER_NAMES = { "whole-page": "the whole-page critic", type: "the type critic", script: "the scripts" };
 
-/** A critic's records, coarse to fine, and the reference sections they cite; or, for `script`, each record with its script. */
 function printRecords(records, given, reader) {
   console.log(`Records for ${READER_NAMES[reader]}, ${assetLine(given)}, coarse to fine: ${records.length} record(s).\n`);
   const label = (q) => (reader === "script" ? (isScriptOwed(q) ? "script owed" : q.fields.script?.value ?? UNNAMED_SCRIPT) : stageOf(q));
@@ -825,13 +586,10 @@ function printRecords(records, given, reader) {
 
 const capitalise = (word) => word[0].toUpperCase() + word.slice(1);
 
-// "3 Yes and 1 No"-style counts of the critics' answers.
 const countLine = (looked) => LOOKED.map((a) => [a, looked.filter((l) => l.answer === a).length]).filter(([, k]) => k).map(([a, k]) => `${k} ${capitalise(a)}`).join(" and ");
 
-// A dead part, worded as parts-map.py's report() words it.
 const deadLine = (p) => `dead, it goes to ${p.dead === "#" ? "# alone" : `${p.dead}, which nothing on the page carries`}`;
 
-// What tally prints for each of affordanceRow()'s cells but `pass`, which it prints only where a settle critic answered.
 const CELLS = {
   pass: ({ counts }) => `pass (${counts})`,
   false: ({ counts }) => `false, it cannot be acted on and looks as if it can (${counts})`,
@@ -888,7 +646,6 @@ function printTally(results, critics, clashesNamed) {
   for (const { name, candidate, quotes } of clashesNamed) console.log(`- ${name}, on ${candidate ?? "the whole round"}: "${quotes[0]}" against "${quotes[1]}"`);
 }
 
-/** The critics' answers to one question, lookVerdict()'s { panel, looked, settled }: a count, then each answer where the panel did not pass, and the settle critic's. */
 function printLooked({ panel, looked, settled }, indent) {
   const tail = countLine(looked) + settledTail(settled);
   const settledLine = settled ? [`${indent}${settled.name}: ${capitalise(settled.answer)}. ${settled.evidence}`] : [];
@@ -933,7 +690,6 @@ function printRecheck(results, critics, answered) {
   }
 }
 
-/** The gate files a path names, [path], or every .md file in it, in name order, where it is a directory; null after saying on stderr why it cannot. */
 function gatePaths(given) {
   let names;
   try {
@@ -947,7 +703,6 @@ function gatePaths(given) {
   return names.length ? names.map((n) => path.join(given, n)) : null;
 }
 
-/** A file's text, or null after saying on stderr why it cannot be read. */
 function readText(file) {
   try {
     return fs.readFileSync(file, "utf8");
@@ -974,11 +729,6 @@ function sharedCriticFile(critics) {
   return null;
 }
 
-/**
- * One answers file read against the form, { name, answers, clashes, faults }, each fault named by its file; or several,
- * comma-joined, as one critic's whose candidates were split across dispatches, which may not answer one candidate
- * twice. Null where a file is unreadable.
- */
 function readFile(files, kind) {
   const read = { name: files, answers: {}, clashes: [], faults: [] };
   for (const file of files.split(",")) {
@@ -995,21 +745,12 @@ function readFile(files, kind) {
   return read;
 }
 
-/**
- * Which parts maps `command` takes, { owed, named, stranger, since }: one for each candidate where PARTS_QUESTION is on
- * the list, and any candidate may be named, of the building session's answers for `tally` and of those fixed for
- * `recheck` (#264). `stranger` and `since` word why a map is refused or owed.
- */
 function partsOwed(command, list, candidates, fixed) {
   const [named, stranger] = command === "tally" ? [candidates, "which the building session's answers do not name"] : [[...fixed.keys()], "which no --fault names"];
   const owed = list.look.some((q) => q.id === PARTS_QUESTION) ? named : [];
   return { owed, named, stranger, since: `${PARTS_QUESTION} is on the list` };
 }
 
-/**
- * The parts maps `<flag> <candidate>=<file>` gives, read against partsOwed(): { maps: { <candidate>: [part] }, faults
- * }, { usage } where the options are bad usage, or {} where a file is unreadable.
- */
 function readPartsMaps(given, flag, command, { owed, named, stranger, since }) {
   const bare = given.find((v) => !/^[^=]+=./.test(v));
   if (bare !== undefined) return { usage: `${flag} takes <candidate>=<parts.json>, not ${bare}` };
@@ -1029,7 +770,6 @@ function readPartsMaps(given, flag, command, { owed, named, stranger, since }) {
   return { maps, faults };
 }
 
-/** `list` for every reader but the gate's: 0, 1 where a --parts file breaks its form, 2 where one is unreadable. */
 function printReader(files, given, { reader, stage, staged, parts = [] }) {
   const partsPresent = [];
   const faults = [];
@@ -1071,7 +811,6 @@ function main(argv) {
     }
     ({ values, positionals: paths } = parsed);
     given = readAssetArgs(values);
-    // #154 settled the path count.
     let why = given.why ?? (paths.length < 1 || paths.length > 2 ? `${command} takes the vault's gate and at most one project's, not ${paths.length} paths` : null);
     if (!why && command === "list") why = readerFault(values);
     if (!why && values.pass !== undefined && !/^[1-9]\d*$/.test(values.pass)) why = `--pass is ${values.pass}, not a pass number`;
@@ -1108,7 +847,6 @@ function main(argv) {
   const reader = values.reader ?? "gate";
   if (reader !== "gate") return printReader(files, given, values);
   const list = listGates(files, given.asset, given.facts, Boolean(values.staged));
-  // An answers file that breaks the form is no answer: each is checked whole before any is checked against another.
   const answered = values.answered && readFile(values.answered, "measured");
   const pass = values.pass && Number(values.pass);
   const before = values.before && readFile(values.before, "measured");
