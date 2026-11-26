@@ -1,6 +1,5 @@
 ---
 name: design-project
-description: Sets a project up for design work in the design vault — registers it in the library, gives it a rules file, and wires its repo to the design round. Use when a new project will do design work, or when a design round finds its project missing from the library's `projects`.
 ---
 
 # design-project

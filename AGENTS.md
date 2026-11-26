@@ -17,16 +17,11 @@ These bind equally in a prototype, a scaffold, and production code.
 - A person who does not know this project holds a record of them — a cold prospect, an interviewee, someone named in a review — never goes into a tracked file, an issue body or an issue comment. Their record lives in gitignored `private/`; the repo refers to them by a handle. Git never forgets, so a slip is permanent: report it rather than deleting the line.
 - A person in a relationship with the project — a collaborator, contractor or partner — is written in full, name and role and what is outstanding. Storing that is lawful and minimising it makes the record worse.
 
-## New dependencies
-- Always commit the lockfile.
-- Before adding any package, verify it actually exists on the registry with real download history and active maintenance. Do not install a package on your own say-so. **Enforced**: `guard-npm-install.sh`.
-
 ## Supervision priors (build accordingly)
 - Concentrate tests, docs and review effort on: auth and access boundaries, money paths, and anything that generates or redeems a credential or code. Presentational code takes the same tests, docs and review as any other code (the core's `docs/code-standards-base.md` §0). A review reads the risk paths first — those the base's §0 defines and your code-standards local file names — since a defect missed there costs most.
 - **Mutation-test every new guarantee: break the fix, confirm that specific test fails, then reverse the break.** Where a branch cannot be reached in-process, extract a callable seam or state it unverified — never count it as covered, and report which mutations ran rather than "it is tested".
 - **A red gate, a hung command or an unexplained failure takes `diagnosing-bugs` first — a feedback loop before any hypothesis.**
 - **Verify before you assert:** the check behind claiming an absence, a config edit in force, a checker's verdict, an error's identity, a restated external source, or a passing mutation test is in the core's `docs/agents/verification.md`.
-- **Reverse the mutation with the inverse targeted edit — never a whole-file restore.** For a whole-file rewrite use a throwaway worktree.
 
 ## Invariants that bind code
 

@@ -42,6 +42,7 @@ v1.0 · 28 September 2026
 | `.claude/settings.json` | Settings — data file | `free-edit` | Direct | — |
 | `.claude/workflow-core.json` | The adopter's config — contract, modules, commands, categories | `source-of-truth` | Direct | — |
 | `.claude/workflow-core.md` | Workflow core | `generated-only` | workflow-core's `init` only, which rewrites it on every bump; override through `.claude/workflow-core.json` | — |
+| `docs/pool-admission-ledger.json` | The admission ledger: one entry per top-level item in the always-loaded pool, keyed by file and headline, giving its removal claim and route — no-trigger, trigger with the ticket whose guard will print it, or pre-first-tool-call (#392). With `admissionGate` on, a commit adding a pool item with no entry is refused | `source-of-truth` | Direct, in the same commit that adds or rewords the pool item; a reworded headline moves its entry | — |
 
 ### Upstream taste-vault docs
 
