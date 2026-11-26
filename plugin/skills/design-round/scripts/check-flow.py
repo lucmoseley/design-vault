@@ -810,6 +810,28 @@ def steps_in(r, changes, times, *, s, e):
     return out
 
 
+# #623
+def merged_steps(label, found):
+    out, reach = [], None
+    for way, lo, hi, _, name, at, before, after in sorted(found):
+        if out and out[-1]["way"] == way and lo <= reach:
+            out[-1]["channels"].append(name)
+            reach = max(reach, hi)
+            continue
+        out.append(
+            {
+                "element": label,
+                "way": way,
+                "at": at,
+                "from": round(before, 2),
+                "to": round(after, 2),
+                "channels": [name],
+            }
+        )
+        reach = hi
+    return out
+
+
 def runs(flags):
     out, start = [], None
     for i, f in enumerate(flags + [False]):
@@ -850,10 +872,11 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
     shared = sample["times"]
     moved = []
     elements = []
-    steps = {}
+    steps = []
     for el in sample["elements"]:
         channels = {}
         seen_at = el.get("seen") or [True] * len(shared)
+        found = []
         for name, values in el["channels"].items():
             times = el.get("times", {}).get(name, shared)
             seen = (
@@ -896,18 +919,20 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                 for i, n, before, after, way in steps_in(r, changes, times, s=s, e=e):
                     if any(unknown[i - STEP_SIDE_FRAMES : i + n + STEP_SIDE_FRAMES]):
                         continue
-                    at = round((times[i] + times[i + n]) / 2)
-                    steps.setdefault(
-                        (el["label"], way, at),
-                        {
-                            "element": el["label"],
-                            "way": way,
-                            "at": at,
-                            "from": round(before, 2),
-                            "to": round(after, 2),
-                            "channels": [],
-                        },
-                    )["channels"].append(name)
+                    # #624
+                    found.append(
+                        (
+                            way,
+                            times[i - 1],
+                            times[i + n],
+                            len(channels),
+                            name,
+                            round((times[i] + times[i + n]) / 2),
+                            before,
+                            after,
+                        )
+                    )
+        steps += merged_steps(el["label"], found)
         elements.append(
             {
                 "label": el["label"],
@@ -1021,13 +1046,13 @@ def analyse(sample, pause_ms=PAUSE_MS, jolt_ratio=None, view_cm=VIEW_CM):
                         }
 
     def by_time(found):
-        return sorted(found.values(), key=lambda x: (x["at"], x["element"]))
+        return sorted(found, key=lambda x: (x["at"], x["element"]))
 
     return {
         "pauses": pauses,
-        "jolts": by_time(jolts),
-        "jumps": by_time(jumps),
-        "unseen": by_time(unseen),
+        "jolts": by_time(jolts.values()),
+        "jumps": by_time(jumps.values()),
+        "unseen": by_time(unseen.values()),
         "steps": by_time(steps),
         "elements": elements,
     }

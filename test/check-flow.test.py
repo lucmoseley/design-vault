@@ -854,6 +854,54 @@ class Steps(unittest.TestCase):
         [st] = r["steps"]
         self.assertEqual(st["at"], round(10 * STEP))
 
+    def steps_of(self, channels):
+        built = {}
+        for name, shape in channels.items():
+            slow, between = shape if isinstance(shape, tuple) else (shape, [])
+            speeds = [10] * slow + between + [40] * 8
+            built[name] = [
+                [sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)
+            ]
+        longest = max(map(len, built.values()))
+        return flow.analyse(
+            {
+                "times": [k * STEP for k in range(longest)],
+                "elements": [
+                    {
+                        "label": "el",
+                        "channels": {
+                            name: xs + xs[-1:] * (longest - len(xs))
+                            for name, xs in built.items()
+                        },
+                    }
+                ],
+            }
+        )["steps"]
+
+    def test_a_step_channels_chain_a_frame_apart_in_any_order_is_listed_once(
+        self,
+    ):  # #623
+        [st] = self.steps_of({"position": 8, "scale": 10, "size": 9})
+        self.assertEqual(
+            (st["way"], st["at"], st["channels"]),
+            ("up", round(8 * STEP), ["position", "size", "scale"]),
+        )
+
+    def test_a_step_channels_place_with_different_spreads_is_listed_once(
+        self,
+    ):  # #623
+        [st] = self.steps_of({"position": (8, [25]), "size": 8})
+        self.assertEqual(
+            (st["at"], st["channels"]), (round(8 * STEP), ["size", "position"])
+        )
+
+    def test_steps_channels_place_two_frames_apart_are_listed_apart(self):  # #623
+        found = self.steps_of({"position": 8, "size": 10})
+        self.assertEqual(
+            [(st["at"], st["channels"]) for st in found],
+            [(round(8 * STEP), ["position"]), (round(10 * STEP), ["size"])],
+        )
+
     def test_a_step_under_a_fifth_of_top_speed_is_not_a_step(self):
         speeds = (
             [1] * 8 + [1.5] * 8 + [1.5 + 18.5 * k / 40 for k in range(1, 41)] + [20] * 8
@@ -2186,6 +2234,20 @@ class MorphFlow(unittest.TestCase):
         r = flow.analyse(s)
         self.assertEqual([(j["edge"], j["at"]) for j in r["jolts"]], [("starts", 107)])
         self.assertEqual([(u["edge"], u["at"]) for u in r["unseen"]], [("stops", 607)])
+
+    def test_a_step_a_morph_and_another_channel_share_is_listed_once_624(self):
+        times = flow.sample_times(1000, [], 120)
+        position = [[300 * doubles(t), 0] for t in times]
+        s = {
+            "times": times,
+            "elements": [{"label": "path#m0", "channels": {"position": position}}],
+            "morphs": [
+                {"label": "path#m0", "writes": writes(doubles, off_the_grid(4)[0])}
+            ],
+        }
+        flow.add_morphs(s)
+        [st] = flow.analyse(s)["steps"]
+        self.assertEqual(sorted(st["channels"]), ["d", "position"])
 
     def test_a_morph_joins_its_elements_other_channels(self):
         s = {

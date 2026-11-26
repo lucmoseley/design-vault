@@ -235,7 +235,7 @@ class Hash(unittest.TestCase):
             proc.stdout, r"2 frame\(s\) differ\n  0 ms: [\d,]+ pixels differ"
         )
 
-    def test_a_frame_that_depends_on_the_frame_before_it_fails_67(self):
+    def test_a_frame_that_depends_on_the_frame_before_it_fails_67_621(self):
         proc = hash_page(os.path.join(FIXTURES, "trail.html"))
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertRegex(
