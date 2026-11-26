@@ -83,8 +83,7 @@ const UNLIMITED = fs.mkdtempSync(path.join(dir, "cgroup-"));
 const UNSEATED = { WFC_GATE_SEAT: "", VAULT_CGROUP: UNLIMITED, VAULT_LANE_WAIT_S: "" };
 
 let runs = 0;
-// #622
-function start(args, env, { cwd } = {}) {
+function spawnLanes(args, env, { cwd } = {}) {
   const full = { ...process.env, ...UNSEATED, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", CI: "1", ...env };
   for (const key of Object.keys(full)) if (full[key] === undefined) delete full[key];
   return spawn("bash", [LANES, ...args], { cwd, env: full });
@@ -92,7 +91,7 @@ function start(args, env, { cwd } = {}) {
 // #370
 function run(args, env, opts) {
   return new Promise((resolve) => {
-    const child = start(args, env, opts);
+    const child = spawnLanes(args, env, opts);
     const out = { stdout: "", stderr: "" };
     child.stdout.on("data", (b) => (out.stdout += b));
     child.stderr.on("data", (b) => (out.stderr += b));
@@ -454,19 +453,23 @@ EOF
     assert.match(proc.stderr, /VAULT_SUITE_BUDGET wants whole seconds, 1 or more — got '0'/);
   });
 
+  // guess #622: a hang bound only, for both children's start markers
+  const START_S = 60;
+  // guess #622: for the stopped suites and their children to be gone
+  const GONE_S = 2;
   for (const [signal, status] of [["SIGINT", 130], ["SIGTERM", 143]]) {
-    test(`a run stopped by ${signal} exits ${status} and stops the suites it started, and what they started`, async () => {
+    test(`a run stopped by ${signal} exits ${status} and stops the suites it started, and what they started`, async (t) => {
       const d = path.join(dir, `stopped-${signal}`);
       fs.mkdirSync(d);
       // Each suite and its child sleep far past the test's own waits, so only the stop can end them.
-      const child = start(["a", "b"].map((n) => `python3 ${FAKE} ${d} ${n} 0`),
-        { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, LANE_SLEEP: "300", LANE_KID: "1" });
+      const child = spawnLanes(["a", "b"].map((n) => `python3 ${FAKE} ${d} ${n} 0`),
+        { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, LANE_SLEEP: String(5 * (START_S + GONE_S)), LANE_KID: "1" });
+      t.after(() => spawnSync("pkill", ["-KILL", "-f", d]));
       const kids = path.join(d, "kids");
       // The suites and their children, not run-lanes.sh itself, whose own command line names `d` too.
       const alive = () => spawnSync("pgrep", ["-f", d], { encoding: "utf8" }).stdout.trim().split("\n")
         .filter((pid) => pid && Number(pid) !== child.pid);
-      // guess #622: 60 s for both children's start markers, a hang bound only
-      for (let i = 0; i < 600 && !(fs.existsSync(kids) && fs.readdirSync(kids).length === 2); i++) {
+      for (let i = 0; i < START_S * 10 && !(fs.existsSync(kids) && fs.readdirSync(kids).length === 2); i++) {
         await new Promise((r) => setTimeout(r, 100));
       }
       assert.deepEqual(fs.existsSync(kids) && fs.readdirSync(kids).sort(), ["a", "b"], "both suites' children started");
@@ -474,8 +477,7 @@ EOF
       const code = new Promise((r) => child.on("exit", r));
       child.kill(signal);
       assert.equal(await code, status);
-      // guess #622: 2 s for them to be gone once stopped
-      for (let i = 0; i < 20 && alive().length; i++) await new Promise((r) => setTimeout(r, 100));
+      for (let i = 0; i < GONE_S * 10 && alive().length; i++) await new Promise((r) => setTimeout(r, 100));
       assert.deepEqual(alive(), [], "a suite or its child outlived the run");
     });
   }
