@@ -1560,6 +1560,31 @@ class Refused(unittest.TestCase):
     def test_a_transition_that_starts_on_scroll(self):
         self.refuses("scroll-reveal.html", "when the page is scrolled")
 
+    def test_a_reveal_css_holds_paused_until_a_scroll_is_refused_as_a_transition_started_on_scroll_is(
+        self,
+    ):  # #615
+        self.refuses(
+            "held-reveal.html", "starts 1 animation(s) when the page is scrolled"
+        )
+
+    def test_a_reveal_paused_again_out_of_view_is_refused_as_one_left_playing_is(
+        self,
+    ):  # #615
+        self.refuses(
+            "held-reveal-toggle.html", "starts 1 animation(s) when the page is scrolled"
+        )
+
+    def test_a_reveal_css_holds_paused_that_nothing_releases_is_named_apart_from_a_script_seeked_one(
+        self,
+    ):  # #615
+        proc, _, _ = run(os.path.join("..", "frames", "revealed.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            "holds 2 animation(s) CSS animation-play-state keeps paused (div#box, div#twin)",
+            proc.stdout,
+        )
+        self.assertNotIn("seeks by hand", proc.stdout)
+
     def test_a_timer_due_past_the_timeout(self):
         self.refuses("long-timer.html", "past --timeout", "--timeout", "3000")
 
