@@ -116,35 +116,45 @@ class ScalarAndArray(unittest.TestCase):
         )
 
 
+def palette_without_numpy(*args):
+    return subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import runpy, sys; sys.modules['numpy'] = None; "
+                "sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')"
+            ),
+            os.path.join(SCRIPTS, "palette.py"),
+            "--logo",
+            "grey=#404040",
+            *args,
+        ],
+        capture_output=True,
+        text=True,
+        # guess, #175
+        timeout=30,
+        check=False,
+    )
+
+
 class WithoutNumpy(unittest.TestCase):
-    def test_palette_runs_with_numpy_blocked(self):
-        script = os.path.join(SCRIPTS, "palette.py")
-        proc = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                (
-                    "import runpy, sys; sys.modules['numpy'] = None; "
-                    "sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')"
-                ),
-                script,
-                "--logo",
-                "grey=#404040",
-                "--colour",
-                "text=#404040",
-                "--colour",
-                "slate=#223448",
-            ],
-            capture_output=True,
-            text=True,
-            # guess, #175
-            timeout=30,
-            check=False,
+    def test_palette_passes_a_palette_with_numpy_blocked(self):
+        proc = palette_without_numpy(
+            "--colour", "text=#404040", "--colour", "slate=#223448"
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertNotIn("numpy", proc.stderr)
         self.assertIn("| grey / slate | 11.9 |", proc.stdout)
         self.assertIn("on a light ground at L* 57.4 or above", proc.stdout)
+
+    def test_palette_refuses_a_near_miss_with_numpy_blocked(self):
+        proc = palette_without_numpy("--colour", "text=#3F3F3F")
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        self.assertNotIn("numpy", proc.stderr)
+        self.assertIn(
+            "| grey / text | 0.3 | 10 | same colour: take grey's hex |", proc.stdout
+        )
 
 
 if __name__ == "__main__":
