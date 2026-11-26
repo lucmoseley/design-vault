@@ -101,6 +101,14 @@
 		"route": "Re-run #210's method at the re-scan date in its meta; a row's verdict changes when a ticket fills it, citing the ticket",
 		"consumes": null
 	},
+	"docs/data/arch-scan-runs.jsonl": {
+		"section": "Governance & process docs",
+		"class": "generated-only",
+		"classQualifier": null,
+		"role": "Each architecture scan's scan and close line, one JSON line a run, which the scan-due counter reads for its window and threshold (workflow-core#1348)",
+		"route": "The architecture-scan skill's scan and close modes append; never hand-edited",
+		"consumes": null
+	},
 	"docs/data/baked-text-sweep-2026-10-16.csv": {
 		"section": "Research notes",
 		"class": "free-edit",
