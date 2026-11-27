@@ -687,17 +687,24 @@ def turns_js(selectors, since, until):
         + r"""
   const frame = window.requestAnimationFrame.bind(window), wait = window.setTimeout.bind(window);
   const turns = window.__turns = [];
+  // The viewport holds its size, so a resize the browser fires is a full-page screenshot's: #628.
+  let shot = -Infinity;
+  addEventListener('resize', (ev) => { if (ev.isTrusted) shot = performance.now(); });
   wait(() => {
     for (const e of selectors.flatMap((s) => [...document.querySelectorAll(s)])) {
 """
         + SIG_JS
         + r"""
-      const first = sig(true), turn = { el: e, at: null };
+      const unwatched = () => !!window.__timers && e.getAnimations({ subtree: true }).some((a) => window.__timers.unwatched.has(a));
+      let first = sig(true), last = performance.now();
+      const turn = { el: e, at: null };
       turns.push(turn);
       const tick = (now) => {
         if (now > until) return;
-        if (sig(true) !== first) turn.at = now;
-        else frame(tick);
+        if (shot >= last || unwatched()) first = sig(true);
+        else if (sig(true) !== first) return void (turn.at = now);
+        last = now;
+        frame(tick);
       };
       frame(tick);
     }
@@ -707,18 +714,31 @@ def turns_js(selectors, since, until):
     )
 
 
-TURNED_JS = "(e) => (window.__turns || []).some((t) => t.el === e && t.at !== null)"
+TURNED_JS = r"""
+(e) => {
+  const t = (window.__turns || []).find((t) => t.el === e);
+  return t ? t.at !== null : null;
+}
+"""
 
 
 def turned(page, handles, until):
-    starts = [_shot(h) for h in handles]
-    out = [False] * len(handles)
-    while True:
-        for k, h in enumerate(handles):
-            out[k] = out[k] or h.evaluate(TURNED_JS) or _differs(starts[k], _shot(h))
-        if all(out) or page.evaluate("() => performance.now()") >= until:
-            return out
-        page.wait_for_timeout(ROTATE_POLL_MS)
+    def now():
+        return page.evaluate("() => performance.now()")
+
+    starts, read = [_shot(h) for h in handles], min(now(), until)
+    moved = [False] * len(handles)
+
+    def judged():
+        return [m or h.evaluate(TURNED_JS) for h, m in zip(handles, moved, strict=True)]
+
+    while not all(judged()) and (left := until - now()) > 0:
+        page.wait_for_timeout(min(ROTATE_POLL_MS, left))
+        moved = [
+            m or _differs(s, _shot(h))
+            for h, s, m in zip(handles, starts, moved, strict=True)
+        ]
+    return judged(), read
 
 
 def still(handle):

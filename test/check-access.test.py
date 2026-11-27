@@ -679,17 +679,16 @@ class TimedChange(Browsed):
         )
         self.assertEqual(faults, [])
         held = re.compile(
-            r"main > div\.slides held still from ([\d.]+) s to ([\d.]+) s after the page's load while the page "
-            r"still ran a timer, so a slower rotation cannot be ruled out"
+            r"main > div\.slides held still from ([\d.]+) s to ([\d.]+) s after the page's load, its pixels "
+            r"watched from ([\d.]+) s, while the page still ran a timer, so a slower rotation cannot be ruled out"
         )
         matches = [held.fullmatch(u) for u in unmeasured]
         self.assertTrue(all(matches), unmeasured)
         windows = [tuple(map(float, m.groups())) for m in matches]
         self.assertEqual(len(windows), 2, unmeasured)
-        rounding = 0.1
-        for start, end in windows:
-            self.assertEqual(start, long_s)  # #642
-            self.assertGreaterEqual(end - start, rotate_s - rounding)
+        for start, end, read in windows:
+            self.assertEqual((start, end), (long_s, long_s + rotate_s))  # #642
+            self.assertTrue(start <= read < end, windows)
 
     UNSEEN = (
         "the page still ran a timer that did not run in the 6 s watched past 5 s from its load, and {}, "

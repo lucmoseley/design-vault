@@ -832,7 +832,7 @@ class Pause(unittest.TestCase):
     def test_a_change_past_rotate_ms_from_5_s_is_not_read_628_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        window_ms = self.access.prelude.LONG_MS + self.access.keys.ROTATE_MS
+        window_ms = self.access.PAUSE_WINDOW[1]
         logged = []
         self.unwatched_after_5_s(
             f"setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-late', 'on'); console.log('late'); }}, {window_ms + self.PAST_MS});",
@@ -858,26 +858,50 @@ class Pause(unittest.TestCase):
             "section:nth-of-type(3)", [u.split(" changes ")[0] for u in unmeasured]
         )
 
+    CLEAN_FIRST_SLIDE_HOLD_MS = 5000
+
+    def first_slide_held(self, ms, script=""):
+        return f"""const wait = window.setTimeout;
+        window.setTimeout = function (fn, t, ...a) {{ return wait.call(this, fn, t === {self.CLEAN_FIRST_SLIDE_HOLD_MS} ? {ms} : t, ...a); }};
+        addEventListener('DOMContentLoaded', () => {{ {script} }});"""
+
     def test_a_declared_carousel_turning_between_5_s_and_a_late_read_fails_642_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
         turn_ms = self.access.prelude.LONG_MS + self.PAST_MS // 2
         with self.late():
             faults, _ = self.pause_answer(
-                "clean",
-                f"""const wait = window.setTimeout;
-                window.setTimeout = function (fn, ms, ...a) {{ return wait.call(this, fn, ms === 5000 ? {turn_ms} : ms, ...a); }};""",
-                carousels=[".carousel"],
+                "clean", self.first_slide_held(turn_ms), carousels=[".carousel"]
             )
         self.assertEqual(
             [f["subject"] for f in faults],
             ["section:nth-of-type(2) > div.carousel"],
         )
 
+    def test_a_declared_carousel_the_checks_own_screenshot_resizes_past_5_s_holds_still_642_paired_with_test_a_declared_carousel_turning_between_5_s_and_a_late_read_fails_642(
+        self,
+    ):
+        past_window_ms = 2 * self.access.PAUSE_WINDOW[1]
+        with self.late():
+            faults, unmeasured = self.pause_answer(
+                "clean",
+                self.first_slide_held(
+                    past_window_ms,
+                    "const box = document.querySelector('.carousel');"
+                    "addEventListener('resize', () => { box.style.height = `${180 + Math.random() * 20}px`; });",
+                ),
+                carousels=[".carousel"],
+            )
+        self.assertEqual(faults, [])
+        self.assertIn(
+            "section:nth-of-type(2) > div.carousel held still from 5.0 s to 11.0 s",
+            " ".join(unmeasured),
+        )
+
     def test_an_interval_first_run_past_rotate_ms_from_5_s_is_unwatched_642_paired_with_test_a_change_past_rotate_ms_from_5_s_is_not_read_628(
         self,
     ):
-        window_ms = self.access.prelude.LONG_MS + self.access.keys.ROTATE_MS
+        window_ms = self.access.PAUSE_WINDOW[1]
         page = f"<p>Hostel</p><script>setInterval(() => {{}}, {window_ms + self.PAST_MS});</script>"
         with self.late(self.access.keys.ROTATE_MS + 4 * self.PAST_MS):
             _, unmeasured = self.answer_at("data:text/html," + page)
