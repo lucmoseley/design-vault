@@ -1,9 +1,5 @@
 # design-vault #88: mmm-infra logo and animation work, misses and redone work
 
-⚠ **Bound 13 Oct 2026 (#94): every finding here is ruled. L1 goes to #73; L3 to #79; L5 and L9 to #112; L11 and L12 to #114. L2 takes no change (#95's agreement log covers the calibration column); L4 was fixed by 5d1f926; L13 takes no change (mmm-infra#35 already binds its one case to the craft gate). L6, L7, L10 and L14 were already filed (#72, #77, #85, #73). L8, L15 and L16 are workflow-core's.**
-
-Owner of every proposed change below: #94 (which mmm-infra findings design-vault adopts) rules on each; a finding about judging a client's photos goes to #93 (photo method).
-
 Question: where did mmm-infra's logo and animation work miss what the founder wanted, or redo work, beyond design-vault #67–#73 and #75?
 Sources: the reduced transcripts in `.claude/tmp/dbb2d38b-reduced/`, raw jsonl for drill-down, mmm-infra issues, design-vault git history of `plugin/`.
 Status: complete (13 Oct 2026).
@@ -20,6 +16,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** fixed by design-vault 5d1f926 (craft rule 1 and `check-curves.js`, from mmm-infra#16). The end-to-end 0.5 px overlay tool is #73. The checker's path is #75.
 - **Proposed change:** none new. One addition to #73: say in rule 1 that an IoU or overlap ratio is not evidence of curve fidelity, because the builder and the critic both used one as proof.
 - **Confidence:** 90% (80–95%) that this is the largest single cause of the founder's round-two rejection. His message leads with it, and the session confirmed it in the file.
+- **Ruling:** taken up in #73.
 
 ### L2: The fresh critic praised the faults the founder rejected most
 - **What happened:** The critic judged against the brief's words, not against physics or timing research. Round one: "Every candidate runs under a minute" is listed under "What holds up" (drafts ran 14–30 s). Round two, v3 "Water runs": "Smooth: yes. Short: yes (shortest)", "Continuity: one unbroken line", 22/28 and 16/20, the top score of the round. The founder called the same draft the main bad example for pacing and for the water's path. The critic did not report the water running uphill over the band's crest, the timber frames that did not fit the stones, or the jolt-and-pause pacing.
@@ -31,6 +28,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** mostly fixed by 5d1f926 (craft rules 2–4 run by the builder and again by the critic) and a48fb01 (`check-flow.py`). The jolt and mid-move gaps are #68 and #69.
 - **Proposed change:** the current review strip (design-round §4, lines 111–117) already puts the gate result first and bars a failing candidate from the lead. One gap stays open: nothing records where the critic and the founder disagree. The round record's "founder's choice" column could also hold his verdict per candidate, so a later session can see whether critic scores predict his picks.
 - **Confidence:** 50% (35–65%) that the calibration column is worth its cost. No motion round has run since 5d1f926, so the new gate's agreement with the founder is untested. It rises if the site-look rounds in 631cff6d show the same score-and-verdict split.
+- **Ruling:** no change: #95's agreement log covers the calibration column.
 
 ### L3: Round one took Mark's ideas as the letter of the brief, in the motion round as well as the identity round
 - **What happened:** All five round-one drafts built the logo stone by stone in Mark's construction order. The founder had to rule that Mark's ideas are suggestions and that other families (the logo turning into something else) must be explored. Round two then widened. After round two he still listed families that no draft explored: camera moves to a top or side view, perspective change, scroll-driven background.
@@ -42,6 +40,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** #79 covers the same fault for the identity round in 631cff6d (5–8 Oct). The transcripts show it happened one day earlier, in the motion round (4 Oct).
 - **Proposed change:** add to #79: before round one of a motion asset, the cards cover at least three distinct families, named in the round record, and the client's own idea is one family at most.
 - **Confidence:** 70% (55–80%). It falls if the 5d1f926 "client-values field" already makes a session read the client's ideas as spirit.
+- **Ruling:** taken up in #79.
 
 ### L4: The motion round ran before the site's look, and no draft length came from research
 - **What happened:** #9 (animation) depended only on the construction research and the pipeline pick. It did not wait for #8 (the site's look), so the intro was designed with no palette or identity. Each draft's length was "what its build came to". Research (#13) later set 3–5 s to a usable page; every intro-placement draft ran 10–30 s.
@@ -64,6 +63,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** no. #72 (morph method) is close but covers path morphs only.
 - **Proposed change:** in design-round §2, a direction card names its core technique. Where the project has no kept precedent for that technique, the card cites a short study (precedent sites or a reference film) before the build.
 - **Confidence:** 55% (40–70%). Only one draft shows it. It rises if the identity or animate-comparison sessions show the same pattern.
+- **Ruling:** taken up in #112.
 
 ### L6: "The arch through time" replaced a shape instead of morphing it, and a rectangle flashed
 - **What happened:** The founder saw stray rectangles at the left edge and a horizontal bar that flashed in the last scene. He traced the bar to a replace instead of a morph. The critic found floating-deck moments but not the flash.
@@ -85,6 +85,7 @@ Status: complete (13 Oct 2026).
 - **Owner of the fix:** workflow-core (question-round style), not design-vault.
 - **Already filed:** workflow-core#478 (question rounds decidable first time) and #628 (re-pitch in plain words on "explain simpler"), both closed. A second case is L15.
 - **Confidence:** 50% (35–65%) that this is a pattern and not a one-off.
+- **Ruling:** workflow-core's.
 
 ### L9: Round one ran with design mode off, so its critic had no impeccable scores
 - **What happened:** design-round (0202f18) line 25 said: "Where the `impeccable` skill is not loaded, tell the founder to switch design mode on and restart, and render nothing." The rule covered "a web-surface round". The session treated the intro as a motion asset, rendered five drafts, and the critic reported "Design mode is off in the critic's session". The founder heard of it only in the hand-off.
@@ -95,6 +96,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** no.
 - **Proposed change:** say that an asset that plays on a web page (an intro, a hero motion) is a web-surface round for the design-mode check, or say it is not.
 - **Confidence:** 60% (45–75%) that the scope is still ambiguous today; check the current line 25 wording before filing.
+- **Ruling:** taken up in #112.
 
 ### L10: The craft rules shipped into the vault the same morning, with no concision pass and no pressure test
 - **What happened:** 1bbd72cf (#16) wrote about 400 words of rules into design-round and design-critique, plus `check-curves.js`, in about 12 minutes after the ruling. It mutation-tested the script (six mutations). It released the plugin. It ran the concision pass only on the mmm-infra note and said so. No baseline-agent pressure test of the new rule text ran. Later sessions found rule-text faults: rule 3 ("falls that follow gravity") conflicts with `check-flow.py`'s jolt rule (#68). Rule 1 names a 0.5 px overlay with no tool (#73). The critique names `check-curves.js` with no path (#75).
@@ -115,6 +117,7 @@ Status: complete (13 Oct 2026).
 - **Owner of the fix:** design-vault design-round (see L12). The pricing style is workflow-core's.
 - **Already filed:** no.
 - **Confidence:** 70% (55–80%).
+- **Ruling:** taken up in #114.
 
 ### L12: The client-review rules from #17 live only in mmm-infra
 - **What happened:** #17 settled, with research, how a client sees a round: three directions, one per family; one variant each by default; 4 items as the target and 6 as the ceiling; the same finish on each item (3–5 stills plus a rough clip); a rating per item, one pick with a reason, "you choose" as a valid answer; an optional "shape it" box (keep, change, bring in from another idea, avoid); and a "You said → what I did" list at the final yes. design-round today says nothing on how many candidates go to a client or how the client answers.
@@ -123,6 +126,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** no.
 - **Proposed change:** add a short "Client review" section to design-round that cites the two mmm-infra research files and carries the limits and the answer format above as the default for any project with a client.
 - **Confidence:** 65% (50–80%) that this is wanted in the vault. It falls if the founder sees Mark's family-only review as a one-off.
+- **Ruling:** taken up in #114.
 
 ### L13: The interior-face geometry research went out before the founder's rigour standard, and was stopped and re-sent
 - **What happened:** b421876f filed #18–#20 and dispatched the #19 split-geometry agent with a brief that asked for candidate curves. Two minutes later the founder added a standard. The session stopped the agent (it had written nothing) and re-sent it with a physical arch model, a light model, and a curvature plot. Then a network error (EAI_AGAIN) killed both agents. A third dispatch finished.
@@ -134,6 +138,7 @@ Status: complete (13 Oct 2026).
 - **Already filed:** no. The `check-curves.js` path hunt in this session is #75.
 - **Proposed change:** craft rule 1 and 2 also bind any geometry a research ticket hands to a round: it states its model, its fit error in px, and passes `check-curves.js`.
 - **Confidence:** 45% (30–60%). The founder caught it at once, and the cost was small.
+- **Ruling:** no change: mmm-infra#35 already binds its one case to the craft gate.
 
 ### L14: Measurement scripts for the mark were lost twice
 - **What happened:** #15's research (cb39287f) cut the scripts that fitted the logo; the landed file says they "ran in a scratch directory and were not kept". #19's landing (b421876f) deleted its scripts after the ruff lint hook refused them. Later, #25 found that no kept tool does the 0.5 px overlay check that rule 1 names.
@@ -146,6 +151,7 @@ Status: complete (13 Oct 2026).
 - **Evidence:** 50c3dea1 L125–L166.
 - **Cost:** 1 founder message, about 1 min.
 - **Already filed:** workflow-core#478, #628 (closed).
+- **Ruling:** workflow-core's.
 
 ### L16: The founder had to ask whether a research agent was still alive
 - **What happened:** The #15 agent wrote F4 and then worked for 30 min with no growth in its findings file, against its brief to append each finding as it landed. The founder asked. The session checked the work folder and found it alive.
@@ -154,6 +160,7 @@ Status: complete (13 Oct 2026).
 - **Cost:** 1 founder message.
 - **Owner of the fix:** workflow-core (artefact-append rule for subagents).
 - **Already filed:** not searched in full.
+- **Ruling:** workflow-core's.
 
 ## Why mmm-infra#35 and #20 stalled
 

@@ -1,9 +1,5 @@
 # Website design coverage: gaps in the house rules and research (#104, map #96)
 
-⚠ **Bound 15 Oct 2026 (#203): this frame is not a coverage measure. Its areas were chosen before research, at whole-subject level, and "covered" was never defined, so the founder's notes found 6 gaps and 19 partial verdicts it marked covered or never listed (`docs/research/notes-coverage.md`, `docs/research/coverage-postmortem.md`). Map #202 replaces the method; #210 rules its successor.**
-
-⚠ **Bound 14 Oct 2026 (#101): rank 4 (small-business trust) goes to research #144, and the palette and logo gaps #115 found go to research #143. Rank 1 (accommodation search) is out of scope, owner lucmoseley/mantahostels. Ranks 2, 3, 5, 7, 10, 11 and 12 are accepted as filled by map #96's later research; ranks 8, 9, 14 and 15 are accepted as gaps. Ranks 6 and 13 are Manta's rulings: owner lucmoseley/mantahostels.**
-
 Status: complete (13 Oct 2026). 
 
 Question: What does good website design today need that the house design rules and research do not cover yet?
@@ -185,6 +181,8 @@ House match:
 
 ## Coverage frame: every area, labelled
 
+This frame is not a coverage measure. Its areas were chosen before research, at whole-subject level, and "covered" was never defined, so the founder's notes found 6 gaps and 19 partial verdicts it marked covered or never listed (`docs/research/notes-coverage.md`, `docs/research/coverage-postmortem.md`). The coverage ledger (`docs/coverage-ledger.json`), built by #210's method in #215, replaces it.
+
 Key. **Label**: T = timeless, E = era-bound (current practice 2023 onward given). **House**: C = covered, P = partly covered, G = gap. **imp** = does impeccable fill it when design mode is on.
 
 | Area | Label | Current practice and dated conventions (source) | House coverage (where) | imp |
@@ -240,6 +238,8 @@ Frequency key: how many of the three site types (hostel search site; small-busin
 | 14 | **Carousels** (no auto-rotate on mobile) | Rare: house taste avoids them | **No** | Low |
 | 15 | **Accessibility law** (EAA, ADA) | Client sites with EU or US customers | **No** | Microenterprise exemption probably applies; not verified at source |
 
+Ranks 2, 3, 5, 7, 10, 11 and 12 are accepted as filled by map #96's later research, and ranks 8, 9, 14 and 15 as gaps (#101). Rank 4 is researched in `docs/research/first-visit-trust.md` (#144). Ranks 1, 6 and 13 are Manta's (lucmoseley/mantahostels).
+
 ## Answer to the founder's question
 
 The house research is **not comprehensive for web design**. The vault's research folder covers image models, the library and process, and holds no web-design-principles research. The house's web craft comes almost entirely from impeccable, which is current on most points but cites no source. The gaps that would bite most often are: accommodation search-results design for Manta (no evidence base at all, and Baymard has one), the WCAG 2.2 criteria, the trade-off between a distinctive look and a familiar page structure, and the trust content a small-business site needs. Timeless foundations (Gestalt, hierarchy, colour, typographic measure) are mostly covered, through impeccable and Manta's sheet; the era-bound parts are where the house is thin or slightly behind (Manta's 15px body; WCAG 2.2; impeccable's hamburger default).
@@ -253,5 +253,4 @@ The house research is **not comprehensive for web design**. The vault's research
 **Web sources:** read through the fetch tool (page text): W3C new-in-22; web.dev vitals and Baseline; NN/g scrolling-and-attention, hamburger-menus, flat-ui, dark-mode, photos-as-web-content, trustworthy-design; Baymard homepage-carousel, new-research-travel-accommodations, accommodations-split-view, checkout-flow-average-form-fields; Butterick point-size; Apple HIG dark mode (JSON); W3C Understanding 2.3.3; Roselli WCAG3 contrast; arXiv 2603.13036 abstract; FTC fees blog. **Snippet level only** (search results, not opened): M3 Expressive and MotionScheme; web.dev Baseline 2023 and view-transitions posts; Google Search Central mobile-first and page-experience posts; FTC fees press release; FTC dark-patterns report; GOV.UK reading age; Baymard filter and inline-validation figures; Romaniuk and the 2023 asset study; Tuch et al. and Wagemans et al. abstracts; EAA summaries; Stanford/Internet Archive study (via Decrypt).
 
 **Not opened:** design-round `references/prompts.md` and `comparison.md`; brand sheet lines 69–124 and 325–435; Manta `.claude/skills/design-review/SKILL.md` body; Manta `claude-seo-fit.md`, `round-shape-literature.md`, `candidate-design-skills.md`, `seeded-review-conversion.md` bodies (headings only — they are about process, tools and review conversion, not page design); impeccable 4.2.1 files (only the file list was compared); Refactoring UI and Bringhurst (no fetch; their points enter only through impeccable's rules); Material 3 and Apple touch-target pages (figures stated from memory and marked so); Directive (EU) 2019/882 text; GOV.UK content design page (redirected); any US ADA or Indonesian law.
-
 

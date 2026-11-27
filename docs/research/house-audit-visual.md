@@ -11,7 +11,7 @@ Dispositions: SOURCED, CONFLICTS, GAP (kind: curve point, taste, or business fac
 
 | # | Value | Where |
 |---|---|---|
-| V1 | Text tint chroma: about OKLCH C 0.01–0.05, falling toward black and white | `references/text-presentation.md:11`; #154 body (Text presentation); `docs/research/text-presentation.md:101` |
+| V1 | Text tint chroma: about OKLCH C 0.01–0.05, falling toward black and white | `references/text-presentation.md:11`; #154 body (Text presentation); `docs/research/text-presentation.md:99` |
 | V2 | "Pure grey is an equal choice" | `references/text-presentation.md:13-14`; #154 |
 | V3 | About three elevation levels on a marketing site (marked unsourced) | `references/surface-styling.md:31`; `docs/research/surface-styling.md:96` |
 | V4 | Fill step under about 1.1:1 keeps the border (marked unsourced) | `references/surface-styling.md:94`; `docs/research/surface-styling.md:212-213,318` |
@@ -40,7 +40,7 @@ Method: I downloaded each system's shipped token file. A Python script converted
 
 ### V1. Chroma band "about OKLCH C 0.01–0.05, falling toward black and white"
 
-- **Where.** `plugin/skills/design-critique/references/text-presentation.md:11`; #154 body ("about OKLCH 0.01–0.05, less near black and white"); `docs/research/text-presentation.md:101`.
+- **Where.** `plugin/skills/design-critique/references/text-presentation.md:11`; #154 body ("about OKLCH 0.01–0.05, less near black and white"); `docs/research/text-presentation.md:99`.
 - **Founder ruling.** Yes, indirectly. #101 Q5 (A), 14 Oct 2026: "Accept recommendations", (A) on every question. Q5 (A) put "#123's text-tint rule" into the spec. The agent recommended (A) at 75%. He did not rule on the numbers 0.01–0.05; the band came from the #123 research and went into #154 with the rule.
 - **Disposition: SOURCED, with two corrections.**
   - The band is the envelope of shipped systems: lowest tinted text grey 0.004 (Apple, Tailwind 950s), highest 0.046 (Tailwind `slate`). So 0.05 is the extreme of one blue-grey scale, not a typical value. Typical shipped text greys sit at 0.008–0.03 (Radix all, Material all, Tailwind `gray`, `zinc`, `stone`, `mist`, `taupe`, `olive`, `mauve`).
@@ -68,7 +68,7 @@ Method: I downloaded each system's shipped token file. A Python script converted
 - #101 Q6 (A), same reply: "icon line weight at other sizes" and "glass effects" accepted as gaps. Agent recommendation taken.
 - #154, comment of 14 Oct 2026: "The founder accepted both recommendations … Q2 (A), the 22 tickets as drafted." The spec body names "one hover signal" and "radius nesting (inner = outer − padding)".
 - No ruling of his names any figure in this group (three levels, 1.1:1, the line-weight band, 32–60%). #174 marked three figures "unsourced" for this audit. #174's heads-up from #178 says: "name it as unsourced rather than as a founder decision."
-- The hover choice ("the house takes Atlassian's", `references/surface-styling.md:23`) is **not** a founder ruling. `docs/research/principle-interactions.md:71` says of it: "**Not decided by a source**: Atlassian and Material disagree. Founder ruling R2". R2 is a Manta ruling, still open under lucmoseley/mantahostels#3793.
+- The hover choice ("the house takes Atlassian's", `references/surface-styling.md:23`) is **not** a founder ruling. `docs/research/principle-interactions.md:69` says of it: "**Not decided by a source**: Atlassian and Material disagree. Founder ruling R2". R2 is a Manta ruling, still open under lucmoseley/mantahostels#3793.
 
 ### Shipped values measured (token files fetched 14 Oct 2026)
 
@@ -165,7 +165,7 @@ Method: I downloaded each system's shipped token file. A Python script converted
 
 ### V10. Form field budget "3 required + 2 optional" ("a house judgement")
 
-- **Where.** `docs/research/first-visit-trust.md:43,83,104`; #154 body ("the form field budget (3 required + 2 optional), labelled a house judgement"); #176 body (open; it will write the budget into a plugin reference). An older line, `docs/research/adopt-or-build.md:184`, says "Add a field budget from Baymard (#104 W11)"; #144 later found that Baymard's figure is for checkout and does not transfer.
+- **Where.** `docs/research/first-visit-trust.md:43,83,104`; #154 body ("the form field budget (3 required + 2 optional), labelled a house judgement"); #176 body (open; it will write the budget into a plugin reference). An older line, `docs/research/adopt-or-build.md:182`, says "Add a field budget from Baymard (#104 W11)"; #144 later found that Baymard's figure is for checkout and does not transfer.
 - **Founder ruling.** No ruling on the numbers. #101 Q2 (A) ("Accept recommendations", agent's (A)) asked for the research. #154 Q2 (A) accepted the spec's 22 tickets as drafted, which carry the budget "labelled a house judgement".
 - **Disposition: split in three.**
   - **"+ 2 optional": SOURCED.** NN/g, Kathryn Whitenton, 1 May 2016: "Limit the form to only 1 or 2 optional fields, and clearly label them as optional." and "eliminate as many optional fields as possible" (https://www.nngroup.com/articles/web-form-design/, fetched 14 Oct 2026). This is a heuristic from usability practice, not a measured curve.
@@ -187,14 +187,14 @@ Method: I downloaded each system's shipped token file. A Python script converted
 
 ### V12d. Tint "toward the main hue only, never toward an accent the page uses as a spot"; "a page with several strong hues or many photographs takes the dominant colour's hue or pure grey"
 
-- **Where.** `references/text-presentation.md:12`; `docs/research/text-presentation.md:103`.
+- **Where.** `references/text-presentation.md:12`; `docs/research/text-presentation.md:101`.
 - **Founder ruling.** Through #101 Q5 (A) only.
-- **Disposition: partly SOURCED, rest GAP (taste).** "Toward the main hue" is sourced: Material tints neutrals at `sourceColorHct.hue` (code above); Radix: "choose the gray scale which is saturated with the hue closest to your accent hue". The photograph and several-hues condition, and "a tinted grey next to a different strong hue can look dirty", are the researcher's inference: `docs/research/text-presentation.md:102` says "(my inference, no source measured it)". Radix's dark-mode caution ("Colorful UI components may clash with your saturated gray background color") supports it for grounds only.
+- **Disposition: partly SOURCED, rest GAP (taste).** "Toward the main hue" is sourced: Material tints neutrals at `sourceColorHct.hue` (code above); Radix: "choose the gray scale which is saturated with the hue closest to your accent hue". The photograph and several-hues condition, and "a tinted grey next to a different strong hue can look dirty", are the researcher's inference: `docs/research/text-presentation.md:100` says "(my inference, no source measured it)". Radix's dark-mode caution ("Colorful UI components may clash with your saturated gray background color") supports it for grounds only.
 - **Confidence.** 0.6 for the inferred part. A look test could settle it, but it is a taste, and #101 Q6 already accepted "taste for colour and busy layouts by audience" as a gap.
 
 ### V12e. "On a coloured ground, secondary text takes that ground's own hue at another lightness, never … a plain grey"
 
-- **Where.** `references/text-presentation.md:12`; `docs/research/text-presentation.md:115`.
+- **Where.** `references/text-presentation.md:12`; `docs/research/text-presentation.md:113`.
 - **Disposition: SOURCED, but only second-hand and weak.** Refactoring UI ("7 practical tips for cheating at design", 2017) was read through a copy because Medium returned 403; impeccable `craft-floor.md:9` is an uncited plugin. The rule is a taste convention with no legibility claim (contrast is still measured).
 - **Confidence.** 0.6. It would rise if the Refactoring UI original is read first-hand.
 
