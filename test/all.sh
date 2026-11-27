@@ -197,7 +197,7 @@ suites_needing() {
   done
   printf '%s' "$out"
 }
-if for_npm="$(suites_needing npm)"; then
+if [ -f plugin/package.json ] && for_npm="$(suites_needing npm)"; then
   need "the plugin's npm package parse5, for $for_npm" 'npm ci --ignore-scripts --prefix plugin' \
     node -e 'require("./plugin/node_modules/parse5")'
 fi

@@ -132,6 +132,13 @@
 		"plugin/.claude-plugin/plugin.json": [
 			"test/plugin-manifest.test.js"
 		],
+		"plugin/package.json": [
+			"test/chromium-suites.test.js",
+			"test/failed-files.test.js",
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
+		],
 		"plugin/review-page/index.html": [
 			"test/review-page.test.js"
 		],

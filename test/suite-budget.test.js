@@ -20,8 +20,6 @@ fs.writeFileSync(path.join(root, "test", "run-lanes.sh"), 'echo "budget=${VAULT_
 fs.writeFileSync(path.join(root, "test", "select-suites.js"),
   'for (const suite of process.argv.slice(3)) console.log(`skip\\t${suite}\\tstub`);\n');
 fs.writeFileSync(path.join(root, "test", "named.test.js"), "");
-fs.mkdirSync(path.join(root, "plugin", "node_modules", "parse5"), { recursive: true });
-fs.writeFileSync(path.join(root, "plugin", "node_modules", "parse5", "index.js"), "");
 const git = (...args) => execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
   { cwd: root, encoding: "utf8" });
 git("init", "-q", "-b", "main");
