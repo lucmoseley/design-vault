@@ -37,7 +37,7 @@
     "ideogram/v4.0": {
       "name": "Ideogram 4.0",
       "tier": "QUALITY",
-      "note": "Higgsfield's schema has no resolution field. It offers 3:2 and 9:16 but not 21:9 (22:9 and 23:9 instead). The 3:2 and 9:16 sizes are read from the docs alone: Higgsfield's 16:9 output matched Ideogram's 2K preset, so its other aspects are taken to match their 2K presets too; measure the first render that falls below one.",
+      "note": "Higgsfield's schema has no resolution field. It offers 3:2 and 9:16 but not 21:9 (its nearest is 12:5). The 3:2 and 9:16 sizes are read from the docs alone: Higgsfield's 16:9 output matched Ideogram's 2K preset, so its other aspects are taken to match their 2K presets too; measure the first render that falls below one.",
       "sizes": {
         "16:9": { "size": "2560x1440", "source": "measured: the 30 Sep calibration renders r1–r3/v4-ideogram.png at rendering_speed QUALITY; docs: Ideogram 4.0's own 16:9 preset in its ResolutionV4 enum (docs/research/image-model-fact-bar.md F6)" },
         "3:2": { "size": "2496x1664", "source": "docs: Ideogram 4.0's only 2K 3:2 preset in its ResolutionV4 enum (developer.ideogram.ai/api-reference/api-reference/generate-v4, read 27 Nov 2026); Higgsfield's page lists 3:2 among its aspect_ratio values" },

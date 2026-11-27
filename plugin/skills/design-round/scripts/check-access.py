@@ -146,9 +146,10 @@ conditions.py does, and measures each question at both:
   active span is over 5 s, and each video playing that loops or runs over
   5 s without its own controls, fails unless a button, switch or checkbox
   named for pausing, stopping or hiding it stops it when clicked. So does a
-  declared carousel shown whose pixels, or the boxes inside it, change past
-  5 s from load and within ROTATE_MS of that, as vault.carousel-focus reads
-  a change, unless such a control, clicked with the pointer then moved off,
+  declared carousel shown whose box or those inside it, or the images they
+  show, change past 5 s from load and within ROTATE_MS of that, or whose
+  pixels change between the check's first look past 5 s and the end of that
+  span, unless such a control, clicked with the pointer then moved off,
   holds it still for its slide's span as vault.carousel-focus timed it, or
   ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
   still through that watch while the page still runs an interval or holds
@@ -292,6 +293,7 @@ contrasts = siblings.load(HERE, "access-contrast.py")
 pointing = siblings.load(HERE, "access-pointer.py")
 
 WATCH_MS = 1000  # guess, #164
+PAUSE_WINDOW = (prelude.LONG_MS, prelude.LONG_MS + keys.ROTATE_MS)  # #628
 WALK_SLACK = 20  # guess, #501
 
 MEASURE_JS = (
@@ -784,7 +786,7 @@ TIMERS_JS = r"""
   const live = new Set(), ran = new Map(), set = window.setInterval, clear = window.clearInterval;
   window.setInterval = function (fn, ...a) {
     const id = set.call(this, function (...b) {
-      ran.set(id, performance.now());
+      (ran.get(id) || ran.set(id, []).get(id)).push(performance.now());
       return typeof fn === 'function' ? fn.apply(this, b) : (0, eval)(String(fn));
     }, ...a);
     live.add(id);
@@ -852,10 +854,11 @@ TIMED_JS = r"""
 LIVE_JS = "() => window.__timers.live.size > 0 || window.__flow.pending.size > 0"
 
 UNSEEN_JS = r"""
-([since, watch]) => {
-  const t = window.__timers, pending = [...window.__flow.pending.keys()];
+([since, until]) => {
+  const t = window.__timers, pending = [...window.__flow.pending.keys()], watch = until - since;
+  const watched = (at) => at >= since && at <= until;
   return {
-    intervals: [...t.live].filter((id) => !(t.ran.get(id) >= since)),
+    intervals: [...t.live].filter((id) => !(t.ran.get(id) || []).some(watched)),
     timeouts: pending.filter((id) => !(t.waits.get(id) <= watch)),
     known: [...t.live, ...pending],
     watch,
@@ -1216,8 +1219,15 @@ def drawn_unmeasured(context, url):
 def pause_answer(context, url, carousels, spans):
     from playwright.sync_api import Error as PlaywrightError
 
+    since, until = PAUSE_WINDOW
     unmeasured = drawn_unmeasured(context, url)  # #646
-    page = loaded_page(context, url, flow.COLLECTOR_JS, TIMERS_JS)
+    page = loaded_page(
+        context,
+        url,
+        keys.turns_js(carousels, since, until),
+        flow.COLLECTOR_JS,
+        TIMERS_JS,
+    )
     page.wait_for_timeout(WATCH_MS)
     got = page.evaluate(prelude.page_js(MOTION_JS))
     unmeasured += [
@@ -1234,29 +1244,24 @@ def pause_answer(context, url, carousels, spans):
         c = el.evaluate(prelude.page_js(CAROUSEL_JS))
         if c["on"]:
             declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
-    turning, stilled, others, unseen = [], [], [], None
+    turning, stilled, others, unseen, read = [], [], [], None, since
     if page.evaluate(prelude.page_js(TIMED_JS), len(carousels)):
-        page.wait_for_timeout(
-            max(0, prelude.LONG_MS - page.evaluate("() => performance.now()"))
-        )
-        since = prelude.LONG_MS  # #628
-        for c in declared:
-            start = page.evaluate("() => performance.now()")
-            if keys.change(page, c[1], keys.ROTATE_MS) is None:
-                stilled.append((c[0], start, page.evaluate("() => performance.now()")))
-            else:
+        page.wait_for_timeout(max(0, since - page.evaluate("() => performance.now()")))
+        turns, read = keys.turned(page, [c[1] for c in declared], until)  # #642
+        for c, m in zip(declared, turns, strict=True):
+            if m:
                 turning.append(c)
-        page.wait_for_timeout(
-            max(0, since + keys.ROTATE_MS - page.evaluate("() => performance.now()"))
-        )
+            else:
+                stilled.append((c[0], m is False))
+        page.wait_for_timeout(max(0, until - page.evaluate("() => performance.now()")))
         others = page.evaluate(
             prelude.page_js(ROTATION_JS),
-            [list(carousels), since, since + keys.ROTATE_MS],
+            [list(carousels), since, until],  # #628
         )
         if not page.evaluate(LIVE_JS):
             stilled = []
         if not stilled:
-            timers = page.evaluate(UNSEEN_JS, [since, keys.ROTATE_MS])
+            timers = page.evaluate(UNSEEN_JS, [since, until])
             if timers["intervals"] or timers["timeouts"]:
                 unseen = timers
     stopped, held, held_others, unclickable = set(), set(), set(), 0
@@ -1288,9 +1293,9 @@ def pause_answer(context, url, carousels, spans):
             if k not in held and keys.change(page, el, hold_ms(span)) is None:
                 held.add(k)
         if len(held_others) < len(others):
-            since = page.evaluate("() => performance.now()")
+            clicked = page.evaluate("() => performance.now()")
             page.wait_for_timeout(hold_ms(None))
-            moved = page.evaluate(prelude.page_js(ROTATED_JS), since)
+            moved = page.evaluate(prelude.page_js(ROTATED_JS), clicked)
             held_others.update(set(range(len(others))) - set(moved))
         if unseen is not None and not page.evaluate(UNSEEN_RUNNING_JS, unseen):
             unseen = None
@@ -1331,9 +1336,15 @@ def pause_answer(context, url, carousels, spans):
         for k, subject in enumerate(others)
         if k not in held_others
     ] + [
-        f"{subject} held still from {start / 1000:.1f} s to {end / 1000:.1f} s after the page's load "
-        "while the page still ran a timer, so a slower rotation cannot be ruled out"
-        for subject, start, end in stilled
+        (
+            f"{subject} held still from {since / 1000:.1f} s to {until / 1000:.1f} s after the page's load, "
+            f"its pixels watched from {read / 1000:.1f} s,"
+            if boxed
+            else f"{subject} was not on the page {since / 1000:.1f} s after its load, and its pixels "
+            f"held still from {read / 1000:.1f} s to {until / 1000:.1f} s"
+        )
+        + " while the page still ran a timer, so a slower rotation cannot be ruled out"
+        for subject, boxed in stilled
     ]
     if unseen is not None:
         unmeasured.append(

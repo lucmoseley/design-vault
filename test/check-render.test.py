@@ -122,6 +122,7 @@ class Size(unittest.TestCase):
                     f"size: FAIL — {size[0]}x{size[1]} against the largest, {w}x{h}",
                     out,
                 )
+                self.assertIn("render it again at the model's largest size", out)
 
     def test_a_render_over_its_models_largest_size_passes(self):
         w, h = largest(GROK)
