@@ -725,6 +725,21 @@ test("a ledger line with no usd figure stops the batch rather than letting the c
   assert.equal(api.submissions().length, 0);
 });
 
+test("a hand-mended ledger usd that is not a plain decimal stops the batch rather than reading as another figure", async () => {
+  for (const usd of ["0x10", "1e2", " ", null]) {
+    const dir = roundDir();
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd })}\n`);
+    const api = fakeApi();
+    await assert.rejects(render([job(dir)], api.options()), /line 1 holds no usd figure/, String(usd));
+    assert.equal(api.submissions().length, 0);
+  }
+  const dir = roundDir();
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, LEDGER), `${JSON.stringify({ usd: "0.95" })}\n`);
+  await assert.rejects(render([job(dir)], fakeApi().options()), /past its \$1\.000 ceiling/);
+});
+
 test("--estimate over the ceiling says a run would be refused, and submits nothing", async () => {
   const api = fakeApi({ usd: "2" });
   const lines = [];
@@ -1278,9 +1293,33 @@ test("an estimate that is neither a usd figure nor a price rule is refused, what
   }
 });
 
-test("a --max-usd that is not a number is refused, naming what was given", async () => {
-  const { jobs } = parseArgs(["--out", path.join(roundDir(), "v1-a"), "--model", MODEL, "--prompt", "p", "--max-usd", "abc"]);
-  await assert.rejects(render(jobs, fakeApi().options()), /max_usd must be a positive number of dollars; got NaN/);
+test("a --max-usd that is not a plain decimal is refused as usage, naming what was given", () => {
+  for (const given of ["abc", "0x10", "1e2", " 0.3", "0.3 ", "+1", ".5", "Infinity"]) {
+    assert.throws(
+      () => parseArgs(["--out", "r1/v1-a", "--model", MODEL, "--prompt", "p", "--max-usd", given]),
+      (error) => error.message === `--max-usd takes the most the job can cost, in dollars, such as 0.25; got ${JSON.stringify(given)}`,
+    );
+  }
+});
+
+test("a ceiling that is not a plain decimal is refused before any call, as 0x10 would otherwise read as $16", async () => {
+  const api = fakeApi();
+  for (const ceiling of ["0x10", "1e2", "0b1", " 3", "3.", "-1", "Infinity", KEY]) {
+    await assert.rejects(
+      render([job(roundDir())], api.options({ ceiling })),
+      (error) => /HIGGSFIELD_ROUND_CEILING_USD must be set.*; it holds something else, not shown/.test(error.message) && !error.message.includes(ceiling),
+      ceiling,
+    );
+  }
+  assert.equal(api.calls.length, 0);
+});
+
+test("an estimate whose usd string is not a plain decimal is not read as a price", async () => {
+  for (const usd of ["0x10", "1e2", " 0.2", "0.2 "]) {
+    const api = fakeApi({ estimate: { ...RULE, usd } });
+    await assert.rejects(render([job(roundDir())], api.options()), /carried no usd figure/, usd);
+    assert.equal(api.submissions().length, 0);
+  }
 });
 
 test("a job priced by a rule that times out is recorded at its max_usd, with the rule beside it", async () => {
@@ -1316,6 +1355,23 @@ test("the key and ceiling are read from ~/.higgsfield.env where the environment 
 test("a variable already in the environment wins over the file", () => {
   const file = envFile("export HIGGSFIELD_API_KEY=file:key\nHIGGSFIELD_ROUND_CEILING_USD='2'\n");
   assert.deepEqual(readSettings({ HIGGSFIELD_API_KEY: "env:key" }, file), { HIGGSFIELD_API_KEY: "env:key", HIGGSFIELD_ROUND_CEILING_USD: "2" });
+});
+
+test("a blank exported variable counts as unset, so the file's value is used", () => {
+  const file = envFile("export HIGGSFIELD_API_KEY=file:key\nexport HIGGSFIELD_ROUND_CEILING_USD=2\n");
+  assert.deepEqual(readSettings({ HIGGSFIELD_API_KEY: "", HIGGSFIELD_ROUND_CEILING_USD: "  " }, file), { HIGGSFIELD_API_KEY: "file:key", HIGGSFIELD_ROUND_CEILING_USD: "2" });
+});
+
+test("an environment value is trimmed, as a file value is", () => {
+  const file = envFile("");
+  assert.deepEqual(readSettings({ HIGGSFIELD_API_KEY: "  env:key\n", HIGGSFIELD_ROUND_CEILING_USD: "\t3 " }, file), { HIGGSFIELD_API_KEY: "env:key", HIGGSFIELD_ROUND_CEILING_USD: "3" });
+});
+
+test("the program sends a padded exported key trimmed", async () => {
+  const api = fakeApi();
+  const env = readSettings({ HIGGSFIELD_API_KEY: ` ${KEY} \n`, HIGGSFIELD_ROUND_CEILING_USD: "1" }, envFile(""));
+  assert.equal(await render([job(roundDir())], api.options({ credentials: env.HIGGSFIELD_API_KEY, ceiling: env.HIGGSFIELD_ROUND_CEILING_USD })), 0);
+  assert.equal(api.submissions()[0].headers.Authorization, `Key ${KEY}`);
 });
 
 test("with no key file the environment alone is used", () => {
