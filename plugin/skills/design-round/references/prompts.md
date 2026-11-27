@@ -89,7 +89,7 @@ Write one line: a noun phrase first, then the parameters. Midjourney ignores hex
 
 `--sref <url> --sw 100` to `400` locks a reference style. `--oref` locks an object, not a style. Inpainting an HD image drops it back to SD.
 
-Check a saved render with `check-render.py <render> --model midjourney/v8.1 --aspect 21:9` (`midjourney/v7` for a V7 upscale). No Midjourney size is on record yet, so either reads NOT JUDGED until one is measured into [render-sizes.json](render-sizes.json).
+Check a saved render with `check-render.py <render> --model midjourney/v8.2 --aspect 21:9` (`midjourney/v8.1` for `--v 8.1`, `midjourney/v7` for a V7 upscale). No Midjourney size is on record yet, so each reads NOT JUDGED until one is measured into [render-sizes.json](render-sizes.json).
 
 ### Nano Banana Pro · Seedream
 

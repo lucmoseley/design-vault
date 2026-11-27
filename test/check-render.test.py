@@ -19,6 +19,9 @@ SPEND_LOG = os.path.join(
 SIBLINGS = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "siblings.py"
 )
+CRASH_EXIT = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "crash_exit.py"
+)
 SIZES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "references", "render-sizes.json"
 )
@@ -29,6 +32,7 @@ ROSTER = os.path.join(
 
 GROK = "xai/grok-imagine-image-2.0"
 QWEN = "alibaba/qwen-image-3/text-to-image"
+IDEOGRAM = "ideogram/v4.0"
 CELL_SLACK_PX = 1  # guess, #332
 CELL_SLACK_SHARE = 0.15  # guess, #332
 
@@ -103,6 +107,23 @@ class Size(unittest.TestCase):
             )
             self.assertIn("render it again at the model's largest size", out)
 
+    def test_an_aspect_past_16_9_fails_a_render_one_pixel_short_542(self):
+        for aspect, (w, h) in (("3:2", (2496, 1664)), ("9:16", (1440, 2560))):
+            stem = f"v-{aspect.replace(':', '-')}"
+            self.logged(
+                *((f"r1/{stem}{s}", IDEOGRAM, aspect) for s in ("", "-n", "-s"))
+            )
+            code, out, _ = run(self.render(stem, (w, h)))
+            self.assertEqual(code, 0, out)
+            for suffix, size in (("-n", (w - 1, h)), ("-s", (w, h - 1))):
+                code, out, _ = run(self.render(stem + suffix, size))
+                self.assertEqual(code, 1, out)
+                self.assertIn(
+                    f"size: FAIL — {size[0]}x{size[1]} against the largest, {w}x{h}",
+                    out,
+                )
+                self.assertIn("render it again at the model's largest size", out)
+
     def test_a_render_over_its_models_largest_size_passes(self):
         w, h = largest(GROK)
         self.logged(("r1/v1-up", GROK, "16:9"))
@@ -114,11 +135,13 @@ class Size(unittest.TestCase):
             ("r1/v1-new", "made-up/model", "16:9"),
             ("r1/v2-web", "nano_banana_2", "16:9"),
             ("r1/v3-square", GROK, "1:1"),
+            ("r1/v4-mj", "midjourney/v8.2", "21:9"),
         )
         for stem, why in (
             ("v1-new", "made-up/model has no row in render-sizes.json"),
             ("v2-web", "no largest size on record for nano_banana_2 at 16:9"),
             ("v3-square", f"no largest size on record for {GROK} at 1:1"),
+            ("v4-mj", "no largest size on record for midjourney/v8.2 at 21:9"),
         ):
             code, out, _ = run(self.render(stem, (8000, 8000)))
             self.assertEqual(code, 6, out)
@@ -257,6 +280,7 @@ class Size(unittest.TestCase):
         copy = shutil.copy(SCRIPT, scripts)
         shutil.copy(SPEND_LOG, scripts)
         shutil.copy(SIBLINGS, scripts)
+        shutil.copy(CRASH_EXIT, scripts)
         render = self.render("v1-a", (10, 10))
         for broken in (
             None,
