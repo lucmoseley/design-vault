@@ -260,7 +260,7 @@ test("two submissions the API answers with one request_id are still two charges 
   await assert.rejects(render([job(dir, "v3-reef")], rerun.options({ ceiling: "0.50" })), /past its \$0\.500 ceiling/);
 });
 
-test("a submission answered with an empty request_id is recorded at its estimate, since it may have been charged", async () => {
+test("a submission answered with an empty request_id is recorded at its estimate, since it may have been charged (#571)", async () => {
   const dir = roundDir();
   await assert.rejects(render([job(dir)], fakeApi({ submit: [reply(200, { status: "queued", request_id: "" })] }).options()), /may have reached Higgsfield/);
   assert.deepEqual(
