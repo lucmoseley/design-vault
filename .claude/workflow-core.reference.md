@@ -5,11 +5,11 @@
 
 ## Switching a module on
 
-The modules are `roadmap`, `governance`, `site`, `mutation` and `comments`. To switch one on, add it to `modules` in `.claude/workflow-core.json`, then run `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.3/scripts/init-adopter.js --no-plugin-install`: it keeps the founder, modules and plugin pin already written. Commit what it wrote; the new rules load at the next session. Until a subject's switch is set, `check-gate-switches.js` refuses every commit.
+The modules are `roadmap`, `governance`, `site`, `mutation` and `comments`. To switch one on, add it to `modules` in `.claude/workflow-core.json`, then run `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.4/scripts/init-adopter.js --no-plugin-install`: it keeps the founder, modules and plugin pin already written. Commit what it wrote; the new rules load at the next session. Until a subject's switch is set, `check-gate-switches.js` refuses every commit.
 
 ## Repo-health checks on demand
 
-The repo-health checkers — stranded claims, stale queue markers and git locks, stray scratch among them — run on demand with `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.3/scripts/status-report.js`, or `--only <part of a name>` for some. A checker's finding never changes its exit code.
+The repo-health checkers — stranded claims, stale queue markers and git locks, stray scratch among them — run on demand with `node /home/lucmo/.claude/plugins/cache/workflow-core/workflow-core/3.2.4/scripts/status-report.js`, or `--only <part of a name>` for some. A checker's finding never changes its exit code.
 
 ## Page checks under `site`
 
@@ -25,5 +25,5 @@ What a `.claude/workflow-core.json` key does where it is absent or wrong — whi
 
 ## Plugin provenance
 
-- url source, ref v3.2.3, HEAD f00badfa1744dc79eb855e5d78a449032d137491
+- url source, ref v3.2.4, HEAD 043ed0f10ef19775fba24f99ea86db9f737c8820
 - the seven husky hooks run from `WFC_PLUGIN_ROOT` in both branches, so this is what the last init or upgrade installed, not what the hooks run today
