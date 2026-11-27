@@ -55,9 +55,11 @@
  * word the --contact word unquoted, and covers the selectors of a covered
  * contact's covers, in painting order.
  * The file is read as the browser parses it: an .svg, .xhtml, .xht or .xml as XML,
- * case-sensitive; anything else as HTML, each attribute name folded to lower
- * case, the first of two duplicates kept, and a shape's selector counted from
- * the <html>, <head> and <body> the parser adds where the page leaves them out.
+ * as written and case-sensitive; anything else as HTML, through the element tree
+ * parse5 builds by the HTML Standard's tree construction, so each shape's
+ * selector, painting order and outermost <svg> are the ones the browser's tree
+ * gives it, and a <template>'s content is not read. Reading HTML needs the
+ * plugin's npm packages (plugin/package.json).
  * --contacts does not read: stroke widths (a stroke is its centre line), a
  * stylesheet's or an animation's geometry, what a <use> draws, an <svg> sized by
  * CSS, whose user units are read as CSS px with a note, and contacts between two
@@ -400,16 +402,16 @@ function findRuns(d) {
 
 const NODE_WRITTEN = new Set(["path", "polygon", "polyline"]);
 
-function nodeWrittenShapes(text, html) {
-  const { shapes, referable, refs } = drawnShapes(text, html);
+function nodeWrittenShapes(tree) {
+  const { shapes, referable, refs } = drawnShapes(tree);
   return [...shapes, ...referable.filter((s) => s.ids.some((i) => refs.has(i)))]
     .filter((s) => NODE_WRITTEN.has(s.tag.toLowerCase()))
     .sort((a, b) => a.offset - b.offset);
 }
 
-function checkText(text, html) {
+function checkTree(tree) {
   const breaches = [];
-  for (const { line, tag, id, d, error } of nodeWrittenShapes(text, html)) {
+  for (const { line, tag, id, d, error } of nodeWrittenShapes(tree)) {
     if (error !== undefined) {
       breaches.push({ line, tag, id, error });
       continue;
@@ -448,14 +450,7 @@ const FAULTS = new Set(CLASSES.slice(0, 2));
 const IDENTITY = [1, 0, 0, 1, 0, 0];
 // https://www.w3.org/TR/SVG2/struct.html#DefsElement: shapes in these are not drawn where they stand
 const UNDRAWN = new Set(["defs", "clippath", "mask", "symbol", "marker", "pattern"]);
-// HTML's void elements take no closing tag: https://html.spec.whatwg.org/multipage/syntax.html#void-elements
-const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 const RAW = new Set(["script", "style"]);
-// https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody: outside an <svg>, the HTML parser reads these
-// elements' content as text, scripting on as in Chromium
-const HTML_RAW = new Set(["iframe", "noembed", "noframes", "noscript", "textarea", "title", "xmp"]);
-// https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inhead: the start tags the parser keeps in <head>
-const HEAD_CONTENT = new Set(["base", "basefont", "bgsound", "link", "meta", "noframes", "noscript", "script", "style", "template", "title"]);
 // a file:// page's parser follows its extension's MIME type: https://source.chromium.org/chromium/chromium/src/+/main:net/base/mime_util.cc
 const XML_FILE = /\.(?:svg|xhtml?|xht|xml)$/i;
 const NUMBER_ONLY = new RegExp(`${NUMBER.source}$`);
@@ -516,28 +511,12 @@ function viewport(attrs) {
   return { map: [s, 0, 0, s, x - box[0] * s + room(align.slice(1, 4), w, box[2]), y - box[1] * s + room(align.slice(5, 8), h, box[3])], sized: true };
 }
 
-// https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-attributes: the HTML parser gives these back their case
-const SVG_CASE = { viewbox: "viewBox", preserveaspectratio: "preserveAspectRatio" };
+function parseAttrs(text) {
+  return [...text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(([, name, dq, sq]) => [name, dq ?? sq]);
+}
 
-// https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-tag-names: the HTML parser gives these SVG tag names back their case
-const SVG_TAG_CASE = Object.fromEntries(
-  [
-    "altGlyph", "altGlyphDef", "altGlyphItem", "animateColor", "animateMotion", "animateTransform", "clipPath",
-    "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting",
-    "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR",
-    "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight",
-    "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence", "foreignObject", "glyphRef", "linearGradient",
-    "radialGradient", "textPath",
-  ].map((n) => [n.toLowerCase(), n]),
-);
-
-function parseAttrs(text, html) {
-  const attrs = {};
-  for (const [, written, dq, sq] of text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-    // https://html.spec.whatwg.org/multipage/parsing.html#attribute-name-state: an HTML parser folds names and keeps the first of two
-    const name = html ? (SVG_CASE[written.toLowerCase()] ?? written.toLowerCase()) : written;
-    if (!(html && name in attrs)) attrs[name] = dq ?? sq;
-  }
+function buildAttrs(list) {
+  const attrs = Object.fromEntries(list);
   const important = new Set();
   for (const decl of (attrs.style ?? "").split(";")) {
     const [name, ...value] = decl.split(":");
@@ -589,80 +568,77 @@ const DRAWN = new Set(["path", "polygon", "polyline", "circle", "ellipse", "rect
 // https://www.w3.org/TR/css-cascade-5/#inherit-initial: on an inherited property unset acts as inherit
 const isInheritedValue = (v) => v === undefined || ["inherit", "unset"].includes(keyword(v));
 
-function drawnShapes(text, html) {
-  const out = [];
-  const referable = [];
-  const refs = new Set();
-  const notes = [];
-  const stack = [{ name: null, seen: {}, selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, evenodd: false, undrawn: false, visible: true, transformError: undefined }];
-  const step = (parent, tag) => {
-    parent.seen[tag] = (parent.seen[tag] ?? 0) + 1;
-    return parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
-  };
-  // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction: the parser adds the <html>, <head> and <body>
-  // a page leaves out, and drops a second one
-  let mode = html ? "initial" : "body";
-  const imply = (name) => {
-    const parent = stack[stack.length - 1];
-    stack.push({ ...parent, name, seen: {}, selector: step(parent, name) });
-  };
-  const leaveHead = () => {
-    stack.length = stack.findIndex((el) => el.name === "html") + 1;
-    mode = "afterHead";
-  };
-  const admit = (name) => {
-    if (mode === "initial") {
-      mode = "beforeHead";
-      if (name === "html") return true;
-      imply("html");
-    }
-    if (name === "html") return false;
-    if (mode === "beforeHead") {
-      mode = "inHead";
-      if (name === "head") return true;
-      imply("head");
-    }
-    if (mode === "body") return name !== "head" && name !== "body";
-    if (HEAD_CONTENT.has(name) || name === "head") return name !== "head";
-    if (mode === "inHead") leaveHead();
-    mode = "body";
-    if (name === "body") return true;
-    imply("body");
-    return true;
-  };
-  let textFrom = 0;
+function parseXmlTree(text) {
+  const tree = { children: [] };
+  const stack = [{ name: null, node: tree, ns: null }];
   const markup = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[!?][^>]*>|<\/([\w:.-]+)\s*>|<([\w:.-]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
   let m;
   while ((m = markup.exec(text))) {
     const [, closing, tag, rest] = m;
-    const textBefore = text.slice(textFrom, m.index);
-    textFrom = markup.lastIndex;
-    if (mode !== "body" && /[^\t\n\f\r ]/.test(textBefore) && [null, "html", "head"].includes(stack[stack.length - 1].name)) admit("#text");
-    if (closing && html && ["head", "body", "html"].includes(closing.toLowerCase())) {
-      if (closing.toLowerCase() === "head" && mode === "inHead") leaveHead();
-      continue;
-    }
     if (closing) {
-      const k = stack.findLastIndex((el, i) => i > 0 && el.name === closing.toLowerCase());
+      const k = stack.findLastIndex((el, i) => i > 0 && el.name === closing);
       if (k > 0) stack.length = k;
       continue;
     }
     if (!tag) continue;
-    const name = tag.toLowerCase();
-    if (html && !admit(name)) continue;
-    const attrs = parseAttrs(rest, html);
     const parent = stack[stack.length - 1];
-    const line = text.slice(0, m.index).split("\n").length;
+    const attrs = parseAttrs(rest);
+    const ns = attrs.find(([n]) => n === "xmlns")?.[1] ?? parent.ns;
+    const node = { name: tag, ns, attrs, children: [], line: text.slice(0, m.index).split("\n").length, offset: m.index };
+    parent.node.children.push(node);
+    if (!/\/\s*$/.test(rest)) stack.push({ name: tag, node, ns });
+    if (RAW.has(tag.toLowerCase())) {
+      const end = text.indexOf(`</${tag}`, markup.lastIndex);
+      markup.lastIndex = end < 0 ? text.length : end;
+    }
+  }
+  return tree;
+}
+
+function parseHtmlTree(text) {
+  const parse5 = loadParse5();
+  if (!parse5) return null;
+  const elements = (n) => n.childNodes.filter((c) => c.tagName !== undefined).map(element);
+  const element = (n) => ({
+    name: n.tagName,
+    ns: n.namespaceURI,
+    attrs: n.attrs.map((a) => [a.prefix ? `${a.prefix}:${a.name}` : a.name, a.value]),
+    children: elements(n),
+    line: n.sourceCodeLocation?.startLine,
+    offset: n.sourceCodeLocation?.startOffset,
+  });
+  return { children: elements(parse5.parse(text, { sourceCodeLocationInfo: true, scriptingEnabled: true })) };
+}
+
+let parse5Loaded;
+
+function loadParse5() {
+  if (parse5Loaded !== undefined) return parse5Loaded;
+  try {
+    parse5Loaded = require("parse5");
+  } catch (err) {
+    console.error(`check-curves.js: the design-vault plugin's npm packages are not installed, so it cannot read an HTML file (${err.message.split("\n")[0]}); run \`claude plugin update design-vault@lucmoseley\`, or in a vault clone \`npm ci --ignore-scripts --prefix plugin\``);
+    parse5Loaded = null;
+  }
+  return parse5Loaded;
+}
+
+function drawnShapes(tree) {
+  const out = [];
+  const referable = [];
+  const refs = new Set();
+  const notes = [];
+  const enter = (node, parent, chain) => {
+    const name = node.name.toLowerCase();
+    const attrs = buildAttrs(node.attrs);
+    const { line, name: tag, offset } = node;
     const id = attrs.id;
     for (const v of Object.values(attrs)) for (const [, ref] of v.matchAll(/url\(\s*["']?#([^)"'\s]+)/g)) refs.add(ref);
     const href = attrs.href ?? attrs["xlink:href"];
     if (href?.startsWith("#")) refs.add(href.slice(1));
-    const selector = step(parent, !html ? tag : parent.root === null && name !== "svg" ? name : (SVG_TAG_CASE[name] ?? name));
     const el = {
-      name,
-      seen: {},
-      selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : selector,
-      root: parent.root ?? (name === "svg" ? m.index : null),
+      selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : chain,
+      root: parent.root ?? (name === "svg" ? offset : null),
       ids: id ? [...parent.ids, id] : parent.ids,
       matrix: parent.matrix,
       fill: isInheritedValue(attrs.fill) ? parent.fill : keyword(attrs.fill) !== "none",
@@ -684,7 +660,7 @@ function drawnShapes(text, html) {
     }
     if (DRAWN.has(name)) {
       const list = el.undrawn ? referable : out;
-      const base = { line, tag, id, offset: m.index, ...(el.undrawn ? { ids: el.ids } : { order: out.length + 1 }) };
+      const base = { line, tag, id, offset, ...(el.undrawn ? { ids: el.ids } : { order: out.length + 1 }) };
       try {
         let shape;
         if (name === "path") shape = attrs.d && { d: attrs.d };
@@ -699,15 +675,18 @@ function drawnShapes(text, html) {
         list.push({ ...base, error: err.message });
       }
     }
-    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors: an HTML parser ignores a self-closing slash outside foreign content
-    const selfClosed = /\/\s*$/.test(rest) && (!html || el.root !== null);
-    if (!selfClosed && !VOID.has(name)) stack.push(el);
-    if (RAW.has(name) || (html && el.root === null && HTML_RAW.has(name))) {
-      const end = text.toLowerCase().indexOf(`</${name}`, markup.lastIndex);
-      markup.lastIndex = end < 0 ? text.length : end;
-      textFrom = markup.lastIndex;
+    return el;
+  };
+  const visit = (node, parent) => {
+    const seen = {};
+    for (const child of node.children) {
+      // https://www.w3.org/TR/selectors-4/#the-nth-of-type-pseudo: siblings of one type share a local name and a namespace
+      const type = `${child.ns} ${child.name}`;
+      seen[type] = (seen[type] ?? 0) + 1;
+      visit(child, enter(child, parent, parent.selector === null ? ":root" : `${parent.selector}>${child.name}:nth-of-type(${seen[type]})`));
     }
-  }
+  };
+  visit(tree, { selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, evenodd: false, undrawn: false, visible: true, transformError: undefined });
   return { shapes: out, referable, refs, notes };
 }
 
@@ -896,11 +875,11 @@ function printContacts(argv) {
     console.error("usage: node check-curves.js --contacts [--json] <file> [<file> ...]");
     return 2;
   }
-  const texts = readFiles(files);
-  if (!texts) return 2;
+  const trees = readFiles(files);
+  if (!trees) return 2;
   const [notes, unread, listed] = [[], [], []];
-  for (const { file, text, html } of texts) {
-    const { shapes: found, notes: noted } = drawnShapes(text, html);
+  for (const { file, tree } of trees) {
+    const { shapes: found, notes: noted } = drawnShapes(tree);
     for (const note of noted) notes.push(`${file}:${note}`);
     const readable = [];
     for (const s of found) {
@@ -941,12 +920,16 @@ function printContacts(argv) {
 function readFiles(files) {
   const out = [];
   for (const file of files) {
+    let text;
     try {
-      out.push({ file, text: fs.readFileSync(file, "utf8"), html: !XML_FILE.test(file) });
+      text = fs.readFileSync(file, "utf8");
     } catch (err) {
       console.error(`${file}: ${err.message}`);
       return null;
     }
+    const tree = XML_FILE.test(file) ? parseXmlTree(text) : parseHtmlTree(text);
+    if (!tree) return null;
+    out.push({ file, tree });
   }
   return out;
 }
@@ -983,11 +966,11 @@ function printBends(files) {
     console.error("usage: node check-curves.js --bends <file> [<file> ...] | --bends --json < shapes.json");
     return 2;
   }
-  const texts = readFiles(files);
-  if (!texts) return 2;
+  const trees = readFiles(files);
+  if (!trees) return 2;
   let unread = 0;
-  for (const { file, text, html } of texts) {
-    for (const shape of nodeWrittenShapes(text, html)) {
+  for (const { file, tree } of trees) {
+    for (const shape of nodeWrittenShapes(tree)) {
       let found;
       let { error } = shape;
       if (error === undefined) {
@@ -1018,11 +1001,11 @@ function main(argv) {
     console.error("usage: node check-curves.js <file> [<file> ...]");
     return 2;
   }
-  const texts = readFiles(argv);
-  if (!texts) return 2;
+  const trees = readFiles(argv);
+  if (!trees) return 2;
   let found = 0;
-  for (const { file, text, html } of texts) {
-    for (const b of checkText(text, html)) {
+  for (const { file, tree } of trees) {
+    for (const b of checkTree(tree)) {
       found++;
       if (b.error) console.log(`${where(file, b)}: could not read the path: ${b.error}`);
       else if (b.corner?.kink) console.log(`${where(file, b)}: the curve and straight line meeting at (${pointText(b.corner.at)}) turn ${b.corner.angle.toPrecision(3)}° there, past the ${b.corner.allowed.toPrecision(2)}° their written precision allows but under the ${((NEAR_TANGENT * 180) / Math.PI).toPrecision(2)}° a meant corner turns; put the curve's handle in line with the straight side, unless vault.curves-script excuses the kink`);

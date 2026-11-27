@@ -102,6 +102,7 @@ jobs:
         run: |
           python3 -m pip install -r plugin/requirements.txt
           python3 -m playwright install --with-deps chromium
+          npm ci --ignore-scripts --prefix plugin
 
       # Through the environment, never `${{ }}` in `run:`:
       # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable

@@ -14,7 +14,8 @@
 	"fullTestShards": 4,
 	"ciSetup": [
 		"python3 -m pip install -r plugin/requirements.txt",
-		"python3 -m playwright install --with-deps chromium"
+		"python3 -m playwright install --with-deps chromium",
+		"npm ci --ignore-scripts --prefix plugin"
 	],
 	"sessionMeanMb": 698,
 	"sessionSigmaMb": 683,

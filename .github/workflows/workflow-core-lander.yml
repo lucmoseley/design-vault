@@ -89,6 +89,7 @@ jobs:
         run: |
           python3 -m pip install -r plugin/requirements.txt
           python3 -m playwright install --with-deps chromium
+          npm ci --ignore-scripts --prefix plugin
 
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 1/4
@@ -167,6 +168,7 @@ jobs:
         run: |
           python3 -m pip install -r plugin/requirements.txt
           python3 -m playwright install --with-deps chromium
+          npm ci --ignore-scripts --prefix plugin
 
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 2/4
@@ -245,6 +247,7 @@ jobs:
         run: |
           python3 -m pip install -r plugin/requirements.txt
           python3 -m playwright install --with-deps chromium
+          npm ci --ignore-scripts --prefix plugin
 
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 3/4
@@ -323,6 +326,7 @@ jobs:
         run: |
           python3 -m pip install -r plugin/requirements.txt
           python3 -m playwright install --with-deps chromium
+          npm ci --ignore-scripts --prefix plugin
 
       - name: Whole-run group
         run: node .workflow-core/scripts/lander-ci.js group 4/4

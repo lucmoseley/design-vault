@@ -12,13 +12,13 @@ set -u
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
 # code-edges loads: failed-files.js
-registry='node --test --test-reporter=./test/failed-files.js
+registry='node --test --test-reporter=./test/failed-files.js	npm
 bash test/design-round-pointer.test.sh
 python3 test/cutout.test.py	images
 python3 test/check-render.test.py	images
 python3 test/check-logo.test.py	images chromium
 python3 test/check-clip.test.py
-python3 test/check-flow.test.py	chromium
+python3 test/check-flow.test.py	chromium npm
 python3 test/runner.test.py	chromium
 python3 test/planted-faults-runner.test.py
 python3 test/check-flow-records.test.py	images chromium
@@ -45,8 +45,8 @@ python3 test/check-load.test.py	chromium
 python3 test/check-load-files.test.py	chromium
 python3 test/drive-overlay.test.py	chromium openssl
 python3 test/conditions.test.py	chromium
-python3 test/look-renders.test.py	images chromium
-python3 test/check-seams.test.py	images chromium
+python3 test/look-renders.test.py	images chromium npm
+python3 test/check-seams.test.py	images chromium npm
 python3 test/drive-form.test.py	chromium
 python3 test/check-cross.test.py	chromium
 python3 test/check-dom.test.py	images chromium
@@ -60,7 +60,7 @@ suites=()
 declare -A needs=()
 while IFS=$'\t' read -r suite need; do
   for word in ${need:-}; do
-    [[ $word == images || $word == chromium || $word == openssl || $word == video ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium, openssl and video" >&2 && exit 2; }
+    [[ $word == images || $word == chromium || $word == openssl || $word == video || $word == npm ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium, openssl, video and npm" >&2 && exit 2; }
   done
   suites+=("$suite")
   needs[$suite]=${need:-}
@@ -98,7 +98,10 @@ for file in "$@"; do
   fi
   [[ " ${named[*]} " == *" $suite "* ]] || named+=("$suite")
 done
-((${#node_files[@]})) && named=("$node_suite ${node_files[*]}" "${named[@]}")
+if ((${#node_files[@]})); then
+  named=("$node_suite ${node_files[*]}" "${named[@]}")
+  needs["$node_suite ${node_files[*]}"]=${needs[$node_suite]}
+fi
 if (($#)) && ((!${#named[@]})); then
   echo "no named file has a suite to run"
   exit 0
@@ -194,6 +197,10 @@ suites_needing() {
   done
   printf '%s' "$out"
 }
+if [ -f plugin/package.json ] && for_npm="$(suites_needing npm)"; then
+  need "the plugin's npm package parse5, for $for_npm" 'npm ci --ignore-scripts --prefix plugin' \
+    node -e 'require("./plugin/node_modules/parse5")'
+fi
 if [[ " ${run[*]} " == *" python3 "* ]]; then
   pip_install='python3 -m pip install --only-binary :all: -r plugin/requirements.txt'
   need python3 'Python 3, from miniforge (the machine-wide Python)' command -v python3

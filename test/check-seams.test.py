@@ -1,4 +1,5 @@
 import csv
+import json
 import re
 
 import os
@@ -18,6 +19,9 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-seams.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "check-seams")
+CURVES = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-curves.js"
+)
 RESEARCH = os.path.join(HERE, "..", "docs", "data", "contact-seams-2026-10-16.csv")
 GAP_ROW = "blue-orange-on-white.gap-v.1"
 # guess, #341
@@ -200,6 +204,25 @@ class Seams(unittest.TestCase):
             self.assertEqual(tuple(matte[8, 8]), (0, 0xCC, 0), ground)
 
 
+with open(os.path.join(HERE, "fixtures", "tree-pages.json"), encoding="utf8") as fh:
+    TREE_PAGES = [(page["name"], page["body"]) for page in json.load(fh)]
+
+
+def matches_in_chromium(tab, page):
+    listed = subprocess.run(
+        ["node", CURVES, "--contacts", "--json", page],
+        capture_output=True,
+        text=True,
+        timeout=RUN_S,
+        check=False,
+    )
+    contacts = json.loads(listed.stdout)["contacts"]
+    selectors = [s for c in contacts for s in (c["lower"], c["upper"], *c["covers"])]
+    assert any(c["covers"] for c in contacts), listed.stdout
+    tab.goto("file://" + os.path.abspath(page))
+    return [tab.eval_on_selector_all(s, "found => found.length") for s in selectors]
+
+
 class Edges(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -289,6 +312,36 @@ class Edges(unittest.TestCase):
         proc = run(path, self.tmp.name)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("pass a.2-b.4 (covered): ", proc.stdout)
+
+    def test_668_no_id_shapes_and_cover_whose_svg_the_html_parser_moves_passes_covered_named_in_chromium(
+        self,
+    ):
+        from playwright.sync_api import sync_playwright
+
+        svg = (
+            '<svg width="100" height="100">'
+            '<path fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
+            '<path fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
+            '<g><path fill="#0c0" d="M46 10 H54 V50 H46 Z"/></g></svg>'
+        )
+        with sync_playwright() as play:
+            browser = play.chromium.launch()
+            try:
+                tab = browser.new_page()
+                for name, body in TREE_PAGES:
+                    path = os.path.join(self.tmp.name, f"{name}.html")
+                    with open(path, "w") as fh:
+                        fh.write(
+                            "<!doctype html><style>body { margin: 0; background: #fff; }</style>"
+                            + body.format(svg=svg)
+                        )
+                    with self.subTest(name):
+                        proc = run(path, os.path.join(self.tmp.name, name))
+                        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                        self.assertIn("pass path1.2-path2.4 (covered): ", proc.stdout)
+                        self.assertEqual(set(matches_in_chromium(tab, path)), {1}, name)
+            finally:
+                browser.close()
 
     def test_a_missing_file_or_a_url_is_a_usage_error(self):
         for page in (os.path.join(self.tmp.name, "none.html"), "https://example.com/"):
