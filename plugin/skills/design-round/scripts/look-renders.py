@@ -208,16 +208,16 @@ def parse(argv):
     return args
 
 
-def open_page(browser, args, load, scale, *, timeline=None):
+def open_page(browser, load, scale, *, width, timeline=None):
     return frames.open_page(
-        browser, load, scale, device=conditions.device(args.width), timeline=timeline
+        browser, load, scale, device=conditions.device(width), timeline=timeline
     )
 
 
 def fit(browser, args):
     # #354
     load = frames.Load(args.url, args.viewport_size, args.timeout, args.wait)
-    context, page, _ = open_page(browser, args, load, 1)
+    context, page, _ = open_page(browser, load, 1, width=args.width)
     try:
         drawn = page.evaluate(SVG_ROOT_JS)
     finally:
@@ -256,7 +256,7 @@ def render_contacts(browser, args, also=None):
     for scale in SCALES:
         for t in times:
             context, page, _ = open_page(
-                browser, args, load, scale, timeline=prep["timeline"]
+                browser, load, scale, width=args.width, timeline=prep["timeline"]
             )
             try:
                 frames.seek(page, t)
@@ -324,7 +324,7 @@ def find_bends(shapes):
 
 def render_bends(browser, args):
     load, full_page = fit(browser, args)
-    context, page, prep = open_page(browser, args, load, ZOOM)
+    context, page, prep = open_page(browser, load, ZOOM, width=args.width)
     try:
         frames.seek(page, prep["end"])
         bends, unread = find_bends(page.evaluate(SHAPES_JS))

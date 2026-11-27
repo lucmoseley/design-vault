@@ -560,7 +560,7 @@ def render(browser, load, scale, t, *, timeline):
         context.close()
 
 
-def check_hash(browser, blank, load, at):
+def check_hash(browser, blank, load, *, at):
     stored, scale = at.stored, at.scale
     if stored:
         load = dataclasses.replace(load, viewport=stored["viewport"])
@@ -824,7 +824,7 @@ def run(at, assets):
         load = Load(at.url, at.viewport_size, at.timeout, at.wait)
         if at.mode == "last":
             return check_last(browser, blank, load, assets, at=at)
-        return check_hash(browser, blank, load, at)
+        return check_hash(browser, blank, load, at=at)
 
 
 def main(argv):

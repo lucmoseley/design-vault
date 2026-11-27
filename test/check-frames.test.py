@@ -21,13 +21,17 @@ import siblings  # noqa: E402
 
 frames = siblings.load(SCRIPTS, "check-frames.py")
 runner = siblings.load(SCRIPTS, "runner.py")
+conditions = siblings.load(SCRIPTS, "conditions.py")
 NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS = 10
 RUN_TIMEOUT_S = 180  # guess, #501
 
 
 def load_of(path):
+    width, height = conditions.DESKTOP_WINDOW
     return frames.Load(
-        pathlib.Path(path).resolve().as_uri(), {"width": 1920, "height": 945}, 60000
+        pathlib.Path(path).resolve().as_uri(),
+        {"width": width, "height": height},
+        runner.PLAY_TIMEOUT_MS,
     )
 
 
