@@ -136,8 +136,10 @@ test("a fall naming no scale cannot be recomputed and exits 6, unless another fa
 
 test("bad usage and a table it cannot read exit 2, naming why", () => {
   const cases = [
-    [[], /--check wants one table file/],
+    [[], /--check <value>. argument missing/],
+    [["--check", "again.md"], /--check wants one table file/],
     [["--landing", "soft"], /--landing wants thud or sink/],
+    [["--landing=thud"], /--landing wants its value as the next argument, not after =/],
     [["--json"], /--json is not taken with --check/],
   ];
   for (const [extra, why] of cases) {

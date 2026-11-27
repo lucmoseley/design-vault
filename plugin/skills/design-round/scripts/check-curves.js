@@ -54,7 +54,8 @@
  * paint), the covered line is not measured. An underlap whose upper fill is not
  * proved opaque is not measured either. Each line ends with the contact as
  * look-renders.py contacts' --contact, a shell word to pass on unchanged. With
- * --json, one JSON object on stdout instead: { notes, unread, contacts }, each
+ * --json, one JSON object on stdout instead: { contactPx, notes, unread,
+ * contacts }, contactPx being CONTACT_PX, each
  * contact { file, name, cls, verdict, lower, upper, at, along, word, unproved? },
  * lower and upper the two shapes' selectors, at and along in upper's user units,
  * word the --contact word unquoted, and unproved true on a pass that rests on
@@ -1052,7 +1053,7 @@ function printContacts(argv) {
   }
   const faults = listed.filter((c) => FAULTS.has(c.cls)).length;
   const unproved = listed.filter((c) => c.unproved).length;
-  if (json) console.log(JSON.stringify({ notes, unread, contacts: listed.map(({ pair, ...c }) => c) }));
+  if (json) console.log(JSON.stringify({ contactPx: CONTACT_PX, notes, unread, contacts: listed.map(({ pair, ...c }) => c) }));
   else {
     for (const line of [...notes, ...unread]) console.log(line);
     for (const c of listed) console.log(`${c.pair}: ${c.cls}: ${c.verdict}. --contact ${shellWord(c.word)}`);
