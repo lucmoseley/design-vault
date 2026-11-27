@@ -25,6 +25,7 @@ EXITS 0 the median LCP is within --limit / 1 it is over / 2 the arguments are
 wrong / 3 Playwright or its browser is missing / 4 the page did not load in time
 / 5 the browser refused the page / 6 the page drew no LCP element / 7 a call
 hung that would never return.
+An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 FILES MODE
   python3 check-load.py <url or file> --files --out DIR [--parts FILE]
@@ -103,6 +104,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from crash_exit import run_main  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
@@ -1099,4 +1101,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    run_main(main)

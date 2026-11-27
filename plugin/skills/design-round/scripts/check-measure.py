@@ -29,6 +29,7 @@ not render in time / 5 the browser refused the page / 6 no running text sets a
 full line at any width, and no line runs over --max / 7 a call hung that would
 never return. Exits 0, 1 and 6 are results and print on stdout; the rest
 print on stderr.
+An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -45,6 +46,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from crash_exit import run_main  # noqa: E402
 from fail_open import fail_open  # noqa: E402
 
 conditions = siblings.load(HERE, "conditions.py")
@@ -397,4 +399,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    run_main(main)
