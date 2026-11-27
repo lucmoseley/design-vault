@@ -577,6 +577,26 @@ test("a saved page's shapes are read past its script and style text, its void ta
   assert.ok(r.stdout.includes(`: separate: `) && r.stdout.includes(` --contact 'a.2-path2.4=${selector}@50.5,`), r.stdout);
 });
 
+test("a page's selectors count from the tree the HTML parser builds, with the <html>, <head> and <body> it adds (#663)", () => {
+  const svg = `<svg width="100" height="100">${A()}<g><path fill="#00c" d="M51 10 H90 V50 H51 Z"/></g></svg>`;
+  const shape = "svg:nth-of-type(1)>g:nth-of-type(1)>path:nth-of-type(1)";
+  const pages = [
+    [`<!doctype html>${svg}`, `:root>body:nth-of-type(1)>${shape}`],
+    [`<!doctype html><html><head></head><style>x{}</style>${svg}`, `:root>body:nth-of-type(1)>${shape}`],
+    [`<!doctype html><head><meta charset="utf-8"></head>hi<div>${svg}</div>`, `:root>body:nth-of-type(1)>div:nth-of-type(1)>${shape}`],
+    [`<!doctype html><p>x</p><body><div></div>${svg}</body></html><svg></svg>`, `:root>body:nth-of-type(1)>${shape}`],
+    [`<!doctype html><title>a<b></title>${svg}`, `:root>body:nth-of-type(1)>${shape}`],
+    [`<!doctype html> <!-- c --> <link rel="icon" href="x"><div></div></body><div>${svg}`, `:root>body:nth-of-type(1)>div:nth-of-type(2)>${shape}`],
+  ];
+  for (const [page, selector] of pages) {
+    const file = path.join(scratch, `${++files}.html`);
+    fs.writeFileSync(file, page);
+    const r = runInProcess(SCRIPT, ["--contacts", "--json", file]);
+    assert.equal(JSON.parse(r.stdout).contacts[0].upper, selector, page);
+  }
+  assert.equal(contactsIn(`${A()}\n<g><path fill="#00c" d="M51 10 H90 V50 H51 Z"/></g>`).found[0].contact.match(CONTACT)[2], ":root>g:nth-of-type(1)>path:nth-of-type(1)");
+});
+
 test("shapes in two <svg>s on one page are not compared: the page, not the file, places each <svg>", () => {
   const file = path.join(scratch, "two-svgs.html");
   const svg = (body) => `<svg width="100" height="100">${body}</svg>`;

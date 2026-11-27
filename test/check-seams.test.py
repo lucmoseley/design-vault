@@ -212,6 +212,20 @@ class Edges(unittest.TestCase):
         self.assertIn("pass a.2-b.4 (covered): ", proved.stdout)
         self.assertNotIn("NOT MEASURED", proved.stdout)
 
+    def test_663_a_cover_with_no_id_on_a_page_with_no_html_or_body_tag_is_shown(self):
+        path = os.path.join(self.tmp.name, "bare.html")
+        with open(path, "w") as fh:
+            fh.write(
+                "<!doctype html><style>body { margin: 0; background: #fff; }</style>"
+                '<svg width="100" height="100">'
+                '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
+                '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
+                '<g><path fill="#0c0" d="M46 10 H54 V50 H46 Z"/></g></svg>'
+            )
+        proc = run(path, self.tmp.name)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("pass a.2-b.4 (covered): ", proc.stdout)
+
     def test_a_missing_file_or_a_url_is_a_usage_error(self):
         for page in (os.path.join(self.tmp.name, "none.html"), "https://example.com/"):
             proc = run(page, self.tmp.name)
