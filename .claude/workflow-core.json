@@ -4,7 +4,7 @@
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
 	"modules": ["comments"],
-	"walkedTo": "v3.2.3",
+	"walkedTo": "v3.2.4",
 	"refillPanel": true,
 	"admissionGate": true,
 	"commands": {
