@@ -352,7 +352,7 @@
 		"plugin/skills/design-round/scripts/crash_exit.py": "library",
 		"plugin/skills/design-round/scripts/siblings.py": "library",
 		"plugin/skills/design-round/scripts/rule-table.py": "library",
-		"plugin/skills/design-round/scripts/probe.py": "library",
+		"plugin/skills/design-round/scripts/probe.py": "program",
 		"plugin/skills/design-round/scripts/layout-records.py": "library",
 		"plugin/skills/design-round/scripts/motion-records.py": "library",
 		"plugin/skills/design-round/scripts/check-cross.py": "program",
