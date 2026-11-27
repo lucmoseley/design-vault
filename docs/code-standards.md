@@ -48,6 +48,29 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/higgsfield-client.js` | library, risk path: higgsfield.js's command line, settings and render client, split out so its tests call what the program calls (#187) |
 | `plugin/skills/design-round/scripts/higgsfield-api.js` | library, risk path: the one request that carries the Higgsfield key, refused off api.higgsfield.ai, and its retry, for higgsfield-client.js (#588) |
 | `plugin/skills/design-round/scripts/gate-form.js` | library: the gate question form gate.js reads and checks, and the asset vocabulary corrections-log.js and critic-examples.js share with it (#187) |
+| `plugin/skills/design-round/scripts/check-flow.py` | library: the page probes and pacing constants the page-reading scripts share (#60); also a program that measures whether a candidate's motion keeps one pace or jolts between long pauses |
+| `plugin/skills/design-round/scripts/check-layout.py` | library: the page load and width sweep check-markup.py and probe.py read pages at (#78); also a program that loads a page at every width for sideways scroll, cut-off text and overlaps, and runs layout-records.py's records |
+| `plugin/skills/design-round/scripts/check-measure.py` | library: the line-length probe check-layout.py runs (#86, #122); also a program that renders both ends of each width range a page's media queries set and reads its line lengths |
+| `plugin/skills/design-round/scripts/check-frames.py` | library: opening a motion candidate, reading its timeline and seeking it to a time, for check-seams.py, contact-sheet.py, look.py and look-renders.py (#67); also a program that proves a candidate's frames |
+| `plugin/skills/design-round/scripts/face-profile.py` | library: the x-height, width and weight a page's text settings draw at, for access-contrast.py (#282); also a program that writes that profile for a page |
+| `plugin/skills/design-round/scripts/look.py` | library: the width look-renders.py renders at (#170); also a program, a gate critic's view tools: zoom into a page, scrub its motion and measure a part or two pixels |
+| `plugin/skills/design-round/scripts/gate.js` | library: the critics critic-examples.js reads (#157); also a program that checks the gate files and lists, tallies and rechecks a round's gate questions |
+| `plugin/skills/design-round/scripts/check-access.py` | program: measures a web candidate against the access rule records a script answers — WCAG 2.2 AA contrast, control edges, target size, links told by colour, keyboard reach and focus (#163) |
+| `plugin/skills/design-round/scripts/check-clip.py` | program: checks a generated clip's length against the motion brief's range, and its loop request against its spend-log line (#336) |
+| `plugin/skills/design-round/scripts/check-logo.py` | program: holds the logo a page or artboard draws to the client's lockup file, unchanged and on a ground it reads against (#330) |
+| `plugin/skills/design-round/scripts/check-overlay.py` | program: measures how far a candidate's mark strays from its source, for vault.curves-script's trace half (#73) |
+| `plugin/skills/design-round/scripts/check-render.py` | program: checks a render's size against its model's largest output at its aspect, read from its spend-log line, and a transparent brief's render for a painted checkerboard (#328) |
+| `plugin/skills/design-round/scripts/check-seams.py` | program: measures the ground showing along every contact check-curves.js lists, on look-renders.py's crops (#341) |
+| `plugin/skills/design-round/scripts/check-style.py` | program: answers the rule records whose answer is a computed style, an authored declaration or a font face's descriptor, through probe.py (#309) |
+| `plugin/skills/design-round/scripts/check-text.py` | program: reads a rendered page's words, characters, case and number and date formats against the records `check-text.table` names, through text-checks.py (#314) |
+| `plugin/skills/design-round/scripts/contact-sheet.py` | program: tiles a motion candidate's frames from time zero to its build's end at phone and desktop size (#71) |
+| `plugin/skills/design-round/scripts/cutout.py` | program: cuts a render's subject off its plain key-coloured background into a PNG (#56) |
+| `plugin/skills/design-round/scripts/parts-map.py` | program: maps from the DOM which parts of a web candidate a visitor can act on, for the function records (#162) |
+| `plugin/skills/design-round/scripts/video-sheet.py` | program: tiles a reference clip's frames, ten a second and either side of each cut, for a technique study (#112) |
+| `plugin/skills/design-round/scripts/check-curves.js` | program: finds curves drawn as chains of straight lines, corners and kinks in an SVG or saved page, and lists its bends and contacts (#14) |
+| `plugin/skills/design-round/scripts/client.js` | program: reads a project's rules file for the client its `Client:` line names (#114) |
+| `plugin/skills/design-round/scripts/fall.js` | program: prints a fall, a settle or a check of a motion table against real gravity, through fall-motion.js (#68) |
+| `plugin/skills/design-round/scripts/higgsfield.js` | program, risk path: renders brand-art and video candidates through Higgsfield's pay-per-request API, through higgsfield-client.js (#18) |
 | `plugin/review-page/page.js` | library, composition root: the review page's entry point, which reads `items.json` by `fetch`, opens the artifact store through `window.claude`, and hands every rule on checking and saving answers to review.js (#120, #381) |
 | `kits/planted-faults/tools/*.py` | program: the planted-fault kit's research scripts, run by hand for a test of a critic's load; `runner.py` and `score.py` are also imported by the scripts beside them (#238) |
 
