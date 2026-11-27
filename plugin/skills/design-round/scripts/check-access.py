@@ -16,9 +16,9 @@ USAGE
         [--contrast-table FILE] [--timeout MS]
   python3 check-access.py <url or file> --out DIR --pointer [--pointer-table FILE] [--timeout MS]
 
-It loads the page at check-layout.py's desktop and phone widths, the latter
+It loads the page at conditions.py's desktop and phone widths, the latter
 with a touch screen, lets its fonts load and its animations finish as
-check-layout.py does, and measures each question at both:
+conditions.py does, and measures each question at both:
 
 - vault.contrast: every line of text, each ::before and ::after whose content
   holds text, and each form control's value, button label, chosen option or
@@ -275,8 +275,8 @@ from crash_exit import run_main  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
-layout = siblings.load(HERE, "check-layout.py")
-flow = layout.flow
+flow = siblings.load(HERE, "check-flow.py")
+conditions = siblings.load(HERE, "conditions.py")
 runner = siblings.load(HERE, "runner.py")
 try:
     import numpy as np
@@ -291,13 +291,6 @@ keys = siblings.load(HERE, "access-keys.py")
 contrasts = siblings.load(HERE, "access-contrast.py")
 pointing = siblings.load(HERE, "access-pointer.py")
 
-VIEWPORTS = tuple(
-    (name, width, layout.height_at(width, layout.HEIGHTS))
-    for name, width in (
-        ("desktop", layout.DESKTOP_WIDTH),
-        ("phone", layout.PHONE_WIDTH),
-    )
-)
 WATCH_MS = 1000  # guess, #164
 WALK_SLACK = 20  # guess, #501
 
@@ -1455,21 +1448,6 @@ class BadSelectorError(Exception):
         self.selectors = selectors
 
 
-def open_page(browser, at, width, height, **scheme):
-    context = browser.new_context(
-        viewport={"width": width, "height": height}, **layout.device(width), **scheme
-    )
-    context.set_default_timeout(at.timeout)
-    context.add_init_script(LISTEN_JS)
-    return (context, *load(context, at.url))
-
-
-def load(context, url):
-    page = context.new_page()
-    page.goto(url, wait_until="load")
-    return page, page.evaluate(layout.SETTLE_JS)
-
-
 def read_texts(page, logotype):
     got = page.evaluate(prelude.page_js(MEASURE_JS), logotype)
     if "bad" in got:
@@ -1496,24 +1474,37 @@ def read_texts(page, logotype):
 
 
 def contrast_answers(page, at, texts, table):
+    def fresh():
+        again = page.context.new_page()
+        again.goto(at.url, wait_until="load")
+        conditions.settle(again)
+        return again
+
     found, readings = contrasts.measure(
         page,
         table,
         parts=at.parts,
         absent=at.absent,
         texts=texts,
-        fresh=lambda: load(page.context, at.url)[0],
+        fresh=fresh,
     )
     if "bad" in found:
         raise BadSelectorError("--parts", found["bad"])
     return found, readings
 
 
-def theme_answer(browser, at, width, height, *, light, answered, readings):
+def theme_answer(browser, at, width, *, light, answered, readings):
     out, shipped = answering.unjudged(), []
     for name, options in contrasts.SCHEMES:
-        context, page, _ = open_page(browser, at, width, height, **options)
-        try:
+        with conditions.open_page(
+            browser,
+            at.url,
+            width=width,
+            timeout=at.timeout,
+            init_scripts=(LISTEN_JS,),
+            **options,
+        ) as page:
+            conditions.settle(page)
             if contrasts.signature(page) == light:
                 continue
             shipped.append(name)
@@ -1530,8 +1521,6 @@ def theme_answer(browser, at, width, height, *, light, answered, readings):
                 )
             for mine, theirs in zip(out, found, strict=True):
                 mine.extend(theirs)
-        finally:
-            context.close()
     if not shipped:
         out.notes.append(
             "the page draws the same colours in a dark scheme and under more contrast, so it ships its light one alone"
@@ -1550,26 +1539,30 @@ def merge(into, more):
 def run(at):
     found, looping = [], 0
     with runner.chromium() as browser:
-        for name, width, height in VIEWPORTS:
-            context, page, loops = open_page(browser, at, width, height)
-            looping = max(looping, loops)
-            got, shots = read_texts(page, at.logotype)
-            measured, contrast_readings = contrast_answers(
-                page, at, (got, shots), at.table
-            )
-            light = contrasts.signature(page)
-            merge(measured, tab_walk(page, at.carousels))
-            driven, measured["vault.pause"] = motion_answers(
-                context, at.url, at.carousels, mouse=name == "desktop"
-            )
-            merge(measured, driven)
-            context.close()
+        for name, width, _ in conditions.VIEWPORTS:
+            with conditions.open_page(
+                browser,
+                at.url,
+                width=width,
+                timeout=at.timeout,
+                init_scripts=(LISTEN_JS,),
+            ) as page:
+                looping = max(looping, conditions.settle(page))
+                got, shots = read_texts(page, at.logotype)
+                measured, contrast_readings = contrast_answers(
+                    page, at, (got, shots), at.table
+                )
+                light = contrasts.signature(page)
+                merge(measured, tab_walk(page, at.carousels))
+                driven, measured["vault.pause"] = motion_answers(
+                    page.context, at.url, at.carousels, mouse=name == "desktop"
+                )
+                merge(measured, driven)
             answered, judge_readings = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(
                 browser,
                 at,
                 width,
-                height,
                 light=light,
                 answered=answered,
                 readings=judge_readings + contrast_readings,
@@ -1579,7 +1572,7 @@ def run(at):
 
 
 def report(url, result, *, looping, json_path, questions):
-    sizes = " and ".join(f"{w}x{h} ({name})" for name, w, h in VIEWPORTS)
+    sizes = " and ".join(f"{w}x{h} ({name})" for name, w, h in conditions.VIEWPORTS)
     lines = [f"check-access: {url}", f"measured at {sizes}"]
     if looping:
         lines.append(
@@ -1681,7 +1674,7 @@ def parse(argv):
 def pointer_run(at):
     # #317
     with runner.chromium(("--allow-file-access-from-files",)) as browser:
-        return pointing.run(browser, at, VIEWPORTS)
+        return pointing.run(browser, at)
 
 
 Mode = collections.namedtuple("Mode", "report run questions")
@@ -1716,7 +1709,7 @@ def main(argv):
                 "url": at.url,
                 "run_at": when.isoformat(),
                 "looping_animations": looping,
-                "viewports": {name: [w, h] for name, w, h in VIEWPORTS},
+                "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
                 "answers": result,
             },
             fh,

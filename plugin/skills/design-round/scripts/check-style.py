@@ -66,7 +66,7 @@ layout = probe.layout
 runner = siblings.load(HERE, "runner.py")
 
 TABLE = os.path.join(HERE, "check-style.table")
-ACROSS_WIDTH = layout.DESKTOP_WIDTH
+ACROSS_WIDTH = conditions.DESKTOP_WIDTH
 SAME = "same"
 DEFAULT = "page as it loads"
 
@@ -289,7 +289,7 @@ def _across(browser, url, block, *, parts, timeout):
         browser,
         url,
         read=read,
-        viewport={"width": ACROSS_WIDTH, "height": layout.HEIGHTS[-1]},
+        viewport={"width": ACROSS_WIDTH, "height": conditions.HEIGHTS[-1]},
     )
     out = {}
     for n, rule in enumerate(block.rules):
@@ -392,7 +392,7 @@ def report(at, widths, found, *, looping, json_path):
     ]
     if not layout.gating(at):
         lines.append(
-            f"NOT A GATING SWEEP: the craft gate needs {layout.LOW}–{layout.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
+            f"NOT A GATING SWEEP: the craft gate needs {conditions.LOW}–{conditions.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
         )
     if looping:
         lines.append(
@@ -429,7 +429,7 @@ def parse_args(argv):
     )
     at = p.parse_args(argv)
     probe.page_options(p, at)
-    at.heights = layout.HEIGHTS
+    at.heights = conditions.HEIGHTS
     at.brief = {}
     for given in at.brief_given:
         key, eq, value = given.partition("=")

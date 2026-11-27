@@ -10,7 +10,6 @@ import siblings  # noqa: E402
 
 answering = siblings.load(HERE, "access-answers.py")
 conditions = siblings.load(HERE, "conditions.py")
-layout = siblings.load(HERE, "check-layout.py")
 prelude = siblings.load(HERE, "access-page.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
@@ -125,24 +124,21 @@ def judged(page, pointer, script):
     return answering.Judged(got["faults"], [], [], notes)
 
 
-def run(browser, at, viewports):
+def run(browser, at):
     consts = f"const FLOOR = {json.dumps(at.pointer_floor)};\n"
 
     def script(body):
         return prelude.labelled_js(consts + f"() => {{\n{body}\n}}")
 
     found, looping = [], 0
-    for name, width, height in viewports:
+    for name, width, _ in conditions.VIEWPORTS:
         mine = answering.unjudged()
         for pointer in conditions.POINTERS:
             with conditions.open_page(
-                browser,
-                at.url,
-                pointer=pointer,
-                viewport={"width": width, "height": height},
+                browser, at.url, pointer=pointer, width=width
             ) as page:
                 page.set_default_timeout(at.timeout)
-                looping = max(looping, page.evaluate(layout.SETTLE_JS))
+                looping = max(looping, conditions.settle(page))
                 for into, got in zip(mine, judged(page, pointer, script), strict=True):
                     into.extend(got)
         found.append((name, {QUESTION[0]: mine}))

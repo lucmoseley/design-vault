@@ -56,8 +56,8 @@ from crash_exit import run_main  # noqa: E402
 REQUIREMENTS = HERE.parents[2] / "requirements.txt"
 
 
-flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 colour_space = siblings.load(
     HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
@@ -532,7 +532,7 @@ def parse(argv):
         metavar="N",
         help="device scale on a page",
     )
-    p.add_argument("--viewport", default=flow.DESKTOP, metavar="WxH")
+    p.add_argument("--viewport", default=conditions.DESKTOP, metavar="WxH")
     p.add_argument("--wait", metavar="SELECTOR")
     p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
     p.add_argument("--out", metavar="DIR", help="where the marked PNGs go")
@@ -543,7 +543,7 @@ def parse(argv):
             if not os.path.isfile(args.target):
                 raise UsageError(f"no such file: {args.target}")
         else:
-            args.viewport_size = flow.size_arg(p, "--viewport", args.viewport)
+            args.viewport_size = conditions.size_arg(p, "--viewport", args.viewport)
             args.url = runner.page_url(p, args.target)
     except UsageError as err:
         p.error(str(err))

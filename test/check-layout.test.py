@@ -257,12 +257,6 @@ class Ranges(unittest.TestCase):
         self.assertEqual(layout.sweep_widths(5, 2000, 2560), [2000, 2560])
         self.assertEqual(layout.sweep_widths(3)[-3:], [1919, 1920, 2560])
 
-    def test_each_band_has_its_height(self):
-        self.assertEqual(
-            [layout.height_at(w, (1, 2, 3)) for w in (320, 767, 768, 1023, 1024, 2560)],
-            [1, 1, 2, 2, 3, 3],
-        )
-
 
 class Zoom(unittest.TestCase):
     def test_each_value_is_judged_as_the_act_rule_judges_it(self):

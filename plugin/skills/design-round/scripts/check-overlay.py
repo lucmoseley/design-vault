@@ -54,8 +54,8 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 from crash_exit import run_main  # noqa: E402
 
-flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 try:
     import numpy as np
     from PIL import Image
@@ -267,7 +267,7 @@ def parse(argv):
     at.box = at.files["source"]["size"]
     at.limit, at.source_kind = LIMITS[at.files["source"]["vector"]]
     if at.size:
-        size = flow.size_arg(p, "--size", at.size, number=float, example="120x80")
+        size = conditions.size_arg(p, "--size", at.size, number=float, example="120x80")
         w, h = size["width"], size["height"]
         if not (0 < w < math.inf and 0 < h < math.inf):
             p.error(f"--size wants a positive width and height — got {at.size!r}")

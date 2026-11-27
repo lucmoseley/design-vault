@@ -57,6 +57,7 @@ AXE = os.path.join(HERE, "..", "vendor", "axe-core", "axe.min.js")
 
 
 runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 layout = siblings.load(HERE, "check-layout.py")
 probe = siblings.load(HERE, "probe.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -64,7 +65,7 @@ rule_table = siblings.load(HERE, "rule-table.py")
 TABLE = os.path.join(HERE, "check-markup.table")
 SEP = " | "
 OFF = "off"
-WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
+WIDTHS = (conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH)
 RULE_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 PART = re.compile(r"part:(\S+)")
 
@@ -164,7 +165,7 @@ def sweep(browser, url, *, table, parts, source, timeout):
     page.set_default_timeout(timeout)
     out = {}
     for width in WIDTHS:
-        layout.load(page, url, width, layout.HEIGHTS)
+        layout.load(page, url, width, conditions.HEIGHTS)
         page.evaluate(source)
         missing = sorted({r for line in table.lines for r in line.rules} - known(page))
         if missing:

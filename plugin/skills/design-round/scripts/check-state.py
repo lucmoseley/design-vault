@@ -161,7 +161,6 @@ from crash_exit import run_main  # noqa: E402
 from fail_open import expected, fail_open  # noqa: E402
 
 
-flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
 form = siblings.load(HERE, "drive-form.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
@@ -176,9 +175,7 @@ colour_space = siblings.load(
 
 TABLE = os.path.join(HERE, "check-state.table")
 ITEMS = "; "
-VIEWPORT = dict(
-    zip(("width", "height"), map(int, flow.DESKTOP.split("x")), strict=True)
-)
+VIEWPORT = dict(zip(("width", "height"), conditions.DESKTOP_WINDOW, strict=True))
 TRACK_CLICK = 0.25  # guess, #312
 TRACK_ENDS = (0.03, 0.97)  # guess, #312
 DRAG_PAST = (40, 60)  # guess, #312
