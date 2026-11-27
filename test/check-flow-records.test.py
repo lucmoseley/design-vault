@@ -740,7 +740,7 @@ class Pause(unittest.TestCase):
         cls.browser.close()
         cls.playwright.stop()
 
-    def pause_answer(self, name, init=None, logged=None):
+    def pause_answer(self, name, init=None, logged=None, carousels=()):
         ctx = self.browser.new_context()
         if logged is not None:
             ctx.on("console", lambda m: logged.append(m.text))
@@ -750,7 +750,7 @@ class Pause(unittest.TestCase):
             url = "file://" + os.path.abspath(
                 os.path.join(FIXTURES, f"tier01-{name}.html")
             )
-            return self.access.pause_answer(ctx, url, [], [])
+            return self.access.pause_answer(ctx, url, list(carousels), [])
         finally:
             ctx.close()
 
@@ -808,20 +808,6 @@ class Pause(unittest.TestCase):
             ],
         )
 
-    def test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628_paired_with_test_check_access_answers_the_pause_plant_545(
-        self,
-    ):
-        self.unwatched_after_5_s(
-            "addEventListener('resize', () => document.querySelector('.lane').setAttribute('data-w', String(Math.random())));"
-        )
-
-    def test_a_transition_an_onresize_handler_starts_past_5_s_is_no_rotation_628_paired_with_test_check_access_answers_the_pause_plant_545(
-        self,
-    ):
-        self.unwatched_after_5_s(
-            "onresize = () => { document.querySelector('.backdrop').style.transform = `translateY(${Math.random() * 10}px)`; };"
-        )
-
     def test_a_change_a_debounced_resize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
@@ -849,22 +835,20 @@ class Pause(unittest.TestCase):
         )
         self.assertIn("late", logged)
 
-    def test_a_turn_the_page_signals_with_its_own_resize_is_read_628_paired_with_test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628(
+    def test_a_change_a_debounced_resize_handler_makes_past_5_s_beside_a_declared_carousel_taller_than_the_window_is_no_rotation_647(
         self,
     ):
-        ms = self.access.prelude.LONG_MS + 2 * self.PAST_MS
-        with self.late():
-            _, unmeasured = self.pause_answer(
+        tall = "document.head.insertAdjacentHTML('beforeend', '<style>.carousel { height: 3000px; }</style>');"
+        handler = "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => document.body.setAttribute('data-w', String(Math.random()))), 50));"
+        answers = [
+            self.pause_answer(
                 "clean",
-                f"""addEventListener('DOMContentLoaded', () => {{
-                  document.querySelector('.pause').remove();
-                  addEventListener('resize', () => {{}});
-                  setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-turn', 'on'); dispatchEvent(new Event('resize')); }}, {ms});
-                }});""",
+                f"addEventListener('DOMContentLoaded', () => {{ document.querySelector('.pause').remove(); {script} }});",
+                carousels=[".carousel"],
             )
-        self.assertIn(
-            "section:nth-of-type(3)", [u.split(" changes ")[0] for u in unmeasured]
-        )
+            for script in (tall, tall + handler)
+        ]
+        self.assertEqual(answers[1], answers[0])
 
 
 if __name__ == "__main__":

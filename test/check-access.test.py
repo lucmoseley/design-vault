@@ -534,7 +534,7 @@ class CarouselWatch(unittest.TestCase):
 
         keys = siblings.load(SCRIPTS, "access-keys.py")
         same = np.zeros((4, 4, 3), int)
-        shot, keys._shot = keys._shot, lambda handle: same
+        shot, keys._shot = keys._shot, lambda page, handle: same
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch()
@@ -554,7 +554,9 @@ class CarouselWatch(unittest.TestCase):
                     page.wait_for_timeout(100)
                     self.assertIsNone(keys.change(page, held, 1500))
                     count = iter(range(10**6))
-                    keys._shot = lambda handle: np.full((4, 4, 3), next(count) % 2 * 99)
+                    keys._shot = lambda page, handle: np.full(
+                        (4, 4, 3), next(count) % 2 * 99
+                    )
                     self.assertIsInstance(keys._span(page, on), float)
                 finally:
                     browser.close()

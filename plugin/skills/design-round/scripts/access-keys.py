@@ -650,15 +650,16 @@ STILL_JS = (
 WATCH_LIMIT = 200
 
 
-def _shot(handle):
+def _shot(page, handle):
     import io
 
     import numpy as np
     from PIL import Image
 
-    return np.asarray(
-        Image.open(io.BytesIO(handle.screenshot(animations="allow"))).convert("RGB")
-    ).astype(int)
+    # #647
+    handle.scroll_into_view_if_needed()
+    shot = page.screenshot(clip=handle.bounding_box(), animations="allow")
+    return np.asarray(Image.open(io.BytesIO(shot)).convert("RGB")).astype(int)
 
 
 def _differs(a, b):
@@ -667,12 +668,12 @@ def _differs(a, b):
 
 def change(page, handle, within_ms):
     handle.evaluate(WATCH_JS, WATCH_LIMIT)
-    start, began = _shot(handle), time.monotonic()
+    start, began = _shot(page, handle), time.monotonic()
     try:
         while (waited := (time.monotonic() - began) * 1000) < within_ms:
             page.wait_for_timeout(ROTATE_POLL_MS)
             if handle.evaluate("(e) => e.__watch.moved") or _differs(
-                start, _shot(handle)
+                start, _shot(page, handle)
             ):
                 return waited + ROTATE_POLL_MS
         return None
