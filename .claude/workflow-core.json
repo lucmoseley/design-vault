@@ -12,6 +12,7 @@
 		"testCanary": "test/verdict-canary.test.js"
 	},
 	"fullTestShards": 4,
+	"worktreeLinks": ["plugin/node_modules"],
 	"ciSetup": [
 		"python3 -m pip install -r plugin/requirements.txt",
 		"python3 -m playwright install --with-deps chromium",
