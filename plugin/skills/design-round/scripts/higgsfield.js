@@ -42,6 +42,10 @@
  *      idempotency_key, the last of which is the job's charge;
  *   5. saves the image or video as `r<n>/v<n>-<name>.<ext>`, under its sniffed type.
  *
+ * Each ledger line carries the answer time, in ms, of every answered try of
+ * the job's estimate (`estimate_ms`), of its submission once sent
+ * (`submit_ms`) and, on its outcome line, of its status reads (`status_ms`).
+ *
  * An estimate or submission answered with a network fault, a 5xx, a 408 or a
  * 429 is tried again within its retry deadline, after at least its
  * Retry-After, a submission under the same idempotency key. A submission
