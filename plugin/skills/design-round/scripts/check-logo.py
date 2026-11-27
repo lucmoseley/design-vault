@@ -53,8 +53,6 @@ if str(HERE) not in sys.path:
 import siblings  # noqa: E402
 from crash_exit import run_main  # noqa: E402
 
-REQUIREMENTS = HERE.parents[2] / "requirements.txt"
-
 
 runner = siblings.load(HERE, "runner.py")
 conditions = siblings.load(HERE, "conditions.py")
@@ -555,11 +553,7 @@ def main(argv):
     try:
         importlib.import_module("PIL")
     except ImportError as err:
-        print(
-            f"check-logo: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
-            file=sys.stderr,
-        )
-        sys.exit(3)
+        sys.exit(runner.missing(err))
     try:
         kind, logo = read_logo(args.logo)
         if kind == "raster":

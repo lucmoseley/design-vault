@@ -25,7 +25,7 @@ const { parseArgs } = require("node:util");
 const { parseRows } = require("./log-gate.js");
 const { checkCorrectionsLog, STANCES } = require("./corrections-log.js");
 const { ASSET_CLASSES } = require("./plugin/skills/design-round/scripts/gate-form.js");
-const { CRITICS } = require("./plugin/skills/design-round/scripts/gate.js");
+const { CRITIC_COUNT } = require("./plugin/skills/design-round/scripts/gate.js");
 
 const LOG = "data/corrections-log.jsonl";
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
@@ -90,7 +90,7 @@ function main(argv) {
   try {
     ({ values } = parseArgs({
       args: argv,
-      options: { project: { type: "string" }, asset: { type: "string" }, brief: { type: "string" }, count: { type: "string", default: "10" }, critics: { type: "string", default: String(CRITICS) }, log: { type: "string" } },
+      options: { project: { type: "string" }, asset: { type: "string" }, brief: { type: "string" }, count: { type: "string", default: "10" }, critics: { type: "string", default: String(CRITIC_COUNT) }, log: { type: "string" } },
     }));
   } catch (err) {
     console.error(`${err.message}\n${USAGE}`);

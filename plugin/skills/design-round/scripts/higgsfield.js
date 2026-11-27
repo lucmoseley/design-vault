@@ -74,7 +74,7 @@
  * line number.
  */
 "use strict";
-const { render, parseArgs, settings } = require("./higgsfield-client.js");
+const { render, parseArgs, readSettings } = require("./higgsfield-client.js");
 
 const USAGE =
   "Usage: node higgsfield.js [--estimate] --out <r<n>/v<n>-<name>> --model <endpoint id> --prompt <text> [--aspect-ratio <w:h>] [--resolution <tier>] [--set <field>=<value>] ... [--max-usd <dollars>]\n" +
@@ -90,7 +90,7 @@ async function main(argv = process.argv.slice(2)) {
     return;
   }
   try {
-    const env = settings(process.env);
+    const env = readSettings(process.env);
     const failed = await render(parsed.jobs, {
       estimateOnly: parsed.estimateOnly,
       credentials: env.HIGGSFIELD_API_KEY,

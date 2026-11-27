@@ -76,9 +76,9 @@ except ImportError as err:
     sys.exit(runner.missing(err))
 UnmeasurableError = runner.UnmeasurableError
 
-SCALES = (1, 2, 3)
-MAGNIFY = 4
-ZOOM = 8
+SCALES = (1, 2, 3)  # #228
+MAGNIFY = 4  # #228
+ZOOM = 8  # #228
 CONTACT_SIZE = 16  # guess, #228
 BEND_SIZE = 32  # guess, #228
 GAP = 8  # guess, #228

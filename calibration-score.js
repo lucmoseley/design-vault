@@ -31,19 +31,15 @@ const { readLog, roundFolder, ROUND_LOG, CORRECTIONS_LOG } = require("./calibrat
 const roundLog = require("./round-log.js");
 const correctionsLog = require("./corrections-log.js");
 const { roundAsked, answerFaults, questionTexts } = require("./calibration-critic.js");
-const { checkCalibrationLog, CRITICS } = require("./calibration-log.js");
+const { checkCalibrationLog, CRITIC_LETTERS } = require("./calibration-log.js");
+const { parseFlags } = require("./log-gate.js");
 
 const CALIBRATION_LOG = "data/calibration-log.jsonl";
 const RULE = /^rule: (\S+)$/;
 const roundName = ({ ticket, round }) => `${ticket} r${round}`;
 
 function parseArgs(argv) {
-  const options = { manifest: null, packet: null, answers: null, where: null, row: null, "round-log": null, "corrections-log": null, "calibration-log": null };
-  for (let i = 0; i < argv.length; i++) {
-    const name = argv[i].replace(/^--/, "");
-    if (!argv[i].startsWith("--") || !(name in options) || !argv[i + 1]) throw new Error(`unknown argument ${JSON.stringify(argv[i])}`);
-    options[name] = argv[++i];
-  }
+  const options = parseFlags(argv, { manifest: null, packet: null, answers: null, where: null, row: null, "round-log": null, "corrections-log": null, "calibration-log": null });
   const missing = ["manifest", "packet", "answers", "where", "row"].filter((k) => !options[k]);
   if (missing.length) throw new Error(`--${missing.join(", --")} needed`);
   return options;
@@ -65,7 +61,7 @@ function score(rounds) {
   const questions = {};
   const entries = {};
   const newQuestions = {};
-  const critics = CRITICS.map(() => ({ unsure: 0, answers: 0 }));
+  const critics = CRITIC_LETTERS.map(() => ({ unsure: 0, answers: 0 }));
   const disagreements = [];
   const failedPicks = [];
   for (const { name, asked, unchanged, row, entries: named, critics: given } of rounds) {
@@ -82,7 +78,7 @@ function score(rounds) {
     for (const q of asked.questions) questions[q] ??= figure();
     const ruleTests = row.first_pick === null ? [] : asked.questions.filter((q) => !unchanged.includes(q) && !known.some((k) => k.candidate === row.first_pick && k.q === q));
     given.forEach((data, i) => {
-      const critic = CRITICS[i];
+      const critic = CRITIC_LETTERS[i];
       for (const section of ["answers", "principles"])
         for (const byKey of Object.values(data[section]))
           for (const a of Object.values(byKey)) {
@@ -135,7 +131,7 @@ function report(row, failedPicks, counted) {
     line("Gate questions", sum(row.questions)),
     ...Object.entries(row.questions).filter(([, f]) => f.of).map(([id, f]) => `  ${line(id, f)}`),
     line("Corrections entries", sum(row.entries)),
-    `Unsure answers: ${row.critics.map((c, i) => `critic ${CRITICS[i]} ${c.unsure} of ${c.answers}`).join(", ")}.`,
+    `Unsure answers: ${row.critics.map((c, i) => `critic ${CRITIC_LETTERS[i]} ${c.unsure} of ${c.answers}`).join(", ")}.`,
     `Settle step: ${settle} ${counted} of ${row.rounds.length} round(s) carried the counts.`,
     `Disagreements: ${row.disagreements.length}.`,
   ];
@@ -194,7 +190,7 @@ function main(argv) {
         .map(({ row: e, line }) => ({ line, candidate: correctionsLog.roundCandidate(e).name, principle: e.principle, ruling: e.ruling, expected: e.stance === "kept" ? "yes" : "no" }));
       if (logged.row.first_pick !== null && !asked.candidates.includes(logged.row.first_pick))
         faults.push(`${name}: his first pick ${logged.row.first_pick} is not one of the packet's candidates — add it to the manifest`);
-      const critics = CRITICS.map((c) => {
+      const critics = CRITIC_LETTERS.map((c) => {
         const file = path.join(options.answers, folder, `critic-${c}.json`);
         if (!fs.existsSync(file)) throw new Error(`${file} does not exist — run calibration-critic.js --packet for the whole run`);
         const data = readJson(file);

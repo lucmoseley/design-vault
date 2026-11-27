@@ -10,7 +10,7 @@ const CANNOT_MEASURE = "cannot measure";
 const MEASURED = ["pass", "fail", CANNOT_MEASURE];
 const LOOKED = ["yes", "no", "unsure"];
 // #154
-const CRITICS = 3;
+const CRITIC_COUNT = 3;
 const PARTS_QUESTION = "vault.affordance";
 const MINOR = /^minor:/i;
 const OTHERS = "others";
@@ -63,7 +63,7 @@ function clashes(questions) {
       else if (la === lb) reason = "same-level";
       else if (Math.min(la, lb) === PROJECT_LEVEL && Math.max(la, lb) === EVIDENCE_LEVEL && !evidenced(la < lb ? a : b)) reason = "evidence";
       const winner = reason === "stage" ? early : reason ? null : la < lb ? a : b;
-      found.push({ a, b, yielding, reason: reason ?? (ownLevel(winner) === 1 ? "law" : "project"), winner });
+      found.push({ a, b, yielding, reason: reason ?? (ownLevel(winner) === LAW_LEVEL ? "law" : "project"), winner });
     }
   });
   return found;
@@ -815,7 +815,7 @@ function main(argv) {
     if (!why && command === "list") why = readerFault(values);
     if (!why && values.pass !== undefined && !/^[1-9]\d*$/.test(values.pass)) why = `--pass is ${values.pass}, not a pass number`;
     if (!why && critiqued && !values.answered) why = `${command} needs the building session's answers, --answered <file>`;
-    if (!why && critiqued && values.critic?.length !== CRITICS) why = `${command} takes ${CRITICS} ${command === "tally" ? "look" : "re-check"} critics' answers, --critic <file> each, not ${values.critic?.length ?? 0}`;
+    if (!why && critiqued && values.critic?.length !== CRITIC_COUNT) why = `${command} takes ${CRITIC_COUNT} ${command === "tally" ? "look" : "re-check"} critics' answers, --critic <file> each, not ${values.critic?.length ?? 0}`;
     if (!why && critiqued) why = sharedCriticFile(values.critic);
     if (!why && isRecheck && !values.fault?.length) why = "recheck needs each fault fixed, --fault <candidate>:<id>";
     if (!why && isRecheck && !values.before) why = "recheck needs the building session's answers from before the fix, --before <file>";
@@ -913,4 +913,4 @@ function main(argv) {
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { CRITICS };
+module.exports = { CRITIC_COUNT };
