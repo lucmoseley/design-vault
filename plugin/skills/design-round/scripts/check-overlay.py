@@ -53,17 +53,18 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 try:
     import numpy as np
     from PIL import Image
     from scipy.ndimage import maximum_filter
     from scipy.spatial import cKDTree
 except ImportError as err:
-    sys.exit(flow.missing(err))
+    sys.exit(runner.missing(err))
 first_line, PageTimeoutError, RefusedError = (
-    flow.first_line,
-    flow.PageTimeoutError,
-    flow.RefusedError,
+    runner.first_line,
+    runner.PageTimeoutError,
+    runner.RefusedError,
 )
 
 LIMITS = {
@@ -255,7 +256,7 @@ def parse(argv):
         help=f"device scale; default {MAX_SCALE}, less for a big source",
     )
     p.add_argument("--out", metavar="DIR", help="write overlay.png here")
-    p.add_argument("--timeout", type=int, default=flow.LOAD_TIMEOUT_MS, metavar="MS")
+    p.add_argument("--timeout", type=int, default=runner.LOAD_TIMEOUT_MS, metavar="MS")
     at = p.parse_args(argv)
     try:
         at.files = {"mark": read(at.mark), "source": read(at.source)}
@@ -293,7 +294,7 @@ def run(at):
     from playwright.sync_api import Error as PlaywrightError
     from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         context = browser.new_context(
             viewport={"width": math.ceil(at.box[0]), "height": math.ceil(at.box[1])},
             device_scale_factor=at.scale,
@@ -352,7 +353,7 @@ def report(at, masks, m):
 
 def main(argv):
     at = parse(argv)
-    drawn, code = flow.run_browser(lambda: run(at), at.timeout)
+    drawn, code = runner.run_browser(lambda: run(at), at.timeout)
     if code:
         return code
     masks = ink(drawn, at.scale)

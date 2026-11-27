@@ -19,6 +19,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 frames = siblings.load(SCRIPTS, "check-frames.py")
+runner = siblings.load(SCRIPTS, "runner.py")
 NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS = 10
 RUN_TIMEOUT_S = 180  # guess, #501
 
@@ -484,7 +485,7 @@ class StagedBuilds(unittest.TestCase):
 
     def open_with(self, timeline):
         _, at = frames.parse(["hash", self.page, "--out", self.dir])
-        with frames.flow.chromium() as browser:
+        with runner.chromium() as browser:
             context, _, prep = frames.open_page(browser, at, 1, timeline=timeline)
             context.close()
         return prep
@@ -523,7 +524,7 @@ class StagedBuilds(unittest.TestCase):
             {"name": "div#twin", "ms": 0},
             {"name": "div#twin", "ms": 50},
         ]
-        with frames.flow.chromium() as browser:
+        with runner.chromium() as browser:
             context, page, _ = frames.open_page(browser, at, 1, timeline=timeline)
             try:
                 frames.seek(page, 50)
@@ -540,7 +541,7 @@ class WaitingStart(unittest.TestCase):
         _, at = frames.parse(
             ["hash", os.path.join(FIXTURES, "waiting.html"), "--out", "unused"]
         )
-        with frames.flow.chromium(frames.HASH_ARGS) as browser:
+        with runner.chromium(frames.HASH_ARGS) as browser:
             context, page, prep = frames.open_page(browser, at, 1)
             try:
                 waited = page.evaluate(

@@ -24,6 +24,7 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 dom = siblings.load(SCRIPTS, "check-dom.py")
+runner = siblings.load(SCRIPTS, "runner.py")
 FIXTURES = pathlib.Path(HERE, "fixtures", "probe").resolve()
 FAULT = FIXTURES / "dom-fault.html"
 CLEAN = FIXTURES / "dom-clean.html"
@@ -73,7 +74,7 @@ def site(page, missing, status):
 
 def setUpModule():
     global BROWSER
-    BROWSER = OPEN.enter_context(dom.flow.chromium())
+    BROWSER = OPEN.enter_context(runner.chromium())
     SITES["fault"] = site(FAULT, MISSING_FAULT, 200)
     SITES["clean"] = site(CLEAN, MISSING_CLEAN, 404)
     SITES["fault-one"] = site(FAULT_ONE, MISSING_CLEAN, 404)
@@ -93,7 +94,7 @@ def found(url, blocks=BLOCKS, parts=PARTS, unset=UNSET):
             blocks,
             parts=parts,
             unset=unset,
-            timeout=dom.flow.LOAD_TIMEOUT_MS,
+            timeout=runner.LOAD_TIMEOUT_MS,
         )
         rules = [r.rule for r in swept[0][1]]
         SWEPT[key] = {f["id"]: f for f in dom.probe.findings(rules, swept)}
@@ -156,7 +157,7 @@ def landings(url):
         picks + [block for block, _ in inventory.values()],
         parts=PARTS,
         unset=UNSET,
-        timeout=dom.flow.LOAD_TIMEOUT_MS,
+        timeout=runner.LOAD_TIMEOUT_MS,
     )
     carried = collections.defaultdict(set)
     marked_picks = collections.defaultdict(set)

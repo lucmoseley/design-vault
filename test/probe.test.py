@@ -30,6 +30,7 @@ import siblings  # noqa: E402
 
 probe = siblings.load(SCRIPTS, "probe.py")
 flow = siblings.load(SCRIPTS, "check-flow.py")
+runner = siblings.load(SCRIPTS, "runner.py")
 layout = siblings.load(SCRIPTS, "check-layout.py")
 STACK = contextlib.ExitStack()
 BROWSER = None
@@ -37,7 +38,7 @@ BROWSER = None
 
 def setUpModule():
     global BROWSER
-    BROWSER = STACK.enter_context(flow.chromium())
+    BROWSER = STACK.enter_context(runner.chromium())
 
 
 def tearDownModule():
