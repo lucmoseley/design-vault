@@ -126,6 +126,10 @@ STOP = threading.Event()
 LOG = threading.Lock()
 
 
+def claude_bin():
+    return os.environ.get("WFC_CLAUDE_BIN") or "claude"
+
+
 def log(*a):
     with LOG:
         print(time.strftime("%H:%M:%S"), *a, flush=True)
@@ -182,7 +186,7 @@ def run_child(folder, prompt, flags, expect, *, valid=None):
         t0 = time.time()
         try:
             p = subprocess.run(
-                ["claude", *CONFINED, *flags, "--model", MODEL],
+                [claude_bin(), *CONFINED, *flags, "--model", MODEL],
                 cwd=folder,
                 input=prompt,
                 capture_output=True,
@@ -320,7 +324,7 @@ def render(page_dir, packet, parts=True):
 def require_canary():
     f = WORK / "canary.json"
     installed = subprocess.run(
-        ["claude", "--version"], capture_output=True, text=True
+        [claude_bin(), "--version"], capture_output=True, text=True
     ).stdout.split()[:1]
     held = json.load(open(f)) if f.exists() else {}
     if not held.get("held") or [held.get("claude_code")] != installed:
