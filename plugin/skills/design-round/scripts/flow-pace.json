@@ -1,0 +1,7 @@
+{
+  "joltBand": { "derivation": "measured: the model's thresholds in docs/research/jolt-onset.md, 0.80 of top speed at 200 ms to 0.17-0.35 at 2000 ms, #297", "value": [[200, 0.8, 0.8], [250, 0.54, 0.67], [300, 0.43, 0.6], [500, 0.27, 0.47], [1000, 0.19, 0.39], [2000, 0.17, 0.35]] },
+  "jumpDeg": { "derivation": "measured: a 0.26 deg jump drew attention in Sunny and von Muhlenen 2014 (docs/research/jolt-onset.md F10), #297", "value": 0.26 },
+  "stillFraction": { "derivation": "guess, #196", "value": 0.01 },
+  "stillArcminS": { "derivation": "guess at Leibowitz 1955's 1-2 arcmin/s, #183", "value": 1 },
+  "viewCm": { "derivation": "guess, #183", "value": 60 }
+}

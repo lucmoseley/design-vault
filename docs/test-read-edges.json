@@ -288,6 +288,9 @@
 			"test/fall-check.test.js",
 			"test/fall.test.js"
 		],
+		"plugin/skills/design-round/scripts/flow-pace.json": [
+			"test/fall.test.js"
+		],
 		"plugin/skills/design-round/scripts/gate-form.js": [
 			"test/calibration-log.test.js",
 			"test/corrections-log.test.js",
