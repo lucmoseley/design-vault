@@ -540,29 +540,33 @@ def tally():
         "share": round(agree[0] / max(agree[1], 1), 3),
         "n": agree[1],
     }
-    for shape, crit in scored_shapes().items() if clean() else ():
-        row = {}
-        for v in ("real", "invented", "out-of-scope", "unresolved"):
-            per_run = []
-            for run in RUNS:
-                groups = {
-                    (c, g)
-                    for (c, r, src), (vv, g) in final.items()
-                    if r == run and vv == v and src.split("#")[0] in crit
-                }
-                per_run.append(round(len(groups) / len(clean()), 2))
-            row[v] = per_run
-        row["findings_per_clean"] = [
-            round(
-                sum(
-                    1 for (c, r, src) in final if r == run and src.split("#")[0] in crit
+    n_clean = len(clean())
+    if n_clean:
+        for shape, crit in scored_shapes().items():
+            row = {}
+            for v in ("real", "invented", "out-of-scope", "unresolved"):
+                per_run = []
+                for run in RUNS:
+                    groups = {
+                        (c, g)
+                        for (c, r, src), (vv, g) in final.items()
+                        if r == run and vv == v and src.split("#")[0] in crit
+                    }
+                    per_run.append(round(len(groups) / n_clean, 2))
+                row[v] = per_run
+            row["findings_per_clean"] = [
+                round(
+                    sum(
+                        1
+                        for (c, r, src) in final
+                        if r == run and src.split("#")[0] in crit
+                    )
+                    / n_clean,
+                    1,
                 )
-                / len(clean()),
-                1,
-            )
-            for run in RUNS
-        ]
-        res["judged"][shape] = row
+                for run in RUNS
+            ]
+            res["judged"][shape] = row
     json.dump(res, open(WORK / "results.json", "w"), indent=1)
     show(res)
 

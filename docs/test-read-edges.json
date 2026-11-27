@@ -2500,6 +2500,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/planted-faults-score.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/plugin-manifest.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
