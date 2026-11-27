@@ -136,6 +136,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from fail_open import expected  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
@@ -313,7 +314,8 @@ def _filter(text):
         try:
             read = _read(" ".join(words[:k]))
             must = _must(" ".join(words[k:]))
-        except TableError:
+        except TableError as exc:
+            expected(exc, "the next split is tried")
             continue
         if read.distinct or read.kind == "count":
             raise TableError("a where reads each element, not distinct or count")
@@ -1116,7 +1118,8 @@ def _numeric(must, value, read, row):
         return True
     try:
         _quantity(must.values[0])
-    except TableError:
+    except TableError as exc:
+        expected(exc, "compared as text")
         return False
     return _actual(read, value, row) is not None
 
@@ -1156,7 +1159,8 @@ def _compare(must, subject, value, row, *, read, verdict):
         if isinstance(raw, str):
             try:
                 raw = _quantity(raw)
-            except TableError:
+            except TableError as exc:
+                expected(exc, "unjudged")
                 return Subject(subject, value, "unjudged", f"{raw!r} is not a number")
         wanted.append(_base(raw, row))
     kinds = {got[1], *(w[1] for w in wanted)}
@@ -1385,14 +1389,13 @@ def parse_args(argv):
     )
     at = p.parse_args(argv)
     unselected = page_options(p, at)
+    heights_usage = f"--heights wants three heights in px, e.g. {','.join(map(str, conditions.HEIGHTS))}"
     try:
         at.heights = tuple(int(n) for n in at.heights.split(","))
     except ValueError:
-        at.heights = ()
+        p.error(heights_usage)
     if len(at.heights) != 3 or min(at.heights) < 1:
-        p.error(
-            f"--heights wants three heights in px, e.g. {','.join(map(str, conditions.HEIGHTS))}"
-        )
+        p.error(heights_usage)
     try:
         with open(at.table, encoding="utf8") as fh:
             at.rules = parse(fh.read())

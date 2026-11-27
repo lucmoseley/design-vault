@@ -224,6 +224,8 @@ class Reads(unittest.TestCase):
         self.assertEqual(units["p#ua"][1], "unjudged")
         (colour,) = values(CASCADE, "A | css:#ua | style:margin-top as alpha | <= 1\n")
         self.assertEqual(colour["p#ua"][1], "unjudged")
+        (word,) = values(CASCADE, "A | css:#ua | count | = one\n")
+        self.assertEqual(word["css:#ua"], (1, "unjudged"))
 
     def test_prev_and_next_read_the_element_siblings_either_side(self):
         page = (
@@ -409,6 +411,18 @@ class Refusals(unittest.TestCase):
             r = run(RUNNER, "--table", TABLE, "--out", out, "--part", "hero", *SWEEP)
             self.assertEqual(r.returncode, 2)
             self.assertIn("--part wants NAME=SELECTOR", r.stderr)
+
+    def test_it_refuses_heights_that_are_not_three_numbers_naming_an_example(
+        self,
+    ):  # #653
+        with tempfile.TemporaryDirectory() as out:
+            for heights in ("tall,900,700", "900,700"):
+                r = run(RUNNER, "--table", TABLE, "--out", out, "--heights", heights)
+                self.assertEqual(r.returncode, 2)
+                self.assertRegex(
+                    r.stderr,
+                    r"--heights wants three heights in px, e\.g\. \d+,\d+,\d+\n",
+                )
 
     def test_the_parts_declaration_maps_part_lines_and_part_overrides_it(self):
         with tempfile.TemporaryDirectory() as out:
