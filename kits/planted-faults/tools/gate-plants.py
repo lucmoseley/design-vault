@@ -238,14 +238,14 @@ PAGES = {
                 "edits": [
                     (
                         "average.</li></ol><section><h2>Ranking method",
-                        'average.</li></ol><ul class="dest-grid ranked"><li><a class="dest-card" href="/destinations/canggu"><span class="dest-card__region">Bali</span><span class="dest-card__name">Canggu</span><span class="dest-card__cta">See the ranking</span></a></li>'
+                        'average.</li></ol><ul class="dest-grid dest-row"><li><a class="dest-card" href="/destinations/canggu"><span class="dest-card__region">Bali</span><span class="dest-card__name">Canggu</span><span class="dest-card__cta">See the ranking</span></a></li>'
                         '<li><a class="dest-card" href="/destinations/uluwatu"><span class="dest-card__region">Bali</span><span class="dest-card__name">Uluwatu</span><span class="dest-card__cta">See the ranking</span></a></li>'
                         '<li><a class="dest-card" href="/destinations/ubud"><span class="dest-card__region">Bali</span><span class="dest-card__name">Ubud</span><span class="dest-card__cta">See the ranking</span></a></li></ul>'
                         "<section><h2>Ranking method",
                     )
                 ],
-                "css": ".prose ul.ranked{padding:0;margin-top:24px}.prose ul.ranked li{margin:0}.prose ul.ranked a{text-decoration:none;font-weight:inherit}"
-                ".ranked li:nth-child(2) .dest-card{border-radius:0;align-items:center;text-align:center;justify-content:center;padding:44px 20px}",
+                "css": ".prose ul.dest-row{padding:0;margin-top:24px}.prose ul.dest-row li{margin:0}.prose ul.dest-row a{text-decoration:none;font-weight:inherit}"
+                ".prose ul.dest-row li:nth-child(2) .dest-card{border-radius:0;align-items:center;text-align:center;justify-content:center}",
             },
         ],
     },
