@@ -183,13 +183,14 @@ def scrub(browser, args):
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("t[0-9][0-9][0-9][0-9][0-9].png"):
         old.unlink()
-    at = frames.args_with(
-        args,
-        viewport_size={"width": args.width, "height": args.height},
-        timeout=runner.LOAD_TIMEOUT_MS,
+    load = frames.Load(
+        args.url,
+        {"width": args.width, "height": args.height},
+        runner.LOAD_TIMEOUT_MS,
+        args.wait,
     )
     context, page, prep = frames.open_page(
-        browser, at, 1, device=conditions.device(args.width)
+        browser, load, 1, device=conditions.device(args.width)
     )
     try:
         shots = frames.seek_shots(page, range(0, args.until + 1, args.step))

@@ -62,6 +62,7 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import base64
+import dataclasses
 import hashlib
 import json
 import os
@@ -390,16 +391,24 @@ def compare(blank, a, b):
     )
 
 
-def open_page(browser, at, scale, *, device=None, timeline=None):
+@dataclasses.dataclass(frozen=True)
+class Load:
+    url: str
+    viewport: dict
+    timeout: int
+    wait: str | None = None
+
+
+def open_page(browser, load, scale, *, device=None, timeline=None):
     context = browser.new_context(
-        viewport=at.viewport_size, device_scale_factor=scale, **(device or {})
+        viewport=load.viewport, device_scale_factor=scale, **(device or {})
     )
-    context.set_default_timeout(at.timeout)
+    context.set_default_timeout(load.timeout)
     context.add_init_script(flow.COLLECTOR_JS)
     page = context.new_page()
-    page.goto(at.url, wait_until="load")
-    if at.wait:
-        page.wait_for_selector(at.wait)
+    page.goto(load.url, wait_until="load")
+    if load.wait:
+        page.wait_for_selector(load.wait)
     prep = page.evaluate(
         PREPARE_JS,
         {
@@ -431,8 +440,8 @@ def keyed(timeline):
     return out
 
 
-def read_timeline(browser, at, scale, device=None):
-    context, page, prep = open_page(browser, at, scale, device=device)
+def read_timeline(browser, load, scale, device=None):
+    context, page, prep = open_page(browser, load, scale, device=device)
     try:
         refuse_chain(page)
     finally:
@@ -491,11 +500,11 @@ def seek_shots(page, times):
     return shots
 
 
-def check_last(browser, blank, at, assets):
+def check_last(browser, blank, load, assets, *, at):
     boxes = [viewbox(text, name) for name, text in assets]
     results = []
     for scale in (1, 2):
-        context, page, prep = open_page(browser, at, scale)
+        context, page, prep = open_page(browser, load, scale)
         end = page.evaluate(FINISH_JS, FINISH_ROUNDS)
         if end["late"]:
             raise UnmeasurableError(
@@ -542,8 +551,8 @@ def check_last(browser, blank, at, assets):
     return results
 
 
-def render(browser, at, t, timeline):
-    context, page, _ = open_page(browser, at, at.scale, timeline=timeline)
+def render(browser, load, scale, t, *, timeline):
+    context, page, _ = open_page(browser, load, scale, timeline=timeline)
     try:
         seek(page, t)
         return page.screenshot()
@@ -551,15 +560,12 @@ def render(browser, at, t, timeline):
         context.close()
 
 
-def args_with(at, **fields):
-    return argparse.Namespace(**{**vars(at), **fields})
-
-
-def check_hash(browser, blank, at):
-    stored = at.stored
+def check_hash(browser, blank, load, at):
+    stored, scale = at.stored, at.scale
     if stored:
-        at = args_with(at, viewport_size=stored["viewport"], scale=stored["scale"])
-    prep = read_timeline(browser, at, at.scale)
+        load = dataclasses.replace(load, viewport=stored["viewport"])
+        scale = stored["scale"]
+    prep = read_timeline(browser, load, scale)
     timeline, timed_by, note = prep["timeline"], "one load", None
     saved_timeline = (stored or {}).get("timeline")
     if stored and saved_timeline is None:
@@ -581,11 +587,11 @@ def check_hash(browser, blank, at):
                     "every frame is drawn at the file's, so a start the page moved shows only here"
                 )
     times = [f["ms"] for f in stored["frames"]] if stored else key_times(prep, at.times)
-    first = {t: render(browser, at, t, timeline) for t in times}
+    first = {t: render(browser, load, scale, t, timeline=timeline) for t in times}
     for t in times:
         with open(os.path.join(at.out, f"frame-{ms(t)}.png"), "wb") as fh:
             fh.write(first[t])
-    context, page, _ = open_page(browser, at, at.scale, timeline=timeline)
+    context, page, _ = open_page(browser, load, scale, timeline=timeline)
     second = {}
     for t in reversed(times):
         seek(page, t)
@@ -610,9 +616,9 @@ def check_hash(browser, blank, at):
         was = {f["ms"]: f["sha256"] for f in stored["frames"]}
         changed = [h["ms"] for h in hashes if h["sha256"] != was[h["ms"]]]
     record = {
-        "page": at.url,
-        "viewport": at.viewport_size,
-        "scale": at.scale,
+        "page": load.url,
+        "viewport": load.viewport,
+        "scale": scale,
         "browser": browser.version,
         "end_ms": prep["end"],
         "timeline": timeline,
@@ -815,9 +821,10 @@ HASH_ARGS = ["--disable-threaded-animation"]
 def run(at, assets):
     with runner.chromium(HASH_ARGS if at.mode == "hash" else []) as browser:
         blank = browser.new_page()
+        load = Load(at.url, at.viewport_size, at.timeout, at.wait)
         if at.mode == "last":
-            return check_last(browser, blank, at, assets)
-        return check_hash(browser, blank, at)
+            return check_last(browser, blank, load, assets, at=at)
+        return check_hash(browser, blank, load, at)
 
 
 def main(argv):

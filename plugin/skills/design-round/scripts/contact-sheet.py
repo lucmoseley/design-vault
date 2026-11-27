@@ -99,9 +99,8 @@ BOXES_JS = r"""
 """
 
 
-def shoot(browser, at, viewport):
-    at = frames.args_with(at, viewport_size=viewport)
-    context, page, prep = frames.open_page(browser, at, 1)
+def shoot(browser, load, step):
+    context, page, prep = frames.open_page(browser, load, 1)
     try:
         if prep["end"] <= 0:
             raise UnmeasurableError(
@@ -109,7 +108,7 @@ def shoot(browser, at, viewport):
                     "makes no Web Animations API animation that runs for any time, so it has no timeline to seek"
                 ]
             )
-        return frames.seek_shots(page, times(prep["end"], at.step)), prep["end"]
+        return frames.seek_shots(page, times(prep["end"], step)), prep["end"]
     finally:
         context.close()
 
@@ -149,7 +148,9 @@ def run(at):
     with runner.chromium(frames.HASH_ARGS) as browser:
         record = {"page": at.url, "step_ms": at.step, "sheets": {}}
         for size, viewport in (("desktop", at.desktop), ("phone", at.phone)):
-            shots, end = shoot(browser, at, viewport)
+            shots, end = shoot(
+                browser, frames.Load(at.url, viewport, at.timeout, at.wait), at.step
+            )
             folder = os.path.join(at.out, size)
             os.makedirs(folder, exist_ok=True)
             for t, png in shots:
