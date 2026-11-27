@@ -24,10 +24,11 @@ WATCH_POLL_S = 0.25  # guess, #432
 KILLED_GONE_S = 10  # guess, #464
 
 REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
+PIP_INSTALL = f"python3 -m pip install --only-binary :all: -r {REQUIREMENTS}"
 INSTALL_HINT = (
     "Playwright is a Python package installed once per machine, at the\n"
     "versions the plugin pins:\n"
-    f"    python3 -m pip install -r {REQUIREMENTS}\n"
+    f"    {PIP_INSTALL}\n"
     "    python3 -m playwright install chromium"
 )
 
@@ -35,7 +36,7 @@ INSTALL_HINT = (
 def missing(err):
     script = os.path.basename(sys.argv[0])
     print(
-        f"{script}: {err.name or err} is missing — python3 -m pip install -r {REQUIREMENTS}",
+        f"{script}: {err.name or err} is missing — {PIP_INSTALL}",
         file=sys.stderr,
     )
     return 3

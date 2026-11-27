@@ -484,7 +484,10 @@ class Checkerboard(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(out.returncode, code, out.stderr)
-        self.assertIn("numpy is missing — python3 -m pip install -r", out.stderr)
+        self.assertIn(
+            "numpy is missing — python3 -m pip install --only-binary :all: -r",
+            out.stderr,
+        )
 
     def test_a_package_present_but_unimportable_exits_3_naming_it_501_paired_with_missing_numpy(
         self,
@@ -504,7 +507,7 @@ class Checkerboard(unittest.TestCase):
                 )
                 self.assertEqual(done.returncode, 3, done.stderr)
                 self.assertIn(
-                    f"check-render.py: {package} is missing — python3 -m pip install -r",
+                    f"check-render.py: {package} is missing — python3 -m pip install --only-binary :all: -r",
                     done.stderr,
                 )
 

@@ -27,20 +27,18 @@ import json
 import os
 import sys
 
-REQUIREMENTS = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "requirements.txt"
-)
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+runner = siblings.load(HERE, "runner.py")
 try:
     import av
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
-except ImportError as e:
-    print(
-        f"video-sheet.py needs {e.name}: python3 -m pip install --only-binary :all: "
-        f"-r {os.path.normpath(REQUIREMENTS)}",
-        file=sys.stderr,
-    )
-    sys.exit(3)
+except ImportError as err:
+    sys.exit(runner.missing(err))
 
 SCORE_WIDTH = 160  # guess, #408
 TILE = 320  # px; guess, #408

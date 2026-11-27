@@ -99,7 +99,8 @@ class Table(unittest.TestCase):
                 done = self.shadowed(package)
                 self.assertEqual(done.returncode, 3, done.stderr)
                 self.assertIn(
-                    f"{package} is missing — python3 -m pip install -r", done.stderr
+                    f"{package} is missing — python3 -m pip install --only-binary :all: -r",
+                    done.stderr,
                 )
 
     def shadowed(self, package):

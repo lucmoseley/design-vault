@@ -182,3 +182,17 @@ test("check fails on a folder with no files", () => {
   assert.equal(r.status, 1);
   assert.match(r.stdout, /holds no files/);
 });
+
+test("add without Pillow names the plugin's install step and exits 1", () => {
+  const shadow = path.join(scratch, `shadow-${n++}`);
+  fs.mkdirSync(path.join(shadow, "PIL"), { recursive: true });
+  fs.writeFileSync(path.join(shadow, "PIL", "__init__.py"), "raise ImportError('shadowed', name='PIL')\n");
+  const file = path.join(scratch, "any.jpg");
+  fs.writeFileSync(file, "x");
+  const r = spawnSync("python3", [SCRIPT, "--root", repo, "add", "a", file, "--source", "s", "--status", "exact"], {
+    encoding: "utf8",
+    env: { ...process.env, PYTHONPATH: shadow },
+  });
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /client-originals\.py add needs Pillow: python3 -m pip install --only-binary :all: -r \S+requirements\.txt/);
+});
