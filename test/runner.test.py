@@ -425,7 +425,7 @@ class RendererDeath(unittest.TestCase):
         api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(api)
         browser = subprocess.Popen(
-            [sys.executable, "-c", "import time; time.sleep(60)"]
+            [sys.executable, "-c", f"import time; time.sleep({CASE_LIMIT_S})"]
         )
         self.addCleanup(browser.wait)
         self.addCleanup(browser.kill)
