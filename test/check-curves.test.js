@@ -588,9 +588,18 @@ test("a page's selectors count from the tree the HTML parser builds, with the <h
     [`<!doctype html><p>x</p><body><div></div>${svg}</body></html><svg></svg>`, `:root>body:nth-of-type(1)>${shape}`],
     [`<!doctype html><title>a<b></title>${svg}`, `:root>body:nth-of-type(1)>${shape}`],
     [`<!doctype html> <!-- c --> <link rel="icon" href="x"><div></div></body><div>${svg}`, `:root>body:nth-of-type(1)>div:nth-of-type(2)>${shape}`],
+    [`<!doctype html><div/>${svg}`, `:root>body:nth-of-type(1)>div:nth-of-type(1)>${shape}`],
+    [`<!doctype html><div></div><DIV>${svg}</DIV>`, `:root>body:nth-of-type(1)>div:nth-of-type(2)>${shape}`],
+    [`<!doctype html><textarea><title></textarea><div></div></title>${svg}`, `:root>body:nth-of-type(1)>${shape}`],
+    [`<!doctype html>${svg.replace("<g>", "<title/><g>")}`, `:root>body:nth-of-type(1)>${shape}`],
+    [
+      `<!doctype html><svg width="100" height="100">${A()}<foreignobject width="100" height="100">${svg.replace(A(), "")}</foreignobject></svg>`,
+      `:root>body:nth-of-type(1)>svg:nth-of-type(1)>foreignObject:nth-of-type(1)>${shape}`,
+    ],
+    [`<html xmlns="http://www.w3.org/1999/xhtml">${svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"')}</html>`, `:root>${shape}`, "xht"],
   ];
-  for (const [page, selector] of pages) {
-    const file = path.join(scratch, `${++files}.html`);
+  for (const [page, selector, ext = "html"] of pages) {
+    const file = path.join(scratch, `${++files}.${ext}`);
     fs.writeFileSync(file, page);
     const r = runInProcess(SCRIPT, ["--contacts", "--json", file]);
     assert.equal(JSON.parse(r.stdout).contacts[0].upper, selector, page);

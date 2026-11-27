@@ -54,7 +54,7 @@
  * lower and upper the two shapes' selectors, at and along in upper's user units,
  * word the --contact word unquoted, and covers the selectors of a covered
  * contact's covers, in painting order.
- * The file is read as the browser parses it: an .svg, .xhtml or .xml as XML,
+ * The file is read as the browser parses it: an .svg, .xhtml, .xht or .xml as XML,
  * case-sensitive; anything else as HTML, each attribute name folded to lower
  * case, the first of two duplicates kept, and a shape's selector counted from
  * the <html>, <head> and <body> the parser adds where the page leaves them out.
@@ -457,7 +457,7 @@ const HTML_RAW = new Set(["iframe", "noembed", "noframes", "noscript", "textarea
 // https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inhead: the start tags the parser keeps in <head>
 const HEAD_CONTENT = new Set(["base", "basefont", "bgsound", "link", "meta", "noframes", "noscript", "script", "style", "template", "title"]);
 // a file:// page's parser follows its extension's MIME type: https://source.chromium.org/chromium/chromium/src/+/main:net/base/mime_util.cc
-const XML_FILE = /\.(?:svg|xhtml|xml)$/i;
+const XML_FILE = /\.(?:svg|xhtml?|xht|xml)$/i;
 const NUMBER_ONLY = new RegExp(`${NUMBER.source}$`);
 
 function parseLength(v) {
@@ -518,6 +518,18 @@ function viewport(attrs) {
 
 // https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-attributes: the HTML parser gives these back their case
 const SVG_CASE = { viewbox: "viewBox", preserveaspectratio: "preserveAspectRatio" };
+
+// https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-tag-names: the HTML parser gives these SVG tag names back their case
+const SVG_TAG_CASE = Object.fromEntries(
+  [
+    "altGlyph", "altGlyphDef", "altGlyphItem", "animateColor", "animateMotion", "animateTransform", "clipPath",
+    "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting",
+    "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR",
+    "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight",
+    "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence", "foreignObject", "glyphRef", "linearGradient",
+    "radialGradient", "textPath",
+  ].map((n) => [n.toLowerCase(), n]),
+);
 
 function parseAttrs(text, html) {
   const attrs = {};
@@ -588,7 +600,7 @@ function drawnShapes(text, html) {
     return parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
   };
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction: the parser adds the <html>, <head> and <body>
-  // a page leaves out, and drops a second one, so a selector counts from the tree it builds
+  // a page leaves out, and drops a second one
   let mode = html ? "initial" : "body";
   const imply = (name) => {
     const parent = stack[stack.length - 1];
@@ -598,7 +610,7 @@ function drawnShapes(text, html) {
     stack.length = stack.findIndex((el) => el.name === "html") + 1;
     mode = "afterHead";
   };
-  const place = (name) => {
+  const admit = (name) => {
     if (mode === "initial") {
       mode = "beforeHead";
       if (name === "html") return true;
@@ -625,7 +637,7 @@ function drawnShapes(text, html) {
     const [, closing, tag, rest] = m;
     const textBefore = text.slice(textFrom, m.index);
     textFrom = markup.lastIndex;
-    if (mode !== "body" && /[^\t\n\f\r ]/.test(textBefore) && [null, "html", "head"].includes(stack[stack.length - 1].name)) place("#text");
+    if (mode !== "body" && /[^\t\n\f\r ]/.test(textBefore) && [null, "html", "head"].includes(stack[stack.length - 1].name)) admit("#text");
     if (closing && html && ["head", "body", "html"].includes(closing.toLowerCase())) {
       if (closing.toLowerCase() === "head" && mode === "inHead") leaveHead();
       continue;
@@ -637,7 +649,7 @@ function drawnShapes(text, html) {
     }
     if (!tag) continue;
     const name = tag.toLowerCase();
-    if (html && !place(name)) continue;
+    if (html && !admit(name)) continue;
     const attrs = parseAttrs(rest, html);
     const parent = stack[stack.length - 1];
     const line = text.slice(0, m.index).split("\n").length;
@@ -645,7 +657,7 @@ function drawnShapes(text, html) {
     for (const v of Object.values(attrs)) for (const [, ref] of v.matchAll(/url\(\s*["']?#([^)"'\s]+)/g)) refs.add(ref);
     const href = attrs.href ?? attrs["xlink:href"];
     if (href?.startsWith("#")) refs.add(href.slice(1));
-    const selector = step(parent, tag);
+    const selector = step(parent, !html ? tag : parent.root === null && name !== "svg" ? name : (SVG_TAG_CASE[name] ?? name));
     const el = {
       name,
       seen: {},
@@ -687,7 +699,9 @@ function drawnShapes(text, html) {
         list.push({ ...base, error: err.message });
       }
     }
-    if (!/\/\s*$/.test(rest) && !VOID.has(name)) stack.push(el);
+    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors: an HTML parser ignores a self-closing slash outside foreign content
+    const selfClosed = /\/\s*$/.test(rest) && (!html || el.root !== null);
+    if (!selfClosed && !VOID.has(name)) stack.push(el);
     if (RAW.has(name) || (html && el.root === null && HTML_RAW.has(name))) {
       const end = text.toLowerCase().indexOf(`</${name}`, markup.lastIndex);
       markup.lastIndex = end < 0 ? text.length : end;

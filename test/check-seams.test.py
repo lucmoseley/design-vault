@@ -276,7 +276,7 @@ class Edges(unittest.TestCase):
         self.assertIn("animates SVG with SMIL", proc.stdout + proc.stderr)
         self.assertNotIn("pass a.2-b.4", proc.stdout)
 
-    def test_663_a_cover_with_no_id_on_a_page_with_no_html_or_body_tag_is_shown(self):
+    def test_663_a_no_id_cover_on_a_page_with_no_html_or_body_tag_passes_covered(self):
         path = os.path.join(self.tmp.name, "bare.html")
         with open(path, "w") as fh:
             fh.write(
