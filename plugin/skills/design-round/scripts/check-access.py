@@ -817,7 +817,7 @@ TIMERS_JS = r"""
   });
   watch.observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   addEventListener('scroll', (e) => note(e.target), true);
-  // The viewport holds its size, so a resize the browser fires is a screenshot's (#647), and what its handlers change is unwatched.
+  // #628, #647
   const unwatched = new WeakSet(), quiet = new WeakMap();
   const quieted = (fn) => {
     if (!fn || (typeof fn !== 'function' && typeof fn.handleEvent !== 'function')) return fn;
