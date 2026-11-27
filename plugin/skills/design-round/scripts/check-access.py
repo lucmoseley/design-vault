@@ -143,37 +143,34 @@ conditions.py does, and measures each question at both:
   read, another site's, it is judged only at the frame, which must show and
   lie under nothing, as a page cannot style a frame that holds focus;
 - vault.pause: on a fresh load, each animation running from the start whose
-  active span is over 5 s, and each video playing that loops or runs over
-  5 s without its own controls, fails unless a button, switch or checkbox
-  named for pausing, stopping or hiding it stops it when clicked. So does a
+  active span is over 5 s, and each video playing that loops or runs over 5 s
+  without its own controls, fails unless a button, switch or checkbox named
+  for pausing, stopping or hiding it stops it when clicked. So does a
   declared carousel shown whose box or those inside it, or the images they
   show, change past 5 s from load and within ROTATE_MS of that, or whose
-  pixels change between the check's first look past 5 s and the end of that
-  span, unless such a control, clicked with the pointer then moved off,
-  holds it still for its slide's span as vault.carousel-focus timed it, or
-  ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
-  still through that watch while the page still runs an interval or holds
-  a pending timeout cannot be measured, as it may turn more slowly. Where
-  no declared carousel holds still so, nor can a page that still runs an
-  interval which did not fire in that ROTATE_MS watch, or holds a pending
+  pixels in the window change between the check's first look past 5 s and the
+  end of that span, unless such a control, clicked with the pointer then
+  moved off, holds it still for its slide's span as vault.carousel-focus
+  timed it, or ROTATE_MS where that timed none, and STILL_SLACK_MS more. One
+  that holds still through that watch while the page still runs an interval
+  or holds a pending timeout cannot be measured, as it may turn more slowly.
+  Where no declared carousel holds still so, nor can a page that still runs
+  an interval which did not fire in that ROTATE_MS watch, or holds a pending
   timeout set for longer than ROTATE_MS, unless such a control, clicked,
   clears it and sets no other timer of either kind; a timeout that fires
-  while the controls are tried was not watched, so is not cleared. Outside
-  a declared carousel, where in that window a script changes an attribute,
-  past the caret style a screenshot writes, adds or removes nodes, changes
-  text or scrolls a box, or an animation or transition starts, past what
-  a resize handler added to the window does at once when a screenshot
-  fires it, the changed
-  element's parent cannot be measured unless a control holds it still for
-  ROTATE_MS and STILL_SLACK_MS. An entrance that ends within 5 s is no such
-  change, and one is watched for only where a carousel is declared or the
-  page, at the read, still runs an interval, holds a pending timeout or
-  asks for frames; an undeclared one slower than ROTATE_MS is seen only by
-  its timer.
-  A long animation that ends before the check could try a control, or while
-  it tries them, an element a script moves frame by frame, and a canvas,
-  image or SVG whose pixels change across WATCH_MS without an animation the
-  browser lists, cannot be measured;
+  while the controls are tried was not watched, so is not cleared. Outside a
+  declared carousel, where in that window a script changes an attribute, past
+  the caret style a screenshot writes, adds or removes nodes, changes text or
+  scrolls a box, or an animation or transition starts, the changed element's
+  parent cannot be measured unless a control holds it still for ROTATE_MS and
+  STILL_SLACK_MS. An entrance that ends within 5 s is no such change, and one
+  is watched for only where a carousel is declared or the page, at the read,
+  still runs an interval, holds a pending timeout or asks for frames; an
+  undeclared one slower than ROTATE_MS is seen only by its timer. A long
+  animation that ends before the check could try a control, or while it tries
+  them, an element a script moves frame by frame, and a canvas, image or SVG
+  whose pixels change across WATCH_MS without an animation the browser lists,
+  cannot be measured;
 - vault.skip-link: where a Tab stop outside the main element comes before it,
   the first stop, past any in a dialog or a fixed or sticky cookie or consent
   banner, must link to the main element or something in it, and show whole in
@@ -201,13 +198,14 @@ conditions.py does, and measures each question at both:
   and Up Arrow, where it opens it, opens it on its last item;
 - vault.carousel-focus: for each carousel the --parts declaration names, no
   Tab stop, and no text outside inert or aria-hidden, lies outside the
-  carousel's box at load, as on a slide out of view, and its rotation control, a button named pause, stop, play, start or resume,
-  is its first stop. On a fresh load, a carousel whose pixels change within
-  ROTATE_MS, timed from one slide to the next, must hold still for that span
-  and STILL_SLACK_MS more while focus is in it and while the pointer is over
-  it, and focus must stay on its previous and next buttons when Enter presses
-  them. One that never holds still between slides cannot be measured. With
-  no carousel declared, each row of page dots vault.controls-on-photo finds
+  carousel's box at load, as on a slide out of view, and its rotation
+  control, a button named pause, stop, play, start or resume, is its first
+  stop. On a fresh load, a carousel whose pixels change within ROTATE_MS,
+  timed from one slide to the next, must hold still for that span and
+  STILL_SLACK_MS more while focus is in it and while the pointer is over it,
+  and focus must stay on its previous and next buttons when Enter presses
+  them. One that never holds still between slides cannot be measured. With no
+  carousel declared, each row of page dots vault.controls-on-photo finds
   cannot be measured, and its reason says no carousel was declared;
 - vault.ring-outline: at each forward stop, where focus changes how the part,
   its label or a wrapper is drawn, an outline must be among the changes, or a
@@ -814,33 +812,7 @@ TIMERS_JS = r"""
   });
   watch.observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   addEventListener('scroll', (e) => note(e.target), true);
-  // #628, #647
-  const unwatched = new WeakSet(), quiet = new WeakMap();
-  const quieted = (fn) => {
-    if (!fn || (typeof fn !== 'function' && typeof fn.handleEvent !== 'function')) return fn;
-    const call = (self, a) => (typeof fn === 'function' ? fn.apply(self, a) : fn.handleEvent(...a));
-    if (!quiet.has(fn)) quiet.set(fn, function (...a) {
-      if (!(a[0] && a[0].isTrusted)) return call(this, a);
-      const had = new Set(document.getAnimations());
-      try { return call(this, a); } finally {
-        watch.takeRecords();
-        for (const an of document.getAnimations()) if (!had.has(an)) unwatched.add(an);
-      }
-    });
-    return quiet.get(fn);
-  };
-  const add = window.addEventListener, remove = window.removeEventListener;
-  window.addEventListener = function (type, fn, ...a) { return add.call(this, type, type === 'resize' ? quieted(fn) : fn, ...a); };
-  window.removeEventListener = function (type, fn, ...a) { return remove.call(this, type, type === 'resize' && quiet.has(fn) ? quiet.get(fn) : fn, ...a); };
-  const handler = Object.getOwnPropertyDescriptor(window, 'onresize');
-  let onresize = null;
-  if (handler && handler.set) Object.defineProperty(window, 'onresize', {
-    configurable: true,
-    enumerable: handler.enumerable,
-    get: () => onresize ?? handler.get.call(window),
-    set: (fn) => { onresize = fn; handler.set.call(window, quieted(fn)); },
-  });
-  window.__timers = { live, ran, waits, cleared, changed, unwatched };
+  window.__timers = { live, ran, waits, cleared, changed };
 })();
 """
 
@@ -886,7 +858,7 @@ const changedSince = (since, until = Infinity) => {
   for (const [el, times] of window.__timers.changed) if (keep(el) && times.some(watched)) out.add(el);
   for (const [a, rec] of f.seen) {
     const el = a.effect && a.effect.target;
-    if (keep(el) && !window.__timers.unwatched.has(a) && rec.start !== null && watched(rec.start)) out.add(el);
+    if (keep(el) && rec.start !== null && watched(rec.start)) out.add(el);
   }
   return out;
 };
@@ -1290,7 +1262,10 @@ def pause_answer(context, url, carousels, spans):
         )
         stopped.update(page.evaluate(STOPPED_JS))
         for k, (_, el, span) in enumerate(turning):
-            if k not in held and keys.change(page, el, hold_ms(span)) is None:
+            if (
+                k not in held
+                and keys.change(page, el, hold_ms(span), in_window=True) is None
+            ):
                 held.add(k)
         if len(held_others) < len(others):
             clicked = page.evaluate("() => performance.now()")

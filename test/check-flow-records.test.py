@@ -725,6 +725,8 @@ class Pages(unittest.TestCase):
 
 class Pause(unittest.TestCase):
     PAST_MS = 500  # guess, #628
+    DEBOUNCED = "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => %s.setAttribute('data-w', String(Math.random()))), 50));"  # guess, #646
+    TALL_PX = 3000  # guess, #647: past the 720 px window of a default context
     TRIED = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
 
     @classmethod
@@ -815,27 +817,10 @@ class Pause(unittest.TestCase):
             ],
         )
 
-    def test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628_paired_with_test_check_access_answers_the_pause_plant_545(
-        self,
-    ):
-        self.unwatched_after_5_s(
-            "addEventListener('resize', () => document.querySelector('.lane').setAttribute('data-w', String(Math.random())));"
-        )
-
-    def test_a_transition_an_onresize_handler_starts_past_5_s_is_no_rotation_628_paired_with_test_check_access_answers_the_pause_plant_545(
-        self,
-    ):
-        self.unwatched_after_5_s(
-            "onresize = () => { document.querySelector('.backdrop').style.transform = `translateY(${Math.random() * 10}px)`; };"
-        )
-
     def test_a_change_a_debounced_resize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        self.unwatched_after_5_s(
-            # guess, #646
-            "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => document.querySelector('.lane').setAttribute('data-w', String(Math.random()))), 50));"
-        )
+        self.unwatched_after_5_s(self.DEBOUNCED % "document.querySelector('.lane')")
 
     def test_a_change_a_body_onresize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
@@ -856,22 +841,24 @@ class Pause(unittest.TestCase):
         )
         self.assertIn("late", logged)
 
-    def test_a_turn_the_page_signals_with_its_own_resize_is_read_628_paired_with_test_a_change_the_checks_own_screenshot_sets_off_past_5_s_is_no_rotation_628(
+    def test_a_change_a_debounced_resize_handler_makes_past_5_s_beside_a_declared_carousel_taller_than_the_window_is_no_rotation_647_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        ms = self.access.prelude.LONG_MS + 2 * self.PAST_MS
-        with self.late():
-            _, unmeasured = self.pause_answer(
+        tall = f"document.head.insertAdjacentHTML('beforeend', '<style>.carousel {{ height: {self.TALL_PX}px; }}</style>');"
+        handler = self.DEBOUNCED % "document.body"
+        answers = [
+            self.pause_answer(
                 "clean",
-                f"""addEventListener('DOMContentLoaded', () => {{
-                  document.querySelector('.pause').remove();
-                  addEventListener('resize', () => {{}});
-                  setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-turn', 'on'); dispatchEvent(new Event('resize')); }}, {ms});
-                }});""",
+                f"addEventListener('DOMContentLoaded', () => {{ document.querySelector('.pause').remove(); {script} }});",
+                carousels=[".carousel"],
             )
+            for script in (tall, tall + handler)
+        ]
         self.assertIn(
-            "section:nth-of-type(3)", [u.split(" changes ")[0] for u in unmeasured]
+            "section:nth-of-type(2) > div.carousel",
+            [f["subject"] for f in answers[0][0]],
         )
+        self.assertEqual(answers[1], answers[0])
 
     CLEAN_FIRST_SLIDE_HOLD_MS = 5000
 
