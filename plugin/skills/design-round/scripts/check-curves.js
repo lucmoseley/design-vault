@@ -54,9 +54,10 @@
  * lower and upper the two shapes' selectors, at and along in upper's user units,
  * word the --contact word unquoted, and covers the selectors of a covered
  * contact's covers, in painting order.
- * Attribute names are read as the browser parses the file: an .svg, .xhtml or
- * .xml as XML, case-sensitive; anything else as HTML, each name folded to lower
- * case and the first of two duplicates kept.
+ * The file is read as the browser parses it: an .svg, .xhtml, .xht or .xml as XML,
+ * case-sensitive; anything else as HTML, each attribute name folded to lower
+ * case, the first of two duplicates kept, and a shape's selector counted from
+ * the <html>, <head> and <body> the parser adds where the page leaves them out.
  * --contacts does not read: stroke widths (a stroke is its centre line), a
  * stylesheet's or an animation's geometry, what a <use> draws, an <svg> sized by
  * CSS, whose user units are read as CSS px with a note, and contacts between two
@@ -450,6 +451,13 @@ const UNDRAWN = new Set(["defs", "clippath", "mask", "symbol", "marker", "patter
 // HTML's void elements take no closing tag: https://html.spec.whatwg.org/multipage/syntax.html#void-elements
 const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 const RAW = new Set(["script", "style"]);
+// https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody: outside an <svg>, the HTML parser reads these
+// elements' content as text, scripting on as in Chromium
+const HTML_RAW = new Set(["iframe", "noembed", "noframes", "noscript", "textarea", "title", "xmp"]);
+// https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inhead: the start tags the parser keeps in <head>
+const HEAD_CONTENT = new Set(["base", "basefont", "bgsound", "link", "meta", "noframes", "noscript", "script", "style", "template", "title"]);
+// a file:// page's parser follows its extension's MIME type: https://source.chromium.org/chromium/chromium/src/+/main:net/base/mime_util.cc
+const XML_FILE = /\.(?:svg|xhtml?|xht|xml)$/i;
 const NUMBER_ONLY = new RegExp(`${NUMBER.source}$`);
 
 function parseLength(v) {
@@ -510,6 +518,18 @@ function viewport(attrs) {
 
 // https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-attributes: the HTML parser gives these back their case
 const SVG_CASE = { viewbox: "viewBox", preserveaspectratio: "preserveAspectRatio" };
+
+// https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-tag-names: the HTML parser gives these SVG tag names back their case
+const SVG_TAG_CASE = Object.fromEntries(
+  [
+    "altGlyph", "altGlyphDef", "altGlyphItem", "animateColor", "animateMotion", "animateTransform", "clipPath",
+    "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting",
+    "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR",
+    "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight",
+    "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence", "foreignObject", "glyphRef", "linearGradient",
+    "radialGradient", "textPath",
+  ].map((n) => [n.toLowerCase(), n]),
+);
 
 function parseAttrs(text, html) {
   const attrs = {};
@@ -575,10 +595,53 @@ function drawnShapes(text, html) {
   const refs = new Set();
   const notes = [];
   const stack = [{ name: null, seen: {}, selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, evenodd: false, undrawn: false, visible: true, transformError: undefined }];
+  const step = (parent, tag) => {
+    parent.seen[tag] = (parent.seen[tag] ?? 0) + 1;
+    return parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
+  };
+  // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction: the parser adds the <html>, <head> and <body>
+  // a page leaves out, and drops a second one
+  let mode = html ? "initial" : "body";
+  const imply = (name) => {
+    const parent = stack[stack.length - 1];
+    stack.push({ ...parent, name, seen: {}, selector: step(parent, name) });
+  };
+  const leaveHead = () => {
+    stack.length = stack.findIndex((el) => el.name === "html") + 1;
+    mode = "afterHead";
+  };
+  const admit = (name) => {
+    if (mode === "initial") {
+      mode = "beforeHead";
+      if (name === "html") return true;
+      imply("html");
+    }
+    if (name === "html") return false;
+    if (mode === "beforeHead") {
+      mode = "inHead";
+      if (name === "head") return true;
+      imply("head");
+    }
+    if (mode === "body") return name !== "head" && name !== "body";
+    if (HEAD_CONTENT.has(name) || name === "head") return name !== "head";
+    if (mode === "inHead") leaveHead();
+    mode = "body";
+    if (name === "body") return true;
+    imply("body");
+    return true;
+  };
+  let textFrom = 0;
   const markup = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[!?][^>]*>|<\/([\w:.-]+)\s*>|<([\w:.-]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
   let m;
   while ((m = markup.exec(text))) {
     const [, closing, tag, rest] = m;
+    const textBefore = text.slice(textFrom, m.index);
+    textFrom = markup.lastIndex;
+    if (mode !== "body" && /[^\t\n\f\r ]/.test(textBefore) && [null, "html", "head"].includes(stack[stack.length - 1].name)) admit("#text");
+    if (closing && html && ["head", "body", "html"].includes(closing.toLowerCase())) {
+      if (closing.toLowerCase() === "head" && mode === "inHead") leaveHead();
+      continue;
+    }
     if (closing) {
       const k = stack.findLastIndex((el, i) => i > 0 && el.name === closing.toLowerCase());
       if (k > 0) stack.length = k;
@@ -586,19 +649,19 @@ function drawnShapes(text, html) {
     }
     if (!tag) continue;
     const name = tag.toLowerCase();
+    if (html && !admit(name)) continue;
     const attrs = parseAttrs(rest, html);
     const parent = stack[stack.length - 1];
-    parent.seen[tag] = (parent.seen[tag] ?? 0) + 1;
     const line = text.slice(0, m.index).split("\n").length;
     const id = attrs.id;
     for (const v of Object.values(attrs)) for (const [, ref] of v.matchAll(/url\(\s*["']?#([^)"'\s]+)/g)) refs.add(ref);
     const href = attrs.href ?? attrs["xlink:href"];
     if (href?.startsWith("#")) refs.add(href.slice(1));
-    const step = parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
+    const selector = step(parent, !html ? tag : parent.root === null && name !== "svg" ? name : (SVG_TAG_CASE[name] ?? name));
     const el = {
       name,
       seen: {},
-      selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : step,
+      selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : selector,
       root: parent.root ?? (name === "svg" ? m.index : null),
       ids: id ? [...parent.ids, id] : parent.ids,
       matrix: parent.matrix,
@@ -636,10 +699,13 @@ function drawnShapes(text, html) {
         list.push({ ...base, error: err.message });
       }
     }
-    if (!/\/\s*$/.test(rest) && !VOID.has(name)) stack.push(el);
-    if (RAW.has(name)) {
+    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors: an HTML parser ignores a self-closing slash outside foreign content
+    const selfClosed = /\/\s*$/.test(rest) && (!html || el.root !== null);
+    if (!selfClosed && !VOID.has(name)) stack.push(el);
+    if (RAW.has(name) || (html && el.root === null && HTML_RAW.has(name))) {
       const end = text.toLowerCase().indexOf(`</${name}`, markup.lastIndex);
       markup.lastIndex = end < 0 ? text.length : end;
+      textFrom = markup.lastIndex;
     }
   }
   return { shapes: out, referable, refs, notes };
@@ -876,7 +942,7 @@ function readFiles(files) {
   const out = [];
   for (const file of files) {
     try {
-      out.push({ file, text: fs.readFileSync(file, "utf8"), html: !/\.(?:svg|xhtml|xml)$/i.test(file) });
+      out.push({ file, text: fs.readFileSync(file, "utf8"), html: !XML_FILE.test(file) });
     } catch (err) {
       console.error(`${file}: ${err.message}`);
       return null;

@@ -251,11 +251,13 @@ class Edges(unittest.TestCase):
                 '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
                 '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
                 '<g><path fill="#0c0" d="M46 6 H54 V54 H46 Z"/></g></svg>'
+                "<script>document.querySelector('g').remove()</script>"
             )
         proc = run(path, self.tmp.name)
         self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
         self.assertIn(
-            "has no element :root>g:nth-of-type(1)>path:nth-of-type(1) for a cover of contact a.2-b.4",
+            "has no element :root>body:nth-of-type(1)>svg:nth-of-type(1)>g:nth-of-type(1)>path:nth-of-type(1)"
+            " for a cover of contact a.2-b.4",
             proc.stdout + proc.stderr,
         )
         self.assertNotIn("FAIL a.2-b.4", proc.stdout)
@@ -273,6 +275,20 @@ class Edges(unittest.TestCase):
         self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
         self.assertIn("animates SVG with SMIL", proc.stdout + proc.stderr)
         self.assertNotIn("pass a.2-b.4", proc.stdout)
+
+    def test_663_a_no_id_cover_on_a_page_with_no_html_or_body_tag_passes_covered(self):
+        path = os.path.join(self.tmp.name, "bare.html")
+        with open(path, "w") as fh:
+            fh.write(
+                "<!doctype html><style>body { margin: 0; background: #fff; }</style>"
+                '<svg width="100" height="100">'
+                '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
+                '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
+                '<g><path fill="#0c0" d="M46 10 H54 V50 H46 Z"/></g></svg>'
+            )
+        proc = run(path, self.tmp.name)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("pass a.2-b.4 (covered): ", proc.stdout)
 
     def test_a_missing_file_or_a_url_is_a_usage_error(self):
         for page in (os.path.join(self.tmp.name, "none.html"), "https://example.com/"):

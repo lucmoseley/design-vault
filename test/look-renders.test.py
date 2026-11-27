@@ -158,6 +158,11 @@ class ContactsFromCheckCurves(unittest.TestCase):
     def test_a_contact_on_a_bare_svg_file_is_cropped_there_too(self):  # #354
         self.round_trip(os.path.join(FIXTURES, "drawn-contacts.svg"), 1100)
 
+    def test_663_a_contact_on_a_page_with_no_html_or_body_tag_is_cropped_there_too(
+        self,
+    ):
+        self.round_trip(os.path.join(FIXTURES, "bare-contacts.html"), 945)
+
     def round_trip(self, page, height):
         listed = subprocess.run(
             ["node", CURVES, "--contacts", page],
