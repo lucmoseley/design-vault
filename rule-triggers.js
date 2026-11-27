@@ -6,18 +6,17 @@
  *
  * Triggers:
  *   gallery-write  an Edit, Write or MultiEdit of data/gallery.json in the project directory or a worktree under its
- *                  .claude/worktrees/, or a Bash command running ingest.js. Its rules bind before the write, so the first such call is denied with them and
- *                  a re-send passes.
+ *                  .claude/worktrees/, or a Bash command running ingest.js. The first such call is denied with its
+ *                  rules, and a re-send passes.
  *   plugin-land    a Bash `session-checkout.js land` whose commits past origin/main touch plugin/, or a `git commit`
- *                  staging, naming or (with -a) picking up a plugin/ path. Its rule binds after the land, so it rides
- *                  the call's result as additionalContext.
- * A Bash program matches only in command position, after heredoc bodies are blanked and quoted text made one word,
- * so prose quoting a command does not fire it.
+ *                  staging, naming or (with -a) picking up a plugin/ path. Its rule rides the call's result as
+ *                  additionalContext.
+ * A Bash program matches only in command position, after heredoc bodies are blanked and quoted text made one word.
  *
  * A latch is one file per trigger, created exclusively in workflow-core's markers directory and named
  * .rule-injected-*-<session_id>, so workflow-core's PreCompact clear-rule-latch.sh removes it and a compacted session
  * is told again. A payload with no session_id cannot latch: its rules ride as additionalContext and nothing is denied.
- * Every outcome exits 0, a fault printing nothing, since a rule reminder must never block the call it rides.
+ * Every outcome exits 0, a fault printing nothing.
  */
 "use strict";
 

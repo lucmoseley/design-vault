@@ -1,7 +1,4 @@
 {
-	"_comment": [
-		"The rules rule-triggers.js prints, each once a session per agent, at the trigger its script names."
-	],
 	"rules": {
 		"two-registers": {
 			"trigger": "gallery-write",
