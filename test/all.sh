@@ -226,7 +226,7 @@ process.stdout.write(String(require(`${core}/scripts/lib/suite-ceiling.js`).ceil
     [[ $ceiling_ms =~ ^[0-9]+$ ]] && ((ceiling_ms / 1000 > SECONDS)); then
     export VAULT_SUITE_BUDGET=$((ceiling_ms / 1000 - SECONDS))
   else
-    echo "the suite ceiling will not read from workflow-core, so this run is not judged against it before it starts"
+    echo "the suite ceiling will not read from workflow-core or is already spent, so this run is not judged against it before it starts"
   fi
 fi
 bash "$vault/test/run-lanes.sh" "${run[@]}" || exit 1
