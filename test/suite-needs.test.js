@@ -9,11 +9,13 @@ const { after, test } = require("node:test");
 
 const ROOT = path.join(__dirname, "..");
 const source = fs.readFileSync(path.join(ROOT, "test", "all.sh"), "utf8");
-const known = source.match(/^known_needs=\(([^)]*)\)$/m)[1];
+const declared = source.match(/^known_needs=\(([^)]*)\)$/m);
+assert.ok(declared, "test/all.sh holds no known_needs=(…) line");
+const known = declared[1];
+assert.match(` ${known} `, / chromium /, "known_needs lost a word every Chromium suite needs");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "suite-needs-"));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-// #609
 const runWithNeed = (word) => {
   const root = fs.mkdtempSync(path.join(dir, "repo-"));
   fs.mkdirSync(path.join(root, "test"));
@@ -23,7 +25,7 @@ const runWithNeed = (word) => {
 };
 
 for (const word of ["gpu", "image", "chromium2"]) {
-  test(`a suite needing '${word}', no word known_needs holds, is refused with exit 2 naming every known word`, () => {
+  test(`a suite needing '${word}', no word known_needs holds, is refused with exit 2 naming every known word (#609)`, () => {
     const r = runWithNeed(word);
     assert.equal(r.status, 2, r.stderr + r.stdout);
     assert.equal(r.stderr,
