@@ -14,13 +14,13 @@ const PY_IMPORT = /^(?:import|from)\s+(\w+)/gm;
 const isPath = (rel) => fs.existsSync(path.join(ROOT, rel));
 const isFile = (rel) => isPath(rel) && fs.statSync(path.join(ROOT, rel)).isFile();
 
-function pathsNamedIn(file) {
+function pathsNamedIn(file, gone) {
   const out = [];
   const text = fs.readFileSync(path.join(ROOT, file), "utf8");
   if (file.endsWith(".py")) {
     for (const [, name] of text.matchAll(PY_IMPORT)) {
       const rel = path.posix.join(path.posix.dirname(file), `${name}.py`);
-      if (rel !== file && isFile(rel)) out.push({ rel, lone: false });
+      if (rel !== file && (gone.has(rel) || isFile(rel))) out.push({ rel, lone: false });
     }
   }
   for (const [run] of text.matchAll(RUN_OF_PARTS)) {
@@ -29,7 +29,7 @@ function pathsNamedIn(file) {
     const bases = lone ? [path.posix.dirname(file)] : [path.posix.dirname(file), "."];
     for (const base of bases) {
       const rel = path.posix.join(base, ...parts).replace(/\/+$/, "");
-      if (rel === "." || rel.startsWith("..") || file.startsWith(`${rel}/`) || !isPath(rel)) continue;
+      if (rel === "." || rel.startsWith("..") || file.startsWith(`${rel}/`) || !(gone.has(rel) || isPath(rel))) continue;
       out.push({ rel, lone });
       break;
     }
@@ -41,7 +41,7 @@ const isCode = (rel) => /\.(py|js|sh)$/.test(rel);
 const filesUnder = (dir) => fs.readdirSync(path.join(ROOT, dir), { recursive: true })
   .map((rel) => path.posix.join(dir, rel.split(path.sep).join("/")));
 
-function reads(entries) {
+function reads(entries, gone) {
   const seen = new Set(entries);
   const followed = new Set();
   const queue = [...entries];
@@ -54,7 +54,7 @@ function reads(entries) {
       continue;
     }
     if (!isCode(file)) continue;
-    for (const { rel, lone } of pathsNamedIn(file)) {
+    for (const { rel, lone } of pathsNamedIn(file, gone)) {
       if (seen.has(rel)) continue;
       seen.add(rel);
       if (!lone || isFile(rel)) queue.push(rel);
@@ -64,7 +64,7 @@ function reads(entries) {
 }
 
 const isCoveredBy = (read, p) => [...read].some((r) => p === r || p.startsWith(`${r}/`));
-const isPlacedBy = (read, p) => read.has(p) || (p.startsWith("test/fixtures/") && isCoveredBy(read, p));
+const isPlacedBy = (read, p) => read.has(p) || [...read].some((r) => r.startsWith("test/") && p.startsWith(`${r}/`));
 
 function entries(suite) {
   const words = suite.split(/\s+/).filter(isFile);
@@ -84,12 +84,15 @@ function registryChange(before, after) {
   return lines(after).filter((l) => !had.has(l)).map((l) => l.split("\t")[0]);
 }
 
-function plan(suites, staged, runner = {}) {
+const withDirsAbove = (p) => p.split("/").map((_, i, parts) => parts.slice(0, i + 1).join("/"));
+
+function plan(suites, staged, side = {}) {
   const changed = staged.filter((p) => RUNNER.has(p));
-  const relisted = changed.length === 1 && changed[0] === "test/all.sh" ? registryChange(runner.before, runner.after) : null;
+  const relisted = changed.length === 1 && changed[0] === "test/all.sh" ? registryChange(side.before, side.after) : null;
   if (changed.length && !relisted) return { all: `${changed[0]} is staged, and it decides which suites run` };
-  const read = new Map(suites.map((s) => [s, reads(entries(s))]));
-  const stray = staged.find((p) => MUST_BE_READ.test(p) && ![...read.values()].some((r) => isPlacedBy(r, p)));
+  const gone = new Set((side.gone ?? []).flatMap(withDirsAbove));
+  const read = new Map(suites.map((s) => [s, reads(entries(s), gone)]));
+  const stray = staged.find((p) => MUST_BE_READ.test(p) && !gone.has(p) && ![...read.values()].some((r) => isPlacedBy(r, p)));
   if (stray) return { all: `${stray} is staged, and no suite is known to read it` };
   return {
     suites: suites.map((suite) => ({
@@ -102,7 +105,7 @@ function plan(suites, staged, runner = {}) {
 }
 
 function planSides(suites, sides, after) {
-  const plans = sides.map((side) => ({ label: side.label, ...plan(suites, side.staged, { before: side.before, after }) }));
+  const plans = sides.map((side) => ({ label: side.label, ...plan(suites, side.staged, { before: side.before, after, gone: side.gone }) }));
   const choosing = plans.filter((p) => !p.all);
   if (!choosing.length) return { all: plans[0].all };
   return {
@@ -119,6 +122,7 @@ if (process.argv[2] === "--select") {
   const sides = (process.env.VAULT_SIDES ?? "").split(" ").filter(Boolean).map((name) => ({
     label: name === "HEAD" ? name : name.slice(0, GIT_ABBREV),
     staged: fs.readFileSync(path.join(dir, `${name}.paths`), "utf8").split("\n").filter(Boolean),
+    gone: fs.readFileSync(path.join(dir, `${name}.gone`), "utf8").split("\n").filter(Boolean),
     before: readCopy(path.join(dir, `${name}.head`)),
   }));
   if (!sides.length) throw new Error("select-suites.js: VAULT_SIDES names no side to judge the commit against");
