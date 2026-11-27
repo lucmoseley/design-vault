@@ -7,12 +7,10 @@ const { runInProcess } = require("./core-run-in-process.js");
 
 const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "fall.js");
 const { fall, settle, css } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "fall-motion.js"));
-const CHECK_FLOW = path.join(path.dirname(SCRIPT), "check-flow.py");
-const FLOW = fs.readFileSync(CHECK_FLOW, "utf8");
-const flowValue = (name) => FLOW.match(new RegExp(`^${name} = (.+)$`, "m"))[1];
-const VIEW_CM = Number(flowValue("VIEW_CM"));
-const stillPx = (cm) => Number(flowValue("STILL_ARCMIN_S")) / ((60 * 180 * Math.atan(2.54 / 96 / cm)) / Math.PI);
-const STILL_FRACTION = Number(flowValue("STILL_FRACTION"));
+const PACE = JSON.parse(fs.readFileSync(path.join(path.dirname(SCRIPT), "flow-pace.json"), "utf8"));
+const VIEW_CM = PACE.viewCm.value;
+const stillPx = (cm) => PACE.stillArcminS.value / ((60 * 180 * Math.atan(2.54 / 96 / cm)) / Math.PI);
+const STILL_FRACTION = PACE.stillFraction.value;
 const G = 9.80665;
 const SPAN_SPEED_RATIO = 1.15;
 const SPEED_SPAN_MS = 1;
@@ -181,8 +179,7 @@ for (const damping of [1, 1.5, 3]) {
   });
 }
 
-test("the still floor these cases hold fall.js to is check-flow.py's own, 0.66 px/s from 60 cm (#142, #196)", () => {
-  assert.equal(flowValue("CSS_PX_CM"), "2.54 / 96");
+test("the still floor these cases hold fall.js to is the one flow-pace.json gives check-flow.py, 0.66 px/s from 60 cm (#142, #196)", () => {
   assert.ok(Math.abs(stillPx(VIEW_CM) - 0.66) < 0.01, `${stillPx(VIEW_CM)}`);
 });
 

@@ -37,7 +37,7 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const { parseRows } = require("./log-gate.js");
+const { ROUND_TAG, parseFlags, parseRows } = require("./log-gate.js");
 const roundLog = require("./round-log.js");
 const correctionsLog = require("./corrections-log.js");
 
@@ -46,22 +46,16 @@ const CORRECTIONS_LOG = "data/corrections-log.jsonl";
 const NOT_VERDICTS = ["date", "project", "asset", "ticket", "round", "where", "candidate", "principle"];
 const VERDICT_FIELDS = [...new Set([...roundLog.FIELDS, ...correctionsLog.FIELDS])].filter((f) => !NOT_VERDICTS.includes(f));
 const VERDICT_KEY = new RegExp(`"(${VERDICT_FIELDS.join("|")})"\\s*:|\\b(${VERDICT_FIELDS.filter((f) => f.includes("_")).join("|")})\\b`);
-const TAG = /^rounds\/([\w.-]+-r([1-9]\d*))$/;
 const NAME = /^(?!\.\.?$)[\w.-]+$/;
 const PROJECT = /^[\w-]+$/;
 
 function roundFolder(project, tag) {
-  const slug = typeof tag === "string" ? tag.match(TAG) : null;
+  const slug = typeof tag === "string" ? tag.match(ROUND_TAG) : null;
   return slug && typeof project === "string" && PROJECT.test(project) ? `${project}.${slug[1]}` : null;
 }
 
 function parseArgs(argv) {
-  const options = { manifest: null, out: null, "round-log": null, "corrections-log": null };
-  for (let i = 0; i < argv.length; i++) {
-    const name = argv[i].replace(/^--/, "");
-    if (!argv[i].startsWith("--") || !(name in options) || !argv[i + 1]) throw new Error(`unknown argument ${JSON.stringify(argv[i])}`);
-    options[name] = argv[++i];
-  }
+  const options = parseFlags(argv, { manifest: null, out: null, "round-log": null, "corrections-log": null });
   if (!options.manifest || !options.out) throw new Error("--manifest and --out are both needed");
   return options;
 }
@@ -78,7 +72,7 @@ function planRounds(manifest, base, roundRows, corrections) {
       fault("manifest", `${at}: is not a round object`);
       continue;
     }
-    const tag = typeof round.tag === "string" ? round.tag.match(TAG) : null;
+    const tag = typeof round.tag === "string" ? round.tag.match(ROUND_TAG) : null;
     if (!tag || Number(tag[2]) !== round.round) {
       fault("manifest", `${at}: tag ${JSON.stringify(round.tag)} is not rounds/<slug>-r<n> for round ${JSON.stringify(round.round)}`);
       continue;

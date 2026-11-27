@@ -116,8 +116,8 @@ const disabled = (el) => !!el.closest(':disabled, [aria-disabled="true"]');
 const box = (r) => [r.left, r.top, r.right, r.bottom];
 const meet = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 // guess, #501
-const DRAWN = 2;
-const empty = (r) => r[2] - r[0] < DRAWN || r[3] - r[1] < DRAWN;
+const DRAWN_PX = 2;
+const empty = (r) => r[2] - r[0] < DRAWN_PX || r[3] - r[1] < DRAWN_PX;
 const onScreen = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
 const clips = (cs) => cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || cs.clipPath !== 'none' || cs.clip !== 'auto';
 const contentBox = (el) => {
@@ -174,7 +174,7 @@ const restingStops = () => {
   };
   const atRest = (el) => {
     const r = box(el.getBoundingClientRect());
-    return (r[2] - r[0] < DRAWN && r[3] - r[1] < DRAWN) || (!drawnOnPage(el) && shownByFocus(el));
+    return (r[2] - r[0] < DRAWN_PX && r[3] - r[1] < DRAWN_PX) || (!drawnOnPage(el) && shownByFocus(el));
   };
   return [...document.querySelectorAll(TARGET)]
     .filter((el) => el.tabIndex >= 0 && el.getClientRects().length && shown(el) && !disabled(el) && atRest(el));

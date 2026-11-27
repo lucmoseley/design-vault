@@ -92,9 +92,9 @@ test("check-flow.py runs every suite that loads it, as do check-frames.py and ch
   assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
 
-test("runner.py runs every suite that opens Chromium through it, the check-flow loaders among them (#640)", () => {
+test("runner.py runs every suite whose script loads it, to open Chromium or name a missing package, the check-flow loaders among them (#640, #556)", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
-  const viaRunner = ["python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py", "python3 test/check-logo.test.py", "python3 test/check-overlay.test.py", "python3 test/face-profile.test.py"];
+  const viaRunner = ["python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py", "python3 test/check-logo.test.py", "python3 test/check-overlay.test.py", "python3 test/face-profile.test.py", "python3 test/cutout.test.py", "python3 test/check-render.test.py"];
   assert.deepEqual(ran([`${SCRIPTS}/runner.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s) || viaRunner.includes(s))]);
 });
 

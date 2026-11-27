@@ -31,9 +31,10 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 flow = siblings.load(SCRIPTS, "check-flow.py")
+pace = siblings.load(SCRIPTS, "flow-pace.py")
 runner = siblings.load(SCRIPTS, "runner.py")
 
-STEP = 1000 / flow.FPS
+STEP = 1000 / pace.FPS
 
 
 def ease_in_out(p):
@@ -69,7 +70,7 @@ def jolts_at(speeds, dropped=()):
     }
     return [
         (j["edge"], round(j["at"] / STEP))
-        for j in flow.analyse(
+        for j in pace.analyse(
             {"times": times, "elements": [el]}, jolt_ratio=FIXED_LINE
         )["jolts"]
     ]
@@ -85,7 +86,7 @@ class OneCopy(unittest.TestCase):
 
 class Pauses(unittest.TestCase):
     def test_a_still_spell_over_the_threshold_is_a_pause_60(self):
-        r = flow.analyse(
+        r = pace.analyse(
             sample((0, 500, ease_in_out), (800, 1300, ease_in_out), until=1300)
         )
         self.assertEqual(len(r["pauses"]), 1)
@@ -95,33 +96,33 @@ class Pauses(unittest.TestCase):
         self.assertIsNone(p["where"])
 
     def test_a_still_spell_under_the_threshold_is_not(self):
-        r = flow.analyse(
+        r = pace.analyse(
             sample((0, 500, ease_in_out), (700, 1200, ease_in_out), until=1200)
         )
         self.assertEqual(r["pauses"], [])
 
     def test_the_threshold_is_the_callers(self):
-        r = flow.analyse(
+        r = pace.analyse(
             sample((0, 500, ease_in_out), (700, 1200, ease_in_out), until=1200),
             pause_ms=150,
         )
         self.assertEqual(len(r["pauses"]), 1)
 
     def test_a_still_start_before_smooth_motion_is_no_pause(self):  # #220
-        r = flow.analyse(sample((400, 900, ease_in_out), until=900))
+        r = pace.analyse(sample((400, 900, ease_in_out), until=900))
         self.assertEqual(
             (r["pauses"], r["jolts"], r["jumps"], r["steps"]), ([], [], [], [])
         )
 
 
-def creep(px_s, channel="position", view_cm=flow.VIEW_CM):
+def creep(px_s, channel="position", view_cm=pace.VIEW_CM):
     times = [k * STEP for k in range(round(1000 / STEP) + 1)]
     values = []
     for t in times:
         x = 300 * ease_in_out(min(1, t / 500)) + px_s * min(400, max(0, t - 500)) / 1000
         values.append([x, 0] if channel == "position" else str(x))
     el = {"label": "el0", "channels": {channel: values}}
-    r = flow.analyse({"times": times, "elements": [el]}, view_cm=view_cm)
+    r = pace.analyse({"times": times, "elements": [el]}, view_cm=view_cm)
     return [(p["start"], p["end"]) for p in r["pauses"]]
 
 
@@ -129,7 +130,7 @@ class Still(unittest.TestCase):
     def test_a_creep_seen_as_motion_is_no_pause_though_under_1_percent_of_top_speed_196(
         self,
     ):
-        self.assertLess(3, flow.STILL_FRACTION * 900)
+        self.assertLess(3, pace.STILL_FRACTION * 900)
         self.assertEqual(creep(3), [])
 
     def test_a_creep_under_the_still_floor_is_still(self):
@@ -147,34 +148,34 @@ class Still(unittest.TestCase):
 
 class Jolts(unittest.TestCase):
     def test_a_linear_move_from_rest_jolts_at_both_ends(self):
-        r = flow.analyse(sample((100, 600, linear), until=800))
+        r = pace.analyse(sample((100, 600, linear), until=800))
         edges = [(j["edge"], j["at"]) for j in r["jolts"]]
         self.assertEqual(edges, [("starts", 100), ("stops", 600)])
         self.assertEqual(r["jolts"][0]["share"], 1)
 
     def test_an_eased_move_does_not_jolt(self):
-        r = flow.analyse(sample((100, 600, ease_in_out), until=800))
+        r = pace.analyse(sample((100, 600, ease_in_out), until=800))
         self.assertEqual(r["jolts"], [])
 
     def test_ease_out_starts_at_full_speed_so_it_jolts_at_its_start_only(self):
-        r = flow.analyse(sample((100, 600, lambda p: 1 - (1 - p) ** 3), until=800))
+        r = pace.analyse(sample((100, 600, lambda p: 1 - (1 - p) ** 3), until=800))
         self.assertEqual([j["edge"] for j in r["jolts"]], ["starts"])
 
     def test_a_move_starting_mid_frame_is_sampled_at_its_exact_start_and_end(self):
-        times = flow.sample_times(800, [110, 610], 60)
+        times = pace.sample_times(800, [110, 610], 60)
         self.assertIn(110, times)
         self.assertIn(610, times)
-        r = flow.analyse(sample((110, 610, linear), until=800, times=times))
+        r = pace.analyse(sample((110, 610, linear), until=800, times=times))
         self.assertEqual(
             [(j["edge"], j["at"]) for j in r["jolts"]],
             [("starts", 110), ("stops", 610)],
         )
 
     def test_a_move_starting_mid_frame_has_a_whole_first_frame_326(self):
-        times = flow.sample_times(800, [48.5, 448.5], 60, [(48.5, 48.5)])
+        times = pace.sample_times(800, [48.5, 448.5], 60, [(48.5, 48.5)])
         self.assertEqual(times[times.index(48.5) + 1], 48.5 + STEP)
         move = (48.5, 448.5, lambda p: 1 - (1 - p) ** 3)
-        r = flow.analyse(sample(move, until=800, times=times))
+        r = pace.analyse(sample(move, until=800, times=times))
         self.assertEqual([round(j["px"]) for j in r["jumps"]], [36])
 
     def test_a_delay_ending_mid_frame_is_drawn_in_its_starts_phase(self):
@@ -183,45 +184,45 @@ class Jolts(unittest.TestCase):
         for start in (k / 2 for k in range(34)):
             with self.subTest(start=start):
                 moves_at = start + delay
-                times = flow.sample_times(
+                times = pace.sample_times(
                     800, [start, moves_at, moves_at + 450], 60, [(start, moves_at)]
                 )
                 drawn = times[times.index(moves_at) + 1]
                 self.assertAlmostEqual(drawn, start + 2 * STEP)
-                r = flow.analyse(
+                r = pace.analyse(
                     sample((moves_at, moves_at + 450, linear), until=800, times=times)
                 )
                 self.assertEqual(r["jumps"], [])
 
     def test_a_delayed_move_off_the_sampled_frames_still_jumps(self):
         start, moves_at = 8.4, 33.4
-        times = flow.sample_times(800, [start, moves_at], 60, [(start, moves_at)])
+        times = pace.sample_times(800, [start, moves_at], 60, [(start, moves_at)])
         move = (moves_at, moves_at + 400, lambda p: 1 - (1 - p) ** 3)
-        r = flow.analyse(sample(move, until=800, times=times))
+        r = pace.analyse(sample(move, until=800, times=times))
         self.assertEqual([round(j["px"]) for j in r["jumps"]], [18])
 
     def test_a_delay_ending_within_1_ms_of_its_frame_has_a_whole_first_frame(self):
-        times = flow.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
+        times = pace.sample_times(800, [8.4, 41.4], 60, [(8.4, 41.4)])
         self.assertAlmostEqual(times[times.index(41.4) + 1], 8.4 + 3 * STEP)
 
     def test_no_two_sample_times_fall_within_1_ms(self):
-        times = flow.sample_times(100, [16.9, 50, 99.5], 60)
+        times = pace.sample_times(100, [16.9, 50, 99.5], 60)
         self.assertTrue(all(b - a >= 1 for a, b in itertools.pairwise(times)))
         self.assertEqual(times[-1], 100)
 
     def test_an_exact_time_within_1_ms_of_a_frame_takes_its_place_126(self):
-        times = flow.sample_times(800, [416.5], 60)
+        times = pace.sample_times(800, [416.5], 60)
         self.assertIn(416.5, times)
         self.assertFalse(any(abs(t - 1000 / 60 * 25) < 1e-9 for t in times))
 
     def test_a_start_within_1_ms_of_the_first_frame_takes_its_place_297(self):
-        times = flow.sample_times(400.09, [0.09, 0.4, 400.09], 60)
+        times = pace.sample_times(400.09, [0.09, 0.4, 400.09], 60)
         self.assertEqual((times[0], times[1]), (0.4, 1000 / 60))
-        self.assertEqual(flow.sample_times(400, [1.5], 60)[:2], [0, 1.5])
+        self.assertEqual(pace.sample_times(400, [1.5], 60)[:2], [0, 1.5])
 
     def test_the_sample_times_run_from_zero_to_the_exact_end(self):
         for end in (2401, 2400.5, 2416.9, 0.5):
-            times = flow.sample_times(end, [], 60)
+            times = pace.sample_times(end, [], 60)
             self.assertEqual((times[0], times[-1]), (0, end))
             self.assertTrue(
                 all(b - a >= 0.5 for a, b in itertools.pairwise(times)), end
@@ -230,11 +231,11 @@ class Jolts(unittest.TestCase):
     def test_only_an_endless_loop_is_excused_its_stop_at_the_window_end(self):
         s = sample((100, 600, linear), (100, 600, linear), until=400)
         self.assertEqual(
-            [j["edge"] for j in flow.analyse(s)["jolts"]],
+            [j["edge"] for j in pace.analyse(s)["jolts"]],
             ["starts", "starts", "stops", "stops"],
         )
         s["elements"][0]["loops"] = True
-        got = [(j["element"], j["edge"]) for j in flow.analyse(s)["jolts"]]
+        got = [(j["element"], j["edge"]) for j in pace.analyse(s)["jolts"]]
         self.assertEqual(got, [("el0", "starts"), ("el1", "starts"), ("el1", "stops")])
 
     def test_float_noise_is_not_motion(self):
@@ -242,7 +243,7 @@ class Jolts(unittest.TestCase):
         s["elements"][0]["channels"]["size"] = [
             [40 + (k % 3) * 1e-5, 40] for k in range(len(s["times"]))
         ]
-        r = flow.analyse(s)
+        r = pace.analyse(s)
         self.assertNotIn("size", r["elements"][0]["channels"])
         self.assertEqual(r["jolts"], [])
 
@@ -288,7 +289,7 @@ class Jolts(unittest.TestCase):
         xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
         fade = [[min(1, max(0, (k - 10) / 4))] for k in range(len(xs))]
         times = [k * STEP for k in range(len(xs))]
-        r = flow.analyse(
+        r = pace.analyse(
             {
                 "times": times,
                 "elements": [
@@ -329,17 +330,17 @@ class Jolts(unittest.TestCase):
                     ],
                 }
                 self.assertEqual(
-                    flow.analyse(s)["elements"][0]["channels"], {}, (name, wobble)
+                    pace.analyse(s)["elements"][0]["channels"], {}, (name, wobble)
                 )
 
     def test_a_1_px_move_is_still_measured_from_its_start(self):
         for fps in (30, 60, 120):
-            times = flow.sample_times(1400, [100, 1100], fps)
+            times = pace.sample_times(1400, [100, 1100], fps)
             s = sample((100, 1100, ease_in_out), until=0, times=times)
             s["elements"][0]["channels"]["position"] = [
                 [x / 300, y] for x, y in s["elements"][0]["channels"]["position"]
             ]
-            r = flow.analyse(s)
+            r = pace.analyse(s)
             self.assertEqual(
                 (r["jolts"], r["steps"], [p["where"] for p in r["pauses"]]),
                 ([], [], ["at the end"]),
@@ -356,23 +357,23 @@ def blend(c):
 
 
 def first_share(easing, ms):
-    r = flow.analyse(sample((100, 100 + ms, easing), until=ms + 300), jolt_ratio=1e-9)
+    r = pace.analyse(sample((100, 100 + ms, easing), until=ms + 300), jolt_ratio=1e-9)
     return next(j["share"] for j in r["jolts"] if j["edge"] == "starts")
 
 
 class JoltLine(unittest.TestCase):
     def test_the_line_is_the_middle_of_the_band_221_set(self):
         for ms, want in ((300, 0.5), (500, 0.37), (1000, 0.29)):
-            self.assertAlmostEqual(flow.jolt_line(ms), want, delta=0.02, msg=ms)
-        self.assertAlmostEqual(flow.jolt_line(200), 0.8)
-        self.assertAlmostEqual(flow.jolt_line(5000), 0.26)
+            self.assertAlmostEqual(pace.jolt_line(ms), want, delta=0.02, msg=ms)
+        self.assertAlmostEqual(pace.jolt_line(200), 0.8)
+        self.assertAlmostEqual(pace.jolt_line(5000), 0.26)
 
     def test_a_move_under_200_ms_has_no_line(self):
-        self.assertIsNone(flow.jolt_line(199.9))
-        self.assertIsNone(flow.jolt_line(0))
+        self.assertIsNone(pace.jolt_line(199.9))
+        self.assertIsNone(pace.jolt_line(0))
 
     def test_the_line_falls_as_a_move_lengthens(self):
-        lines = [flow.jolt_line(ms) for ms in range(200, 2400, 50)]
+        lines = [pace.jolt_line(ms) for ms in range(200, 2400, 50)]
         self.assertTrue(all(a >= b for a, b in itertools.pairwise(lines)))
 
     def test_material_3s_standard_curve_crosses_a_fixed_half_only_when_short_and_never_its_line(
@@ -383,13 +384,13 @@ class JoltLine(unittest.TestCase):
         self.assertGreaterEqual(short, 0.5)
         self.assertLess(long, 0.5)
         for ms in (150, 200, 300, 1000):
-            r = flow.analyse(sample((100, 100 + ms, m3), until=ms + 300))
+            r = pace.analyse(sample((100, 100 + ms, m3), until=ms + 300))
             self.assertEqual([j["edge"] for j in r["jolts"]], [], ms)
 
     def test_one_start_share_passes_in_a_300_ms_move_and_jolts_in_a_1_s_one(self):
         for ms, want in ((300, []), (1000, ["starts"])):
             self.assertLess(first_share(blend(0.4), ms), 0.5)
-            r = flow.analyse(sample((100, 100 + ms, blend(0.4)), until=ms + 300))
+            r = pace.analyse(sample((100, 100 + ms, blend(0.4)), until=ms + 300))
             self.assertEqual(
                 [j["edge"] for j in r["jolts"] if j["edge"] == "starts"], want, ms
             )
@@ -397,32 +398,32 @@ class JoltLine(unittest.TestCase):
     def test_each_jolt_names_its_line_and_a_fixed_ratio_overrides_it(self):
         [j] = [
             j
-            for j in flow.analyse(sample((100, 1100, blend(0.4)), until=1300))["jolts"]
+            for j in pace.analyse(sample((100, 1100, blend(0.4)), until=1300))["jolts"]
             if j["edge"] == "starts"
         ]
-        self.assertEqual(j["line"], round(flow.jolt_line(1000), 2))
-        r = flow.analyse(sample((100, 1100, blend(0.4)), until=1300), jolt_ratio=0.5)
+        self.assertEqual(j["line"], round(pace.jolt_line(1000), 2))
+        r = pace.analyse(sample((100, 1100, blend(0.4)), until=1300), jolt_ratio=0.5)
         self.assertEqual(r["jolts"], [])
-        r = flow.analyse(sample((100, 250, linear), until=500), jolt_ratio=0.5)
+        r = pace.analyse(sample((100, 250, linear), until=500), jolt_ratio=0.5)
         self.assertEqual([j["line"] for j in r["jolts"]], [0.5, 0.5])
 
     def test_a_short_linear_move_starts_and_stops_unjudged_by_share(self):
-        r = flow.analyse(sample((100, 250, linear), until=500))
+        r = pace.analyse(sample((100, 250, linear), until=500))
         self.assertEqual(r["jolts"], [])
 
 
-def first_frame(px, view_cm=flow.VIEW_CM, channel="position"):
+def first_frame(px, view_cm=pace.VIEW_CM, channel="position"):
     speeds = [px, *[px * 4] * 50, *[px * 2, px, px / 2, px / 4]]
     xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
     times = [k * STEP for k in range(len(xs))]
     el = {"label": "el0", "channels": {channel: xs}}
-    return flow.analyse({"times": times, "elements": [el]}, view_cm=view_cm)
+    return pace.analyse({"times": times, "elements": [el]}, view_cm=view_cm)
 
 
 class Jumps(unittest.TestCase):
     def test_the_jump_is_026_degrees_about_10_px_at_60_cm(self):
-        self.assertAlmostEqual(flow.jump_px(60), 10.3, delta=0.05)
-        self.assertAlmostEqual(flow.jump_px(30), flow.jump_px(60) / 2, delta=1e-6)
+        self.assertAlmostEqual(pace.jump_px(60), 10.3, delta=0.05)
+        self.assertAlmostEqual(pace.jump_px(30), pace.jump_px(60) / 2, delta=1e-6)
 
     def test_a_first_frame_over_the_jump_is_flagged_whatever_its_share(self):
         r = first_frame(11)
@@ -437,7 +438,7 @@ class Jumps(unittest.TestCase):
         self.assertEqual(first_frame(6, view_cm=60)["jumps"], [])
 
     def test_a_short_move_jumps_though_it_has_no_line(self):
-        r = flow.analyse(sample((100, 250, linear), until=500))
+        r = pace.analyse(sample((100, 250, linear), until=500))
         self.assertEqual((r["jolts"], [j["at"] for j in r["jumps"]]), ([], [100]))
 
     def test_only_a_boxs_start_from_rest_jumps(self):
@@ -445,14 +446,14 @@ class Jumps(unittest.TestCase):
         speeds = [*EASED, 0.005, -40, -40, -30, -20, -10, -3, -1]
         xs = [[sum(speeds[:k]), 0] for k in range(len(speeds) + 1)]
         times = [k * STEP for k in range(len(xs))]
-        r = flow.analyse(
+        r = pace.analyse(
             {
                 "times": times,
                 "elements": [{"label": "el0", "channels": {"position": xs}}],
             }
         )
         self.assertEqual(r["jumps"], [])
-        r = flow.analyse(
+        r = pace.analyse(
             sample((100, 250, lambda p: 1 - (1 - p) ** 2 if p < 1 else 1), until=500)
         )
         self.assertEqual([j["at"] for j in r["jumps"]], [100])
@@ -468,7 +469,7 @@ class Unseen(unittest.TestCase):
     def test_a_start_the_viewer_never_sees_at_rest_is_listed_not_judged_297(self):
         s = sample((100, 500, lambda p: 1 - (1 - p) ** 3), until=700)
         rest = s["times"].index(100)
-        r = flow.analyse(hidden(s, 0, {rest}))
+        r = pace.analyse(hidden(s, 0, {rest}))
         self.assertEqual((r["jolts"], r["jumps"]), ([], []))
         self.assertEqual(
             [
@@ -481,14 +482,14 @@ class Unseen(unittest.TestCase):
     def test_seen_at_rest_it_is_judged_though_unseen_once_it_moves(self):
         s = sample((100, 500, lambda p: 1 - (1 - p) ** 3), until=700)
         rest = s["times"].index(100)
-        r = flow.analyse(hidden(s, 0, set(range(rest + 1, rest + 5))))
+        r = pace.analyse(hidden(s, 0, set(range(rest + 1, rest + 5))))
         self.assertEqual((len(r["jolts"]), len(r["jumps"]), r["unseen"]), (1, 1, []))
 
     def test_a_stop_the_viewer_never_sees_is_not_judged(self):
         s = sample((100, 500, lambda p: p**3), until=700)
         end = round(500 / STEP)
-        self.assertEqual([j["edge"] for j in flow.analyse(s)["jolts"]], ["stops"])
-        r = flow.analyse(hidden(s, 0, set(range(end, len(s["times"])))))
+        self.assertEqual([j["edge"] for j in pace.analyse(s)["jolts"]], ["stops"])
+        r = pace.analyse(hidden(s, 0, set(range(end, len(s["times"])))))
         self.assertEqual(r["jolts"], [])
         self.assertEqual(
             [(u["edge"], u["would_be"]) for u in r["unseen"]], [("stops", ["jolt"])]
@@ -496,7 +497,7 @@ class Unseen(unittest.TestCase):
 
     def test_an_unseen_start_that_would_be_nothing_is_not_listed(self):
         s = sample((100, 500, ease_in_out), until=700)
-        r = flow.analyse(hidden(s, 0, set(range(len(s["times"])))))
+        r = pace.analyse(hidden(s, 0, set(range(len(s["times"])))))
         self.assertEqual(r["unseen"], [])
 
 
@@ -531,13 +532,13 @@ def played(easing, p):
 
 class Landing(unittest.TestCase):
     def test_a_bare_gravity_fall_stops_at_full_speed(self):
-        r = flow.analyse(sample((100, 347, lambda p: p * p), until=600))
+        r = pace.analyse(sample((100, 347, lambda p: p * p), until=600))
         self.assertEqual([j["edge"] for j in r["jolts"]], ["stops"])
 
     def test_the_fall_into_its_landing_does_not_jolt_or_step_297(self):
         for drop, sink in itertools.product((60, 240, 600), (1, 4, 12)):
             f = landing(drop=drop, sink=sink)
-            r = flow.analyse(
+            r = pace.analyse(
                 sample(
                     (100, 100 + f["ms"], lambda p, e=f["easing"]: played(e, p)),
                     until=f["ms"] + 300,
@@ -545,7 +546,7 @@ class Landing(unittest.TestCase):
             )
             want = ["stops"] if (drop, sink) == (600, 1) else []
             if want:
-                self.assertLess(f["landMs"], flow.BROWSER_FRAME_MS)
+                self.assertLess(f["landMs"], pace.BROWSER_FRAME_MS)
             self.assertEqual(
                 ([j["edge"] for j in r["jolts"]], r["steps"]), (want, []), (drop, sink)
             )
@@ -556,14 +557,14 @@ def settled(distance=300, ms=900, damping=1):
 
 
 def settle_flow(f):
-    return flow.analyse(
+    return pace.analyse(
         sample(
             (100, 100 + f["ms"], lambda p: played(f["easing"], p)), until=f["ms"] + 400
         )
     )
 
 
-def settle_then(f, fps=flow.FPS, then=None):
+def settle_then(f, fps=pace.FPS, then=None):
     step, start = 1000 / fps, 100
     until = start + f["ms"] + (0 if then is None else then + 500)
     times = [k * step for k in range(int(until / step) + 1)]
@@ -591,7 +592,7 @@ def settle_then(f, fps=flow.FPS, then=None):
                 },
             }
         )
-    return flow.analyse({"times": times, "elements": elements})
+    return pace.analyse({"times": times, "elements": elements})
 
 
 class Settle(unittest.TestCase):
@@ -630,7 +631,7 @@ class Settle(unittest.TestCase):
         ):
             f = settled(distance, ms, damping)
             jolts = f["startShare"] >= f["joltLine"]
-            jumps = f["firstPx"] >= flow.jump_px(flow.VIEW_CM)
+            jumps = f["firstPx"] >= pace.jump_px(pace.VIEW_CM)
             warned |= {"jolt"} if jolts else set()
             warned |= {"jump"} if jumps else set()
             r = settle_then(f)
@@ -656,20 +657,20 @@ class Settle(unittest.TestCase):
             ).stdout
         )
         lines = [
-            flow.jolt_line(ms) for ms in (150, 200, 220, 300, 640, 1000, 1700, 5000)
+            pace.jolt_line(ms) for ms in (150, 200, 220, 300, 640, 1000, 1700, 5000)
         ]
         self.assertEqual(got[0][0], lines[0])
         for a, b in zip(got[0][1:], lines[1:], strict=True):
             self.assertAlmostEqual(a, b, places=9)
         for a, cm in zip(got[1], (30, 60, 90), strict=True):
-            self.assertAlmostEqual(a, flow.jump_px(cm), places=9)
+            self.assertAlmostEqual(a, pace.jump_px(cm), places=9)
 
 
 def each_frame_phase(f):
     size = f.get("drop") or f["distance"]
     for share, fps in itertools.product((0, 0.25, 0.5, 0.75), (30, 60, 120)):
         start = 100 + share * 1000 / fps
-        times = flow.sample_times(start + f["ms"] + 300, [start, start + f["ms"]], fps)
+        times = pace.sample_times(start + f["ms"] + 300, [start, start + f["ms"]], fps)
         s = sample(
             (
                 start,
@@ -679,7 +680,7 @@ def each_frame_phase(f):
             until=0,
             times=times,
         )
-        yield share, fps, flow.analyse(s)
+        yield share, fps, pace.analyse(s)
 
 
 class Defaults(unittest.TestCase):
@@ -741,10 +742,10 @@ def stepped(ratio, at):
     return lambda p: done[min(n - 1, int(p * n))] / done[-1]
 
 
-def phased(easing, ms, share, fps=flow.FPS):
+def phased(easing, ms, share, fps=pace.FPS):
     start = 100 + share * 1000 / fps
-    times = flow.sample_times(start + ms + 300, [start, start + ms], fps)
-    return flow.analyse(
+    times = pace.sample_times(start + ms + 300, [start, start + ms], fps)
+    return pace.analyse(
         sample((start, start + ms, easing), until=0, times=times)
     ), start
 
@@ -752,7 +753,7 @@ def phased(easing, ms, share, fps=flow.FPS):
 class Steps(unittest.TestCase):
     def test_a_4x_speed_step_mid_move_is_flagged_wherever_it_falls_in_a_frame_69(self):
         for share in (0, 0.25, 0.5, 0.75):
-            r = flow.analyse(
+            r = pace.analyse(
                 sample(
                     (100 + share * STEP, 700 + share * STEP, stepped(4, 0.5)), until=900
                 )
@@ -767,7 +768,7 @@ class Steps(unittest.TestCase):
             self.assertEqual(r["jolts"], [], share)
 
     def test_a_4x_slowdown_mid_move_is_flagged_from_fast_to_slow(self):
-        r = flow.analyse(sample((100, 700, stepped(1 / 4, 0.5)), until=900))
+        r = pace.analyse(sample((100, 700, stepped(1 / 4, 0.5)), until=900))
         [st] = r["steps"]
         self.assertEqual((st["way"], st["to"]), ("down", 0.25))
         self.assertAlmostEqual(st["from"], 1, delta=0.02)
@@ -775,7 +776,7 @@ class Steps(unittest.TestCase):
     def test_a_4x_step_spread_over_two_frames_is_flagged(self):
         speeds = [10] * 8 + [19, 35] + [40] * 8
         xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
-        r = flow.analyse(
+        r = pace.analyse(
             {
                 "times": [k * STEP for k in range(len(xs))],
                 "elements": [{"label": "el", "channels": {"position": xs}}],
@@ -788,7 +789,7 @@ class Steps(unittest.TestCase):
     def test_a_frame_reading_the_slower_speed_but_for_noise_is_not_between_126(self):
         speeds = [10] * 8 + [10.001] + [40] * 8
         xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
-        r = flow.analyse(
+        r = pace.analyse(
             {
                 "times": [k * STEP for k in range(len(xs))],
                 "elements": [{"label": "el", "channels": {"position": xs}}],
@@ -802,7 +803,7 @@ class Steps(unittest.TestCase):
     ):  # #612
         speeds = [10] * 8 + [10.001, 10.0005] + [40] * 8
         xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
-        r = flow.analyse(
+        r = pace.analyse(
             {
                 "times": [k * STEP for k in range(len(xs))],
                 "elements": [{"label": "el", "channels": {"position": xs}}],
@@ -820,7 +821,7 @@ class Steps(unittest.TestCase):
                 [sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)
             ]
         longest = max(map(len, built.values()))
-        return flow.analyse(
+        return pace.analyse(
             {
                 "times": [k * STEP for k in range(longest)],
                 "elements": [
@@ -864,7 +865,7 @@ class Steps(unittest.TestCase):
             [1] * 8 + [1.5] * 8 + [1.5 + 18.5 * k / 40 for k in range(1, 41)] + [20] * 8
         )
         xs = [[sum(speeds[:k]) * STEP / 1000, 0] for k in range(len(speeds) + 1)]
-        r = flow.analyse(
+        r = pace.analyse(
             {
                 "times": [k * STEP for k in range(len(xs))],
                 "elements": [{"label": "el", "channels": {"position": xs}}],
@@ -938,7 +939,7 @@ class Steps(unittest.TestCase):
 
         for easing, ms in ((bounce, 600), (ease_in_out_back, 150)):
             self.assertEqual(
-                flow.analyse(sample((100, 100 + ms, easing), until=ms + 300))["steps"],
+                pace.analyse(sample((100, 100 + ms, easing), until=ms + 300))["steps"],
                 [],
                 ms,
             )
@@ -947,12 +948,12 @@ class Steps(unittest.TestCase):
 class Values(unittest.TestCase):
     def fade(self, prop, values):
         times = [k * STEP for k in range(len(values))]
-        return flow.analyse(
+        return pace.analyse(
             {"times": times, "elements": [{"label": "el", "channels": {prop: values}}]}
         )
 
     def test_an_opaque_colour_and_a_nearly_opaque_one_are_close(self):
-        self.assertEqual(flow.numbers("color", "rgb(0, 0, 0)"), [0, 0, 0, 1])
+        self.assertEqual(pace.numbers("color", "rgb(0, 0, 0)"), [0, 0, 0, 1])
         alphas = [1 - ease_in_out(k / 30) for k in range(31)]
         values = [
             "rgb(0, 0, 0)" if a == 1 else f"rgba(0, 0, 0, {a:.4f})" for a in alphas
@@ -961,15 +962,15 @@ class Values(unittest.TestCase):
 
     def test_a_flat_transform_and_a_3d_one_are_one_kind_of_number(self):
         self.assertEqual(
-            flow.numbers("transform", "none"),
-            flow.numbers("transform", "matrix(1, 0, 0, 1, 0, 0)"),
+            pace.numbers("transform", "none"),
+            pace.numbers("transform", "matrix(1, 0, 0, 1, 0, 0)"),
         )
-        self.assertEqual(len(flow.numbers("transform", "matrix(1, 0, 0, 1, 5, 6)")), 16)
+        self.assertEqual(len(pace.numbers("transform", "matrix(1, 0, 0, 1, 5, 6)")), 16)
         self.assertEqual(
-            flow.numbers(
+            pace.numbers(
                 "transform", "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"
             ),
-            flow.IDENTITY_3D,
+            pace.IDENTITY_3D,
         )
         angles = [60 * ease_in_out(k / 30) for k in range(31)]
         values = []
@@ -983,9 +984,9 @@ class Values(unittest.TestCase):
         self.assertEqual(self.fade("transform", values)["jolts"], [])
 
     def test_scale_none_is_one(self):
-        self.assertEqual(flow.numbers("scale", "none"), flow.numbers("scale", "1"))
-        self.assertEqual(flow.numbers("scale", "1.5"), [1.5, 1.5, 1])
-        self.assertEqual(flow.numbers("scale", "1.5 2"), [1.5, 2, 1])
+        self.assertEqual(pace.numbers("scale", "none"), pace.numbers("scale", "1"))
+        self.assertEqual(pace.numbers("scale", "1.5"), [1.5, 1.5, 1])
+        self.assertEqual(pace.numbers("scale", "1.5 2"), [1.5, 2, 1])
 
 
 class PageQuiet(unittest.TestCase):
@@ -1003,17 +1004,17 @@ class PageQuiet(unittest.TestCase):
         }
 
     def test_the_quiet_window_runs_from_the_first_frame_135(self):
-        self.assertFalse(flow.settled(self.status(firstFrame=350), 300))
-        self.assertTrue(flow.settled(self.status(now=650, firstFrame=350), 300))
+        self.assertFalse(pace.settled(self.status(firstFrame=350), 300))
+        self.assertTrue(pace.settled(self.status(now=650, firstFrame=350), 300))
 
     def test_a_frame_loop_still_rewriting_an_element_has_not_settled(self):  # #469
-        self.assertFalse(flow.settled(self.status(rewriting=True), 300))
+        self.assertFalse(pace.settled(self.status(rewriting=True), 300))
 
     def test_a_frame_loop_it_will_be_refused_for_ends_the_wait(self):  # #469
-        self.assertTrue(flow.settled(self.status(running=1, looped=True), 300))
+        self.assertTrue(pace.settled(self.status(running=1, looped=True), 300))
 
     def test_a_page_with_no_frame_drawn_has_not_settled(self):
-        self.assertFalse(flow.settled(self.status(now=5000, firstFrame=None), 300))
+        self.assertFalse(pace.settled(self.status(now=5000, firstFrame=None), 300))
 
     def test_a_page_that_never_draws_a_frame_times_out(self):
         page = types.SimpleNamespace(
@@ -1543,16 +1544,16 @@ OFF_GRID_MS = 8  # measured, #624: 1 fake step in 200 seeded runs at 120 fps
 
 def morph_sample(ws, until, fps=60, edges=()):
     s = {
-        "times": flow.sample_times(until, list(edges), fps),
+        "times": pace.sample_times(until, list(edges), fps),
         "elements": [],
         "morphs": [{"label": f"path#m{i}", "writes": w} for i, w in enumerate(ws)],
     }
-    flow.add_morphs(s)
+    pace.add_morphs(s)
     return s
 
 
 def morph_measured(w, until):
-    return flow.analyse(morph_sample([w], until))
+    return pace.analyse(morph_sample([w], until))
 
 
 def doubles(t):
@@ -1571,7 +1572,7 @@ class MorphPoints(unittest.TestCase):
     def test_a_write_every_frame_is_one_point_per_frame(self):
         w = writes(eased(0, 500), frames(500))
         self.assertEqual(
-            flow.morph_points(w), [(x["ms"], flow.path_numbers(x["value"])) for x in w]
+            pace.morph_points(w), [(x["ms"], pace.path_numbers(x["value"])) for x in w]
         )
 
     def test_a_held_shape_is_still_until_the_frame_before_the_next_write(self):
@@ -1584,18 +1585,18 @@ class MorphPoints(unittest.TestCase):
                 "value": between(1),
             },
         ]
-        pts = flow.morph_points(w)
+        pts = pace.morph_points(w)
         self.assertEqual([t for t, _ in pts], [0, 400 - STEP, 400])
-        self.assertEqual(flow.morph_at(pts, 200), flow.morph_at(pts, 0))
+        self.assertEqual(pace.morph_at(pts, 200), pace.morph_at(pts, 0))
 
     def test_numbers_are_interpolated_one_by_one_and_held_at_either_end_72(self):
         pts = [(100, [0, 0, 10, 0, 20, 0, 30, 0]), (200, [10, 0, 20, 0, 40, 0, 50, 0])]
-        self.assertEqual(flow.morph_at(pts, 150), [5, 0, 15, 0, 30, 0, 40, 0])
-        self.assertEqual(flow.morph_at(pts, 0), [0, 0, 10, 0, 20, 0, 30, 0])
-        self.assertEqual(flow.morph_at(pts, 900), [10, 0, 20, 0, 40, 0, 50, 0])
+        self.assertEqual(pace.morph_at(pts, 150), [5, 0, 15, 0, 30, 0, 40, 0])
+        self.assertEqual(pace.morph_at(pts, 0), [0, 0, 10, 0, 20, 0, 30, 0])
+        self.assertEqual(pace.morph_at(pts, 900), [10, 0, 20, 0, 40, 0, 50, 0])
 
     def test_compact_path_data_reads_every_number(self):
-        self.assertEqual(flow.path_structure("M0,0C10-5 20,0 30 0z"), ("MCz", 8))
+        self.assertEqual(pace.path_structure("M0,0C10-5 20,0 30 0z"), ("MCz", 8))
 
     def test_a_change_of_command_structure_is_refused_72(self):
         w = [
@@ -1608,7 +1609,7 @@ class MorphPoints(unittest.TestCase):
             },
         ]
         with self.assertRaises(runner.UnmeasurableError) as caught:
-            flow.add_morphs(
+            pace.add_morphs(
                 {
                     "times": [0, STEP],
                     "elements": [],
@@ -1629,7 +1630,7 @@ class MorphPoints(unittest.TestCase):
             },
             {"ms": 100 + STEP, "prev_ms": 100, "old": FROM, "value": between(0.1)},
         ]
-        self.assertEqual([t for t, _ in flow.morph_points(w)], [100, 100 + STEP])
+        self.assertEqual([t for t, _ in pace.morph_points(w)], [100, 100 + STEP])
 
 
 def without(*gone):
@@ -1640,10 +1641,10 @@ def without(*gone):
 
 class DroppedFrames(unittest.TestCase):
     def test_one_dropped_frame_is_tolerated(self):
-        self.assertEqual(flow.dropped_frames(without(30)), [])
+        self.assertEqual(pace.dropped_frames(without(30)), [])
 
     def test_two_dropped_frames_in_a_row_are_found(self):
-        got = flow.dropped_frames(without(30, 31))
+        got = pace.dropped_frames(without(30, 31))
         self.assertEqual(
             [(round(a), round(b)) for a, b in got],
             [(round(29 * STEP), round(32 * STEP))],
@@ -1654,15 +1655,15 @@ class DroppedFrames(unittest.TestCase):
             doubles, [f for k, f in enumerate(frames(1000)) if k not in (27, 28)]
         )
         s = morph_sample([w], 1000)
-        self.assertEqual(flow.analyse(s)["steps"], [])
+        self.assertEqual(pace.analyse(s)["steps"], [])
         del s["elements"][0]["dropped"]
-        self.assertTrue(flow.analyse(s)["steps"])
+        self.assertTrue(pace.analyse(s)["steps"])
 
     def test_no_jolt_rests_on_a_dropped_frame(self):
         s = sample((100, 600, linear), until=800)
         s["elements"][0]["dropped"] = {"position": [(100, 100 + STEP)]}
         self.assertEqual(
-            [(j["edge"], j["at"]) for j in flow.analyse(s)["jolts"]], [("stops", 600)]
+            [(j["edge"], j["at"]) for j in pace.analyse(s)["jolts"]], [("stops", 600)]
         )
 
     def test_a_jolt_outside_a_dropped_stretch_is_still_found(self):
@@ -1673,9 +1674,9 @@ class DroppedFrames(unittest.TestCase):
 
     def test_a_morph_drawn_at_a_steady_20_fps_is_found_126_135(self):
         w = writes(eased(0, 1000), [k * 3 * STEP for k in range(21)])
-        self.assertEqual(flow.dropped_frames(w), [(w[0]["ms"], w[-1]["ms"])])
+        self.assertEqual(pace.dropped_frames(w), [(w[0]["ms"], w[-1]["ms"])])
         self.assertEqual(
-            flow.dropped_frames(
+            pace.dropped_frames(
                 writes(eased(0, 1000), [k * 2 * STEP for k in range(31)])
             ),
             [],
@@ -1697,7 +1698,7 @@ class DroppedFrames(unittest.TestCase):
                 "value": between(0.9),
             },
         ]
-        self.assertEqual(flow.dropped_frames(w), [])
+        self.assertEqual(pace.dropped_frames(w), [])
 
 
 class MorphFlow(unittest.TestCase):
@@ -1725,7 +1726,7 @@ class MorphFlow(unittest.TestCase):
     def morph_steps(self, drawn, fps, progress=None):
         ws = [writes(progress or eased(0, 1000), own) for own in drawn]
         edges = [t for own in drawn for t in own]
-        return flow.analyse(morph_sample(ws, 1000, fps, edges))["steps"]
+        return pace.analyse(morph_sample(ws, 1000, fps, edges))["steps"]
 
     def test_a_morphs_d_is_measured_only_at_its_own_drawn_frames_624(self):
         own = off_the_grid(6)[0]
@@ -1772,11 +1773,11 @@ class MorphFlow(unittest.TestCase):
         late = [k * STEP for k in range(61)]
         late[30] += 6
         s = sample(
-            (0, 1000, ease_in_out), until=1000, times=flow.sample_times(1000, [], 120)
+            (0, 1000, ease_in_out), until=1000, times=pace.sample_times(1000, [], 120)
         )
         s["morphs"] = [{"label": "path#m", "writes": writes(eased(0, 1000), late)}]
-        flow.add_morphs(s)
-        [el, _] = flow.analyse(s)["elements"]
+        pace.add_morphs(s)
+        [el, _] = pace.analyse(s)["elements"]
         times = el["channels"]["position"]["times"]
         self.assertEqual(times, s["times"])
         self.assertLessEqual(
@@ -1787,7 +1788,7 @@ class MorphFlow(unittest.TestCase):
         w = writes(lambda t: min(1, max(0, (t - 100) / 500)), frames(800))
         s = morph_sample([w], 800, 120)
         s["elements"][0]["seen"] = [t > 100 for t in s["times"]]
-        r = flow.analyse(s)
+        r = pace.analyse(s)
         self.assertEqual([(j["edge"], j["at"]) for j in r["jolts"]], [("stops", 600)])
         self.assertEqual([(u["edge"], u["at"]) for u in r["unseen"]], [("starts", 100)])
 
@@ -1797,12 +1798,12 @@ class MorphFlow(unittest.TestCase):
         )
         s = morph_sample([w], 800, 120)
         s["elements"][0]["seen"] = [t < 605 for t in s["times"]]
-        r = flow.analyse(s)
+        r = pace.analyse(s)
         self.assertEqual([(j["edge"], j["at"]) for j in r["jolts"]], [("starts", 107)])
         self.assertEqual([(u["edge"], u["at"]) for u in r["unseen"]], [("stops", 607)])
 
     def test_a_step_a_morph_and_another_channel_share_is_listed_once_624(self):
-        times = flow.sample_times(1000, [], 120)
+        times = pace.sample_times(1000, [], 120)
         position = [[300 * doubles(t), 0] for t in times]
         s = {
             "times": times,
@@ -1811,14 +1812,14 @@ class MorphFlow(unittest.TestCase):
                 {"label": "path#m0", "writes": writes(doubles, off_the_grid(4)[0])}
             ],
         }
-        flow.add_morphs(s)
-        [st] = flow.analyse(s)["steps"]
+        pace.add_morphs(s)
+        [st] = pace.analyse(s)["steps"]
         self.assertEqual(sorted(st["channels"]), ["d", "position"])
 
     def analyse_morph_and_position(
         self, position_from, *, seen=None, ease=linear, px=300, opacity_from=None, **at
     ):
-        times = flow.sample_times(800, [], 60)
+        times = pace.sample_times(800, [], 60)
 
         def go(t):
             return ease(min(1, max(0, (t - position_from) / 500)))
@@ -1852,8 +1853,8 @@ class MorphFlow(unittest.TestCase):
                 }
             ],
         }
-        flow.add_morphs(s)
-        return flow.analyse(s, **at)
+        pace.add_morphs(s)
+        return pace.analyse(s, **at)
 
     def test_a_morph_and_another_channel_starting_together_jolt_once_632(self):
         got = [
@@ -1905,18 +1906,18 @@ class MorphFlow(unittest.TestCase):
                 ("k", k * STEP, self.edge("position")),
                 ("k", (k + 1) * STEP, self.edge("opacity")),
             ]
-            self.assertEqual(len(flow.merged_edges(found, flow.FPS)), 2, k)
+            self.assertEqual(len(pace.merged_edges(found, pace.FPS)), 2, k)
 
     def test_one_channel_is_never_joined_to_itself_632(self):
         found = [("k", 100, self.edge("d")), ("k", 105, self.edge("d"))]
-        self.assertEqual(len(flow.merged_edges(found, flow.FPS)), 2)
+        self.assertEqual(len(pace.merged_edges(found, pace.FPS)), 2)
 
     def test_a_joined_jolt_takes_the_line_of_its_higher_share_632(self):
         found = [
             ("k", 100, self.edge("position", 0.5, 0.4)),
             ("k", 105, self.edge("d", 0.9, 0.6)),
         ]
-        [j] = flow.merged_edges(found, flow.FPS)
+        [j] = pace.merged_edges(found, pace.FPS)
         self.assertEqual((j["share"], j["line"]), (0.9, 0.6))
 
     def test_a_morph_and_another_channel_two_frames_apart_jolt_apart_632(self):
@@ -1942,7 +1943,7 @@ class MorphFlow(unittest.TestCase):
                 {"label": "path#arch", "writes": writes(eased(0, 10), [0, 5, 10])}
             ],
         }
-        flow.add_morphs(s)
+        pace.add_morphs(s)
         self.assertEqual(len(s["elements"]), 1)
         self.assertEqual(sorted(s["elements"][0]["channels"]), ["d", "opacity"])
 

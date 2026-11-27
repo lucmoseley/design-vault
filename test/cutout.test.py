@@ -21,6 +21,9 @@ sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 cutout = siblings.load(SCRIPTS, "cutout.py")
+REQUIREMENTS = os.path.realpath(
+    os.path.join(SCRIPTS, "..", "..", "..", "requirements.txt")
+)
 
 W, H, SS = 200, 160, 8
 KEY = np.array([0, 177, 64], np.float32)
@@ -113,9 +116,6 @@ class Cut(unittest.TestCase):
 
 
 class Cli(unittest.TestCase):
-    def test_the_install_hint_names_the_plugins_requirements(self):
-        self.assertTrue(cutout.REQUIREMENTS.is_file(), cutout.REQUIREMENTS)
-
     def run_script(self, *args):
         return subprocess.run(
             [sys.executable, SCRIPT, *args], capture_output=True, text=True
@@ -183,7 +183,7 @@ class Cli(unittest.TestCase):
                 )
                 self.assertEqual(done.returncode, 3, done.stderr)
                 self.assertIn(
-                    f"cutout: {package} is missing — python3 -m pip install -r",
+                    f"cutout.py: {package} is missing — python3 -m pip install -r {REQUIREMENTS}",
                     done.stderr,
                 )
 

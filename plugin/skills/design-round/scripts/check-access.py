@@ -1332,7 +1332,7 @@ def pause_answer(context, url, carousels, spans):
 
 def judge(got, shots, measured, table):
     readings = []
-    out = {qid: answering.Judged([], [], [], []) for qid, _ in answering.QUESTIONS}
+    out = {qid: answering.unjudged() for qid, _ in answering.QUESTIONS}
     shot, ink, held, sizes = shots.shot, shots.ink, shots.held, shots.sizes
     # #290
     if len(set(sizes)) > 1:
