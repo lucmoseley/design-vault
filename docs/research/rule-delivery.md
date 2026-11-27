@@ -1,7 +1,5 @@
 # How the researched design rules reach the builder and the critics (design-vault#211, map #202)
 
-⚠ **Bound 2026-10-15 (#212): the gaps A4.6 and B6 leave to #212 are settled by [critic-transcripts.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/critic-transcripts.md).** In 50 production runs the critic ran impeccable's two assessments in one context, with no degraded banner and the detector first. It read critique.md whole in about 14 of 18 reads. Its real context at the verdict was about 170k tokens, not 95k–110k. The loading pattern is ruled on #212: Q7 there has the building session dispatch impeccable's two assessments as isolated subagents.
-
 Question (#211, 15 Oct 2026): how must the house's researched design rules get to the agents that apply them, so that each agent applies all of its rules well when the number of rules increases? The options are: all rules at one time; rules split by part or by topic; or passes from coarse to fine. The agents are the building session (`design-round`), the critic (`design-critique`) and the three gate critics (`plugin/skills/design-round/references/gate-check.md`).
 
 The founder (15 Oct 2026): "if we just dumped it all in, or even all the rules in, we'd get a very poorly functioning skill, because any agent reading it would be overloaded with information in a way that meant it wouldn't apply it all smoothly. Perhaps the skill works by reviewing at a coarse grain, apply those rules, then moving finer and finer. Perhaps that's a terrible idea."
@@ -11,7 +9,6 @@ Written in ASD-STE100 Simplified Technical English.
 Evidence labels (the same as #99): **Strong** (peer-reviewed or first-party, read), **Moderate** (primary read in part, or a preprint read), **Weak** (abstract only, or one small study), **judgement**. Each model-specific result gives the model and the date. Token counts are characters divided by 4. This is approximate (English prose is about 3.5 to 4.5 characters for each Claude token).
 
 ## Part A. What each agent loads today (measured 15 Oct 2026)
-
 
 ### A1. The critique critic (design-round §4: one fresh critic; gate-check §3: the "critique critic")
 
@@ -68,7 +65,7 @@ The builder is also one **long** session. It holds every tool output, render, cr
 3. **The gate check splits by role across sessions**: three gate critics answer the look list only ("no critique, no score, no leader"); one critique critic does the open critique. A re-check uses three more fresh critics.
 4. **impeccable splits by concern and by stage.** One command per concern (`typeset`, `colorize`, `layout`, `animate`, `clarify` and others; `design-round/references/impeccable.md` "The axis command"). Its `SKILL.md` step 3 loads `craft-floor.md` "After resolving analysis and direction … immediately before any UI edit … Do not load it for planning-only work."
 5. **impeccable critique splits into two isolated assessments.** `critique.md` "Hard Invariants": Assessment A (design review) and Assessment B (detector and browser evidence) "MUST run as two isolated sub-agents", because detector output "still anchors judgment". `new-work.md` §7 sends the build to a separate `impeccable-finish-reviewer` agent, "fresh eyes on a done artifact, outside the build thread's attention gravity" (`agents/impeccable-finish-reviewer.md`).
-6. **A gap.** design-round §4 runs the critic as a subagent, and impeccable `critique` inside it asks for two more subagents (A and B). Claude Code allows this: "By default, a subagent can spawn subagents of its own, up to three layers below the main conversation" (code.claude.com/docs/en/sub-agents, read 15 Oct 2026). But the workflow-core session rules say "A subagent does not spawn subagents". Where the critic obeys that rule, impeccable runs A and B inline in one context, which `critique.md` calls a degraded run that must print `⚠️ DEGRADED: single-context`. No house file found says which of the two the critic does (searched `plugin/skills` and `docs/research` for "degraded" and "single-context"; no hit outside an unrelated script).
+6. **Nested subagents.** design-round §4 runs the critic as a subagent, and impeccable `critique` inside it asks for two more subagents (A and B). Claude Code allows this: "By default, a subagent can spawn subagents of its own, up to three layers below the main conversation" (code.claude.com/docs/en/sub-agents, read 15 Oct 2026). But the workflow-core session rules say "A subagent does not spawn subagents". Where the critic obeys that rule, impeccable runs A and B inline in one context, which `critique.md` calls a degraded run that must print `⚠️ DEGRADED: single-context`. In 50 production runs the critic ran the two assessments in one context, with no degraded banner and the detector first ([critic-transcripts.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/critic-transcripts.md)). #212 Q7 has the building session dispatch them as isolated subagents.
 7. **#121's dependency order is a coarse-to-fine sequence already in force for the critic.** `house-principles.md` gives function → role → treatment → value, and design-critique §0a runs "the function walk, before beauty" before §1. The order exists as an order of **decisions**; the rules are not yet **loaded** in that order.
 
 ## Part B. Outside evidence
@@ -141,7 +138,7 @@ Meaning (judgement): **a coarse-to-fine sequence inside one context is weaker th
 - **Skill authoring best practices** (platform.claude.com, read 15 Oct 2026). "Keep SKILL.md body under 500 lines for optimal performance". "Pattern 2: Domain-specific organization … to avoid loading irrelevant context". "Keep references one level deep from SKILL.md": from nested references Claude "might use commands like `head -100` to preview content rather than reading entire files, resulting in incomplete information". Reference files over 100 lines need a table of contents. "Prefer scripts for deterministic operations"; utility scripts are "More reliable than generated code" and "Only the script's output consumes tokens". Feedback loops: "Run validator → fix errors → repeat". **Strong.**
 - **"Equipping agents for the real world with Agent Skills"** (Zhang, Lazuka, Murag, 16 Oct 2025; read in part). Three levels: metadata, SKILL.md body, linked files. "If certain contexts are mutually exclusive or rarely used together, keeping the paths separate will reduce the token usage." **Strong.**
 
-Checks against the house (measured in Part A): `design-round/SKILL.md` is 253 lines (inside 500) but about 10,800 tokens because of long lines. impeccable `critique.md` is 806 lines and is reached from impeccable `SKILL.md`, which design-critique reaches through `design-round/references/impeccable.md`: a **two-level chain** from the critic's own skill, the case where Claude may read only the first 100 lines. Judgement: the critic may not read the heuristics and persona sections that sit after line 277 of `critique.md`.
+Checks against the house (measured in Part A): `design-round/SKILL.md` is 253 lines (inside 500) but about 10,800 tokens because of long lines. impeccable `critique.md` is 806 lines and is reached from impeccable `SKILL.md`, which design-critique reaches through `design-round/references/impeccable.md`: a **two-level chain** from the critic's own skill, the case where Claude may read only the first 100 lines. In production the critic read `critique.md` whole in about 14 of 18 reads ([critic-transcripts.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/critic-transcripts.md)).
 
 ## Part C. The loading patterns, with evidence, cost and trade-offs
 
@@ -158,7 +155,7 @@ These are context sizes at the verdict, not billed tokens: a multi-turn agent re
 - **Who uses it now.** The critique critic (about 38,000 to 55,000 tokens of rules, 100+ rules and checks) and the builder (about 70,000 tokens of rules, in a session that grows across rounds).
 - **Evidence for.** It is the simplest. Every rule is in view, so the agent can see two rules clash (#121 needs both rules side by side to name a clash). Anthropic's research-system judge did best as one call with five criteria (B3, Jun 2025).
 - **Evidence against.** Each added rule lowers the chance that all hold (B1: Claude 3.5 Sonnet 0.95 → 0.48 at 10 rules; 0.96 → 0.01 at 6 code-style rules). Earlier rules win (IFScale primacy). Rules that do not apply hurt more than length (RuleArena). A judge checking many rules at once over-reports compliance (ManyIFEval). Long context with distractors loses (Context Rot, NoLiMa). Anthropic advises against "a laundry list of edge cases" (B2).
-- **Cost.** One session. Critic: D + 38,000 to 55,000 rules + images ≈ 95,000 to 110,000 tokens at the verdict. Builder: 70,000 tokens of rules before any work.
+- **Cost.** One session. Critic: D + 38,000 to 55,000 rules + images ≈ 95,000 to 110,000 tokens at the verdict by this sum; measured in production, about 170,000 ([critic-transcripts.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/critic-transcripts.md)). Builder: 70,000 tokens of rules before any work.
 - **Trade-off.** Lowest session count and wall time. Highest risk that a rule is silently omitted.
 
 ### C2. Pattern 2: take each measured rule away from the agent (a script answers it)
@@ -200,7 +197,6 @@ These are context sizes at the verdict, not billed tokens: a multi-turn agent re
 - **Trade-off.** The best fit to the evidence on ordering and on separate calls. The slowest pattern. It needs a rule to be tagged with its stage, which #121's form gives (`writes` maps to role, treatment or value).
 
 ### C7. Coarse to the eye, fine to the code (a synthesis of C2 and C6)
-
 
 | #121 stage | Typical house rules | Who can answer it | Evidence |
 |---|---|---|---|
@@ -247,7 +243,6 @@ The baseline-against-staged test on one candidate was **not run**. It needs two 
 - No study measures many **subjective, conditional design rules** in one generated UI or one visual critique (#99 V8; searched again 15 Oct 2026).
 - No study compares staged against all-at-once design rules for a generator, or per-concern against single visual critics with Claude 4.5 or later.
 - Current-model numbers (Claude Opus 4.7, 2026) exist only for keyword rules, from one blog.
-- Whether the house's critic runs impeccable's critique degraded (Part A4.6) and whether it reads all of `critique.md` (B6) is not verified; a transcript would settle both (#212 owns the check).
 - The Manta brand sheet's actual use by the critic (always opened or only on demand) is not measured.
 
 ## Bound

@@ -1,7 +1,5 @@
 # Research: adopt expert design guidance, or write the house's own? (design-vault#119, map #96)
 
-⚠ **Bound 14 Oct 2026 (#101): whether to buy Baymard Premium goes to lucmoseley/mantahostels with its search pages, and whether Manta ships a dark theme is Manta's own ruling. Small-business trust, rated WRITE here, goes to research #144 first.**
-
 Date: 13 Oct 2026.
 
 Question (from #119): which expert-built design guidance must the house adopt or use, and not write itself? Is impeccable's guidance good enough that the house's job is mostly to enforce it more strictly?
@@ -232,7 +230,7 @@ Why enforcing it as-is, more strictly, is wrong:
 - Level 5, spine: **ENFORCE** a pinned impeccable, with a short house override file that (a) strikes or corrects F2 rules 6, 23, 29, 36, 37, 38; (b) adds conditions to the RU rules; (c) labels the anti-"AI look" bans as era-bound defaults, with a review date; and (d) cites the level-1, 3 or 4 source behind each enforced rule.
 - **WRITE** only where no outside source exists: imagery's information rule, the trust and disclosure checklist, the distinctive-asset method, brand-motion physics (the craft gate already does this), and the surface-styling method (#117).
 
-What this does not settle: whether to buy Baymard Premium; whether Manta ships a dark theme; how the override file is pressure-tested. Those go to the founder or to #121, #100 and #101, which this ticket blocks.
+What this does not settle: whether to buy Baymard Premium, which is Manta's with its search pages, and whether Manta ships a dark theme, which is Manta's own ruling (both lucmoseley/mantahostels); how the override file is pressure-tested. Small-business trust, rated WRITE, is researched in `docs/research/first-visit-trust.md` (#144).
 
 ## Bound
 

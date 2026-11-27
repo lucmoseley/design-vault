@@ -1,16 +1,12 @@
 # Critic shape on planted faults (#224)
 
-⚠ **Bound 15 Oct 2026 (#238): the kit is in `kits/planted-faults/`, not `.claude/tmp/224/`. The clean-page judges could see which critic made each finding, so the real and invented counts stand unconfirmed until the blind re-judge, #251. The recall counts are unaffected.**
-
-⚠ **Bound 15 Oct 2026 (#251): the blind re-judge confirms the whole-page critic plus the type critic. Blind judges call more findings invented and fewer real on every set. W plus type still invents within the whole-page critic's spread: 1.76 a page against W's 1.43, with a spread of 0.43. See the last section.**
-
 Question: which critic shape finds the most real faults without inventing more? The four shapes: one whole-page critic; it plus two deliberately different whole-page critics; topic critics plus the whole-page critic; or a coarse-to-fine chain of critics.
 
 ## Answer
 
-- **The whole-page critic plus one type critic.** Of all the sets measured, only this one finds more real faults of some kind with no rise in invented faults beyond the run-to-run spread, the test #212 Q1 (A) and Q8 (A) set. On planted faults it catches every type fault and every global fault in all 3 runs, where the whole-page critic alone caught 5 or 6 of 6. On the clean pages it finds 10.2 real faults a page against 8.3, and invents 1.10 a page against 0.90. The rise of 0.20 sits inside the whole-page critic's own spread of 0.43 (0.71 to 1.14).
-- **Shapes 2, 3 and 4 each invent more beyond the spread.** Three whole-page critics and the topic shape catch all 30 planted faults in every run, but invent 2.6 and 4.5 faults a clean page. The chain catches 29 or 30 and invents 2.1.
-- **A layout critic alone also passes the test, but not together with the type critic.** Whole-page plus layout finds 10.7 real faults a page and invents 1.24 (+0.34). Type plus layout together invent 1.43 (+0.53), beyond the spread. The type critic is the one to keep: it adds planted-fault catches (type and global) that the layout critic does not, it invents fewer, and half its extra real faults are P2 against a quarter of the layout critic's.
+- **The whole-page critic plus one type critic.** It finds more real faults of some kind with no rise in invented faults beyond the run-to-run spread, the test #212 Q1 (A) and Q8 (A) set. On planted faults it catches every type fault and every global fault in all 3 runs, where the whole-page critic alone caught 5 or 6 of 6. On the clean pages, as blind judges score them (§Blind re-judge), it finds 9.4 real faults a page against 7.8, and invents 1.76 a page against 1.43. The rise of 0.33 sits inside the whole-page critic's own spread of 0.43.
+- **Shapes 2, 3 and 4 each invent more beyond the spread.** Three whole-page critics and the topic shape catch all 30 planted faults in every run, but invent 3.6 and 5.7 faults a clean page. The chain catches 29 or 30 and invents 2.1.
+- **A layout critic alone sits on the bar, and not together with the type critic.** Whole-page plus layout finds 9.6 real faults a page and invents 1.86 (+0.43). Type plus layout together invent 2.19 (+0.76), beyond the spread. The type critic is the one to keep: it adds planted-fault catches (type and global) that the layout critic does not, it invents fewer, and half its extra real faults are P2 (17 of 34) against under a third of the layout critic's (12 of 39).
 - **The whole-page critic's misses are scattered, apart from two type-led plants.** It missed 2 or 3 of the 30 planted faults a run, mostly a different one each run. The two it missed in 2 of 3 runs were an article title set louder than the hero, and a subhead set bigger than its title. The type critic caught both in every run.
 - **The whole-page critic's remaining function misses are a script's job.** It missed a planted button pointing at `#` in one run. In two of three runs it also missed a real dead link on Manta's how-we-rank page ('Destinations' points at `#destinations`, which the page does not have). `parts-map.py` records each link's `href` but does not check that an in-page target exists. Under #212 Q1 a checkable fault belongs to a script: #236.
 - **No shape matches the founder's verdicts well.** Of the 9 verdicts on these pages, the whole-page critic and the chosen set each match 3 or 4 a run, and the best set matches 6. No critic in any run named B3 (a childish font and phrasing) or B6 (a boring page). Of the 33 critic runs on each page, B1 (a childish feel) was named in 2, and B9 (a thin border reads as a strange box) in 1 of the 66 on its two pages. These are judgements of tone, which the brief does not yet state (#204).
@@ -40,6 +36,8 @@ Question: which critic shape finds the most real faults without inventing more? 
 | W plus W2 | 6/6/6 | 6/6/6 | 6/6/6 | 6/6/6 | 6/6/6 | 30/30/30 |
 
 ### The 7 clean pages, per page (mean over 3 runs, lowest–highest run)
+
+These are the first judges' counts. They could see which critic made each finding; §Blind re-judge scores the same findings blind, and its counts are the ones the answer uses.
 
 | Set | Real faults | Invented | Findings | Founder verdicts matched (of 9) |
 |---|---|---|---|---|
@@ -86,16 +84,11 @@ The type critic's additions are concrete type faults: a page that breaks its own
 - [critic-shape.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/critic-shape.md) (#212): why the published evidence could not decide.
 - [look-list-length.md](https://github.com/lucmoseley/design-vault/blob/b4a0b43d5/docs/research/look-list-length.md) (#225): the sibling test on the gate critics.
 - `docs/research/past-design-rejections.md` Part B: the founder's verdicts B1 to B10.
-- The kit (fixtures, plant key, prompts, runner, scorers, every critic's reply and every score) is in the gitignored `.claude/tmp/224/`, which the scratch sweep clears.
+- The kit (fixtures, plant key, prompts, runner, scorers, every critic's and scorer's parsed reply) is in `kits/planted-faults/`; `score.py tally` over it reproduces this test's numbers exactly. The kit writes the map from shuffled finding ids back to critics outside the scorer's folder.
 
-## Later: the kit kept, and the judges not blind (#238, 15 Oct 2026)
+## Blind re-judge (#251)
 
-- The kit now lives in `kits/planted-faults/`. It holds every critic's and scorer's parsed reply, and `score.py tally` over them reproduces this test's numbers exactly.
-- The clean-page judges were not blind to the critic. Each judge's folder held the map from shuffled finding ids back to critics (`ids.json`, such as `T-type#3`), and 132 of the 153 judges opened it. The recall counts above stand, because none of the 108 match scorers opened theirs. Whether knowing the critic moved the real and invented counts is unmeasured, and a blind re-judge of the original pages is #251. The kit now writes the map outside the scorer's folder.
-
-## Later: the blind re-judge (#251, 15 Oct 2026)
-
-The 42 original-page judges and their third scorers ran again, and no judge could reach its id map: no map sat in any judge's folder, and none of the 63 transcripts names `ids.json`. Each judge saw the same findings, in the same shuffled order and under the same ids, as #224's judge did. Recall and the founder matches come out of `score.py tally` exactly as above. The chain's C2 and C3 verdicts on the fixed pages were not judged again, so only shape 4's C1 findings are blind.
+The first clean-page judges were not blind to the critic: each judge's folder held the id map (`ids.json`, such as `T-type#3`), and 132 of the 153 opened it. None of the 108 match scorers opened theirs, so the recall counts stand as first scored. The 42 original-page judges and their third scorers ran again, and no judge could reach its id map: no map sat in any judge's folder, and none of the 63 transcripts names `ids.json`. Each judge saw the same findings, in the same shuffled order and under the same ids, as #224's judge did. Recall and the founder matches come out of `score.py tally` exactly as above. The chain's C2 and C3 verdicts on the fixed pages were not judged again, so only shape 4's C1 findings are blind.
 
 **W plus type still stands.**
 

@@ -1,13 +1,8 @@
 # Manta site: element coverage by design rule and research (design-vault#118)
 
-⚠ **Bound 14 Oct 2026 (#103): the rule form is #103's nine-field form, for gate questions only.**
-
-⚠ **Bound 13 Oct 2026 (#121): every §4 conflict K1–K27 is resolved or put to the founder in `docs/research/principle-interactions.md` §3. All K rows are Manta-only (owner lucmoseley/mantahostels); the founder rulings R1–R11 there are Manta's to put. The rule form that carries conditions goes to #103.**
-
 Question: What is every element that the Manta site shows or will show? Which elements have no design rule or research behind them, held or planned?
 
 Status: complete (13 Oct 2026).
-
 
 ## Key
 
@@ -238,7 +233,6 @@ Finding 2.0. design-vault's own skills give **no element rule** for a web page. 
 - Process rule: render desktop, one intermediate width and mobile (census R12). This checks a candidate. It does not say how an element behaves.
 - Research: #104 W10 (content-driven breakpoints, container queries, mobile-first indexing; "dated: device breakpoints"). No Manta rule adopts it. impeccable `adapt.md` is the fallback for every other element.
 
-
 ## 3. Matrix: element by area
 
 How to read this table:
@@ -399,7 +393,9 @@ Findings from the totals:
 5. Responsive behaviour is `I` for 63 rows. Element rules exist only for the nav, the hero wave, the mobile card, the handover bar and mobile comparison.
 6. States are `I` for 28 rows. Most are inputs and planned surfaces. The corpus holds hover and selected states for some controls. The sheet holds states only for buttons, focus, the rating unit and availability.
 
-## 4. Conflicts between house rules (input for #121)
+## 4. Conflicts between house rules
+
+Every K row is Manta-only (owner lucmoseley/mantahostels). Each is resolved, or left to a Manta ruling R1–R11, in `docs/research/principle-interactions.md` §3 (#121).
 
 Scope: a conflict is two held rules that cannot both be true for one element, or a held rule that a built or specced element breaks, or a held rule that research contradicts.
 
@@ -438,7 +434,6 @@ Scope: a conflict is two held rules that cannot both be true for one element, or
 - **K25. Scrim colour (from #117 A1).** The built mobile-nav scrim is `rgb(0 0 0 / .4)` with a panel shadow `rgb(0 0 0 / .2)` (globals.css:387, 409). The corpus Dialog scrim is `rgba(10,53,66,.45)`, tinted with ink (Dialog.jsx:7). No rule names a scrim. Elements: E2, E94, E118.
 - **K26. Stale version pointers.** DESIGN.md and PRODUCT.md name sheet v2.32; the sheet is v2.37. The corpus is reconciled to v2.18. X1-X3 live only in DESIGN.md. A rule in the corpus (`Rc`) can be 19 sheet versions old. Census #98 holds the same drift.
 - **K27. Hover with two signals (from #117 A1, B2.3).** The built `.dest-card:hover` changes the border to lagoon and adds a shadow (globals.css:627-629). Atlassian says use one or the other; Material combines them. The impeccable detector flags "hairline border plus wide diffuse shadow". No Manta rule covers it. Elements: E21, E45.
-
 
 ## 5. Least-covered elements, ranked by how often a visitor meets them
 

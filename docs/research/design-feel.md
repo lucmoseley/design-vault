@@ -1,9 +1,6 @@
 # Research #204: the term for a design's intended feel, the sets of feels, and the choices tied to each
 
-⚠ **Bound 15 Oct 2026 (#208): of the five candidate gaps, 1 to 4 are filled (the tone reference with its vocabulary, the brief and card tone line, and the critic question); 5 (mood-word scale positions) is accepted. The founder's question on "refined" is withdrawn: his note was a lead to the gap, not a term to define.**
-
 Ticket: lucmoseley/design-vault#204 (child of map #202, founder note N15).
-
 
 Source strength labels:
 - **[P]** Primary source: a peer-reviewed study, a standard, or the first-party document.
@@ -18,7 +15,6 @@ Time labels:
 ## Part H. What the house holds now (found first)
 
 ### H1. Issues on this repo
-
 
 - No closed issue rules on a term or a set of feels. #204 is the first ticket on the subject. **[H]**
 - #24 recorded seed-collection lines such as "Crafted-document energy" and "frontier-company gravitas" as faults against the two-registers rule (design-vault#2 Q6), because the founder could not read them. Thus "energy" has appeared before as a loose design word, not as a defined term. **[H]**
@@ -201,7 +197,7 @@ The evidence supports **scales (dimensions)**, not a fixed list of named feels. 
 
 **Finding:** the house has many feel words and two working feel-to-choice links (impeccable `quieter`, Manta's volume scale). The vault's own round has **no place to state the target tone** and **no reference that ties a tone to choices with evidence strength**. Named styles and collections link feel to choices only as convention bundles.
 
-**Candidate gaps for the ledger (#208 rules fill or accept; this report does not rule):**
+**Gaps (#208 filled 1 to 4 and accepted 5):**
 
 1. A **tone line** on the brief and on each direction card: the target position on the five scales (or the few that matter for the asset), in plain words for the founder.
 2. A **house reference** that ties each scale to its choices, with Part C's strength and era labels, so a builder can move a design along a scale on purpose and a critic can check it.
@@ -209,7 +205,7 @@ The evidence supports **scales (dimensions)**, not a fixed list of named feels. 
 4. A **vocabulary rule** for the words "bolder", "quieter", "louder", "calmer": energy and weight moves, kept apart from impeccable's familiarity register.
 5. Optional: give the gallery `mood` words a scale position, so references can be found by tone.
 
-**Where a question to the founder remains after this research:** the target position for each project and surface on the scales (a taste and business fact), and whether "refined" for him also means low familiarity (novel) or only low energy and light weight. The evidence cannot answer either.
+**Where a question to the founder remains after this research:** the target position for each project and surface on the scales (a taste and business fact), which the tone line asks per brief. His "refined" was a lead to the gap, not a term to define (#208).
 
 ## Bound
 

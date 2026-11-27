@@ -1,9 +1,5 @@
 # Research #338: how far a painterly render may stray off its palette, and how plain a headline area must be
 
-⚠ **Bound 16 Oct 2026 (#338, review of the landing commit): r1 holds 12 renders, not 13. The 3:1 figures 2.2 and 13.3 are the busy render's upper-third box; in the centre box it reads 3.4 and passes 3:1, so the sourced contrast line does not separate busy art either. The masking index is the sourced measure but does not fit painted art; the measures that separate here (local L\* spread, edge density) are unsourced. r2/v7-soul2, labelled textured, also sits inside the plain range on every local measure. `vault.text-over-image` does not exist on main: text over an image is held by `plugin/skills/design-critique/references/surface-styling.md` (Clash, item 12) and measured by `check-access.py`. Rerun with k_L = 2 (`docs/data/render-palette-kl2-2026-10-16.csv`): palette-52's share beyond ΔE00 10 falls from 0.40 to 0.21 against the not-given group's best of 0.50, and its 95th percentile is 16.2, still failing ISO's 5; the verdict stands.**
-
-⚠ **Bound 16 Oct 2026 (#350): §4's look test was put to the founder on #350, not #338, and he ruled none: it is revisited only if off-palette or busy art reaches him past the critics in a real round.**
-
 Date: 16 Oct 2026. Question: design-vault#338, for the build ticket #339 under spec #324. Labels: **opened** (full text or the cited section read), **abstract** (abstract or publisher page only), **secondary** (a citation or search summary; not read). Every number is marked **sourced**, **house** or **untraced**.
 
 **Answer.** Neither question has a number research can defend. Each has a sourced measure; neither has a sourced pass line, and on the real renders on this machine neither measure puts its line where an eye does. By #324's rule, #339 closes not planned and both rules stay with the critics (§4).
@@ -12,7 +8,7 @@ Data: `docs/data/render-palette-share-2026-10-16.csv` (per-pixel shares and perc
 
 ## Sample
 
-39 renders: `~/higgsfield-calibration-2026-09-30/r1`–`r3` (13, 13 and 12 models), `~/higgsfield-palette-52/r1/v1-gpt-sunburst-palette.png`, and MMM Infra's `rounds/aqueduct-storyboard:r2/v1-into-the-valley-still.png` (a generated photograph, not painterly). Manta has no round branch with art; MMM Infra's other round files are storyboards of SVG frames, page screenshots, real photographs or logos, and were skipped.
+39 renders: `~/higgsfield-calibration-2026-09-30/r1`–`r3` (12, 13 and 12 models), `~/higgsfield-palette-52/r1/v1-gpt-sunburst-palette.png`, and MMM Infra's `rounds/aqueduct-storyboard:r2/v1-into-the-valley-still.png` (a generated photograph, not painterly). Manta has no round branch with art; MMM Infra's other round files are storyboards of SVG frames, page screenshots, real photographs or logos, and were skipped.
 
 Labels come from the calibration run's `report.md` where it gives one, else from an agent's look at a downscaled copy (r2 v1, v7, v9, v10, v12, palette-52, the MMM still, four r3 mascots). All values are at 1440 px wide, a desktop hero, assumed seen at 60 cm on a 96 ppi screen (about 40 px per degree; assumed, not measured).
 
@@ -45,6 +41,7 @@ Two renders were given the four-hex palette in their prompt (palette-52, and r2/
 - **Only the middle of the distribution separates**, and on n = 2: share > 5, the median, and k-means area. The tail (95th percentile, share > 20) overlaps, as both groups carry deep shadow and glow.
 - **Blurring makes it worse.** A Gaussian in CIELAB, standing in for S-CIELAB, mixes two palette colours at their border into a colour far from both: palette-52's share > 10 rises from 0.40 to 0.57.
 - **The answer turns on the palette, not the render.** Against Manta's 20 tokens, palette-52 scores 0.41 beyond 10, as against its own palette (0.40): every one of its colours has a Manta neighbour (its cream is ΔE00 3.3 from sand-border), and the cream sky is 40% of the area. A muted r1 hero that followed no palette passes against Manta at 0.10.
+- **Weighting lightness changes the size, not the verdict.** Rerun with k_L = 2 (`docs/data/render-palette-kl2-2026-10-16.csv`), palette-52's share beyond ΔE00 10 falls from 0.40 to 0.21 against the not-given group's best of 0.50, and its 95th percentile is 16.2, still failing ISO's 5.
 - **A colour count works partly.** On the r3 mascots ("three colours, plain cream"), the share beyond ΔE00 5 from each render's own four-colour fit separates the four that kept the rule (≤ 0.015) from three of the four that broke it (≥ 0.080). It misses the fourth (gpt-flare, 0.007), and the fit spends two centres on the cream ground.
 
 ### Verdict
@@ -78,15 +75,15 @@ Boxes: the brief's own (the upper half for r2 and palette-52, the upper third fo
 C_M from the data file's `rmsY_box` and `meanL` (Y from L\*, C₂ 0.05, C_T = (Y_box − Y_#111) / Y_box).
 
 - **Busy content separates by 10× on every local measure** (a building in the box: 17.7 against at most 1.29), and a crumpled-paper sky separates on edge density (20× or more) but not on the letter band, being finer than a letter. Each is one render.
-- **The one render the eye said needs a scrim (r2 grok, soft cloud strokes) sits inside the plain range on every measure.** Its strokes are hue changes of about 1–1.5 L\*.
+- **The one render the eye said needs a scrim (r2 grok, soft cloud strokes) sits inside the plain range on every measure.** Its strokes are hue changes of about 1–1.5 L\*. r2/v7-soul2, labelled textured, also sits inside the plain range on every local measure.
 - **The sourced index misreads a sky gradient as texture.** Global C_RMS counts a smooth peach-to-blue gradient as masking: at the anchor 0.30, C_M fails qwen (0.29), flux-pro (0.29) and flux-flex (0.26), all plain, and passes the crumpled-paper flux-max (0.51). Scharff's textures were tiled with an even mean; a painted sky is not.
 - **The box decides more than any line.** On the brief's own upper half every r2 render fails: qwen, which the report calls "exactly the brief", scores 6.1 local SD, palette-52 26.3. No model left the full half plain. palette-52's upper third scores 7.63 from a vine and tree tips at its edges, and 0.27 in the centre box.
 - **Plain is not zero.** Flat cream grounds score 0.02–0.31 local SD; smooth painted skies reach 1.4.
-- Against the 5%-worst pixel, the better of white and #111 reaches at least 4.1:1 in every plain sky; only the busy box falls under 3:1 (2.2). A ratio against the box mean hides it (13.3).
+- Against the 5%-worst pixel, the better of white and #111 reaches at least 4.1:1 in every plain sky. The busy render's upper-third box falls under 3:1 (2.2; 13.3 against the box mean), but its centre box reads 3.4 and passes, so the sourced contrast line does not separate busy art either.
 
 ### Verdict
 
-Measure: **sourced** (the masking index; F83 for contrast). Pass line: **untraced**: no source sets one, the index's own form misreads painted gradients, and the local measures that do separate busy art rest on one busy and one textured render, with the eye's one scrim call inside the plain range.
+Measure: **sourced** (the masking index; F83 for contrast). Pass line: **untraced**: no source sets one, the index's own form misreads painted gradients, and the local measures that do separate busy art (local L\* spread, edge density) are unsourced and rest on one busy and one textured render, with the eye's one scrim call and a second textured render inside the plain range.
 
 ## 3. Numbers
 
@@ -105,8 +102,8 @@ Measure: **sourced** (the masking index; F83 for contrast). Pass line: **untrace
 ## 4. What follows
 
 - **#339 closes not planned**, both halves, by #324 §Order and decision points.
-- **No critic question carries either rule yet.** Brand art has no look question on keeping to the ruled palette or on a plain headline area: colour.md's palette questions judge the palette, not a render against it, and imagery.md's `vault.text-over-image` covers only text already placed on a web surface. That page-level case is scripted, as `check-access.py` measures each letter's background as F83 asks. So "stays with the critics" needs two look questions written (#344), for which the findings above give the critic what to look at: the bulk of the art against the ruled colours, not its shadows and glints; both directions (every ruled colour present); and plainness at letter scale inside the area the headline will take, not the brief's whole box.
-- **A number the founder's eye could set.** Two of the gaps are house values a look test could settle: the share of area beyond ΔE00 10 at which a render reads off its palette, and the local L\* spread at which a sky needs a scrim. Either would need a sample with more renders a palette was given than this one has; whether to run one is put to the founder on #338.
+- **Both rules stay with the critics as look questions**, `vault.render-palette-look` (`plugin/skills/design-critique/rules/colour.md`) and `vault.headline-plain-look` (`plugin/skills/design-critique/rules/imagery.md`), written by #344. The findings above give the critic what to look at: the bulk of the art against the ruled colours, not its shadows and glints; both directions (every ruled colour present); and plainness at letter scale inside the area the headline will take, not the brief's whole box. Text already placed over an image on a web surface is held by `plugin/skills/design-critique/references/surface-styling.md` (Clash, item 12) and measured by `check-access.py`, which reads each letter's background as F83 asks.
+- **No look test sets a house number** for either line (#350); one is revisited only if off-palette or busy art reaches the founder past the critics in a real round.
 
 ## Bound
 

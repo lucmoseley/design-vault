@@ -1,7 +1,5 @@
 # Research #327: does the PP-OCRv4 text detector find baked-in text on real renders without false alarms?
 
-⚠ **Bound 16 Oct 2026 (#327, review of the landing commit): "found" means any blob anywhere in a text image, not a blob on its text. On the three text renders found, each blob sits on the lettering (THE YARD, HOSTEL twice; checked on crops); `images/`' 69 were not checked box by box. The FAIL rests on the flags, so it stands. Two sample paths are wrong here and in the CSV: MMM Infra's `valley.jpg` is `rounds/aqueduct-storyboard:r2/v1-into-the-valley/valley.jpg`, and the CSV's palette-52 row lacks `r1/`. `~/higgsfield-cutout-54` holds keyed and rembg cutouts of the calibration renders, not new renders, and was skipped. The sweep grid is this trial's choice (untraced); RapidOCR's text score 0.5 is its shipped default (`rapidocr_onnxruntime/config.yaml`).**
-
 Date: 16 Oct 2026. Question: design-vault#327, the baked-text trial #324 runs before anything in the vault depends on onnxruntime-web. Every number is marked **sourced**, **house** or **untraced**.
 
 **Answer: FAIL.** At #324's settings the detector finds 72 of the 76 images that hold text and passes #262's four fixtures, but it flags 32 of the 64 clean images, 17 of them among the 35 clean renders. No threshold setting that still passes the fixtures brings the flags below 18, and that one misses 41 text images. Its false alarms are larger and more confident than the real text it finds, so no tuning separates them. By #324's rule the plugin's npm dependency and the text check are dropped, #329 and #335 close not planned, and `vault.baked-ui-look` covers baked text (§5).
@@ -12,7 +10,7 @@ Data: `docs/data/baked-text-trial-2026-10-16.csv` (each image's label, the detec
 
 140 images:
 
-- **Renders (40).** `~/higgsfield-calibration-2026-09-30/r1` (12), `r2` (13) and `r3` (12); `~/higgsfield-palette-52/r1/v1-gpt-sunburst-palette.png`; MMM Infra's `rounds/aqueduct-storyboard:r2/v1-into-the-valley-still.png` and `valley.jpg`, the same generated aqueduct picture at two sizes. Manta has no round branch. MMM Infra's other round files are storyboards, screenshots, real photographs or logos, not AI renders, and were skipped.
+- **Renders (40).** `~/higgsfield-calibration-2026-09-30/r1` (12), `r2` (13) and `r3` (12); `~/higgsfield-palette-52/r1/v1-gpt-sunburst-palette.png`; MMM Infra's `rounds/aqueduct-storyboard:r2/v1-into-the-valley-still.png` and `rounds/aqueduct-storyboard:r2/v1-into-the-valley/valley.jpg`, the same generated aqueduct picture at two sizes. Manta has no round branch. MMM Infra's other round files are storyboards, screenshots, real photographs or logos, not AI renders, and were skipped. `~/higgsfield-cutout-54` holds keyed and rembg cutouts of the calibration renders, not new renders, and was skipped.
 - **The vault's `images/` (96 stills).** The 10 `.webm` clips were skipped because there was no decoder.
 - **#262's four fixtures** (1200×800): clean, headline ("BOOK NOW / Open daily 9-5"), garbled ("BOKKO NWOW") and checker.
 
@@ -46,6 +44,8 @@ One departure from PaddleOCR: #262's preparation scales every image to a 960 px 
 | Clean images flagged | 32 | 64 |
 | Clean renders flagged | 17 | 35 |
 
+"Found" means any blob anywhere in a text image, not a blob on its text. On the three text renders found, each blob sits on the lettering (THE YARD, HOSTEL twice; checked on crops); `images/`' 69 were not checked box by box. The fail rests on the flags, so it does not depend on this.
+
 **Missed:** r2/v6-soul (highest probability 0.019), r2/v9-flux-flex (0.0), sails-collage (0.0), and yosemite, whose signature peaks at 0.994 but forms no 20 px blob.
 
 **Flagged renders:** r1 v2, v4, v8, v10, v11, v12; r2 v7; r3 v1, v3, v5–v12. palette-52 and both MMM images are clean. The flagged blobs fall on a mascot's body, a sun and its reflection, and a painted face. Some examples:
@@ -61,7 +61,7 @@ One departure from PaddleOCR: #262's preparation scales every image to a 960 px 
 
 ## 2. Tuning
 
-The sweep tried pixel thresholds 0.3, 0.5, 0.7, 0.8, 0.9, 0.95 and 0.99 against smallest blobs of 20, 50, 100, 200, 500, 1000, 2000, 5000 and 10,000 px.
+The sweep tried pixel thresholds 0.3, 0.5, 0.7, 0.8, 0.9, 0.95 and 0.99 against smallest blobs of 20, 50, 100, 200, 500, 1000, 2000, 5000 and 10,000 px. The grid is this trial's choice (untraced).
 
 - **The pixel threshold barely matters.** The false-alarm blobs sit at 0.97–0.99 mean probability, the same as the text.
 - **The blob size trades misses for flags.** At 20 px: 4 missed, 32 flagged. At 2000 px: 14 missed, 22 flagged. At 5000 px: 41 missed, 18 flagged. At 10,000 px the headline fixture fails.
@@ -76,7 +76,7 @@ Without the three borderline images the best setting is 4 missed, 28 flagged. Th
 To rule out the preparation as the cause, RapidOCR 1.4.4 (onnxruntime 1.30.0, its own PP-OCRv4 det export, mean and standard deviation 0.5, defaults: long side ≥ 736, threshold 0.3, box threshold 0.5) ran in a throwaway venv on all 140 images.
 
 - **Its detector alone** found all 76 images with text and flagged 54 of 64 clean at its defaults. At 960 px with `limit_type: max` it found 74 and flagged 48. The false alarms come from the model, not from #262's preparation.
-- **With its recogniser** (text score ≥ 0.5) most flagged renders come back empty or as single junk characters ("三", "C", "仓"), while the fixtures read "BOOK NOW", "Open daily 9-5" and "BOKKO NWOW" and the renders read "HOSTEL" and "YARD", "ROOM". It still flags 8 clean images (six renders) and misses 5 text images. Recognition is a second model and a second dependency, which #324 does not adopt, and it does not reach 0 and 0 either.
+- **With its recogniser** (text score ≥ 0.5, its shipped default in `rapidocr_onnxruntime/config.yaml`) most flagged renders come back empty or as single junk characters ("三", "C", "仓"), while the fixtures read "BOOK NOW", "Open daily 9-5" and "BOKKO NWOW" and the renders read "HOSTEL" and "YARD", "ROOM". It still flags 8 clean images (six renders) and misses 5 text images. Recognition is a second model and a second dependency, which #324 does not adopt, and it does not reach 0 and 0 either.
 
 ## 5. What follows
 

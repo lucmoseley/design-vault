@@ -1,7 +1,5 @@
 # Text presentation: colour, tint, emphasis, links, grounds, rendering (design-vault#123)
 
-⚠ **Bound 14 Oct 2026 (#103): only rules that can fail a candidate become gate questions. Text contrast is one (WCAG 2.2 AA, 4.5:1), in the vault. Row 3's tint rule is not a gate question; whether it goes into #119's house override file is for map #96's spec. Row 8 (caps tracking, the eyebrow conflict) is Manta's (owner lucmoseley/mantahostels).**
-
 Status: complete (13 Oct 2026).
 Language: ASD-STE100 Simplified Technical English (approximate).
 Parent map: design-vault#96. Question: design-vault#123. Parallel ticket: design-vault#117 (surface styling, `.claude/tmp/research-surface-styling.md`).
@@ -262,7 +260,6 @@ Measured by me (WCAG 2 relative luminance; OKLCH by the Ottosson matrices; scrip
 
 ## Part C. House coverage per area
 
-
 | Area | design-vault | impeccable | Manta | Note |
 |---|---|---|---|---|
 | Tinted neutrals for text (B1.1) | G | P, split: colorize +cond (untestable "genuinely creates cohesion"), quieter -cond (always tint); no chroma limit except "reduce chroma near white and black" | Done, not stated: ink C 0.051, text-muted 0.021, muted-night 0.014 at hue 223–229; "cool grey neutrals (sterile)" rejected, scope unclear | No house file gives the chroma band, the colour space for text, or the condition |
@@ -318,17 +315,17 @@ Frequency key: how many Manta surfaces, and how often a session builds one.
 |---|---|---|---|---|
 | 1 | **Inline links in prose have no underline on light grounds** (`a { text-decoration: none }`; `lagoon-text` vs `ink` 2.22:1, under G183's 3:1) | Every guide, destination and legal page with a link in a paragraph (Read mode; the SEO pages are the bulk of pages) | No | Likely WCAG 1.4.1 (A) failure as soon as prose links ship. A one-rule fix in the brand sheet plus CSS. Owner: mantahostels. |
 | 2 | **Secondary text on ink at the WCAG limit** (`muted-night` 4.51:1; APCA Lc 40.9) | Footer (every page), nav, announcement block, reward screens, social tiles | No | Raise L (measured options in B6); check ΔE before a ruling. Owner: mantahostels. |
-| 3 | **No written tint rule** (Manta tints; no file says chroma band, hue or space; "cool grey neutrals" rejection is ambiguous) | Every new token (search, filters, compare will add greys: disabled, placeholder, dividers) | Split (colorize vs quieter) | Low risk now; drift risk as the working area grows. A portable rule belongs in the vault (#103 decides where). |
+| 3 | **No written tint rule** (Manta tints; no file says chroma band, hue or space; "cool grey neutrals" rejection is ambiguous) | Every new token (search, filters, compare will add greys: disabled, placeholder, dividers) | Split (colorize vs quieter) | Low risk now; drift risk as the working area grows. A portable rule belongs in the vault, but not as a gate question (#103); whether it goes into #119's house override file is for map #96's spec. |
 | 4 | **No disabled or placeholder text token** | Search form, filters, date and guest inputs, compare, "no space for your dates" rows | Partly (states listed, no values) | Comes with the search UI (#104 rank 1). |
 | 5 | **Text on photos and video** (no rule; scrim vs "UI is flat") | Listing card photos (controls on photo), planned video hero, any future photo hero | Partly (check only) | Shared with #117 B6.2; needs one ruling for both. |
 | 6 | **Numerals** (no `font-variant-numeric`; Quicksand score digits proportional, no `tnum`) | Every results row (price, score, review count), compare table | Partly | Nunito Sans is tabular by default, so prices are fine; scores in Quicksand are not. Low severity, high frequency. |
 | 7 | **Ink on turquoise for body-size text** (WCAG 5.73:1 passes; APCA Lc 52.4, under the content-text level) | Hero subcopy on every marketing and destination banner | No | WCAG is the legal bar, so this is a design-margin note, not a failure. Keep hero subcopy large. |
-| 8 | **Caps labels tracked at +0.02 em** (rule says 5–12%) | Destination card region labels, page region labels | Partly (detector checks wide tracking on body only) | Tied to the eyebrow conflict (#98, #103). |
+| 8 | **Caps labels tracked at +0.02 em** (rule says 5–12%) | Destination card region labels, page region labels | Partly (detector checks wide tracking on body only) | Tied to the eyebrow conflict; Manta's (lucmoseley/mantahostels). |
 | 9 | **Dark-ground weight rule** (impeccable "one step more weight" vs irradiation sources) | Night headings, footer | Conflicting | Low impact on Manta (Quicksand and Nunito Sans have no `GRAD`; weights are set). |
 | 10 | **Global font smoothing** | All text, macOS with subpixel on only | No | Low; scope to `.ground--ink` if touched. |
 | 11 | **Visited links and prose emphasis rules** | Guide lists (visited), guide prose (bold/italic) | No | Low. |
 
-For the vault (portable, all projects): every area except text on art is a gap in design-vault itself; the critic reaches text presentation only through impeccable, which is uncited, split on tint and opacity, and silent on links, numerals in practice, photo text and rendering. #98/#103 decide where a portable rule lives.
+For the vault (portable, all projects): every area except text on art is a gap in design-vault itself; the critic reaches text presentation only through impeccable, which is uncited, split on tint and opacity, and silent on links, numerals in practice, photo text and rendering. Only a rule that can fail a candidate becomes a gate question (#103): text contrast is one (WCAG 2.2 AA, 4.5:1), in the vault.
 
 ## Bound
 
