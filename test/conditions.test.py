@@ -155,7 +155,7 @@ class Viewer(unittest.TestCase):
             got = page.evaluate(self.SIZE)
         self.assertEqual(got, [conditions.PHONE_WIDTH, conditions.HEIGHTS[0], True])
 
-    def test_a_desktop_width_gives_neither(self):
+    def test_a_desktop_width_gives_no_touch_and_the_desktop_height(self):
         with conditions.open_page(BROWSER, URL, width=conditions.DESKTOP_WIDTH) as page:
             got = page.evaluate(self.SIZE)
         self.assertEqual(got, [conditions.DESKTOP_WIDTH, conditions.HEIGHTS[2], False])

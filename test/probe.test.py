@@ -32,6 +32,7 @@ probe = siblings.load(SCRIPTS, "probe.py")
 flow = siblings.load(SCRIPTS, "check-flow.py")
 runner = siblings.load(SCRIPTS, "runner.py")
 layout = siblings.load(SCRIPTS, "check-layout.py")
+conditions = siblings.load(SCRIPTS, "conditions.py")
 STACK = contextlib.ExitStack()
 BROWSER = None
 
@@ -69,7 +70,7 @@ def values(url, table, parts=None):
     page = BROWSER.new_page()
     try:
         page.goto(url)
-        layout.conditions.settle(page)
+        conditions.settle(page)
         return [
             {s.subject: (s.value, s.verdict) for s in r.subjects}
             for r in probe.read(page, probe.parse(table), parts)

@@ -3,9 +3,9 @@
   python3 face-profile.py <url or file> --out DIR [--widths W,W,…] [--wait SEL]
         [--timeout MS]
 
-It loads the page at check-layout.py's phone and desktop widths (--widths
+It loads the page at conditions.py's phone and desktop widths (--widths
 names others), the phone with a touch screen, and lets its fonts load and its
-animations finish as check-layout.py does. Each element drawing text of its
+animations finish as conditions.py does. Each element drawing text of its
 own is put under a setting: its font family, weight, style, stretch, size,
 font-size-adjust, font-variation-settings and font-optical-sizing. A setting
 is read once, through a ruler element given those properties and no

@@ -16,9 +16,9 @@ USAGE
         [--contrast-table FILE] [--timeout MS]
   python3 check-access.py <url or file> --out DIR --pointer [--pointer-table FILE] [--timeout MS]
 
-It loads the page at check-layout.py's desktop and phone widths, the latter
+It loads the page at conditions.py's desktop and phone widths, the latter
 with a touch screen, lets its fonts load and its animations finish as
-check-layout.py does, and measures each question at both:
+conditions.py does, and measures each question at both:
 
 - vault.contrast: every line of text, each ::before and ::after whose content
   holds text, and each form control's value, button label, chosen option or

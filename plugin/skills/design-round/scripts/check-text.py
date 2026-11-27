@@ -6,7 +6,7 @@ USAGE
   python3 check-text.py <page> --out DIR [--parts FILE] [--part NAME=SELECTOR]…
         [--words FILE]… [--own-case] [--table FILE] [--timeout MS]
 
-The page loads at phone and desktop width, as check-layout.py loads it, and
+The page loads at conditions.py's phone and desktop widths, and
 every text check runs at both. It loads again at desktop width right to
 left (conditions.py's rtl) for vault.rtl-digit-order, and under each
 browser locale vault.locale-numbers and vault.week-hour name. Each text's

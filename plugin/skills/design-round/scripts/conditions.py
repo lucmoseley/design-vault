@@ -8,7 +8,7 @@ DESKTOP = f"{DESKTOP_WINDOW[0]}x{DESKTOP_WINDOW[1]}"
 LOW = 320
 HIGH = 2560  # guess, #197
 BANDS = (
-    ("phone", 320, 767),
+    ("phone", LOW, 767),
     ("tablet", 768, 1023),
     ("desktop", 1024, HIGH),
 )  # guess, #501

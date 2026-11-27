@@ -135,8 +135,9 @@ def run(browser, at):
         mine = answering.unjudged()
         for pointer in conditions.POINTERS:
             with conditions.open_page(
-                browser, at.url, pointer=pointer, width=width, timeout=at.timeout
+                browser, at.url, pointer=pointer, width=width
             ) as page:
+                page.set_default_timeout(at.timeout)
                 looping = max(looping, conditions.settle(page))
                 for into, got in zip(mine, judged(page, pointer, script), strict=True):
                     into.extend(got)

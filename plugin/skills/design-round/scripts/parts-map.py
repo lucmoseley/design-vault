@@ -5,8 +5,8 @@ design-critique's rules/: whether a visitor can act on it, read from the DOM.
 USAGE
   python3 parts-map.py <url or file> --out DIR [--timeout MS]
 
-It loads the page at check-access.py's desktop and phone widths, the phone's
-with a touch screen, lets it settle as check-layout.py does, and lists each
+It loads the page at conditions.py's desktop and phone widths, the phone's
+with a touch screen, lets it settle as conditions.py does, and lists each
 part:
 
 - every part a visitor can act on: a link, button, form control, summary, an

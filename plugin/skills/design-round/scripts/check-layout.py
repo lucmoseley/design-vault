@@ -145,10 +145,10 @@ rule_table = siblings.load(HERE, "rule-table.py")
 STEPPED = 1920  # guess, #197
 GATE_STEP = 5  # guess, #78
 SHOT_WIDTHS = (
-    320,
+    conditions.LOW,
     conditions.PHONE_WIDTH,
-    768,
-    1024,
+    conditions.BANDS[1][1],
+    conditions.BANDS[2][1],
     1536,
     conditions.DESKTOP_WIDTH,
     conditions.HIGH,
