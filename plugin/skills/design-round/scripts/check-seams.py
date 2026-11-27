@@ -167,7 +167,7 @@ def look_args(args, measured):
     return parsed
 
 
-def shoot_mattes(page, args, *, contact, point, png):
+def shoot_mattes(page, full_page, *, contact, point, png):
     ahead = page.evaluate(
         renders.POINT_JS,
         {"sel": contact["sel"], "x": contact["along"][0], "y": contact["along"][1]},
@@ -182,7 +182,7 @@ def shoot_mattes(page, args, *, contact, point, png):
         try:
             png = page.screenshot(
                 clip=renders.square(point, renders.CONTACT_SIZE),
-                full_page=args.full_page,
+                full_page=full_page,
             )
         finally:
             page.evaluate(UNMATTE_JS)

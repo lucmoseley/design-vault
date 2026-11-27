@@ -1,4 +1,3 @@
-import argparse
 import concurrent.futures
 import datetime
 import functools
@@ -363,10 +362,10 @@ class Arguments(unittest.TestCase):
                 self.assertIn(said, r.stderr, args)
 
     def test_only_a_whole_sweep_at_5_px_or_finer_gates(self):
-        self.assertTrue(layout.gating(argparse.Namespace(step=5, span=(320, 2560))))
-        self.assertFalse(layout.gating(argparse.Namespace(step=6, span=(320, 2560))))
-        self.assertFalse(layout.gating(argparse.Namespace(step=5, span=(320, 1920))))
-        self.assertFalse(layout.gating(argparse.Namespace(step=1, span=(320, 1919))))
+        self.assertTrue(layout.gating(5, (320, 2560)))
+        self.assertFalse(layout.gating(6, (320, 2560)))
+        self.assertFalse(layout.gating(5, (320, 1920)))
+        self.assertFalse(layout.gating(1, (320, 1919)))
         _, stdout, _, found, _ = DONE["clean"]
         self.assertIn("NOT A GATING SWEEP", stdout)
         self.assertFalse(found["gating"])

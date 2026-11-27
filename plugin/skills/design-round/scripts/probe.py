@@ -1294,7 +1294,7 @@ def report(at, widths, found, *, looping, json_path):
         f"probe: {at.url}",
         f"read {len(at.rules)} rule line(s) for {len(found)} record(s) at {len(widths)} widths, {at.span[0]}–{at.span[1]} px every {at.step} px",
     ]
-    if not layout.gating(at):
+    if not layout.gating(at.step, at.span):
         lines.append(
             f"NOT A GATING SWEEP: the craft gate needs {conditions.LOW}–{conditions.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
         )
@@ -1481,7 +1481,7 @@ def main(argv):
             {
                 "url": at.url,
                 "run_at": when.isoformat(),
-                "gating": layout.gating(at),
+                "gating": layout.gating(at.step, at.span),
                 "step": at.step,
                 "span": at.span,
                 "heights": dict(

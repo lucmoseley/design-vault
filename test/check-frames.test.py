@@ -1,5 +1,6 @@
 import json
 import os
+import pathlib
 import shutil
 import sys
 import tempfile
@@ -20,8 +21,18 @@ import siblings  # noqa: E402
 
 frames = siblings.load(SCRIPTS, "check-frames.py")
 runner = siblings.load(SCRIPTS, "runner.py")
+conditions = siblings.load(SCRIPTS, "conditions.py")
 NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS = 10
 RUN_TIMEOUT_S = 180  # guess, #501
+
+
+def load_of(path):
+    width, height = conditions.DESKTOP_WINDOW
+    return frames.Load(
+        pathlib.Path(path).resolve().as_uri(),
+        {"width": width, "height": height},
+        runner.PLAY_TIMEOUT_MS,
+    )
 
 
 def run(*args):
@@ -484,9 +495,10 @@ class StagedBuilds(unittest.TestCase):
         self.assertIn("as one load timed them", proc.stdout)
 
     def open_with(self, timeline):
-        _, at = frames.parse(["hash", self.page, "--out", self.dir])
         with runner.chromium() as browser:
-            context, _, prep = frames.open_page(browser, at, 1, timeline=timeline)
+            context, _, prep = frames.open_page(
+                browser, load_of(self.page), 1, timeline=timeline
+            )
             context.close()
         return prep
 
@@ -516,16 +528,18 @@ class StagedBuilds(unittest.TestCase):
         self,
     ):
         """#619"""
-        _, at = frames.parse(
-            ["hash", os.path.join(FIXTURES, "revealed.html"), "--out", self.dir]
-        )
         timeline = [
             {"name": "div#box", "ms": 0},
             {"name": "div#twin", "ms": 0},
             {"name": "div#twin", "ms": 50},
         ]
         with runner.chromium() as browser:
-            context, page, _ = frames.open_page(browser, at, 1, timeline=timeline)
+            context, page, _ = frames.open_page(
+                browser,
+                load_of(os.path.join(FIXTURES, "revealed.html")),
+                1,
+                timeline=timeline,
+            )
             try:
                 frames.seek(page, 50)
                 shown = page.evaluate("getComputedStyle(twin).transform")
@@ -538,11 +552,10 @@ class WaitingStart(unittest.TestCase):
     def test_an_animation_made_in_a_held_frame_starts_in_it_so_no_frame_draws_it_waiting_346(
         self,
     ):
-        _, at = frames.parse(
-            ["hash", os.path.join(FIXTURES, "waiting.html"), "--out", "unused"]
-        )
         with runner.chromium(frames.HASH_ARGS) as browser:
-            context, page, prep = frames.open_page(browser, at, 1)
+            context, page, prep = frames.open_page(
+                browser, load_of(os.path.join(FIXTURES, "waiting.html")), 1
+            )
             try:
                 waited = page.evaluate(
                     "Object.fromEntries(Object.entries(window.waited)"
