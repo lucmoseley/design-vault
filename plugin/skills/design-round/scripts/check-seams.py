@@ -9,7 +9,11 @@ USAGE
 The file is the one check-curves.js --contacts reads: an .svg, or a page saved
 after its scripts ran. At each scale and frame look-renders.py contacts shoots,
 each contact is shot three times: as drawn, then with every element but its
-two shapes hidden over a black ground, then over a white one. Their difference
+two shapes and, for a covered contact, the covers check-curves.js names hidden,
+over a black ground, then over a white one. So a cover whose paint lets the
+ground through shows as a seam, whatever sets that paint. The matte forces what
+it shows visible, so a cover the page's visibility hides at that frame is left
+out of it, and the gap it would have filled shows. Their difference
 is each device pixel's share of ground, and the pixel the two fills would make
 with no ground showing. Each pixel's
 luminance Weber contrast against that pixel, summed across the contact per
@@ -26,8 +30,8 @@ the arguments are wrong, or check-curves.js cannot read the file / 3 Node,
 Playwright, its browser, numpy or Pillow is missing / 4 the page did not render
 in time / 5 the browser refused the page / 6 none fails, but a contact cannot be
 measured: a fill that lets the ground through, a contact off its crop, a shape
-check-curves.js cannot read, a cover whose paint it cannot prove opaque, or a
-page that cannot be rendered frame by frame.
+check-curves.js cannot read, a cover whose selector names no element in the
+page, or a page that cannot be rendered frame by frame.
 Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
@@ -82,13 +86,12 @@ CURVES = os.path.join(HERE, "check-curves.js")
 GROUNDS = {"black": "#000", "white": "#fff"}
 UNMEASURED = {
     "coincident": "both fills lie on one side of one edge, so no ground lies between them",
-    "covered": "a shape painted over both fills its gap",
 }
 MATTE_CSS = """
 :root, body {{ background: {ground} !important; }}
 *, *::before, *::after {{ transition: none !important; }}
-* {{ visibility: hidden !important; }}
-{pair} {{ visibility: visible !important; }}
+*:not(clipPath *, mask *, pattern *) {{ visibility: hidden !important; }}
+clipPath, mask, pattern, {shown} {{ visibility: visible !important; }}
 """
 MATTE_JS = r"""
 (css) => {
@@ -101,6 +104,12 @@ MATTE_JS = r"""
 }
 """
 UNMATTE_JS = "() => { window.__seamMatte.remove(); delete window.__seamMatte; }"
+COVERS_JS = r"""
+(sels) => sels.map((sel) => {
+  const el = document.querySelector(sel);
+  return el ? getComputedStyle(el).visibility === 'visible' : null;
+})
+"""
 
 
 def parse(argv):
@@ -163,7 +172,9 @@ def look_args(args, measured):
         argv += ["--contact", c["word"]]
     parsed = renders.parse(argv)
     for entry, c in zip(parsed.contact, measured, strict=True):
-        entry.update(lower=c["lower"], upper=c["upper"], along=c["along"])
+        entry.update(
+            lower=c["lower"], upper=c["upper"], along=c["along"], covers=c["covers"]
+        )
     return parsed
 
 
@@ -174,9 +185,20 @@ def shoot_mattes(page, full_page, *, contact, point, png):
     )
     tangent = [ahead[0] - point[0], ahead[1] - point[1]]
     out = {"tangent": tangent, "drawn": png}
+    drawn = page.evaluate(COVERS_JS, contact["covers"])
+    missing = [s for s, v in zip(contact["covers"], drawn, strict=True) if v is None]
+    if missing:
+        raise renders.UnmeasurableError(
+            [
+                f"has no element {s} for a cover of contact {contact['name']}"
+                for s in missing
+            ]
+        )
+    covers = [s for s, v in zip(contact["covers"], drawn, strict=True) if v]
     for ground, colour in GROUNDS.items():
         css = MATTE_CSS.format(
-            ground=colour, pair=f"{contact['lower']}, {contact['upper']}"
+            ground=colour,
+            shown=", ".join([contact["lower"], contact["upper"], *covers]),
         )
         page.evaluate(MATTE_JS, css)
         try:
@@ -266,10 +288,11 @@ def judge(contact, shots, out, *, reach):
     figures = ", ".join(f"{w} {v:.2g}″" for w, v in seen.items())
     lines = []
     if over:
+        cover = ", or paint its cover opaque" if contact["covers"] else ""
         lines.append(
             f"FAIL {name} ({cls}): the ground shows along the contact, width x contrast {figures}, "
             f"at or over {THRESHOLD_ARCSEC}″ at {', '.join(over)}; make the two fills one path, or run one "
-            f"on under the other by at least {UNDERLAP_CSS_PX} CSS px. --contact {shlex.quote(contact['word'])}"
+            f"on under the other by at least {UNDERLAP_CSS_PX} CSS px{cover}. --contact {shlex.quote(contact['word'])}"
         )
     if lost:
         lines.append(
@@ -297,10 +320,7 @@ def main(argv):
     os.makedirs(args.out, exist_ok=True)
     lines, faults, unmeasured = [], 0, len(listed["unread"])
     for c in contacts:
-        if c["cls"] in UNMEASURED and c.get("unproved"):
-            lines.append(f"NOT MEASURED {c['name']} ({c['cls']}): {c['verdict']}.")
-            unmeasured += 1
-        elif c["cls"] in UNMEASURED:
+        if c["cls"] in UNMEASURED:
             lines.append(f"pass {c['name']} ({c['cls']}): {UNMEASURED[c['cls']]}")
     if measured:
         look = look_args(args, measured)
