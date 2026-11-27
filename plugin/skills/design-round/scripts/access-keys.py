@@ -687,24 +687,17 @@ def turns_js(selectors, since, until):
         + r"""
   const frame = window.requestAnimationFrame.bind(window), wait = window.setTimeout.bind(window);
   const turns = window.__turns = [];
-  // The viewport holds its size, so a resize the browser fires is a full-page screenshot's: #628.
-  let shot = -Infinity;
-  addEventListener('resize', (ev) => { if (ev.isTrusted) shot = performance.now(); });
   wait(() => {
     for (const e of selectors.flatMap((s) => [...document.querySelectorAll(s)])) {
 """
         + SIG_JS
         + r"""
-      const unwatched = () => !!window.__timers && e.getAnimations({ subtree: true }).some((a) => window.__timers.unwatched.has(a));
-      let first = sig(true), last = performance.now();
-      const turn = { el: e, at: null };
+      const first = sig(true), turn = { el: e, at: null };
       turns.push(turn);
       const tick = (now) => {
         if (now > until) return;
-        if (shot >= last || unwatched()) first = sig(true);
-        else if (sig(true) !== first) return void (turn.at = now);
-        last = now;
-        frame(tick);
+        if (sig(true) !== first) turn.at = now;
+        else frame(tick);
       };
       frame(tick);
     }

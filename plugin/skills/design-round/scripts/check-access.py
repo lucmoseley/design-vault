@@ -147,10 +147,10 @@ conditions.py does, and measures each question at both:
   5 s without its own controls, fails unless a button, switch or checkbox
   named for pausing, stopping or hiding it stops it when clicked. So does a
   declared carousel shown whose box or those inside it, or the images they
-  show, change past 5 s from load and within ROTATE_MS of that, past what a
-  full-page screenshot's resize sets off, or whose pixels change between
-  the check's first look past 5 s and the end of that span, unless such a
-  control, clicked with the pointer then moved off, holds it still for its slide's span as vault.carousel-focus timed it, or
+  show, change past 5 s from load and within ROTATE_MS of that, or whose
+  pixels change between the check's first look past 5 s and the end of that
+  span, unless such a control, clicked with the pointer then moved off,
+  holds it still for its slide's span as vault.carousel-focus timed it, or
   ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
   still through that watch while the page still runs an interval or holds
   a pending timeout cannot be measured, as it may turn more slowly. Where
