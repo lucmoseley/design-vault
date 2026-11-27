@@ -4,7 +4,7 @@ const API = "https://api.higgsfield.ai";
 const QUOTED_BODY_CHARS = 200; // #583 guess
 const MAX_TRIES = 3; // #583 guess
 const FIRST_RETRY_WAIT_MS = 2000; // #583 guess
-const RETRY_DEADLINE_MS = 60 * 1000; // #590 guess
+const RETRY_DEADLINE_MS = 60 * 1000; // #590 guess, until each try's share is set from the ledger's estimate_ms, submit_ms and status_ms
 // https://www.rfc-editor.org/rfc/rfc9110#section-15.5.9 https://www.rfc-editor.org/rfc/rfc6585#section-4
 const ASK_AGAIN_STATUSES = new Set([408, 429]);
 // A 429 creates and charges nothing: https://docs.higgsfield.ai/docs/concepts/rate-limits.md
@@ -49,9 +49,10 @@ class OffApiUrlError extends RefusalError {
 }
 
 // #583
-async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
+async function call(ctx, method, url, { body, headers = {}, signal, answerMs } = {}) {
   // #588
   if (typeof url !== "string" || !url.startsWith(`${API}/`)) throw new OffApiUrlError(method, url);
+  const sentAt = ctx.now();
   const response = await ctx.fetch(url, {
     method,
     headers: { Authorization: `Key ${ctx.credentials}`, ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
@@ -60,6 +61,8 @@ async function call(ctx, method, url, { body, headers = {}, signal } = {}) {
     signal,
   });
   const text = await response.text();
+  // #590
+  answerMs?.push(ctx.now() - sentAt);
   let json;
   try {
     json = JSON.parse(text);
