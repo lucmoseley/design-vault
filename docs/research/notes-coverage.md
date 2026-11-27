@@ -1,7 +1,5 @@
 # Research #205: the founder's notes N1–N19 against the house
 
-⚠ **Bound 15 Oct 2026 (#208): the ten research questions below are ruled. Filled: 1 to 9, with 7 one combined job and 9 without the optional mood-word scale positions (accepted); 10 (carry-over) goes to #210 (P8). The three house errors this note found are fixed by the spec. Only a dependency order is fixed (5 first, then 4 before 3); ranking waits for #210's full ledger. The warm-or-cool-text half of N19c is ruled out as unsourced.**
-
 Question (#205, map #202): for each note N1–N19, what do the house references and research hold? Is the note sound design theory? Is it covered, partly covered, or a gap?
 
 Language: ASD-STE100 Simplified Technical English.
@@ -21,7 +19,7 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
 ### N1. Text for comfortable reading
 
 **N1a. Characters per line ("70–80 is good — true? only in some cases?")**
-- House: `plugin/skills/design-critique/SKILL.md:65` (the Measure lens: 45–75 characters, spaces included; the critic counts set characters; `check-measure.py` measures each width). `plugin/skills/design-round/references/impeccable.md:83` (override: 45–75, "Source: Butterick, 45–90"). Research: `docs/research/adopt-or-build.md:40-41`, `docs/research/principle-interactions.md:156` (i1: "Read pages target 60-75; dense UI may go shorter"). Closed #86 added the lens and its script.
+- House: `plugin/skills/design-critique/SKILL.md:65` (the Measure lens: 45–75 characters, spaces included; the critic counts set characters; `check-measure.py` measures each width). `plugin/skills/design-round/references/impeccable.md:83` (override: 45–75, "Source: Butterick, 45–90"). Research: `docs/research/adopt-or-build.md:38-39`, `docs/research/principle-interactions.md:154` (i1: "Read pages target 60-75; dense UI may go shorter"). Closed #86 added the lens and its script.
 - Sourced: yes (Butterick). Conditioned: partly. The lens applies to "body text" and skips headings, nav, forms and tables. The research condition "dense UI may go shorter" (i1) is not in the lens. Reaches a critic: yes, with a script.
 - Verdict: **covered**, because the lens has a condition (body text only).
 - Is the note sound? **Partly.** 70–80 is inside the accepted envelope only at its top:
@@ -30,11 +28,11 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
   - WCAG 2.2 SC 1.4.8 (AAA): "Width is no more than 80 characters or glyphs (40 if CJK)" (W3C Understanding 1.4.8, read). 80 is a ceiling, not a target.
   - Reading studies: Dyson and Haselgrove 2001 (*IJHCS* 54:585–612) report 55 characters a line as best for speed and comprehension together; Shaikh and Chaparro found 95 characters a line read fastest, but readers prefer shorter lines (both read second-hand through search summaries, not the papers).
   - So: 70–80 is acceptable for a single wide column of prose, at the top of the range. The middle of the expert range is about 55–66. 80 is the accessibility ceiling. Narrow columns (cards, multi-column, phone) run shorter (Butterick: newspaper columns "have to be very narrow").
-- Finding on a house value: the lens fails a line at 76–90 characters. Butterick, the source the override names, allows up to 90; WCAG allows 80. The house should cite Baymard and WCAG 1.4.8 for the 75 cap, or state that 75 is a house choice inside 45–90.
+- Finding on a house value: the lens fails a line at 76–90 characters. Butterick, the source the override names, allows up to 90; WCAG allows 80. The 75 cap cites Baymard and WCAG 1.4.8 (`plugin/skills/design-round/references/impeccable.md`): a house error (#208), fixed.
 - Era: **timeless** (perception of line return).
 
 **N1b. Font size**
-- House: `impeccable.md:104` ("a 16 px body floor, unless a dense role justifies less (Butterick 15–25 px; IBM Carbon)"). Research: `principle-interactions.md:90` P29 (16 px+ on Read pages; 14–15 px secondary lines on dense results), `design-coverage-gaps.md` W5.
+- House: `impeccable.md:104` ("a 16 px body floor, unless a dense role justifies less (Butterick 15–25 px; IBM Carbon)"). Research: `principle-interactions.md:88` P29 (16 px+ on Read pages; 14–15 px secondary lines on dense results), `design-coverage-gaps.md` W5.
 - Sourced, conditioned (by mode and density), reaches the builder through the override list. A critic gets it only through impeccable `typeset`/`audit` (design mode on). No gate question.
 - Verdict: **covered** for body size. **Not worth covering** as a house rule for a type scale (how sizes step from body to display): #101 Q4 accepted "type and spacing scales from one source per project" as filled, so the scale is the project's value (level 2), not a house rule.
 - Sound: yes. Butterick: web body "15–25 pixels" (via `design-coverage-gaps.md` W5). Era: **era-bound** (16 px+ is current; 12–14 px body is a dated 1990s–2000s habit).
@@ -75,10 +73,9 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
 - Research question: fold into N1f and N12: *How does a wide section place a measure-limited text column (left on the grid, centred, offset), and what decides it?*
 
 **N1i. When and how much to bold, italicise, resize or recolour**
-- House: research only, `text-presentation.md` B2.1 (rank by weight first, then a colour step, then size; one cue down is enough), B2.2 (Butterick: bold or italic, never both, rarely; with a sans, bold). `principle-interactions.md:85` P24 (working-area emphasis by weight, size, position, not colour). impeccable `typeset.md:42` ("Combine size, weight, space, and tone"). Override `impeccable.md:85` (flat-type-hierarchy).
+- House: research only, `text-presentation.md` B2.1 (rank by weight first, then a colour step, then size; one cue down is enough), B2.2 (Butterick: bold or italic, never both, rarely; with a sans, bold). `principle-interactions.md:83` P24 (working-area emphasis by weight, size, position, not colour). impeccable `typeset.md:42` ("Combine size, weight, space, and tone"). Override `impeccable.md:85` (flat-type-hierarchy).
 - Not in a house reference. Verdict: **partly**.
 - Sound: yes. Era: timeless.
-
 
 ### N2. Section background colours, and a subtle gradient against a solid fill
 
@@ -106,26 +103,26 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
 - House:
   - `plugin/skills/design-critique/references/house-principles.md:16` (dependency order, step 2 Role: "prominence by task priority"); `:73` (carrier A: "The primary action holds the view's strongest colour"; reserved: "The primary action's colour"); `:76` (carrier T: "Semantic colour with text or an icon … one colour per status everywhere"; reserved: "The semantic colours, and none near the action colour"); `:95` (function walk Q6: rank by visual weight against task priority, one primary action).
   - Gate: `gate.md` `vault.primary-action` (look question, from walk Q6).
-  - Research: `docs/research/function-fit.md:112-127` (B3.1, B3.2: Apple HIG Buttons, Material 3 emphasis ladder, GOV.UK Button, NN/g 2021; condition (2): "Given a destructive most-likely action, do not give it the primary style"); `principle-interactions.md:65` (P4: "the CTA keeps the strongest colour, rather than the brand mark"), `:166` (C7: status takes its semantic token).
+  - Research: `docs/research/function-fit.md:110-125` (B3.1, B3.2: Apple HIG Buttons, Material 3 emphasis ladder, GOV.UK Button, NN/g 2021; condition (2): "Given a destructive most-likely action, do not give it the primary style"); `principle-interactions.md:63` (P4: "the CTA keeps the strongest colour, rather than the brand mark"), `:164` (C7: status takes its semantic token).
   - House DNA `never` line 13 (`data/gallery.json:25`): "several colours at equal weight, none dominant".
 - Sourced: yes (primary). Conditioned: yes (task priority is the visitor's; destructive actions; count per view; patterned grounds). Reaches the critic: yes (walk and gate).
 - Verdict: **covered**. One part is **partly**: no house line says what a destructive action looks like at each step (the list view, then the confirmation step).
 - Is the note sound? **Partly. "Always" is too strong.** The claim most likely comes from Refactoring UI's "Semantics are secondary" (Wathan and Schoger 2018: do not make a destructive action big and red only because it is destructive; give it the treatment its rank earns, and keep the bold red button for the confirmation step; from memory, not re-read). The primary sources agree with the core and add the limit:
-  - Apple HIG Buttons: "Don't assign the primary role to a button that performs a destructive action, even if that action is the most likely choice" (via `function-fit.md:114`). Here a semantic fact (destructive) changes the hierarchy, so semantics wins over "most likely".
+  - Apple HIG Buttons: "Don't assign the primary role to a button that performs a destructive action, even if that action is the most likely choice" (via `function-fit.md:112`). Here a semantic fact (destructive) changes the hierarchy, so semantics wins over "most likely".
   - Carbon Button usage (read 15 Oct 2026): the danger button is "used for actions that could have destructive effects"; danger *primary* "for destructive actions that are a required or primary step in a workflow"; danger *tertiary or ghost* when the destructive action "is one of several options". So the hierarchy picks the emphasis rung, and the semantic picks the colour on that rung. Neither "always beats" the other.
-  - GOV.UK Button: warning buttons "Only … for actions with serious destructive consequences" (via `function-fit.md:116`).
+  - GOV.UK Button: warning buttons "Only … for actions with serious destructive consequences" (via `function-fit.md:114`).
   - WCAG 1.4.1: a status shown by colour must also show by text or an icon, so semantic colour never carries meaning alone (house carrier T already says this).
 - Resolution the sources support: hierarchy decides *prominence* (fill, outline, text; one primary per view). Semantics decides *hue* inside the rung it is given, and it reserves its hues (a status colour never marks the main action; the action colour never marks a status). A destructive action is never the prominent default; at a confirmation step it may be the primary, in the danger hue.
 - Era: **timeless** (principle); the rung names (filled, tonal, outlined, text) are era-bound (Material 3, 2021 on).
 - Research question for the part that is open: *What does a destructive or irreversible action look like at each step (in a list, in a confirmation), and how does the house's carrier table name the danger rung?* Small; can sit with N17.
 
 **N3b. Buttons sized by purpose and by where the eye should go**
-- House: none on size. Research `function-fit.md:114` quotes Apple: "Use style — not size — to visually distinguish the preferred choice among multiple options." `impeccable.md:88` covers target size (24 px floor, 44 px option), not size as emphasis.
+- House: none on size. Research `function-fit.md:112` quotes Apple: "Use style — not size — to visually distinguish the preferred choice among multiple options." `impeccable.md:88` covers target size (24 px floor, 44 px option), not size as emphasis.
 - Verdict: **partly** (the source is in research; no house rule on size as an emphasis tool).
 - Sound: **partly.** Sources split by context:
   - Apple HIG: style, not size, to mark the preferred choice in a group.
   - Carbon Button usage (read): "We do not recommend mixing different button sizes in button groups"; sizes are chosen by context (Large productive the common size; Extra large where a button bleeds to a modal's edge).
-  - Google M3 Expressive research (via `function-fit.md:166`): a larger Send button, placed above the keyboard, helped people find key elements "up to four times faster". Size raised prominence on the one key action.
+  - Google M3 Expressive research (via `function-fit.md:164`): a larger Send button, placed above the keyboard, helped people find key elements "up to four times faster". Size raised prominence on the one key action.
   - So: inside a group, one size and the emphasis rung carry rank; a standalone key action (a hero call to action, a floating action) may take a larger size. Target size has its own floor (WCAG 2.5.8).
 - Era: the group rule is **timeless** (similarity); the larger-key-action pattern is **era-bound** (M3 Expressive, 2025).
 - Research question: *When does size, rather than the emphasis rung, mark the key action, and what size steps does a button set need by context (group, hero, dense row, touch)?*
@@ -163,7 +160,7 @@ Reading of the note: a "ring" is an edge drawn outside (or inside) the box with 
 - House:
   - Research `docs/research/design-coverage-gaps.md` W4 (Tuch et al. 2012, *IJHCS* 70(11): low visual complexity and high prototypicality rated most appealing, judged within 17–50 ms; rank 3 gap, "Prototypical structure vs distinctive look").
   - `plugin/skills/design-critique/references/house-principles.md:116-121` (brand-layer line: "A dense list takes less novelty than a hero"); `:105-112` (beauty guard).
-  - `surface-styling.md:57-60` and research B1.4 ("Too many borders make a design busy", Refactoring UI); `function-fit.md:105` ("strong signifiers on everything make a busy page").
+  - `surface-styling.md:57-60` and research B1.4 ("Too many borders make a design busy", Refactoring UI); `function-fit.md:103` ("strong signifiers on everything make a busy page").
   - impeccable `layout.md:22` (Density question: "Does the amount of information per region fit use frequency, decision complexity, and visitor mode?"), `layout.md:62` (squint test), `quieter`, `distill` commands; override `impeccable.md:79` (strikes the "≤4 visible options" count; judge grouping and scannability).
   - Closed #101 Q4 accepted the distinctive-against-familiar trade-off as filled by #127.
 - Sourced: partly (Tuch is in research; the brand-layer line cites #127 sources). Conditioned: partly (density by visitor mode in impeccable; the house names hero against dense list). Reaches the critic: through impeccable `critique`/`layout` (design mode on) and the brand-layer line. No measure of busyness reaches a critic.
@@ -202,8 +199,8 @@ Reading of the note: a visible frame on the page's main column or page box (side
 
 - House: no house reference line. Holdings:
   - impeccable `typeset.md:42` ("Use the fewest roles and families that make the hierarchy unmistakable"), `:57` ("do not … introduce a second family without a clear role it alone can perform"), `typeset.md:8` (Operate and Read: "A single well-tuned family … often right"), `operate.md:13` ("One family is often right. Product UIs don't need display/body pairing"), `distill.md:52` ("One font family, 3-4 sizes maximum, 2-3 weights"), `new-work.md:67` (Persuade and Experience "want faces with a point of view"; a list of overused faces).
-  - Override `impeccable.md:94-95` (the detector's `overused-font` is an AI-look ban, level 6, dated). `docs/research/adopt-or-build.md:48` (overused-font is "era-bound taste").
-  - House DNA: no line on font count now; the 13 Oct research quotes an older DNA line "The default font stack (Inter, the system sans) as the only voice" (`text-presentation.md:24`), not in today's DNA.
+  - Override `impeccable.md:94-95` (the detector's `overused-font` is an AI-look ban, level 6, dated). `docs/research/adopt-or-build.md:46` (overused-font is "era-bound taste").
+  - House DNA: no line on font count now; the 13 Oct research quotes an older DNA line "The default font stack (Inter, the system sans) as the only voice" (`text-presentation.md:22`), not in today's DNA.
 - Sourced: no (impeccable cites none). Conditioned: yes, by visitor mode (impeccable). Reaches the critic: only through impeccable with design mode on.
 - Verdict: **partly** (impeccable holds a conditioned rule; the house holds no sourced one).
 - Is the note sound? **Yes.** Butterick, "Mixing fonts" (practicaltypography.com/mixing-fonts.html, read 15 Oct 2026): "Most documents can tolerate a second font. Few can tolerate a third. Almost none can tolerate four or more"; give each font a consistent job ("one font for body text and one font for headings"). Design systems ship one family with roles (Carbon: IBM Plex; Apple: SF, with New York as a serif option; GOV.UK: one) (my knowledge, not re-read). Each family adds font files to load (web.dev font guidance, not re-read). So the count follows roles and mode, not site size: an operate or read surface rarely needs more than one family; a persuade page may add a display face; a third face needs a role no other face can do (for example monospace for code or data).
@@ -240,7 +237,7 @@ Reading of the note: a visible frame on the page's main column or page box (side
 
 Reading of the note: whether parts with the same role keep the same contrast level everywhere, and whether parts of different rank keep clearly different levels.
 - House:
-  - `house-principles.md:93-94` (function walk Q5: "Does each look on the page and the site mean one function? List every distinct treatment and its functions"), `:68-85` (carriers); research `function-fit.md:131-143` (B4.1: WCAG 3.2.4 Consistent Identification; same function, same look).
+  - `house-principles.md:93-94` (function walk Q5: "Does each look on the page and the site mean one function? List every distinct treatment and its functions"), `:68-85` (carriers); research `function-fit.md:129-141` (B4.1: WCAG 3.2.4 Consistent Identification; same function, same look).
   - `brand-palette.md:19-33` ("The same colour or clearly different": ΔE00 bands; "Steps of one colour's ramp: exempt. Their check is contrast"; Tufte's subtle difference for rank).
   - `surface-styling.md:9-16` (two border roles with fixed contrast meaning).
   - Research `text-presentation.md` B1.5 (two readable text steps per ground; Radix Lc 60 and Lc 90), B6 (APCA levels by use).
@@ -255,7 +252,7 @@ Reading of the note: whether parts with the same role keep the same contrast lev
 - House:
   - `plugin/skills/design-round/references/impeccable.md:86` (override: impeccable's "tracking no tighter than -0.04em" is "One author's numbers with no source found: the project's type scale replaces them").
   - Research `docs/research/house-audit-method.md:71` (item 11: "Tracking is set per typeface by its maker"; Apple SF Pro and New York tracking tables; Inter Dynamic Metrics, about -0.022 em at display sizes; "The hand-over to the project's type scale is SOURCED"; "no source found" is "partly wrong"). Closed #183 accepted the hand-over.
-  - Research `text-presentation.md` B2.3 (caps headings and labels: +5–12% tracking; Butterick, Bringhurst second-hand); `principle-interactions.md:86` P25.
+  - Research `text-presentation.md` B2.3 (caps headings and labels: +5–12% tracking; Butterick, Bringhurst second-hand); `principle-interactions.md:84` P25.
   - impeccable detector "crushed letter spacing", "wide tracking on body text".
 - Sourced: yes. Conditioned: the value goes to the project; no condition says how tracking follows size or case. Reaches the critic: the override does; the caps rule and the size rule stay in research.
 - Verdict: **partly**. The house hands the value to the project but gives the project no rule to set it by.
@@ -287,11 +284,11 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 ### N16. Uppercase against lowercase
 
 - House:
-  - No house reference line. Research `docs/research/text-presentation.md` B2.3 ("Caps suit 'headings shorter than one line … headers, footers, captions, and other labels'"; "Always add letterspacing to caps", 5–12%; Butterick; Bringhurst second-hand; WCAG 1.4.12), Part D item 5; `principle-interactions.md:86` P25. The research's bound line says row 8 (caps tracking, the eyebrow) is Manta's.
+  - No house reference line. Research `docs/research/text-presentation.md` B2.3 ("Caps suit 'headings shorter than one line … headers, footers, captions, and other labels'"; "Always add letterspacing to caps", 5–12%; Butterick; Bringhurst second-hand; WCAG 1.4.12), Part D item 5; `principle-interactions.md:84` P25. The research's bound line says row 8 (caps tracking, the eyebrow) is Manta's.
   - Override `impeccable.md:75` (an eyebrow that names the section, place or category is no finding; GOV.UK caption above a heading).
   - House DNA `never` line 5 (`data/gallery.json:17`: "a tracked-out all-caps eyebrow above every heading") and line 7 (`:19`: "all caps for labels") as AI-look tells.
   - impeccable detector "all-caps body text".
-- Verdict: **partly**. The typographic rule (short strings only, tracked) is researched but stays in `docs/research/`. Two house sources pull against each other with no clash line: research B2.3 accepts caps for labels; DNA line 7 calls "all caps for labels" an AI tell. The DNA is a dated default and a brief can earn it back; no reference says how a critic weighs a caps label.
+- Verdict: **partly**. The typographic rule (short strings only, tracked) is researched but stays in `docs/research/`. Two house sources pull against each other with no clash line: research B2.3 accepts caps for labels; DNA line 7 calls "all caps for labels" an AI tell: a house error (#208), fixed. The DNA is a dated default and a brief can earn it back; no reference says how a critic weighs a caps label.
 - Is the note sound? **Yes, with a correction to the common belief.**
   - Convention: caps for short strings, with added tracking (Butterick, via #123 B2.3; strong secondary).
   - Evidence on reading cost is weaker than the convention suggests: Arditi and Cho 2007, *Vision Research* 47(19):2499–2505, found uppercase read *faster* than mixed case near the acuity limit, and the advantage disappeared at larger sizes; they argue uppercase helps low-vision readers (abstract via PMC2016788, read through search, 15 Oct 2026). Older studies (Tinker, 1950s–60s) report slower reading for long all-caps text (not read). So "caps cost reading speed in long text" is a convention with old evidence; "caps are illegible" is not supported.
@@ -316,9 +313,9 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 - House:
   - Gate `vault.layout` (`plugin/skills/design-critique/gate.md:132-140`; `check-layout.py`): at every width, no sideways scroll, no cut or overlapping text, the call to action on the first screen. `check-measure.py` checks line length at both ends of each breakpoint range.
   - Overrides `impeccable.md:77` (device-width breakpoints struck: break where content breaks, container queries; web.dev Learn Design, Every Layout), `:89` (four nav links or fewer stay visible; NN/g 2016), `:88` (target sizes).
-  - design-round renders desktop, one intermediate width and mobile (`docs/research/design-coverage-gaps.md:24`).
+  - design-round renders desktop, one intermediate width and mobile (`docs/research/design-coverage-gaps.md:20`).
   - impeccable `adapt.md` and `layout.md:23` ("what reorders, collapses, wraps, scrolls, or remains fixed?"), `layout.md:96` ("Make responsive behavior structural: reorder, collapse, reflow, or reveal based on what remains important").
-  - Research `docs/research/design-coverage-gaps.md` W10 (judged **covered** by impeccable); `docs/research/manta-element-coverage.md:235-239` (§2.9: responsive behaviour falls back to impeccable on 63 of 119 Manta elements; "No Manta rule adopts" #104 W10); Baymard on filter sidebars against horizontal filter bars (`manta-element-coverage.md:186`). Closed #101 Q3 sent accommodation search layout to mantahostels.
+  - Research `docs/research/design-coverage-gaps.md` W10 (judged **covered** by impeccable); `docs/research/manta-element-coverage.md:230-234` (§2.9: responsive behaviour falls back to impeccable on 63 of 119 Manta elements; "No Manta rule adopts" #104 W10); Baymard on filter sidebars against horizontal filter bars (`manta-element-coverage.md:181`). Closed #101 Q3 sent accommodation search layout to mantahostels.
 - Verdict: **partly**. The house checks the *result* at each width (no overflow, measure, nav count) and holds the *method* (content breakpoints). It holds no pattern table for what each kind of part does as the window narrows: a sidebar (filters, table of contents, handover) collapsing to a drawer, a sheet or a top bar; a grid dropping columns; a table becoming cards; images re-cropping.
 - Is the note sound? **Yes.** Primary sources treat this as a layout decision by window size: Android's window size classes (developer.android.com, read 15 Oct 2026): Compact under 600 dp, Medium 600–840, Expanded 840–1200, Large 1200–1600, Extra-large 1600 and over; "Use window size classes to make high-level application layout decisions"; a phone in landscape has medium width and compact height, "in which case two pane layouts are not practical". WCAG 2.2 SC 1.4.10 Reflow (AA) requires content at 320 CSS px without two-way scrolling (the gate's sideways-scroll check). Size classes do not conflict with the struck device-width override: classes decide page-level structure (navigation form, number of panes); content breakpoints and container queries decide components.
 - Era: reflow is **timeless** as a need; the patterns (rail, drawer, container queries, size classes) are **era-bound** (current, 2023 on).
@@ -365,13 +362,13 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 | N2a | Section background colours | gap | nearest Ref `surface-styling.md:55-62`; Res B5.1 | Sound; false-floor cost (NN/g 2016) | T / E |
 | N2b | Subtle gradient vs solid | gap (bans only) | DNA line 4; imp bans | Sound as a question; no source found | E |
 | N3a | Hierarchy "always" beats semantics | covered (destructive steps partly) | Ref `house-principles.md:16,73,76,95`; gate `vault.primary-action`; Res #127 B3 | Partly: "always" too strong; hierarchy sets the rung, semantics the hue (Carbon danger primary/tertiary; Apple: destructive never primary) | T |
-| N3b | Buttons sized by purpose | partly | Res `function-fit.md:114` | Partly: Apple "style not size" in groups; Carbon one size per group; M3 Expressive larger key action | T / E |
+| N3b | Buttons sized by purpose | partly | Res `function-fit.md:112` | Partly: Apple "style not size" in groups; Carbon one size per group; M3 Expressive larger key action | T / E |
 | N4 | Variable fonts | gap (choice) / partly (rendering) | Res #123 B5.2 | Sound when 3+ styles or axes used (web.dev) | E |
 | N5 | Outer rings vs borders | gap (resting edges); covered (focus) | Ref `surface-styling.md:64-71` | Sound; ring = box-shadow, removed in forced-colours (MDN) | E |
 | N6 | Dividers in sections and cards | covered | Ref `surface-styling.md:55-62, 93-96` | Sound; add NN/g false-floor condition | T |
 | N7 | How busy a page looks | partly | Res #104 W4; Ref brand-layer line; imp `layout.md` | Sound (Tuch 2012; Reinecke 2013) | T / E |
 | N8 | Page container borders | partly, by method only | Ref border roles; DNA line 3 | Narrow; no source; fold into N2 or N5 | E |
-| N9 | Cool, neutral, warm greys | covered (hue) / partly (temperature as feel) | Ref `text-presentation.md:11-16`; `brand-palette.md:54`; Res B1.1 | Sound (Ou et al. 2004; design systems). Tension: DNA line 5 vs tint rule | E / T |
+| N9 | Cool, neutral, warm greys | covered (hue) / partly (temperature as feel) | Ref `text-presentation.md:11-16`; `brand-palette.md:54`; Res B1.1 | Sound (Ou et al. 2004; design systems). Tension: DNA line 5 vs tint rule: a house error (#208), fixed | E / T |
 | N10 | How many fonts | partly | imp `typeset.md:42,57`, `operate.md:13` | Sound (Butterick: a second font usually, a third rarely) | T |
 | N11 | Border opacity | partly | Ref `surface-styling.md:11,39`; Res B1.4 | Sound; alpha makes contrast ground-dependent | E |
 | N12 | Alignment between sections | partly | Ref Gestalt lens `SKILL.md:52`; imp `polish.md:59` | Sound (good continuation, Wagemans 2012) | T |
@@ -383,12 +380,14 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 | N18 | Responsive: sidebars collapse | partly | gate `vault.layout`; `impeccable.md:77,89`; imp `adapt.md` | Sound (Android window size classes; WCAG 1.4.10) | E |
 | N19a | Rules record context | covered (form) | every Ref; Res principle-interactions | Sound; completeness is #206 | T |
 | N19b | Typeface traits drive size, spacing | gap | imp `typeset.md:21,49` | Sound (MDN font-size-adjust; Legge and Bigelow 2011) | T |
-| N19c | Weight by palette, crowding, warm/cool | partly (hue: gap, no evidence) | `impeccable.md:74`; Res B2.1 | Lightness: small effect; temperature: unsourced | T |
+| N19c | Weight by palette, crowding, warm/cool | partly (hue: gap, no evidence) | `impeccable.md:74`; Res B2.1 | Lightness: small effect; temperature: unsourced, so ruled out (#208) | T |
 | N19d | Research oversimplified? | finding | — | Main loss is research not carried into references (#123: ~20 principles researched, 2 in the reference) | — |
 
 Counts: covered 4 (N1a, N3a, N6, N19a) plus covered halves of N1b, N1d, N1e, N5, N9; partly 19; gap 6 (N1g, N2a, N2b, N4, N5 resting edges, N19b); not worth its own ticket: N8 (fold in).
 
-## Research questions named for the gaps (not filled here; #208 rules each: fill or accept)
+## Research questions named for the gaps
+
+#208 fills 1 to 9, with 7 one combined job and 9 without the optional mood-word scale positions; 10 is #210's P8. Order: 5 first, then 4 before 3; the coverage ledger (`docs/coverage-ledger.json`, #215) ranks the rest.
 
 1. Alignment and block width (N1f, N1h, N12): when a page centres, left- or right-aligns text, how a measure-limited column sits in a wide section, which alignment lines hold across sections.
 2. `text-wrap` (N1g): which roles take `balance` or `pretty`, and the cost.

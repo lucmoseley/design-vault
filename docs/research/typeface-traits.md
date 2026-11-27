@@ -45,7 +45,7 @@ Key to check result: CONFIRMED = the quote is on the page today. DIFFERS = the p
   - 20–42 px (productive headings 03–06, expressive headings): 0 em; lh 1.4 at 20 px, 1.286 at 28, 1.25 at 32, 1.199 at 42 (light weight at 42+).
   - Display (light weight): display-03 at 60 px −0.64 px = **−0.0107 em**, at 84 px −0.96 px = **−0.0114 em**; display-04 at 92 px −0.64 px = −0.0070 em, 122 px −0.0052 em, 156 px −0.96 px = −0.0062 em. Display lh falls from 1.19 at 42 px to 1.05 at 156 px.
 - Reading: the Plex curve has the same direction as Apple and Material: positive under 16 px, zero at 16–48 px, slightly negative at display. Carbon also ties line height to role: "long" body (paragraphs) takes 1.43–1.5, "short" body (one or two lines in UI) takes 1.29–1.375 at the same size.
-- Carbon type sets page (https://carbondesignsystem.com/elements/typography/type-sets/) carries the productive (14 px base, dense product UI) and expressive (16 px base) sets. The notes (adopt-or-build.md:39, read 13 Oct 2026) quote it; I confirm the 14/16 base values in the source above.
+- Carbon type sets page (https://carbondesignsystem.com/elements/typography/type-sets/) carries the productive (14 px base, dense product UI) and expressive (16 px base) sets. The notes (adopt-or-build.md:37, read 13 Oct 2026) quote it; I confirm the 14/16 base values in the source above.
 
 ### R4. Inter (rsms): v3 dynamic metrics and Inter 4 (D, the maker)
 - v3 URL: https://d.rsms.me/inter-website/v3/dynmetrics/ (archived v3 site). Read 16 Oct 2026. Quote: "tracking = a + b × e(c × z)", "a = -0.0223", "b = 0.185", "c = -0.1745", "z = font size". "You simply provide the optical font size". CONFIRMED (formula and constants as in S9). The page gives no line-height formula in its text.
@@ -86,7 +86,7 @@ Key to check result: CONFIRMED = the quote is on the page today. DIFFERS = the p
 
 ### R6. MDN `font-size-adjust` (P-level reference)
 - URL: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-size-adjust. Read 16 Oct 2026. Page last modified 16 Sep 2026.
-- "Legibility of fonts, especially at small font sizes, is determined more by the size of lowercase letters than by the size of uppercase letters." CONFIRMED (notes-coverage.md:337).
+- "Legibility of fonts, especially at small font sizes, is determined more by the size of lowercase letters than by the size of uppercase letters." CONFIRMED (notes-coverage.md:334).
 - "Baseline 2024 ... Newly available ... Since July 2024, this feature works across the latest devices and browser versions." CONFIRMED.
 - `from-font`: "Uses the <number> value for the specified <font-metric> from the first available font." `ex-height`: "Uses the ratio of x-height ... to font size (aspect value) to adjust the font size. This keyword value is used to normalize lowercase letters across fonts." CONFIRMED.
 - Example on the page: Verdana first, Times fallback, `font-size-adjust: 0.545` keeps Verdana's aspect in Times. The 0.545 agrees with my measurement of Verdana (R5).
@@ -102,7 +102,7 @@ Key to check result: CONFIRMED = the quote is on the page today. DIFFERS = the p
 
 ### R8. MDN `font-optical-sizing` (P-level reference)
 - URL: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-optical-sizing. Read 16 Oct 2026. Last modified 17 Sep 2026.
-- "Optical sizing is enabled by default for fonts that have an optical size variation axis." "small text sizes are often rendered with thicker strokes and larger serifs, whereas larger text is often rendered more delicately". "It's been available across browsers since March 2020." CONFIRMED (text-presentation.md:230).
+- "Optical sizing is enabled by default for fonts that have an optical size variation axis." "small text sizes are often rendered with thicker strokes and larger serifs, whereas larger text is often rendered more delicately". "It's been available across browsers since March 2020." CONFIRMED (text-presentation.md:228).
 - DIFFERS in location only: the note says the `font` shorthand resets `font-optical-sizing` "(MDN)". The font-optical-sizing page does not say it. The MDN `font` shorthand page does (last modified 17 Sep 2026): "the shorthand resets the following properties to their initial values", and the list includes `font-optical-sizing`, `font-size-adjust` and `font-variation-settings`. So the claim is CONFIRMED on the `font` page. Consequence for a builder: a later `font:` shorthand also resets `font-size-adjust` and any `GRAD` set in `font-variation-settings`.
 
 ### R9. MDN `font-variation-settings` (P-level reference)
@@ -161,7 +161,7 @@ Key to check result: CONFIRMED = the quote is on the page today. DIFFERS = the p
 
 ### R16. web.dev, "Introduction to variable fonts on the web" (D/E, Google)
 - URL: https://web.dev/articles/variable-fonts. Read 16 Oct 2026. "Last updated 2018-02-19 UTC." So it is NOT a 2023+ source.
-- "Storing 48 individual fonts in a single variable font file meant a 88% reduction in file size." "if you are using a single font such as Roboto Regular and nothing else, you might not see a net gain in font size if you were to switch to a variable font with many axes." "animating the font between settings may cause performance issues." "A Grade axis ... changes the weight of the font without changing the widths, so line breaks do not change." CONFIRMED (notes-coverage.md:137).
+- "Storing 48 individual fonts in a single variable font file meant a 88% reduction in file size." "if you are using a single font such as Roboto Regular and nothing else, you might not see a net gain in font size if you were to switch to a variable font with many axes." "animating the font between settings may cause performance issues." "A Grade axis ... changes the weight of the font without changing the widths, so line breaks do not change." CONFIRMED (notes-coverage.md:134).
 
 ### R17. web.dev Learn CSS, Typography (D)
 - URL: https://web.dev/learn/css/typography (curl). Read 16 Oct 2026. "Last updated 2021-11-23 UTC." Variable fonts: "fonts that can contain many different variants of a typeface in one file". line-height: "it's recommended to use a number instead of a length or percentage". No rule on when a variable font pays. CONFIRMED; adds nothing for this job.
@@ -447,10 +447,10 @@ Symbols: xh = the face's x-height in em (OS/2 sxHeight / unitsPerEm, measured as
 - Verdict: COVERABLE.
 
 ## Part 3. Research-line dispositions (lines.txt, 26 lines)
-- text-presentation.md:206 → TYF-54. impeccable's "one step heavier on dark" is superseded by CHI 2023 and M3, except as a look choice.
-- text-presentation.md:230 → TYF-15, TYF-53.
-- text-presentation.md:232 → TYF-52, TYF-53.
-- text-presentation.md:236 → TYF-13.
+- text-presentation.md:204 → TYF-54. impeccable's "one step heavier on dark" is superseded by CHI 2023 and M3, except as a look choice.
+- text-presentation.md:228 → TYF-15, TYF-53.
+- text-presentation.md:230 → TYF-52, TYF-53.
+- text-presentation.md:234 → TYF-13.
 - rule-interactions.md I-1 :194 → TYS-7, TYS-8, TYS-10, TYF-19.
 - rule-interactions.md I-2 :195 → TYS-63–65.
 - rule-interactions.md I-5 :198 → TYS-39, TYS-40, TYS-42, TYS-11.

@@ -49,11 +49,11 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 
 ### vault.contacts-script
 - applies-when: any; every place two separately drawn paths nearly touch
-- question: Where segments of two separately drawn shapes run alongside within 2 px of each other at the drawn size, does each pair either match to the paths' written precision with both fills on one side, or have one fill run on past the other's edge, the upper fill opaque, leaving no exact edge with a fill on each side, or, where a gap parts them, have an opaque shape painted after both fill it?
+- question: Where segments of two separately drawn shapes run alongside within 2 px of each other at the drawn size, does each pair either match to the paths' written precision with both fills on one side, or have one fill run on past the other's edge, leaving no exact edge with a fill on each side, or, where a gap parts them, have a shape painted after both span it? Whether an upper fill or a cover's paint hides what lies under it is vault.contacts-seam's to measure.
 - answered-by: script
 - writes: contact
 - yields-to: level 2
-- source: the rule is the founder's, lucmoseley/mmm-infra#9; the #262 ruling that a script lists the contacts (spec #324, user story 19); a fill on each side of one exact edge is the conflation seam (Khronos NV_path_rendering_shared_edge, Issue 1); an opaque shape painted later hides a gap or an underlap's lower edge, as each element paints over those before it (SVG 2, §3.3–3.4) (#356, #489); the 2 px is a guess no source sets (#324's Values); strength: founder ruling for the rule, house ruling for the script, a rendering fact for the seam and the cover, an unsourced guess for the 2 px
+- source: the rule is the founder's, lucmoseley/mmm-infra#9; the #262 ruling that a script lists the contacts (spec #324, user story 19); a fill on each side of one exact edge is the conflation seam (Khronos NV_path_rendering_shared_edge, Issue 1); a shape painted later lies over a gap or an underlap's lower edge, as each element paints over those before it (SVG 2, §3.3–3.4) (#356), and whether its paint hides them is measured in pixels, not read from the file's cascade (#585); the 2 px is a guess no source sets (#324's Values); strength: founder ruling for the rule, house ruling for the script, a rendering fact for the seam and the cover, an unsourced guess for the 2 px
 - era: timeless
 - owner: vault
 - stage: value
@@ -64,11 +64,11 @@ Pictures, icons and drawn marks: curves, where shapes touch, stroke weight, text
 
 ### vault.contacts-seam
 - applies-when: any; every place two separately drawn paths nearly touch
-- question: On every key frame at scales 1×, 2× and 3×, with the contact's two shapes drawn alone over black and over white to find the ground in each pixel, does every contact keep the ground's width times its luminance contrast along the edge under 0.5 arcsec?
+- question: On every key frame at scales 1×, 2× and 3×, with the contact's two shapes, and any shape check-curves.js names as covering its gap, drawn alone over black and over white to find the ground in each pixel, does every contact keep the ground's width times its luminance contrast along the edge under 0.5 arcsec?
 - answered-by: script
 - writes: contact
 - yields-to: vault.contacts-script, level 2
-- source: the rule is the founder's, lucmoseley/mmm-infra#9; a thin line is seen once it reaches 0.5 arcsec (Hecht & Mintz 1939), its width times contrast form and the device pixel's angle at each ratio derived from it in docs/research/contact-seams.md (#340); strength: founder ruling for the rule, a vision-science floor for the threshold, derived figures for the angles
+- source: the rule is the founder's, lucmoseley/mmm-infra#9; a thin line is seen once it reaches 0.5 arcsec (Hecht & Mintz 1939), its width times contrast form and the device pixel's angle at each ratio derived from it in docs/research/contact-seams.md (#340); a cover's paint is measured by the same two-ground matte, whatever sets it (#585); strength: founder ruling for the rule, a vision-science floor for the threshold, derived figures for the angles
 - era: timeless
 - owner: vault
 - stage: value

@@ -919,6 +919,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/check-seams/covers.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/check-seams/gap.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1802,6 +1806,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/look-renders/bare-contacts.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/look-renders/bend.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -2481,6 +2489,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/parts-map.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/planted-faults-runner.test.py": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],

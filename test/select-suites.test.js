@@ -26,6 +26,7 @@ const ran = (staged) => {
   return p.all ? SUITES : p.suites.filter((s) => !s.why).map((s) => s.suite);
 };
 
+const KIT_RUNNER_SUITE = "python3 test/planted-faults-runner.test.py";
 const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/colour-space.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py", "python3 test/video-sheet.test.py", "python3 test/check-logo.test.py", "python3 test/check-overlay.test.py", "python3 test/face-profile.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
@@ -87,8 +88,8 @@ test("a directory named by a lone bare word is not followed: check-flow.test.py'
 test("check-flow.py runs every suite that loads it, as do check-frames.py and check-layout.py, which check-flow.py reaches back through probe.py; contact-sheet.py runs its own alone", () => {
   const fast = [NODE, "bash test/design-round-pointer.test.sh"];
   assert.deepEqual(ran([`${SCRIPTS}/check-flow.py`]), [...fast, ...PYTHON.filter((s) => !NO_FLOW.includes(s))]);
-  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, "python3 test/contact-sheet.test.py", "python3 test/crash-exit.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
-  assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/crash-exit.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/contact-sheet.py`]), [...fast, KIT_RUNNER_SUITE, "python3 test/contact-sheet.test.py", "python3 test/crash-exit.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/check-frames.py`]), [...fast, KIT_RUNNER_SUITE, "python3 test/check-frames.test.py", "python3 test/contact-sheet.test.py", "python3 test/crash-exit.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/look-renders.test.py", "python3 test/check-seams.test.py", "python3 test/check-dom.test.py"]);
   assert.deepEqual(ran([`${SCRIPTS}/check-layout.py`]), ran([`${SCRIPTS}/check-flow.py`]));
 });
 
@@ -101,7 +102,7 @@ test("runner.py runs every suite whose script loads it, to open Chromium or name
 test("a suite runs for its own test file, its fixtures, and a script its test runs", () => {
   assert.ok(ran(["test/cutout.test.py"]).includes("python3 test/cutout.test.py"));
   assert.deepEqual(ran(["test/fixtures/flow/new-page.html"]).filter((s) => PYTHON.includes(s)), ["python3 test/check-flow.test.py", "python3 test/check-flow-records.test.py"]);
-  assert.deepEqual(ran([`${SCRIPTS}/fall.js`]).filter((s) => PYTHON.includes(s)), ["python3 test/check-flow.test.py", "python3 test/crash-exit.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
+  assert.deepEqual(ran([`${SCRIPTS}/fall.js`]).filter((s) => PYTHON.includes(s)), ["python3 test/check-flow.test.py", KIT_RUNNER_SUITE, "python3 test/crash-exit.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"]);
 });
 
 test("a suite runs for a module beside it that it imports by name, as every Chromium suite does test/child.py (#454)", () => {
@@ -129,7 +130,7 @@ test("a file only the fast checks read is recognised, so it runs no Python suite
 });
 
 test("a script joined on from a directory a test named runs that test's suite (#486)", () => {
-  const dom = ["python3 test/crash-exit.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
+  const dom = [KIT_RUNNER_SUITE, "python3 test/crash-exit.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
   for (const file of ["check-dom.py", "check-dom.table"]) {
     assert.equal(plan(SUITES, [`${SCRIPTS}/${file}`]).all, undefined, file);
     assert.deepEqual(ran([`${SCRIPTS}/${file}`]).filter((s) => PYTHON.includes(s)), dom, file);
@@ -162,7 +163,7 @@ const relist = (from, to) => {
 };
 
 const FAST = [NODE, "bash test/design-round-pointer.test.sh"];
-const SHEET = [...FAST, "python3 test/contact-sheet.test.py", "python3 test/crash-exit.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
+const SHEET = [...FAST, KIT_RUNNER_SUITE, "python3 test/contact-sheet.test.py", "python3 test/crash-exit.test.py", "python3 test/look.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
 const relisting = (after) => plan(SUITES, ["test/all.sh"], { before: ALL_SH, after });
 const runs = (p) => p.suites.filter((s) => !s.why).map((s) => s.suite);
 
@@ -207,8 +208,9 @@ test("a commit retiring a suite, its file and its line, runs the fast checks alo
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "select-suites-"));
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 const repo = path.join(scratch, "repo");
-for (const dir of ["test", "plugin"]) {
-  fs.cpSync(path.join(ROOT, dir), path.join(repo, dir), { recursive: true, filter: (src) => !src.includes("__pycache__") });
+const isCodeOrDir = (src) => fs.statSync(src).isDirectory() || /\.(py|js|sh)$/.test(src);
+for (const [dir, keep] of [["test", () => true], ["plugin", () => true], ["kits", isCodeOrDir]]) {
+  fs.cpSync(path.join(ROOT, dir), path.join(repo, dir), { recursive: true, filter: (src) => !src.includes("__pycache__") && keep(src) });
 }
 fs.copyFileSync(path.join(ROOT, "git-read.js"), path.join(repo, "git-read.js"));
 const hooks = path.join(scratch, "hooks");
