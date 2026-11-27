@@ -19,6 +19,9 @@ SPEND_LOG = os.path.join(
 SIBLINGS = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "siblings.py"
 )
+CRASH_EXIT = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "crash_exit.py"
+)
 SIZES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "references", "render-sizes.json"
 )
@@ -257,6 +260,7 @@ class Size(unittest.TestCase):
         copy = shutil.copy(SCRIPT, scripts)
         shutil.copy(SPEND_LOG, scripts)
         shutil.copy(SIBLINGS, scripts)
+        shutil.copy(CRASH_EXIT, scripts)
         render = self.render("v1-a", (10, 10))
         for broken in (
             None,

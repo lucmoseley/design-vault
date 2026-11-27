@@ -29,6 +29,7 @@ measured: a fill that lets the ground through, a contact off its crop, a shape
 check-curves.js cannot read, a cover whose paint it cannot prove opaque, or a
 page that cannot be rendered frame by frame.
 Exits 0, 1 and 6 print on stdout; the rest print on stderr.
+An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -44,6 +45,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from crash_exit import run_main  # noqa: E402
 
 
 renders = siblings.load(HERE, "look-renders.py")
@@ -281,7 +283,11 @@ def judge(contact, shots, out):
 
 def main(argv):
     args = parse(argv)
-    listed = list_contacts(args.file)
+    try:
+        listed = list_contacts(args.file)
+    except UnlistedError as err:
+        print(err, file=sys.stderr)
+        sys.exit(err.code)
     for line in listed["notes"] + listed["unread"]:
         print(line)
     contacts = listed["contacts"]
@@ -346,8 +352,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(main(sys.argv[1:]))
-    except UnlistedError as err:
-        print(err, file=sys.stderr)
-        sys.exit(err.code)
+    run_main(main)

@@ -25,6 +25,7 @@ EXITS 0 every render passes / 1 a render fails / 2 the arguments are wrong, or
 a render, the log or render-sizes.json cannot be read / 3 Pillow, or numpy for
 --transparent, is missing / 6 no render fails but one cannot be judged. Exits 0, 1 and 6 are results and print on stdout; the
 rest print on stderr.
+An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -38,6 +39,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 import siblings  # noqa: E402
+from crash_exit import run_main  # noqa: E402
 
 SIZES = HERE.parent / "references" / "render-sizes.json"
 REQUIREMENTS = HERE.parents[2] / "requirements.txt"
@@ -257,4 +259,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    run_main(main)

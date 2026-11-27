@@ -17,6 +17,7 @@ EXITS 0 every clip passes / 1 a clip fails / 2 the arguments are wrong, or a
 clip, the log or loop-fields.json cannot be read / 6 no clip fails but one cannot be judged. It
 never exits 3. Exits 0, 1 and 6 are
 results and print on stdout; the rest print on stderr.
+An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -30,6 +31,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 import siblings  # noqa: E402
+from crash_exit import run_main  # noqa: E402
 
 FIELDS = HERE.parent / "references" / "loop-fields.json"
 
@@ -207,4 +209,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    run_main(main)

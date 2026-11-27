@@ -136,6 +136,7 @@ EXITS 0 no miss / 1 a miss (each printed) / 2 the arguments or the table are
 wrong / 3 Playwright or its browser is missing / 4 the page did not load in time
 / 5 the browser refused the page / 7 a call hung that would never return. Exits
 0 and 1 print on stdout; the rest print on stderr.
+An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -156,6 +157,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
+from crash_exit import run_main  # noqa: E402
 from fail_open import expected, fail_open  # noqa: E402
 
 
@@ -2900,4 +2902,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    run_main(main)
