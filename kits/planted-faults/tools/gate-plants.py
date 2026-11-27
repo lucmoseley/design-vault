@@ -64,14 +64,14 @@ PAGES = {
                 "record": "vault.sibling-emphasis",
                 "stage": "role",
                 "area": "text",
-                "what": "In the header navigation the current page's link, Profile, is set apart from Articles, Blog and Contact only by the logo blue the page keeps for its links and its one button, with no change of weight, fill, size or place.",
+                "what": "In the header navigation the current page's link, Profile, is set apart from Articles, Blog and Contact only by semibold against their regular weight, a step too small to catch at a glance, with no change of colour, fill, size or place.",
                 "edits": [
                     (
                         '<nav aria-label="Main"><a href="#">Profile</a>',
                         '<nav aria-label="Main"><a href="#" aria-current="page">Profile</a>',
                     )
                 ],
-                "css": ".top nav a[aria-current]{color:var(--blue)}",
+                "css": ".top nav a[aria-current]{font-weight:600}",
             },
             {
                 "id": "v5g-case",
@@ -131,7 +131,7 @@ PAGES = {
                 "record": "vault.icon-use",
                 "stage": "function",
                 "area": "imagery",
-                "what": "Each section heading (Palette, Type pair, Texture, An article page, Motion sketch) opens with a large blue decorative icon (a star, a lightning bolt, a drop, a leaf, a sparkle) that marks no action or information.",
+                "what": "Each section heading (Palette, Type pair, Texture, An article page, Motion sketch) opens with a large decorative icon in the heading's ink (a star, a lightning bolt, a drop, a leaf, a sparkle) that marks no action or information.",
                 "edits": [
                     (f'<h2 id="h-{h}">', f'<h2 id="h-{h}">' + ICON.format(d=d))
                     for h, d in (
@@ -142,7 +142,7 @@ PAGES = {
                         ("motion", SPARK),
                     )
                 ],
-                "css": "h2 .deco{width:30px;height:30px;vertical-align:-9px;margin-right:12px;color:#0070C0}",
+                "css": "h2 .deco{width:30px;height:30px;vertical-align:-9px;margin-right:12px;color:var(--ink)}",
             },
             {
                 "id": "v7g-stack",
@@ -157,8 +157,8 @@ PAGES = {
                 "record": "vault.zebra-rows",
                 "stage": "treatment",
                 "area": "data",
-                "what": "The short motion timeline table, four narrow columns, has heavy alternating row fills, saturated mid-blue and pale grey, on a table too small for the eye to lose its row.",
-                "css": ".timeline tbody tr:nth-child(odd) td{background:#7FA7D1!important;color:#10202f}.timeline tbody tr:nth-child(even) td{background:#E6E6E6!important}",
+                "what": "The short motion timeline table, four narrow columns, has heavy alternating row fills, mid grey and pale grey, on a table too small for the eye to lose its row.",
+                "css": ".timeline tbody tr:nth-child(odd) td{background:#A8A8A8!important;color:#1a1a1a}.timeline tbody tr:nth-child(even) td{background:#E6E6E6!important}",
             },
             {
                 "id": "v7g-condensed",

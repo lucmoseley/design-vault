@@ -540,7 +540,7 @@ def tally():
         "share": round(agree[0] / max(agree[1], 1), 3),
         "n": agree[1],
     }
-    for shape, crit in scored_shapes().items():
+    for shape, crit in scored_shapes().items() if clean() else ():
         row = {}
         for v in ("real", "invented", "out-of-scope", "unresolved"):
             per_run = []
@@ -582,10 +582,14 @@ def show(res):
         print(f"\n{shape}\n  recall: {cells}")
         f = res["founder"][shape]
         print(f"  founder verdicts: {'/'.join(map(str, f['runs']))} of {f['of']}")
-        j = res["judged"][shape]
+        j = res["judged"].get(shape)
         print(
             "  clean, per candidate (distinct): "
-            + "  ".join(f"{k}={'/'.join(map(str, v))}" for k, v in j.items())
+            + (
+                "  ".join(f"{k}={'/'.join(map(str, v))}" for k, v in j.items())
+                if j
+                else "no clean page in this run"
+            )
         )
 
 
