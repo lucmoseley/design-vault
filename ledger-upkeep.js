@@ -20,6 +20,7 @@ const fs = require("fs");
 const path = require("path");
 
 const { parseGate } = require("./plugin/skills/design-round/scripts/gate-form.js");
+const { REPO_MARKDOWN_FORM, parseRepoMarkdown } = require("./repo-markdown.js");
 
 const LEDGER = path.join(__dirname, "docs", "coverage-ledger.json");
 const STORE = path.join(__dirname, "plugin", "skills", "design-critique", "rules");
@@ -97,7 +98,7 @@ function readStore(dir) {
 
 function readProjects(file) {
   const projects = JSON.parse(fs.readFileSync(file, "utf8")).projects;
-  return new Map(Object.entries(isObject(projects) ? projects : {}).map(([key, p]) => [key, String(p?.rules ?? "").split(" in ")[0]]));
+  return new Map(Object.entries(isObject(projects) ? projects : {}).map(([key, p]) => [key, parseRepoMarkdown(p?.rules)?.file ?? null]));
 }
 
 function destinationFault(destination, records, projects) {
@@ -105,6 +106,7 @@ function destinationFault(destination, records, projects) {
   if (destination.startsWith("not carried")) return NOT_CARRIED.test(destination) ? null : "a `not carried: ` with no reason";
   const line = destination.match(/^([\w-]+):(.+):(\d+)$/);
   if (line && projects.has(line[1])) {
+    if (projects.get(line[1]) === null) return `${JSON.stringify(destination)}, but ${line[1]}'s rules in the library are not ${REPO_MARKDOWN_FORM}`;
     return line[2] === projects.get(line[1]) && +line[3] > 0 ? null : `${JSON.stringify(destination)}, which is not a line of ${line[1]}'s rules file, ${projects.get(line[1])}`;
   }
   return records.has(destination) ? null : `${JSON.stringify(destination)}, which is no record in the rule store, no \`<project>:<rules file>:<line>\` and no \`not carried: <reason>\``;

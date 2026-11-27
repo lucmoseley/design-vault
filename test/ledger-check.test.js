@@ -138,6 +138,14 @@ test("a done job citing a research line with no destination is refused; each kin
   passes(to("not carried: the house's dependency order already settles it"));
 });
 
+test("a destination in a project whose rules are not <path> in <owner>/<repo> is refused, not read as that project's rules file (#569)", () => {
+  const library = path.join(scratch, "climbing-rules.json");
+  fs.writeFileSync(library, JSON.stringify({ projects: { manta: { rules: "docs/../brand-sheet.md in lucmoseley/mantahostels" } } }));
+  const result = check({ ...done({ destinations: { "docs/research/notes.md:40": "manta:docs/../brand-sheet.md:12" } }), library });
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /"manta:docs\/\.\.\/brand-sheet\.md:12", but manta's rules in the library are not `<path to a \.md file> in <owner>\/<repo>`/);
+});
+
 test("a job marked done by anything but an issue number is refused", () => {
   refuses(done({ done: true }), /job done-job is marked done by true, not an issue number like #275/);
 });

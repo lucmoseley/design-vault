@@ -8,7 +8,8 @@ const { after, test } = require("node:test");
 const { runInProcess } = require("./core-run-in-process.js");
 
 const ROOT = path.join(__dirname, "..");
-const PROGRAMS = ["ingest.js", "bundle.js", "validate.js", "git-read.js"];
+const VALIDATOR_FILES = require("./validator-files.js");
+const PROGRAMS = ["ingest.js", "bundle.js", ...VALIDATOR_FILES];
 const SHOTS = path.join(__dirname, "fixtures", "ingest");
 const STAND_IN = path.join(SHOTS, "claude.js");
 const FIXTURES = path.join(__dirname, "fixtures", "validate");

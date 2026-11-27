@@ -15,6 +15,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `data/vault-data.js` | library: a static data table derived from `data/gallery.json` and `data/styles.json` by `node bundle.js`, so a fault in it is fixed in `bundle.js` (#32) |
 | `plugin/review-page/review.js` | library: the shared review page's logic: checking the data file and the feedback boxes (#120) |
 | `git-read.js` | library: git run for the programs that judge a commit from the index or HEAD, under one read cap (#141) |
+| `repo-markdown.js` | library: the one parser of a project's `<path> in <owner>/<repo>` file reference, for validate.js and ledger-upkeep.js (#569) |
 | `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line; the row reader, round-tag patterns, shape checks and strict flag parser the calibration scripts and critic examples use (#166, #168, #556) |
 | `plugin/skills/design-project/scripts/colour_space.py` | library: the colour maths every check shares (#644) |
 | `plugin/skills/design-round/scripts/access-pixels.py` | library: the pixel maths check-access.py measures its screenshots with (#198) |
