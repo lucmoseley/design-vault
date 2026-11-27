@@ -47,6 +47,7 @@ import siblings  # noqa: E402
 
 
 renders = siblings.load(HERE, "look-renders.py")
+frames = siblings.load(HERE, "check-frames.py")
 runner = siblings.load(HERE, "runner.py")
 try:
     import numpy as np
@@ -69,8 +70,8 @@ ALL_GROUND = 0.95
 DARK = 1e-4
 # guess, #341
 WINDOW = 5
-# guess, #341
-REACH = 3
+# guess, #544
+REACH_PAST_CONTACT_PX = 1
 
 # guess, #341
 UNDERLAP_CSS_PX = 1
@@ -191,7 +192,7 @@ def pixels(png):
     return np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), dtype=float)
 
 
-def measure(drawn, mattes, tangent, scale):
+def measure(drawn, mattes, tangent, scale, *, reach):
     black, white = mattes["black"], mattes["white"]
     norm = math.hypot(*tangent)
     if norm == 0:
@@ -201,7 +202,7 @@ def measure(drawn, mattes, tangent, scale):
     share = np.clip(((white - black) / 255).mean(axis=2), 0, 1)
     size = share.shape[0]
     mid = size / 2
-    reach = REACH * scale
+    reach *= scale
 
     def at(x, y):
         i, j = int(math.floor(y)), int(math.floor(x))
@@ -243,7 +244,7 @@ def matte_name(shot, ground):
     return shot["file"].replace(".png", f"-{ground}.png")
 
 
-def judge(contact, shots, out):
+def judge(contact, shots, out, *, reach):
     seen, lost = {}, []
     for shot in shots:
         mats = {}
@@ -252,8 +253,8 @@ def judge(contact, shots, out):
                 fh.write(shot[ground])
             mats[ground] = pixels(shot[ground])
         drawn = pixels(shot["drawn"])
-        wc = measure(drawn, mats, shot["tangent"], shot["scale"])
-        where = f"{renders.frames.ms(shot['ms'])} ms {shot['scale']}x"
+        wc = measure(drawn, mats, shot["tangent"], shot["scale"], reach=reach)
+        where = f"{frames.ms(shot['ms'])} ms {shot['scale']}x"
         if wc is None:
             lost.append(where)
         else:
@@ -271,7 +272,7 @@ def judge(contact, shots, out):
     if lost:
         lines.append(
             f"NOT MEASURED {name} at {', '.join(lost)}: no opaque fill on each side of the contact within "
-            f"{REACH} CSS px of its crop's centre; a translucent fill reads as ground. Judge it under "
+            f"{reach} CSS px of its crop's centre; a translucent fill reads as ground. Judge it under "
             "vault.contacts-look."
         )
     elif not over:
@@ -282,6 +283,7 @@ def judge(contact, shots, out):
 def main(argv):
     args = parse(argv)
     listed = list_contacts(args.file)
+    reach = listed["contactPx"] + REACH_PAST_CONTACT_PX
     for line in listed["notes"] + listed["unread"]:
         print(line)
     contacts = listed["contacts"]
@@ -299,7 +301,7 @@ def main(argv):
         renders.clear(look.out)
 
         def run():
-            with runner.chromium(renders.frames.HASH_ARGS) as browser:
+            with runner.chromium(frames.HASH_ARGS) as browser:
                 return renders.render_contacts(browser, look, also=shoot_mattes)
 
         result, code = runner.run_browser(
@@ -315,7 +317,10 @@ def main(argv):
             return code
         for c in measured:
             said, failed, lost = judge(
-                c, [s for s in result["shots"] if s["contact"] == c["name"]], look.out
+                c,
+                [s for s in result["shots"] if s["contact"] == c["name"]],
+                look.out,
+                reach=reach,
             )
             lines += said
             faults += failed
