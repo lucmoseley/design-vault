@@ -194,20 +194,21 @@ suites_needing() {
   printf '%s' "$out"
 }
 if [[ " ${run[*]} " == *" python3 "* ]]; then
+  pip_install='python3 -m pip install --only-binary :all: -r plugin/requirements.txt'
   need python3 'Python 3, from miniforge (the machine-wide Python)' command -v python3
   if for_images="$(suites_needing images)"; then
     for module in numpy PIL scipy; do
-      need "the Python package $module, for $for_images" "python3 -m pip install -r plugin/requirements.txt" \
+      need "the Python package $module, for $for_images" "$pip_install" \
         python3 -c "import $module"
     done
   fi
   if for_video="$(suites_needing video)"; then
-    need "the Python package av, for $for_video" "python3 -m pip install --only-binary :all: -r plugin/requirements.txt" \
+    need "the Python package av, for $for_video" "$pip_install" \
       python3 -c "import av"
   fi
   if for_chromium="$(suites_needing chromium)"; then
     need "the Python package playwright, for $for_chromium" \
-      'python3 -m pip install -r plugin/requirements.txt && python3 -m playwright install chromium' \
+      "$pip_install && python3 -m playwright install chromium" \
       python3 -c 'import playwright.sync_api'
     python3 -c 'import playwright.sync_api' 2>/dev/null &&
       need "Playwright's Chromium, for $for_chromium" \
