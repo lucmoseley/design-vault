@@ -272,8 +272,8 @@ function parseUsd(value) {
   return NaN;
 }
 
-async function estimate(ctx, job) {
-  const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input });
+async function estimate(ctx, job, answerMs) {
+  const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input, answerMs });
   const usd = parseUsd(answer?.usd);
   if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
@@ -287,13 +287,13 @@ function priceText(price, suffix = "") {
   return `at most ${dollars(price.usd)}${suffix}, by its max_usd (the rule: ${JSON.stringify(price.rule)})`;
 }
 
-async function submit(ctx, job, idempotencyKey) {
-  const accepted = await withRetry(ctx, "POST", `${API}/${job.model}`, { body: job.input, headers: { "Idempotency-Key": idempotencyKey } });
+async function submit(ctx, job, idempotencyKey, answerMs) {
+  const accepted = await withRetry(ctx, "POST", `${API}/${job.model}`, { body: job.input, headers: { "Idempotency-Key": idempotencyKey }, answerMs });
   if (typeof accepted?.request_id !== "string" || !accepted.request_id) throw new Error(`the submission carried no request_id: ${JSON.stringify(accepted)}`);
   return accepted;
 }
 
-async function poll(ctx, accepted) {
+async function poll(ctx, accepted, answerMs) {
   const statusUrl = `${API}/requests/${encodeURIComponent(accepted.request_id)}/status`;
   const deadline = ctx.now() + ctx.timeoutMs;
   const unpolled = (fault) => ({ status: "unpolled", error: fault.message, request_id: accepted.request_id });
@@ -306,7 +306,7 @@ async function poll(ctx, accepted) {
     delay = Math.min(delay * POLL_WAIT_GROWTH, POLL_LONGEST_WAIT_MS);
     // #589
     try {
-      const read = await withRetry(ctx, "GET", statusUrl);
+      const read = await withRetry(ctx, "GET", statusUrl, { answerMs });
       if (typeof read?.status !== "string") throw new Error(`GET ${new URL(statusUrl).pathname} answered no status: ${read === undefined ? "its body is not JSON" : JSON.stringify(read).slice(0, QUOTED_BODY_CHARS)}`);
       state = read;
       lastReadFault = undefined;
@@ -342,7 +342,8 @@ async function render(jobs, options = {}) {
     credentials: checkCredentials(options.credentials),
     fetch: options.fetch ?? globalThis.fetch,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
-    now: options.now ?? Date.now,
+    now: options.now ?? (() => performance.now()),
+    date: options.date ?? (() => new Date()),
     timeoutMs: options.timeoutMs ?? JOB_TIMEOUT_MS,
     retryDeadlineMs: options.retryDeadlineMs ?? RETRY_DEADLINE_MS,
     timeout: options.timeout ?? AbortSignal.timeout,
@@ -394,7 +395,10 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
   }
 
   const priced = [];
-  for (const job of checked) priced.push({ ...job, price: await estimate(ctx, job) });
+  for (const job of checked) {
+    const estimateMs = [];
+    priced.push({ ...job, price: await estimate(ctx, job, estimateMs), estimateMs });
+  }
   for (const job of priced) log(`${job.name}  ${job.model}  ${priceText(job.price, " a request")}`);
 
   const unpriced = priced.filter((job) => job.price.usd === undefined);
@@ -424,7 +428,7 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
   let failed = 0;
   for (const [index, job] of priced.entries()) {
     const { name } = job;
-    const entry = { at: new Date(ctx.now()).toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input };
+    const entry = { at: ctx.date().toISOString(), candidate: name, model: job.model, idempotency_key: crypto.randomUUID(), request_id: null, usd: job.price.usd, credits: job.price.credits, discount: job.price.discount, rule: job.price.rule, input: job.input, estimate_ms: job.estimateMs };
     const ledgerFault = (status, error) => `${name}: its ${status} line could not be written to ${path.join(job.roundDir, LEDGER)} (${error.message})`;
     // #575
     const recordOrStop = (line, howFar, { submissionSent = true, mayBeCharged } = {}) => {
@@ -437,8 +441,9 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     // #571
     recordOrStop({ ...entry, status: "submitting", files: [] }, "it was not submitted", { submissionSent: false });
     let accepted;
+    entry.submit_ms = [];
     try {
-      accepted = await submit(ctx, job, entry.idempotency_key);
+      accepted = await submit(ctx, job, entry.idempotency_key, entry.submit_ms);
     } catch (error) {
       // #583
       if (error instanceof RefusalError && !error.mayHaveReached) {
@@ -456,7 +461,8 @@ async function runBatch(ctx, checked, roundDirs, ceiling, options, log) {
     } catch (error) {
       log(`${ledgerFault("submitted", error)}; request ${accepted.request_id} is polled on, and its outcome line stands in for it`);
     }
-    const state = await poll(ctx, accepted);
+    entry.status_ms = [];
+    const state = await poll(ctx, accepted, entry.status_ms);
     if (state.status === "timed-out" || state.status === "unpolled") {
       const why = state.status === "unpolled" ? `its status could not be read (${state.error})` : `still running after ${ctx.timeoutMs / 1000} s`;
       recordOrStop({ ...entry, status: state.status, files: [] }, `request ${accepted.request_id}: ${why}`);

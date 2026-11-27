@@ -467,6 +467,53 @@ test("a submission answered 5xx is retried under the same idempotency key", asyn
   assert.equal(keys[0], keys[1]);
 });
 
+function slowOptions(latencies, api = fakeApi()) {
+  const options = api.options();
+  const answer = options.fetch;
+  options.fetch = async (url, init = {}) => {
+    const { pathname } = new URL(url);
+    const kind = pathname.startsWith("/estimate/") ? "estimate" : pathname.startsWith("/requests/") ? "status" : "submit";
+    if (url.startsWith("https://api.higgsfield.ai/")) await options.sleep(latencies[kind]?.shift() ?? 0);
+    return answer(url, init);
+  };
+  return options;
+}
+
+test("each estimate, submission and status read's answer time, in ms, is on the job's ledger lines, a retried call's per try (#590)", async () => {
+  const dir = roundDir();
+  const options = slowOptions({ estimate: [100, 300], submit: [900, 700], status: [150, 250] }, fakeApi({ estimates: [reply(502, {})], submit: [reply(502, { detail: "Bad gateway" })] }));
+  assert.equal(await render([job(dir)], options), 0);
+  assert.deepEqual(
+    ledger(dir).map((entry) => [entry.status, entry.estimate_ms, entry.submit_ms, entry.status_ms]),
+    [
+      ["submitting", [100, 300], undefined, undefined],
+      ["submitted", [100, 300], [900, 700], undefined],
+      ["completed", [100, 300], [900, 700], [150, 250]],
+    ],
+  );
+});
+
+test("a ledger line's at is the injected wall-clock date, apart from the clock that times the calls (#590)", async () => {
+  const dir = roundDir();
+  const api = fakeApi();
+  await render([job(dir)], api.options({ date: () => new Date("2026-11-27T06:00:00.000Z") }));
+  assert.deepEqual([...new Set(ledger(dir).map((entry) => entry.at))], ["2026-11-27T06:00:00.000Z"]);
+});
+
+test("a submission whose try gives no answer records only the tries answered (#590)", async () => {
+  const dir = roundDir();
+  const { options } = hangingSubmits(1);
+  assert.equal(await render([job(dir)], options), 0);
+  assert.deepEqual(outcomes(dir)[0].submit_ms, [0]);
+});
+
+test("a refused submission's answer time is on its $0 line (#590)", async () => {
+  const dir = roundDir();
+  const options = slowOptions({ submit: [400] }, fakeApi({ submit: [reply(422, { detail: "bad prompt" })] }));
+  await assert.rejects(render([job(dir)], options), /answered 422: bad prompt/);
+  assert.deepEqual(outcomes(dir).map((entry) => [entry.status, entry.usd, entry.submit_ms]), [["refused", 0, [400]]]);
+});
+
 test("a 5xx submission is tried three times, 2 s then 4 s apart (#583)", async () => {
   const api = fakeApi({ submit: [reply(502, {}), reply(502, {}), reply(502, {}), reply(502, {})] });
   const waits = [];
