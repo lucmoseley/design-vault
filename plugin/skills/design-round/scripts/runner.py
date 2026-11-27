@@ -107,22 +107,30 @@ def process_args(pid):
         return []
 
 
+def parent_pid(pid):
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            # comm may hold spaces: https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
+            return int(f.read().rsplit(")", 1)[1].split()[1])
+    except (FileNotFoundError, ProcessLookupError) as exc:  # #464
+        expected(exc, "no parent")
+        return None
+
+
 def browser_pids(pids):
-    return [
+    found = [
         pid
         for pid in pids
         if "--remote-debugging-pipe" in (args := process_args(pid))
         and not any(a.startswith("--type=") for a in args)
     ]
+    # #662
+    return [pid for pid in found if parent_pid(pid) not in found]
 
 
 def driver_pid(browser):
-    try:
-        with open(f"/proc/{browser}/stat") as f:
-            # comm may hold spaces: https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
-            parent = int(f.read().rsplit(")", 1)[1].split()[1])
-    except (FileNotFoundError, ProcessLookupError) as exc:  # #464
-        expected(exc, "no driver")
+    parent = parent_pid(browser)
+    if parent is None:
         return None
     return parent if "run-driver" in process_args(parent) else None
 

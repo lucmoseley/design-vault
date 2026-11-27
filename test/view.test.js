@@ -159,3 +159,35 @@ test("the collection, style and image-prompt copies carry what they name", () =>
   const prompt = V.imagePrompt(DATA.entries[0]);
   assert.ok(prompt.includes("a-recipe") && prompt.includes("Composition: a-composition") && prompt.includes("Use images/a.png as a style reference"));
 });
+
+test("a reference toggles in and out of the selection, which holds five at most (#584)", () => {
+  assert.deepEqual(V.toggleSelected(["a"], "b"), ["a", "b"]);
+  assert.deepEqual(V.toggleSelected(["a", "b"], "a"), ["b"]);
+  const full = ["a", "b", "c", "d", "e"];
+  assert.equal(V.toggleSelected(full, "f"), null);
+  assert.deepEqual(V.toggleSelected(full, "c"), ["a", "b", "d", "e"]);
+});
+
+test("switching project drops the picks and selections the new project does not offer (#584)", () => {
+  const acme = V.keptOnSwitch(view({ pick: { look: "flat", group: "icons", part: "hero" } }), ["a", "d"], "acme");
+  assert.deepEqual(acme.selection, ["a", "d"]);
+  assert.deepEqual(acme.pick, { look: "flat", part: "hero", motion: null, group: null });
+  const manta = V.keptOnSwitch(view({ project: "acme", pick: { part: "pricing" } }), ["a", "d"], "manta");
+  assert.deepEqual(manta.selection, ["a"]);
+  assert.equal(manta.pick.part, null);
+  assert.deepEqual(V.keptOnSwitch(view(), ["gone", "a"], "manta").selection, ["a"]);
+});
+
+test("the page opens on the stored project, else the default, else the first, with the stored selection pruned (#584)", () => {
+  const start = (project, selection) => V.startView(view({ project: undefined }), project, selection);
+  assert.equal(start("acme", []).project, "acme");
+  assert.equal(start(null, []).project, "manta");
+  assert.equal(start("gone", []).project, "manta");
+  const acmeFirst = { acme: DATA.projects.acme, manta: DATA.projects.manta };
+  assert.equal(V.startView(view({ data: { ...DATA, projects: acmeFirst } }), null, []).project, "manta");
+  assert.equal(V.startView(view({ data: { ...DATA, projects: { acme: DATA.projects.acme } } }), null, []).project, "acme");
+  assert.equal(V.startView(view({ data: { ...DATA, projects: {} } }), "gone", []).project, "manta");
+  assert.deepEqual(start("manta", ["gone", "d", "a", "b"]).selection, ["a", "b"]);
+  assert.deepEqual(start("acme", ["a", "b", "c", "x", "y", "d"]).selection, ["a", "b", "c"]);
+  assert.deepEqual(start("manta", "not a list").selection, []);
+});
