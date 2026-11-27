@@ -59,9 +59,9 @@ const COMPOSITE = {
   menubar: ['[role=menuitem], [role=menuitemcheckbox], [role=menuitemradio]', 'ArrowRight'],
 };
 const groups = () => [...document.querySelectorAll(Object.keys(COMPOSITE).map((r) => `[role=${r}]`).join(', '))]
-  .filter((g) => shown(g) && !g.closest('[inert]') && !empty(box(g.getBoundingClientRect())));
+  .filter((g) => onScreen(g) && !g.closest('[inert]'));
 const itemsOf = (g) => [...g.querySelectorAll(COMPOSITE[g.getAttribute('role')][0])]
-  .filter((e) => shown(e) && !disabled(e) && !empty(box(e.getBoundingClientRect())));
+  .filter((e) => onScreen(e) && !disabled(e));
 const arrowOf = (g) => {
   const o = g.getAttribute('aria-orientation');
   return o === 'vertical' ? 'ArrowDown' : o === 'horizontal' ? 'ArrowRight' : COMPOSITE[g.getAttribute('role')][1];
@@ -71,7 +71,7 @@ const current = () => {
   const id = f && f.getAttribute('aria-activedescendant');
   return (id && f.ownerDocument.getElementById(id)) || f;
 };
-const tabbable = (e) => e.tabIndex >= 0 && shown(e) && !disabled(e) && !e.closest('[inert]') && !empty(box(e.getBoundingClientRect()));
+const tabbable = (e) => e.tabIndex >= 0 && onScreen(e) && !disabled(e) && !e.closest('[inert]');
 const rotation = /\b(pause|stop|play|start|resume)\b/i;
 """
 )
@@ -86,7 +86,7 @@ MARK_JS = (
     const out = (e) => empty(meet(visiblePart(e, box(e.getBoundingClientRect())), frame));
     const unseen = new Set([...c.querySelectorAll(TARGET)].filter((e) => tabbable(e) && out(e)));
     const heard = [...c.querySelectorAll('*')].filter((e) => [...e.childNodes].some((n) => n.nodeType === 3 && /\S/.test(n.data)) &&
-      shown(e) && !empty(box(e.getBoundingClientRect())) && out(e) && !e.closest('[inert], [aria-hidden=true]')).map((e) => label(e));
+      onScreen(e) && out(e) && !e.closest('[inert], [aria-hidden=true]')).map((e) => label(e));
     k.carousels.push({ el: c, unseen, heard });
   }
 }
@@ -196,7 +196,7 @@ WALKED_JS = (
   for (const e of document.body.querySelectorAll('*')) {
     const cs = css(e);
     const scrolls = (/auto|scroll/.test(cs.overflowX) && e.scrollWidth > e.clientWidth + 1) || (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 1);
-    if (!scrolls || !shown(e) || e.closest('[inert]') || empty(box(e.getBoundingClientRect()))) continue;
+    if (!scrolls || !onScreen(e) || e.closest('[inert]')) continue;
     if ([...e.querySelectorAll(TARGET)].some(tabbable)) continue;
     const named = (e.getAttribute('aria-labelledby') || '').split(/\s+/).some((id) => id && document.getElementById(id) && /\S/.test(document.getElementById(id).textContent)) ||
       /\S/.test(e.getAttribute('aria-label') || '');
@@ -301,7 +301,7 @@ MENU_JS = (
 (menu) => {
   let items = [...menu.querySelectorAll('[role=menuitem], [role=menuitemcheckbox], [role=menuitemradio]')];
   if (!items.length) items = [...menu.querySelectorAll(TARGET)];
-  items = items.filter((e) => shown(e) && !disabled(e) && !empty(box(e.getBoundingClientRect())));
+  items = items.filter((e) => onScreen(e) && !disabled(e));
   const c = current();
   return { items: items.map(label), at: items.findIndex((e) => e === c || e.contains(c)), focus: c && c !== document.body ? label(c) : 'the page' };
 }

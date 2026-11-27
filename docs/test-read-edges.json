@@ -503,6 +503,10 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/colour-space.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/conditions.test.py": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"

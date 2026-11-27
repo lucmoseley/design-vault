@@ -25,7 +25,7 @@ const ran = (staged) => {
   return p.all ? SUITES : p.suites.filter((s) => !s.why).map((s) => s.suite);
 };
 
-const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py", "python3 test/video-sheet.test.py", "python3 test/check-logo.test.py", "python3 test/check-overlay.test.py", "python3 test/face-profile.test.py"];
+const NO_FLOW = ["python3 test/cutout.test.py", "python3 test/check-render.test.py", "python3 test/check-clip.test.py", "python3 test/palette.test.py", "python3 test/colour-space.test.py", "python3 test/rule-table.test.py", "python3 test/siblings.test.py", "python3 test/child.test.py", "python3 test/runner.test.py", "python3 test/drive-overlay.test.py", "python3 test/conditions.test.py", "python3 test/drive-form.test.py", "python3 test/check-cross.test.py", "python3 test/drive-pointer.test.py", "python3 test/video-sheet.test.py", "python3 test/check-logo.test.py", "python3 test/check-overlay.test.py", "python3 test/face-profile.test.py"];
 
 test("the lander's --shard=k/n runs each suite in exactly one shard, every nth of the list from the kth (#462)", () => {
   const readShard = (k, n) => {

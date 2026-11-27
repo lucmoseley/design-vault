@@ -18,6 +18,9 @@ answering = siblings.load(HERE, "access-answers.py")
 prelude = siblings.load(HERE, "access-page.py")
 keys = siblings.load(HERE, "access-keys.py")
 maths = siblings.load(HERE, "access-pixels.py")
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 face = siblings.load(HERE, "face-profile.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
@@ -548,8 +551,8 @@ def glyph_figure(drawn, glyph, rect):
         return None
     window = drawn[top:bottom, left:right].astype(float)
     near, own = window[ring], window[g]
-    colour = own[int(np.argmax(maths.contrast(own, np.median(near, axis=0))))]
-    ratios = maths.contrast(colour, near)
+    colour = own[int(np.argmax(colour_space.contrast(own, np.median(near, axis=0))))]
+    ratios = colour_space.contrast(colour, near)
     i = int(np.argmin(ratios))
     return Figure(float(ratios[i]), colour, near[i])
 
@@ -570,7 +573,7 @@ def box_figure(drawn, painted, taken, rect):
     window = drawn[top:bottom, left:right].astype(float)
     colour = np.median(window[own], axis=0)
     near = window[ring]
-    ratios = maths.contrast(colour, near)
+    ratios = colour_space.contrast(colour, near)
     i = int(np.argmin(ratios))
     return Figure(float(ratios[i]), colour, near[i])
 
@@ -582,40 +585,7 @@ def state_figure(on, off, rect):
     changed = (np.abs(a - b) > maths.PAINT_NOISE).any(axis=-1)
     if not changed.any():
         return None
-    return float(np.median(maths.contrast(a[changed], b[changed])))
-
-
-def _linear(rgb):
-    c = np.asarray(rgb, dtype=float) / 255
-    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-
-
-def oklch(rgb):
-    r, g, b = _linear(rgb)
-    lms = np.cbrt(
-        np.array(
-            [
-                0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
-                0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
-                0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
-            ]
-        )
-    )
-    lab = (
-        np.array(
-            [
-                [0.2104542553, 0.7936177850, -0.0040720468],
-                [1.9779984951, -2.4285922050, 0.4505937099],
-                [0.0259040371, 0.7827717662, -0.8086757660],
-            ]
-        )
-        @ lms
-    )
-    return (
-        float(lab[0]),
-        float(np.hypot(lab[1], lab[2])),
-        float(np.degrees(np.arctan2(lab[2], lab[1])) % 360),
-    )
+    return float(np.median(colour_space.contrast(a[changed], b[changed])))
 
 
 def fill_drawn(shot, entry):
@@ -634,7 +604,10 @@ def fill_fault(entry, table):
     *rgb, alpha = entry["text"]
     fill = np.array(entry["fill"], dtype=float)
     seen = alpha * np.array(rgb, dtype=float) + (1 - alpha) * fill
-    y_fill, y_text = float(maths.luminance(fill)), float(maths.luminance(seen))
+    y_fill, y_text = (
+        float(colour_space.luminance(fill)),
+        float(colour_space.luminance(seen)),
+    )
     what = "icon" if entry["icon"] else "text"
     if y_fill < table.split and y_text <= y_fill:
         return (
@@ -646,7 +619,7 @@ def fill_fault(entry, table):
             f"is light {what} ({maths.hexed(seen)}) on a fill of luminance {y_fill:.3f} ({maths.hexed(fill)}); "
             f"a fill at {table.split:g} or over takes dark {what}"
         )
-    (lt, ct, ht), (lf, cf, hf) = oklch(seen), oklch(fill)
+    (lt, ct, ht), (lf, cf, hf) = colour_space.oklch(seen), colour_space.oklch(fill)
     turn = abs(ht - hf) % 360
     if ct >= table.hued and cf >= table.hued and min(turn, 360 - turn) <= HUE_SAME:
         big = entry["icon"] or maths.large(entry["size"], entry["weight"], table.floors)
@@ -690,7 +663,7 @@ def chart_faults(chart, ids_shot, ground, table):
         nexts = []
         bare = edge & (owner < 0)
         if bare.sum() >= ADJ_PX:
-            ratios = maths.contrast(colour, ground_px[bare])
+            ratios = colour_space.contrast(colour, ground_px[bare])
             i = int(np.argmin(ratios))
             nexts.append((float(ratios[i]), "the chart's ground", ground_px[bare][i]))
         if filled:
@@ -713,7 +686,9 @@ def chart_faults(chart, ids_shot, ground, table):
                         continue
                     pj = np.array(paint_j, dtype=float)
                     seen = pj[3] * pj[:3] + (1 - pj[3]) * behind
-                    nexts.append((float(maths.contrast(colour, seen)), what, seen))
+                    nexts.append(
+                        (float(colour_space.contrast(colour, seen)), what, seen)
+                    )
         if not nexts:
             continue
         ratio, what, seen = min(nexts, key=lambda t: t[0])

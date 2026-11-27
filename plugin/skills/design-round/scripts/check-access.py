@@ -699,41 +699,34 @@ MOTION_JS = (
 () => {
   const f = window.__flow;
   f.scan();
-  const out = { long: [], ended: [], scripted: [], painted: [] };
+  const out = { long: [], ended: [], scripted: [] };
   const motions = [];
-  const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
   // #368
   for (const [a, rec] of f.seen) {
     const el = a.effect && a.effect.target;
     const running = a.playState === 'running';
-    if (a.timeline !== document.timeline || !el || !(running ? on(el) : rec.ended)) continue;
+    if (a.timeline !== document.timeline || !el || !(running ? onScreen(el) : rec.ended)) continue;
     const span = a.effect.getComputedTiming().activeDuration / Math.abs(a.playbackRate || 1);
     if (!(span > LONG_MS)) continue;
     const name = a.animationName || a.id;
     const motion = { subject: label(el, a.effect.pseudoElement || ''),
       what: `${name ? `"${name}" ` : ''}${span === Infinity ? 'loops forever' : `runs ${(span / 1000).toFixed(1)} s`}` };
     if (!running) { out.ended.push(motion); continue; }
-    motions.push({ stopped: () => !rec.ended && (a.playState !== 'running' || !document.getAnimations().includes(a) || !on(el)),
+    motions.push({ stopped: () => !rec.ended && (a.playState !== 'running' || !document.getAnimations().includes(a) || !onScreen(el)),
       ended: () => rec.ended });
     out.long.push(motion);
   }
   for (const v of document.querySelectorAll('video')) {
-    if (!on(v) || v.controls || (v.paused && !v.autoplay) || (!v.loop && v.duration <= LONG_MS / 1000)) continue;
-    motions.push({ stopped: () => !v.ended && (v.paused || !on(v)), ended: () => v.ended });
+    if (!onScreen(v) || v.controls || (v.paused && !v.autoplay) || (!v.loop && v.duration <= LONG_MS / 1000)) continue;
+    motions.push({ stopped: () => !v.ended && (v.paused || !onScreen(v)), ended: () => v.ended });
     out.long.push({ subject: label(v), what: v.loop ? 'plays on a loop' : 'plays a video longer than 5 s' });
   }
   window.__motions = motions;
-  const animated = document.getAnimations().map((a) => a.effect && a.effect.target).filter(Boolean);
-  for (const [el, log] of f.rewrites) if (el.isConnected && on(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
-  for (const el of document.querySelectorAll('canvas, img, svg')) {
-    if (!on(el) || el.parentElement.closest('svg') || animated.some((t) => t === el || el.contains(t) || t.contains(el))) continue;
-    const r = el.getBoundingClientRect();
-    out.painted.push({ subject: label(el), rect: [r.left + scrollX, r.top + scrollY, r.right + scrollX, r.bottom + scrollY].map(Math.round) });
-  }
+  for (const [el, log] of f.rewrites) if (el.isConnected && onScreen(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
   const name = (el) => [el.getAttribute('aria-label'), el.textContent, el.title, el.value].filter(Boolean).join(' ');
   const PAUSE = /\b(pause|stop|hide|play|resume|freeze|motion|animations?)\b/i;
   window.__pauses = [...document.querySelectorAll('button, input[type=button], input[type=checkbox], [role=button], [role=switch], [role=checkbox], [aria-pressed]')]
-    .filter((el) => on(el) && !disabled(el) && PAUSE.test(name(el))).slice(0, PAUSE_TRIES);
+    .filter((el) => onScreen(el) && !disabled(el) && PAUSE.test(name(el))).slice(0, PAUSE_TRIES);
   document.addEventListener('submit', (e) => e.preventDefault(), true);
   out.pauses = window.__pauses.length;
   return out;
@@ -766,6 +759,20 @@ CLICKABLE_JS = r"""
   frame();
 })
 """
+
+PAINTED_JS = (
+    flow.LABEL_JS
+    + r"""
+() => {
+  const animated = document.getAnimations().map((a) => a.effect && a.effect.target).filter(Boolean);
+  return [...document.querySelectorAll('canvas, img, svg')].flatMap((el) => {
+    if (!onScreen(el) || el.parentElement.closest('svg') || animated.some((t) => t === el || el.contains(t) || t.contains(el))) return [];
+    const r = el.getBoundingClientRect();
+    return [{ subject: label(el), rect: [r.left + scrollX, r.top + scrollY, r.right + scrollX, r.bottom + scrollY].map(Math.round) }];
+  });
+}
+"""
+)
 
 STOPPED_JS = "() => window.__motions.flatMap((m, i) => (m.stopped() ? [i] : []))"
 ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
@@ -803,7 +810,7 @@ TIMERS_JS = r"""
   });
   watch.observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   addEventListener('scroll', (e) => note(e.target), true);
-  // The viewport holds its size, so a resize the browser fires is a full-page screenshot's, and what its handlers change is unwatched.
+  // #628, #647
   const unwatched = new WeakSet(), quiet = new WeakMap();
   const quieted = (fn) => {
     if (!fn || (typeof fn !== 'function' && typeof fn.handleEvent !== 'function')) return fn;
@@ -886,12 +893,11 @@ ROTATION_JS = (
     + CHANGED_JS
     + r"""
 ([selectors, since, until]) => {
-  const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
   const carousels = selectors.flatMap((s) => [...document.querySelectorAll(s)]);
   const rest = [...changedSince(since, until)].filter((el) => !carousels.some((c) => c.contains(el))).map((el) => el.parentElement || el);
   const roots = window.__rotations = [];
   for (const root of rest)
-    if (on(root) && !rest.some((o) => o !== root && o.contains(root)) && !roots.includes(root)) roots.push(root);
+    if (onScreen(root) && !rest.some((o) => o !== root && o.contains(root)) && !roots.includes(root)) roots.push(root);
   return roots.map((r) => label(r));
 }
 """
@@ -911,7 +917,7 @@ ROTATED_JS = (
 CAROUSEL_JS = (
     flow.LABEL_JS
     + r"""
-(e) => ({ subject: label(e), on: shown(e) && !empty(box(e.getBoundingClientRect())) })
+(e) => ({ subject: label(e), on: onScreen(e) })
 """
 )
 
@@ -1178,32 +1184,47 @@ def motion_answers(context, url, carousels, *, mouse):
     )
 
 
-def pause_answer(context, url, carousels, spans):
-    from playwright.sync_api import Error as PlaywrightError
-
+def loaded_page(context, url, *scripts):
     page = context.new_page()
-    page.add_init_script(flow.COLLECTOR_JS)
-    page.add_init_script(TIMERS_JS)
+    for script in scripts:
+        page.add_init_script(script)
     page.goto(url, wait_until="load")
     page.evaluate("() => document.fonts.ready")
+    return page
+
+
+def drawn_unmeasured(context, url):
+    page = loaded_page(context, url)
     before = page.screenshot(full_page=True)
     page.wait_for_timeout(WATCH_MS)
     after = page.screenshot(full_page=True)
+    painted = page.evaluate(prelude.page_js(PAINTED_JS))
+    page.close()
+    a, b = (decoded(png).astype(int) for png in (before, after))
+    drawn = []
+    for p in painted:
+        x, y = maths.pixels(a, p["rect"]), maths.pixels(b, p["rect"])
+        if len(x) and len(x) == len(y) and np.abs(x - y).max() > maths.PAINT_NOISE:
+            drawn.append(
+                f"{p['subject']} changes as it is drawn, which this check cannot time"
+            )
+    return drawn
+
+
+def pause_answer(context, url, carousels, spans):
+    from playwright.sync_api import Error as PlaywrightError
+
+    unmeasured = drawn_unmeasured(context, url)  # #646
+    page = loaded_page(context, url, flow.COLLECTOR_JS, TIMERS_JS)
+    page.wait_for_timeout(WATCH_MS)
     got = page.evaluate(prelude.page_js(MOTION_JS))
-    unmeasured = [
+    unmeasured += [
         f"{m['subject']} {m['what']} from the page's load and ended before a control could be tried on it"
         for m in got["ended"]
     ] + [
         f"{s} is moved frame by frame by a script, which this check cannot time"
         for s in got["scripted"]
     ]
-    a, b = (decoded(png).astype(int) for png in (before, after))
-    for painted in got["painted"]:
-        x, y = maths.pixels(a, painted["rect"]), maths.pixels(b, painted["rect"])
-        if len(x) and len(x) == len(y) and np.abs(x - y).max() > maths.PAINT_NOISE:
-            unmeasured.append(
-                f"{painted['subject']} changes as it is drawn, which this check cannot time"
-            )
     declared = []
     for n, el in enumerate(
         el for sel in carousels for el in page.query_selector_all(sel)
