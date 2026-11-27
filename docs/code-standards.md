@@ -46,7 +46,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/drive-overlay.py` | library: finds a page's menus, dialogs and popovers and opens and closes them by click, keyboard and Escape, for the family scripts (#303) |
 | `plugin/skills/design-round/scripts/drive-form.py` | library: fills a form with valid or planted invalid values, submits it, and reads the page once it settles, for the family scripts (#302) |
 | `plugin/skills/design-round/scripts/drive-pointer.py` | library: hovers, presses, clicks, drags and wheel-scrolls a page with the mouse and returns once it settles, for the family scripts (#301) |
-| `plugin/skills/design-round/scripts/fall-motion.js` | library: the fall and settle maths fall.js prints, split out so its tests call what the program calls, its jolt, jump and still thresholds read from `flow-pace.json` (#187, #556) |
+| `plugin/skills/design-round/scripts/fall-motion.js` | library: the fall and settle maths fall.js prints, split out so its tests call what the program calls (#187) |
 | `plugin/skills/design-round/scripts/higgsfield-client.js` | library, risk path: higgsfield.js's command line, settings and render client, split out so its tests call what the program calls (#187) |
 | `plugin/skills/design-round/scripts/higgsfield-api.js` | library, risk path: the one request that carries the Higgsfield key, refused off api.higgsfield.ai, and its retry, for higgsfield-client.js (#588) |
 | `plugin/skills/design-round/scripts/gate-form.js` | library: the gate question form gate.js reads and checks, and the asset vocabulary corrections-log.js and critic-examples.js share with it (#187) |
