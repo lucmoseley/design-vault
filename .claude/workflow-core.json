@@ -4,7 +4,7 @@
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
 	"modules": ["comments"],
-	"walkedTo": "v3.2.2",
+	"walkedTo": "v3.2.3",
 	"refillPanel": true,
 	"admissionGate": true,
 	"commands": {
@@ -334,6 +334,31 @@
 			"tag": "v3.0.0",
 			"type": "choice",
 			"text": "To run CI on GitHub, add `\"ci\": {\"runner\": \"ubuntu-slim\"}` to `.claude/workflow-core.json` (`\"ubuntu-24.04-arm\"` where the job needs more than one core, with `\"timeoutMinutes\"` raised where it runs past 15 minutes), re-run the upgrade, and commit the workflow it writes. A check of your own that the job should run goes in `commands.check`. Where `test` runs only the tests touched since `main`, as the plugin's `run-vitest.js` does, declare the whole suite as `full_test` first: on a clean checkout a narrowing `test` selects nothing."
+		},
+		{
+			"tag": "v3.2.3",
+			"type": "act",
+			"text": "Where a refill loop runs an older release across this bump, it reads the new control file as damaged and stops itself; run `node \"$WFC_PLUGIN_ROOT\"/scripts/refill-loop.js start`."
+		},
+		{
+			"tag": "v3.2.3",
+			"type": "act",
+			"text": "Close a refill panel started before the loop restarted on this release, which crashes on the new status output, and reopen it with `node \"$WFC_PLUGIN_ROOT\"/scripts/refill-panel-open.js <pid>`, the agents view's pid from `pgrep -a claude`."
+		},
+		{
+			"tag": "v3.2.3",
+			"type": "notice",
+			"text": "Rolling a checkout back past this release leaves a control file the older loop reads as damaged; run `node \"$WFC_PLUGIN_ROOT\"/scripts/refill-loop.js start` there."
+		},
+		{
+			"tag": "v3.2.3",
+			"type": "notice",
+			"text": "The stricter gate checks bind only a new or rewritten `Gated on:` line; an existing one is judged as before. A refusal names the `met:`/`unmet:` print or the fetch the check lacks."
+		},
+		{
+			"tag": "v3.2.3",
+			"type": "notice",
+			"text": "In fantasy-books, lucmoseley/workflow-core-tracker#5709's `\"commentMarkers\": [\"@encodes\"]` commits once this bump lands."
 		}
 	],
 	"pythonRoutes": {
