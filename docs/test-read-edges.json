@@ -102,7 +102,8 @@
 			"test/round-log.test.js",
 			"test/rule-store-pointers.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"index.html": [
 			"test/calibration-packet.test.js"
@@ -139,7 +140,8 @@
 			"test/ledger-check.test.js",
 			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"plugin/review-page/index.html": [
 			"test/review-page.test.js"
@@ -382,7 +384,8 @@
 			"test/ledger-check.test.js",
 			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/answers-file.test.py": [
 			"test/ledger-check.test.js",
@@ -595,7 +598,8 @@
 			"test/ledger-check.test.js",
 			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/drive-form.test.py": [
 			"test/ledger-check.test.js",
@@ -2575,7 +2579,8 @@
 			"test/npm-preflight.test.js",
 			"test/run-lanes.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/run-lanes.test.js": [
 			"test/ledger-check.test.js",
@@ -2601,7 +2606,8 @@
 			"test/ledger-check.test.js",
 			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/select-suites.test.js": [
 			"test/ledger-check.test.js",
@@ -2617,6 +2623,11 @@
 			"test/select-suites.test.js"
 		],
 		"test/suite-budget.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/suite-needs.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
