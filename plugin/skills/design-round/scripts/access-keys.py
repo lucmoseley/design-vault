@@ -650,15 +650,20 @@ STILL_JS = (
 WATCH_LIMIT = 200
 
 
-def _shot(page, handle):
+def _shot(page, handle, in_window):
     import io
 
     import numpy as np
     from PIL import Image
 
-    # #647
-    handle.scroll_into_view_if_needed()
-    shot = page.screenshot(clip=handle.bounding_box(), animations="allow")
+    if in_window:  # #647
+        handle.scroll_into_view_if_needed()
+        box = handle.bounding_box()
+        if not box or box["width"] < 1 or box["height"] < 1:
+            raise ValueError("the carousel has no box in the window to shoot")
+        shot = page.screenshot(clip=box, animations="allow")
+    else:
+        shot = handle.screenshot(animations="allow")
     return np.asarray(Image.open(io.BytesIO(shot)).convert("RGB")).astype(int)
 
 
@@ -666,14 +671,14 @@ def _differs(a, b):
     return a.shape != b.shape or bool((abs(a - b) > ROTATE_NOISE).any())
 
 
-def change(page, handle, within_ms):
+def change(page, handle, within_ms, in_window=False):
     handle.evaluate(WATCH_JS, WATCH_LIMIT)
-    start, began = _shot(page, handle), time.monotonic()
+    start, began = _shot(page, handle, in_window), time.monotonic()
     try:
         while (waited := (time.monotonic() - began) * 1000) < within_ms:
             page.wait_for_timeout(ROTATE_POLL_MS)
             if handle.evaluate("(e) => e.__watch.moved") or _differs(
-                start, _shot(page, handle)
+                start, _shot(page, handle, in_window)
             ):
                 return waited + ROTATE_POLL_MS
         return None

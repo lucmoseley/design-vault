@@ -199,10 +199,10 @@ conditions.py does, and measures each question at both:
   Tab stop, and no text outside inert or aria-hidden, lies outside the
   carousel's box at load, as on a slide out of view, and its rotation
   control, a button named pause, stop, play, start or resume, is its first
-  stop. On a fresh load, a carousel whose pixels in the window change within
-  ROTATE_MS, timed from one slide to the next, must hold still for that span
-  and STILL_SLACK_MS more while focus is in it and while the pointer is over
-  it, and focus must stay on its previous and next buttons when Enter presses
+  stop. On a fresh load, a carousel whose pixels change within ROTATE_MS,
+  timed from one slide to the next, must hold still for that span and
+  STILL_SLACK_MS more while focus is in it and while the pointer is over it,
+  and focus must stay on its previous and next buttons when Enter presses
   them. One that never holds still between slides cannot be measured. With no
   carousel declared, each row of page dots vault.controls-on-photo finds
   cannot be measured, and its reason says no carousel was declared;
@@ -1212,7 +1212,7 @@ def pause_answer(context, url, carousels, spans):
         since = prelude.LONG_MS  # #628
         for c in declared:
             start = page.evaluate("() => performance.now()")
-            if keys.change(page, c[1], keys.ROTATE_MS) is None:
+            if keys.change(page, c[1], keys.ROTATE_MS, in_window=True) is None:
                 stilled.append((c[0], start, page.evaluate("() => performance.now()")))
             else:
                 turning.append(c)
@@ -1255,7 +1255,10 @@ def pause_answer(context, url, carousels, spans):
         )
         stopped.update(page.evaluate(STOPPED_JS))
         for k, (_, el, span) in enumerate(turning):
-            if k not in held and keys.change(page, el, hold_ms(span)) is None:
+            if (
+                k not in held
+                and keys.change(page, el, hold_ms(span), in_window=True) is None
+            ):
                 held.add(k)
         if len(held_others) < len(others):
             since = page.evaluate("() => performance.now()")
