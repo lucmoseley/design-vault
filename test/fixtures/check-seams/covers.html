@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- check-seams.test.py: rows of two fills 2 CSS px apart, each gap spanned by a cover painted over both. The
+     cover's paint decides whether the ground shows: opaque in row 0 and the last three rows, letting the ground
+     through in every other row. check-curves.js names each cover; check-seams.py measures each gap through it. -->
+<style>body { margin: 0; background: #fff; } svg { display: block; } path.sheet { opacity: .3; }</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="1200">
+  <defs>
+    <linearGradient id="fade"><stop offset="0" stop-color="#0c0"/><stop offset="1" stop-color="#0c0" stop-opacity=".3"/></linearGradient>
+    <linearGradient id="lent" href="#fade"/>
+    <linearGradient id="empty"/>
+    <linearGradient id="inherits" stop-color="transparent"><stop stop-color="inherit"/></linearGradient>
+    <clipPath id="corner"><rect width="1" height="1"/></clipPath>
+    <mask id="cornerMask"><rect width="1" height="1" fill="#fff"/></mask>
+    <clipPath id="wide"><rect width="100" height="1200"/></clipPath>
+    <mask id="wideMask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="1200"><rect width="100" height="1200" fill="#fff"/></mask>
+    <pattern id="solidPattern" patternUnits="userSpaceOnUse" width="100" height="1200"><rect width="100" height="1200" fill="#0c0"/></pattern>
+  </defs>
+  <!-- row 0: opaque -->
+  <path id="a0" fill="#c00" d="M10 10 H49 V40 H10 Z"/>
+  <path id="b0" fill="#c00" d="M51 10 H90 V40 H51 Z"/>
+  <path id="s0" fill="#0c0" d="M46 6 H54 V44 H46 Z"/>
+  <!-- row 1: uppercase OPACITY in an HTML page, the first of two duplicates -->
+  <path id="a1" fill="#c00" d="M10 60 H49 V90 H10 Z"/>
+  <path id="b1" fill="#c00" d="M51 60 H90 V90 H51 Z"/>
+  <path id="s1" fill="#0c0" OPACITY=".3" opacity="1" d="M46 56 H54 V94 H46 Z"/>
+  <!-- row 2: a stylesheet opacity -->
+  <path id="a2" fill="#c00" d="M10 110 H49 V140 H10 Z"/>
+  <path id="b2" fill="#c00" d="M51 110 H90 V140 H51 Z"/>
+  <path id="s2" class="sheet" fill="#0c0" d="M46 106 H54 V144 H46 Z"/>
+  <!-- row 3: an opacity through a custom property -->
+  <path id="a3" fill="#c00" d="M10 160 H49 V190 H10 Z"/>
+  <path id="b3" fill="#c00" d="M51 160 H90 V190 H51 Z"/>
+  <path id="s3" fill="#0c0" style="--o: .3; opacity: var(--o)" d="M46 156 H54 V194 H46 Z"/>
+  <!-- row 4: a #rgba fill -->
+  <path id="a4" fill="#c00" d="M10 210 H49 V240 H10 Z"/>
+  <path id="b4" fill="#c00" d="M51 210 H90 V240 H51 Z"/>
+  <path id="s4" fill="#0c08" d="M46 206 H54 V244 H46 Z"/>
+  <!-- row 5: an rgba() fill -->
+  <path id="a5" fill="#c00" d="M10 260 H49 V290 H10 Z"/>
+  <path id="b5" fill="#c00" d="M51 260 H90 V290 H51 Z"/>
+  <path id="s5" fill="rgba(0, 204, 0, 0.5)" d="M46 256 H54 V294 H46 Z"/>
+  <!-- row 6: a transparent fill -->
+  <path id="a6" fill="#c00" d="M10 310 H49 V340 H10 Z"/>
+  <path id="b6" fill="#c00" d="M51 310 H90 V340 H51 Z"/>
+  <path id="s6" fill="transparent" d="M46 306 H54 V344 H46 Z"/>
+  <!-- row 7: currentColor of an alpha colour -->
+  <path id="a7" fill="#c00" d="M10 360 H49 V390 H10 Z"/>
+  <path id="b7" fill="#c00" d="M51 360 H90 V390 H51 Z"/>
+  <g color="rgba(0,0,0,.5)"><path id="s7" fill="currentColor" d="M46 356 H54 V394 H46 Z"/></g>
+  <!-- row 8: fill-opacity in style -->
+  <path id="a8" fill="#c00" d="M10 410 H49 V440 H10 Z"/>
+  <path id="b8" fill="#c00" d="M51 410 H90 V440 H51 Z"/>
+  <path id="s8" fill="#0c0" style="fill-opacity: 50%" d="M46 406 H54 V444 H46 Z"/>
+  <!-- row 9: a group opacity -->
+  <path id="a9" fill="#c00" d="M10 460 H49 V490 H10 Z"/>
+  <path id="b9" fill="#c00" d="M51 460 H90 V490 H51 Z"/>
+  <g opacity=".9"><path id="s9" fill="#0c0" d="M46 456 H54 V494 H46 Z"/></g>
+  <!-- row 10: a gradient with a thin stop -->
+  <path id="a10" fill="#c00" d="M10 510 H49 V540 H10 Z"/>
+  <path id="b10" fill="#c00" d="M51 510 H90 V540 H51 Z"/>
+  <path id="s10" fill="url(#fade)" d="M46 506 H54 V544 H46 Z"/>
+  <!-- row 11: a gradient lent a thin stop by href -->
+  <path id="a11" fill="#c00" d="M10 560 H49 V590 H10 Z"/>
+  <path id="b11" fill="#c00" d="M51 560 H90 V590 H51 Z"/>
+  <path id="s11" fill="url(#lent)" d="M46 556 H54 V594 H46 Z"/>
+  <!-- row 12: a gradient with no stops -->
+  <path id="a12" fill="#c00" d="M10 610 H49 V640 H10 Z"/>
+  <path id="b12" fill="#c00" d="M51 610 H90 V640 H51 Z"/>
+  <path id="s12" fill="url(#empty)" d="M46 606 H54 V644 H46 Z"/>
+  <!-- row 13: a blend mode -->
+  <path id="a13" fill="#c00" d="M10 660 H49 V690 H10 Z"/>
+  <path id="b13" fill="#c00" d="M51 660 H90 V690 H51 Z"/>
+  <path id="s13" fill="#0c0" style="mix-blend-mode: multiply" d="M46 656 H54 V694 H46 Z"/>
+  <!-- row 14: a clip-path to a corner -->
+  <path id="a14" fill="#c00" d="M10 710 H49 V740 H10 Z"/>
+  <path id="b14" fill="#c00" d="M51 710 H90 V740 H51 Z"/>
+  <path id="s14" fill="#0c0" clip-path="url(#corner)" d="M46 706 H54 V744 H46 Z"/>
+  <!-- row 15: a mask to a corner -->
+  <path id="a15" fill="#c00" d="M10 760 H49 V790 H10 Z"/>
+  <path id="b15" fill="#c00" d="M51 760 H90 V790 H51 Z"/>
+  <g mask="url(#cornerMask)"><path id="s15" fill="#0c0" d="M46 756 H54 V794 H46 Z"/></g>
+  <!-- row 16: a -webkit-filter -->
+  <path id="a16" fill="#c00" d="M10 810 H49 V840 H10 Z"/>
+  <path id="b16" fill="#c00" d="M51 810 H90 V840 H51 Z"/>
+  <path id="s16" fill="#0c0" style="-webkit-filter: opacity(.2)" d="M46 806 H54 V844 H46 Z"/>
+  <!-- row 17: a -webkit-mask-image -->
+  <path id="a17" fill="#c00" d="M10 860 H49 V890 H10 Z"/>
+  <path id="b17" fill="#c00" d="M51 860 H90 V890 H51 Z"/>
+  <path id="s17" fill="#0c0" style="-webkit-mask-image: linear-gradient(transparent, transparent)" d="M46 856 H54 V894 H46 Z"/>
+  <!-- row 18: an !important opacity before a plain one -->
+  <path id="a18" fill="#c00" d="M10 910 H49 V940 H10 Z"/>
+  <path id="b18" fill="#c00" d="M51 910 H90 V940 H51 Z"/>
+  <path id="s18" fill="#0c0" style="opacity: .3 !important; opacity: 1" d="M46 906 H54 V944 H46 Z"/>
+  <!-- row 19: fill unset under a thin fill -->
+  <path id="a19" fill="#c00" d="M10 960 H49 V990 H10 Z"/>
+  <path id="b19" fill="#c00" d="M51 960 H90 V990 H51 Z"/>
+  <g style="fill: rgba(0,204,0,.3)"><path id="s19" style="fill: unset" d="M46 956 H54 V994 H46 Z"/></g>
+  <!-- row 20: a stop-color inherited from a transparent gradient -->
+  <path id="a20" fill="#c00" d="M10 1010 H49 V1040 H10 Z"/>
+  <path id="b20" fill="#c00" d="M51 1010 H90 V1040 H51 Z"/>
+  <path id="s20" fill="url(#inherits)" d="M46 1006 H54 V1044 H46 Z"/>
+  <!-- row 21: a clip-path wider than it -->
+  <path id="a21" fill="#c00" d="M10 1060 H49 V1090 H10 Z"/>
+  <path id="b21" fill="#c00" d="M51 1060 H90 V1090 H51 Z"/>
+  <path id="s21" fill="#0c0" clip-path="url(#wide)" d="M46 1056 H54 V1094 H46 Z"/>
+  <!-- row 22: a mask wider than it -->
+  <path id="a22" fill="#c00" d="M10 1110 H49 V1140 H10 Z"/>
+  <path id="b22" fill="#c00" d="M51 1110 H90 V1140 H51 Z"/>
+  <path id="s22" fill="#0c0" mask="url(#wideMask)" d="M46 1106 H54 V1144 H46 Z"/>
+  <!-- row 23: an opaque pattern -->
+  <path id="a23" fill="#c00" d="M10 1160 H49 V1190 H10 Z"/>
+  <path id="b23" fill="#c00" d="M51 1160 H90 V1190 H51 Z"/>
+  <path id="s23" fill="url(#solidPattern)" d="M46 1156 H54 V1194 H46 Z"/>
+</svg>
+</body>
+</html>
