@@ -28,7 +28,7 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
   - WCAG 2.2 SC 1.4.8 (AAA): "Width is no more than 80 characters or glyphs (40 if CJK)" (W3C Understanding 1.4.8, read). 80 is a ceiling, not a target.
   - Reading studies: Dyson and Haselgrove 2001 (*IJHCS* 54:585–612) report 55 characters a line as best for speed and comprehension together; Shaikh and Chaparro found 95 characters a line read fastest, but readers prefer shorter lines (both read second-hand through search summaries, not the papers).
   - So: 70–80 is acceptable for a single wide column of prose, at the top of the range. The middle of the expert range is about 55–66. 80 is the accessibility ceiling. Narrow columns (cards, multi-column, phone) run shorter (Butterick: newspaper columns "have to be very narrow").
-- Finding on a house value: the lens fails a line at 76–90 characters. Butterick, the source the override names, allows up to 90; WCAG allows 80. The 75 cap now cites Baymard and WCAG 1.4.8 (`plugin/skills/design-round/references/impeccable.md`), a house error #208 ruled fixed.
+- Finding on a house value: the lens fails a line at 76–90 characters. Butterick, the source the override names, allows up to 90; WCAG allows 80. The 75 cap cites Baymard and WCAG 1.4.8 (`plugin/skills/design-round/references/impeccable.md`): a house error (#208), fixed.
 - Era: **timeless** (perception of line return).
 
 **N1b. Font size**
@@ -103,7 +103,7 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
 - House:
   - `plugin/skills/design-critique/references/house-principles.md:16` (dependency order, step 2 Role: "prominence by task priority"); `:73` (carrier A: "The primary action holds the view's strongest colour"; reserved: "The primary action's colour"); `:76` (carrier T: "Semantic colour with text or an icon … one colour per status everywhere"; reserved: "The semantic colours, and none near the action colour"); `:95` (function walk Q6: rank by visual weight against task priority, one primary action).
   - Gate: `gate.md` `vault.primary-action` (look question, from walk Q6).
-  - Research: `docs/research/function-fit.md:110-125` (B3.1, B3.2: Apple HIG Buttons, Material 3 emphasis ladder, GOV.UK Button, NN/g 2021; condition (2): "Given a destructive most-likely action, do not give it the primary style"); `principle-interactions.md:63` (P4: "the CTA keeps the strongest colour, rather than the brand mark"), `:166` (C7: status takes its semantic token).
+  - Research: `docs/research/function-fit.md:110-125` (B3.1, B3.2: Apple HIG Buttons, Material 3 emphasis ladder, GOV.UK Button, NN/g 2021; condition (2): "Given a destructive most-likely action, do not give it the primary style"); `principle-interactions.md:63` (P4: "the CTA keeps the strongest colour, rather than the brand mark"), `:164` (C7: status takes its semantic token).
   - House DNA `never` line 13 (`data/gallery.json:25`): "several colours at equal weight, none dominant".
 - Sourced: yes (primary). Conditioned: yes (task priority is the visitor's; destructive actions; count per view; patterned grounds). Reaches the critic: yes (walk and gate).
 - Verdict: **covered**. One part is **partly**: no house line says what a destructive action looks like at each step (the list view, then the confirmation step).
@@ -288,7 +288,7 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
   - Override `impeccable.md:75` (an eyebrow that names the section, place or category is no finding; GOV.UK caption above a heading).
   - House DNA `never` line 5 (`data/gallery.json:17`: "a tracked-out all-caps eyebrow above every heading") and line 7 (`:19`: "all caps for labels") as AI-look tells.
   - impeccable detector "all-caps body text".
-- Verdict: **partly**. The typographic rule (short strings only, tracked) is researched but stays in `docs/research/`. Two house sources pull against each other with no clash line: research B2.3 accepts caps for labels; DNA line 7 calls "all caps for labels" an AI tell; #208 rules the clash a house error to fix. The DNA is a dated default and a brief can earn it back; no reference says how a critic weighs a caps label.
+- Verdict: **partly**. The typographic rule (short strings only, tracked) is researched but stays in `docs/research/`. Two house sources pull against each other with no clash line: research B2.3 accepts caps for labels; DNA line 7 calls "all caps for labels" an AI tell: a house error (#208), fixed. The DNA is a dated default and a brief can earn it back; no reference says how a critic weighs a caps label.
 - Is the note sound? **Yes, with a correction to the common belief.**
   - Convention: caps for short strings, with added tracking (Butterick, via #123 B2.3; strong secondary).
   - Evidence on reading cost is weaker than the convention suggests: Arditi and Cho 2007, *Vision Research* 47(19):2499–2505, found uppercase read *faster* than mixed case near the acuity limit, and the advantage disappeared at larger sizes; they argue uppercase helps low-vision readers (abstract via PMC2016788, read through search, 15 Oct 2026). Older studies (Tinker, 1950s–60s) report slower reading for long all-caps text (not read). So "caps cost reading speed in long text" is a convention with old evidence; "caps are illegible" is not supported.
@@ -324,7 +324,7 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 ### N19. Across all notes: the best answer changes with other factors (palette, crowding, warm or cool text, the typeface's own traits)
 
 **N19a. Does the house's rule form record context?**
-- House: every house reference writes each principle as Rule, When, Trade-off, Clash, Era, Source (`house-principles.md`, `surface-styling.md`, `text-presentation.md`, `brand-palette.md`, `first-visit-trust.md`); the dependency order names what each step reads (`house-principles.md:11-18`: ground, neighbouring treatments, device, density, zone energy); `surface-styling.md:91-106` and `text-presentation.md:26-27` list "given X, do Z" interactions; research `docs/research/principle-interactions.md` §2 maps 42 interactions and §3 resolves 49 clashes. Sibling ticket #206 audits whether these conditions are complete.
+- House: every house reference writes each principle as Rule, When, Trade-off, Clash, Era, Source (`house-principles.md`, `surface-styling.md`, `text-presentation.md`, `brand-palette.md`, `first-visit-trust.md`); the dependency order names what each step reads (`house-principles.md:11-18`: ground, neighbouring treatments, device, density, zone energy); `surface-styling.md:91-106` and `text-presentation.md:28-29` list "given X, do Z" interactions; research `docs/research/principle-interactions.md` §2 maps 42 interactions and §3 resolves 49 clashes. Sibling ticket #206 audits whether these conditions are complete.
 - Verdict: **covered** as a form; whether each rule's conditions are complete is #206's question.
 
 **N19b. Rules that characterise a typeface and their knock-on effects**
@@ -368,7 +368,7 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 | N6 | Dividers in sections and cards | covered | Ref `surface-styling.md:55-62, 93-96` | Sound; add NN/g false-floor condition | T |
 | N7 | How busy a page looks | partly | Res #104 W4; Ref brand-layer line; imp `layout.md` | Sound (Tuch 2012; Reinecke 2013) | T / E |
 | N8 | Page container borders | partly, by method only | Ref border roles; DNA line 3 | Narrow; no source; fold into N2 or N5 | E |
-| N9 | Cool, neutral, warm greys | covered (hue) / partly (temperature as feel) | Ref `text-presentation.md:11-16`; `brand-palette.md:54`; Res B1.1 | Sound (Ou et al. 2004; design systems). Tension: DNA line 5 vs tint rule, a house error #208 rules fixed | E / T |
+| N9 | Cool, neutral, warm greys | covered (hue) / partly (temperature as feel) | Ref `text-presentation.md:11-16`; `brand-palette.md:54`; Res B1.1 | Sound (Ou et al. 2004; design systems). Tension: DNA line 5 vs tint rule: a house error (#208), fixed | E / T |
 | N10 | How many fonts | partly | imp `typeset.md:42,57`, `operate.md:13` | Sound (Butterick: a second font usually, a third rarely) | T |
 | N11 | Border opacity | partly | Ref `surface-styling.md:11,39`; Res B1.4 | Sound; alpha makes contrast ground-dependent | E |
 | N12 | Alignment between sections | partly | Ref Gestalt lens `SKILL.md:52`; imp `polish.md:59` | Sound (good continuation, Wagemans 2012) | T |

@@ -2,7 +2,7 @@
 
 Question: Where the design principles from map #96 depend on context or pull against each other, how is each resolved, so that the house rules work as one system?
 
-Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/gallery.json`). Manta = lucmoseley/mantahostels (read-only here; out of write scope). Rule ids: B1-B53 and X1-X9 are Manta rules, G and R are vault rules, all from the census `docs/research/design-rules-census.md` §1-§4. K1-K27 are from `docs/research/manta-element-coverage.md` §4 (#118). C1-C10, B7.x and D1-D3 are from `docs/research/function-fit.md` (#127). F5 is `docs/research/adopt-or-build.md:139`-`:158` (#119). "#117 E<n>" is `docs/research/surface-styling.md` Part E (`:315`-`:331`). "#123 D<n>" is `docs/research/text-presentation.md` Part D (`:289`-`:301`). Era: T = timeless; E = era-bound, current as of the date given.
+Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/gallery.json`). Manta = lucmoseley/mantahostels (read-only here; out of write scope). Rule ids: B1-B53 and X1-X9 are Manta rules, G and R are vault rules, all from the census `docs/research/design-rules-census.md` §1-§4. K1-K27 are from `docs/research/manta-element-coverage.md` §4 (#118). C1-C10, B7.x and D1-D3 are from `docs/research/function-fit.md` (#127). F5 is `docs/research/adopt-or-build.md:139`-`:158` (#119). "#117 E<n>" is `docs/research/surface-styling.md` Part E (`:315`-`:331`). "#123 D<n>" is `docs/research/text-presentation.md` Part D (`:286`-`:298`). Era: T = timeless; E = era-bound, current as of the date given.
 
 ## Summary
 
