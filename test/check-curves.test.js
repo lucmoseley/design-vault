@@ -578,7 +578,7 @@ test("a saved page's shapes are read past its script and style text, its void ta
   assert.ok(r.stdout.includes(`: separate: `) && r.stdout.includes(` --contact 'a.2-path2.4=${selector}@50.5,`), r.stdout);
 });
 
-const TREE_PAGES = (svg) => [
+const buildTreePages = (svg) => [
   ...JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "tree-pages.json"), "utf8")).map(({ body, chain }) => [`<!doctype html>${body.replace("{svg}", svg)}`, chain]),
   [`<!doctype html><b>1<p>2</b>${svg}</p>`, "p:nth-of-type(1)>"],
   [`<!doctype html><template>${svg}</template><i>${svg}</i>`, "i:nth-of-type(1)>"],
@@ -603,7 +603,7 @@ test("a page's selectors count from the tree the HTML parser builds, with the <h
       `:root>body:nth-of-type(1)>svg:nth-of-type(1)>foreignObject:nth-of-type(1)>${shape}`,
     ],
     [`<html xmlns="http://www.w3.org/1999/xhtml">${svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"')}</html>`, `:root>${shape}`, "xht"],
-    ...TREE_PAGES(svg).map(([page, chain]) => [page, `:root>body:nth-of-type(1)>${chain}${shape}`]),
+    ...buildTreePages(svg).map(([page, chain]) => [page, `:root>body:nth-of-type(1)>${chain}${shape}`]),
     [
       `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${A()}<a xmlns="http://www.w3.org/1999/xhtml"></a><a><path fill="#00c" d="M51 10 H90 V50 H51 Z"/></a></svg>`,
       ":root>a:nth-of-type(1)>path:nth-of-type(1)",
@@ -659,6 +659,35 @@ test("#668: with no parse5 to load, an HTML file exits 2 naming the install, and
     assert.match(svg.stdout, /shared edge, no underlap/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a parse5 this Node cannot require() exits 2 naming the Node floor, not an install", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-curves-esm-"));
+  try {
+    const copy = path.join(dir, "check-curves.js");
+    fs.copyFileSync(SCRIPT, copy);
+    fs.mkdirSync(path.join(dir, "node_modules", "parse5"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "node_modules", "parse5", "index.js"), 'throw Object.assign(new Error("require() of ES Module"), { code: "ERR_REQUIRE_ESM" });');
+    fs.writeFileSync(path.join(dir, "page.html"), `<!doctype html><svg width="100" height="100">${A()}${B()}</svg>`);
+    const r = runInProcess(copy, ["--contacts", path.join(dir, "page.html")]);
+    assert.equal(r.status, 2, r.stderr);
+    assert.match(r.stderr, /Node 20\.19 or later/);
+    assert.doesNotMatch(r.stderr, /claude plugin update/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("only an SVG-namespace element draws: an XML <PATH> and an HTML <path> under <foreignObject> are not shapes", () => {
+  const xml = path.join(scratch, "upper-case.svg");
+  fs.writeFileSync(xml, `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${A()}${B().replace(/<path/g, "<PATH")}</svg>`);
+  const html = path.join(scratch, "foreign.html");
+  fs.writeFileSync(html, `<!doctype html><svg width="100" height="100">${A()}<foreignObject width="100" height="100"><div>${B()}</div></foreignObject></svg>`);
+  for (const file of [xml, html]) {
+    const r = runInProcess(SCRIPT, ["--contacts", file]);
+    assert.equal(r.status, 0, r.stdout);
+    assert.match(r.stdout, /^no two shapes come within 2 px/);
   }
 });
 

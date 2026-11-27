@@ -18,7 +18,7 @@ python3 test/cutout.test.py	images
 python3 test/check-render.test.py	images
 python3 test/check-logo.test.py	images chromium
 python3 test/check-clip.test.py
-python3 test/check-flow.test.py	chromium npm
+python3 test/check-flow.test.py	chromium
 python3 test/runner.test.py	chromium
 python3 test/planted-faults-runner.test.py
 python3 test/planted-faults-score.test.py
@@ -57,11 +57,12 @@ python3 test/check-state.test.py	images chromium
 python3 test/check-text.test.py	chromium
 python3 test/drive-pointer.test.py	chromium
 python3 test/video-sheet.test.py	images video'
+known_needs=(images chromium openssl video npm)
 suites=()
 declare -A needs=()
 while IFS=$'\t' read -r suite need; do
   for word in ${need:-}; do
-    [[ $word == images || $word == chromium || $word == openssl || $word == video || $word == npm ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium, openssl, video and npm" >&2 && exit 2; }
+    [[ " ${known_needs[*]} " == *" $word "* ]] || { echo "test/all.sh: $suite needs '$word', which is none of ${known_needs[*]}" >&2 && exit 2; }
   done
   suites+=("$suite")
   needs[$suite]=${need:-}
@@ -199,8 +200,9 @@ suites_needing() {
   printf '%s' "$out"
 }
 if [ -f plugin/package.json ] && for_npm="$(suites_needing npm)"; then
-  need "the plugin's npm package parse5, for $for_npm" 'npm ci --ignore-scripts --prefix plugin' \
-    node -e 'require("./plugin/node_modules/parse5")'
+  need "the plugin's npm packages at plugin/package-lock.json's versions, for $for_npm" 'npm ci --ignore-scripts --prefix plugin' \
+    node -e 'for (const [at, { version }] of Object.entries(require("./plugin/package-lock.json").packages))
+      if (at && require(`./plugin/${at}/package.json`).version !== version) process.exit(1)'
 fi
 if [[ " ${run[*]} " == *" python3 "* ]]; then
   pip_install='python3 -m pip install --only-binary :all: -r plugin/requirements.txt'
