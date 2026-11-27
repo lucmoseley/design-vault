@@ -118,11 +118,13 @@ if ((in_commit)); then
     [[ -n $parents ]] || parents="$(compgen -e | sed -n 's/^GITHEAD_//p')"
   fi
   printf '%s\n' "$staged" >"$copies/HEAD.paths"
+  git diff --cached --name-only --no-renames --diff-filter=D >"$copies/HEAD.gone"
   git show HEAD:test/all.sh >"$copies/HEAD.head" 2>/dev/null || rm -f "$copies/HEAD.head"
   sides=(HEAD)
   for parent in $parents; do
     side="$copies/$parent"
-    if [[ $parent =~ ^[0-9a-f]{40}([0-9a-f]{24})?$ ]] && git diff --cached --name-only --no-renames "$parent" >"$side.paths" 2>/dev/null; then
+    if [[ $parent =~ ^[0-9a-f]{40}([0-9a-f]{24})?$ ]] && git diff --cached --name-only --no-renames "$parent" >"$side.paths" 2>/dev/null &&
+      git diff --cached --name-only --no-renames --diff-filter=D "$parent" >"$side.gone" 2>/dev/null; then
       git show "$parent:test/all.sh" >"$side.head" 2>/dev/null || rm -f "$side.head"
       sides+=("$parent")
     else
