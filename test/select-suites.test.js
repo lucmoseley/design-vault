@@ -20,6 +20,7 @@ const byHand = allSh(["--plan"]);
 const SUITES = parseRuns(byHand.stdout);
 const PYTHON = SUITES.filter((s) => s.startsWith("python3 "));
 const NODE = SUITES.find((s) => s.startsWith("node "));
+const ALL_SH = fs.readFileSync(path.join(ROOT, "test", "all.sh"), "utf8");
 const ran = (staged) => {
   const p = plan(SUITES, staged);
   return p.all ? SUITES : p.suites.filter((s) => !s.why).map((s) => s.suite);
@@ -152,10 +153,9 @@ test("a file in a test/ directory a suite reads runs that suite: child.py puts t
 
 test("a deleted path no suite read at HEAD runs every suite (#488)", () => {
   const gone = "test/gone-helper.py";
-  assert.match(plan(SUITES, [gone], { gone: [gone], rev: "HEAD" }).all ?? "", /^test\/gone-helper\.py is staged, and no suite is known to read it/);
+  assert.match(plan(SUITES, [gone], { gone: [gone], rev: "HEAD", before: ALL_SH }).all ?? "", /^test\/gone-helper\.py is staged, and no suite is known to read it/);
 });
 
-const ALL_SH = fs.readFileSync(path.join(ROOT, "test", "all.sh"), "utf8");
 const relist = (from, to) => {
   assert.equal(ALL_SH.split(from).length, 2, from);
   return ALL_SH.replace(from, to);
@@ -196,12 +196,21 @@ test("a merge runs a suite only where the plan against every parent runs it, and
   assert.deepEqual(planSides(SUITES, [side("HEAD", [sheet])], ALL_SH), plan(SUITES, [sheet], { before: ALL_SH, after: ALL_SH }));
 });
 
+test("a commit retiring a suite, its file and its line, runs the fast checks alone: HEAD's list placed the file (#488)", () => {
+  const file = path.posix.join("test", "rule-table" + ".test.py");
+  const retired = `python3 ${file}`;
+  const after = relist(`${retired}\n`, "");
+  const p = plan(SUITES.filter((s) => s !== retired), ["test/all.sh", file], { before: ALL_SH, after, gone: [file], rev: "HEAD" });
+  assert.deepEqual(runs(p), FAST);
+});
+
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "select-suites-"));
 after(() => fs.rmSync(scratch, { recursive: true, force: true }));
 const repo = path.join(scratch, "repo");
 for (const dir of ["test", "plugin"]) {
   fs.cpSync(path.join(ROOT, dir), path.join(repo, dir), { recursive: true, filter: (src) => !src.includes("__pycache__") });
 }
+fs.copyFileSync(path.join(ROOT, "git-read.js"), path.join(repo, "git-read.js"));
 const hooks = path.join(scratch, "hooks");
 const planOut = path.join(scratch, "plan.txt");
 fs.mkdirSync(hooks);
@@ -346,7 +355,7 @@ test("a deleted path a suite read at HEAD runs that suite: test/child.py by `imp
     fs.rmSync(path.join(repo, gone));
     try {
       const scratchPlan = require(path.join(repo, "test", "select-suites.js")).plan;
-      assert.deepEqual(runs(scratchPlan(SUITES, [gone], { gone: [gone], rev: "HEAD" })), ran([gone]), gone);
+      assert.deepEqual(runs(scratchPlan(SUITES, [gone], { gone: [gone], rev: "HEAD", before: ALL_SH })), ran([gone]), gone);
     } finally {
       fs.writeFileSync(path.join(repo, gone), kept);
     }
@@ -370,7 +379,7 @@ test("a deleted directory a suite read at HEAD runs that suite for each file it 
   fs.renameSync(dir, kept);
   try {
     const scratchPlan = require(path.join(repo, "test", "select-suites.js")).plan;
-    assert.deepEqual(runs(scratchPlan(SUITES, [held], { gone: [held], rev: "HEAD" })), ran(["test/child.py"]));
+    assert.deepEqual(runs(scratchPlan(SUITES, [held], { gone: [held], rev: "HEAD", before: ALL_SH })), ran(["test/child.py"]));
   } finally {
     fs.renameSync(kept, dir);
   }
@@ -399,7 +408,7 @@ test("a merge whose other parent lacks a rename runs, against that parent, the r
   }
 });
 
-test("a commit deleting a file HEAD reads only through an unquoted form runs every suite (#488)", () => {
+test("a commit deleting a file HEAD reads only through an unquoted form runs every suite, where one HEAD reads by a quoted path or import runs its readers (#488)", () => {
   const helper = path.posix.join("test", "unquoted" + "_helper.py");
   fs.writeFileSync(path.join(repo, helper), "");
   fs.appendFileSync(path.join(repo, "test", "child.py"), '\nimportlib.import_module("unquoted" + "_helper")\n');
@@ -409,4 +418,17 @@ test("a commit deleting a file HEAD reads only through an unquoted form runs eve
   git(["commit", "-q", "-m", "drop helper"]);
   assert.deepEqual(readPlanRuns(), SUITES);
   assert.match(fs.readFileSync(planOut, "utf8"), /^all suites: test\/unquoted_helper\.py is staged, and no suite is known to read it$/m);
+});
+
+test("a commit renaming a suite's file and its line runs the fast checks and the renamed suite (#488)", () => {
+  const [from, to] = [path.posix.join("test", "rule-table" + ".test.py"), path.posix.join("test", "rules" + ".test.py")];
+  fs.renameSync(path.join(repo, from), path.join(repo, to));
+  try {
+    const scratchPlan = require(path.join(repo, "test", "select-suites.js")).plan;
+    const after = relist(`python3 ${from}\n`, `python3 ${to}\n`);
+    const suites = SUITES.map((s) => (s === `python3 ${from}` ? `python3 ${to}` : s));
+    assert.deepEqual(runs(scratchPlan(suites, ["test/all.sh", from, to], { before: ALL_SH, after, gone: [from], rev: "HEAD" })), [...FAST, `python3 ${to}`]);
+  } finally {
+    fs.renameSync(path.join(repo, to), path.join(repo, from));
+  }
 });
