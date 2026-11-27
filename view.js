@@ -34,7 +34,7 @@
   const knownProject = (v, key) => Object.hasOwn(v.data.projects || {}, key);
   const keptPicks = (at, wanted) => Object.fromEntries(WAYS.map(w => [w.key, w.ids(at).includes(wanted[w.key]) ? wanted[w.key] : null]));
 
-  // one reference per round one's five directions; guess, #501
+  // one reference per round one's five directions; guess, #584
   const MAX_SELECTED = 5, DEFAULT_PROJECT = 'manta';
   const toggleSelected = (selection, id) => selection.includes(id) ? selection.filter(s => s !== id)
     : selection.length < MAX_SELECTED ? [...selection, id] : null;
