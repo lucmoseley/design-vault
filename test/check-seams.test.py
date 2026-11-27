@@ -71,6 +71,7 @@ class Seams(unittest.TestCase):
                 "thin",
                 "transition",
                 "seam.svg",
+                "covers",
             )
         }
 
@@ -167,6 +168,37 @@ class Seams(unittest.TestCase):
         self.assertIn("within 3 CSS px of its crop's centre", proc.stdout)
         self.assertIn("Judge it under vault.contacts-look", proc.stdout)
 
+    def test_585_a_gap_is_measured_through_its_covers_paint_whatever_sets_it(self):
+        proc = self.runs["covers"]
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        with open(fixture("covers")) as fh:
+            rows = re.findall(r"<!-- row (\d+): (.+?) -->", fh.read())
+        self.assertEqual(len(rows), 24)
+        opaque = {"0", "21", "22", "23"}
+        for row, what in rows:
+            name = f"a{row}.2-b{row}.4 (covered)"
+            with self.subTest(row=what):
+                if row in opaque:
+                    self.assertIn(
+                        f"pass {name}: width x contrast 0 ms 1x 0″, 0 ms 2x 0″, 0 ms 3x 0″",
+                        proc.stdout,
+                    )
+                else:
+                    self.assertIn(
+                        f"FAIL {name}: the ground shows along the contact", proc.stdout
+                    )
+        self.assertIn(
+            "or paint its cover opaque. --contact 'a1.2-b1.4=#b1@", proc.stdout
+        )
+        self.assertNotIn("NOT MEASURED", proc.stdout)
+
+    def test_585_a_covered_contacts_mattes_draw_its_covers_too(self):
+        out = os.path.join(self.tmp.name, "covers")
+        for ground in ("black", "white"):
+            with Image.open(os.path.join(out, f"a0.2-b0.4-0ms-1x-{ground}.png")) as im:
+                matte = np.asarray(im.convert("RGB")).astype(int)
+            self.assertEqual(tuple(matte[8, 8]), (0, 0xCC, 0), ground)
+
 
 class Edges(unittest.TestCase):
     def setUp(self):
@@ -196,21 +228,53 @@ class Edges(unittest.TestCase):
         self.assertIn("could not read the shape", proc.stdout)
         self.assertIn("judge them under vault.contacts-code", proc.stdout)
 
-    def test_541_an_unproved_cover_is_unmeasured_and_a_proved_one_passes(self):
+    def test_585_a_cover_a_stylesheet_thins_or_hides_fails_in_an_svg_file(self):
         shapes = (
             '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
             '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
-            '<path id="strip" fill="#0c0" d="M46 10 H54 V50 H46 Z"/>'
+            '<path id="strip" fill="#0c0" d="M46 6 H54 V54 H46 Z"/>'
         )
-        proc = run(self.page("<style>.t{opacity:.5}</style>" + shapes), self.tmp.name)
+        for css in ("#strip{opacity:.3}", "#strip{visibility:hidden}"):
+            with self.subTest(css=css):
+                proc = run(self.page(f"<style>{css}</style>" + shapes), self.tmp.name)
+                self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+                self.assertIn("FAIL a.2-b.4 (covered): ", proc.stdout)
+        opaque = run(self.page(shapes), self.tmp.name)
+        self.assertEqual(opaque.returncode, 0, opaque.stdout + opaque.stderr)
+        self.assertIn("pass a.2-b.4 (covered): ", opaque.stdout)
+
+    def test_585_a_cover_whose_selector_names_no_element_is_unmeasured(self):
+        path = os.path.join(self.tmp.name, "bare.html")
+        with open(path, "w") as fh:
+            fh.write(
+                '<!doctype html><svg width="100" height="100">'
+                '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
+                '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
+                '<g><path fill="#0c0" d="M46 6 H54 V54 H46 Z"/></g></svg>'
+                "<script>document.querySelector('g').remove()</script>"
+            )
+        proc = run(path, self.tmp.name)
         self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
-        self.assertIn("NOT MEASURED a.2-b.4 (covered): ", proc.stdout)
-        self.assertIn("judge it under vault.contacts-code.", proc.stdout)
+        self.assertIn(
+            "has no element :root>body:nth-of-type(1)>svg:nth-of-type(1)>g:nth-of-type(1)>path:nth-of-type(1)"
+            " for a cover of contact a.2-b.4",
+            proc.stdout + proc.stderr,
+        )
+        self.assertNotIn("FAIL a.2-b.4", proc.stdout)
+
+    def test_585_a_cover_smil_animates_leaves_the_page_unmeasured_never_passed(self):
+        shapes = (
+            '<defs><linearGradient id="solid"><stop stop-color="#0c0"/></linearGradient>'
+            '<linearGradient id="thin"><stop stop-color="#0c0" stop-opacity=".3"/></linearGradient>'
+            '<linearGradient id="moved" href="#solid"><set attributeName="href" to="#thin"/></linearGradient></defs>'
+            '<path id="a" fill="#c00" d="M10 10 H49 V50 H10 Z"/>'
+            '<path id="b" fill="#00c" d="M51 10 H90 V50 H51 Z"/>'
+            '<path id="strip" fill="url(#moved)" d="M46 6 H54 V54 H46 Z"/>'
+        )
+        proc = run(self.page(shapes), self.tmp.name)
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn("animates SVG with SMIL", proc.stdout + proc.stderr)
         self.assertNotIn("pass a.2-b.4", proc.stdout)
-        proved = run(self.page(shapes), self.tmp.name)
-        self.assertEqual(proved.returncode, 0, proved.stdout + proved.stderr)
-        self.assertIn("pass a.2-b.4 (covered): ", proved.stdout)
-        self.assertNotIn("NOT MEASURED", proved.stdout)
 
     def test_663_a_cover_with_no_id_on_a_page_with_no_html_or_body_tag_is_shown(self):
         path = os.path.join(self.tmp.name, "bare.html")

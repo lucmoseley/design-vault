@@ -394,9 +394,10 @@ const A = (right = 50) => `<path id="a" fill="#c00" d="M10 10 H${right} V50 H10 
 const B = (left = 50) => `<path id="b" fill="#00c" d="M${left} 10 H90 V50 H${left} Z"/>`;
 const CONTACT = /^([\w.-]+)=(?:(.+)@)?(-?[\d.]+),(-?[\d.]+)$/;
 
-function contactsIn(body, size = 'width="100" height="100" viewBox="0 0 100 100"') {
-  const file = path.join(scratch, `${++files}.svg`);
-  fs.writeFileSync(file, `<svg xmlns="http://www.w3.org/2000/svg" ${size}>\n${body}\n</svg>`);
+function contactsIn(body, size = 'width="100" height="100" viewBox="0 0 100 100"', html = false) {
+  const file = path.join(scratch, `${++files}.${html ? "html" : "svg"}`);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" ${size}>\n${body}\n</svg>`;
+  fs.writeFileSync(file, html ? `<!doctype html><html><body>${svg}</body></html>` : svg);
   const r = runInProcess(SCRIPT, ["--contacts", file]);
   const lines = r.stdout.trim().split("\n");
   const found = lines.flatMap((l) => {
@@ -646,10 +647,10 @@ test("a square standing a unit deep in a wider one is an underlap; its sides, cr
 const STRIP = (attrs = "") => `<path id="strip" fill="#0c0"${attrs} d="M48 10 H52 V50 H48 Z"/>`;
 const gapClass = (r) => r.found.find((c) => c.contact.startsWith("a.2-b.4="))?.cls;
 
-test("#356: a gap a shape painted after both fills is covered and passes, its line naming the cover", () => {
+test("#356: a gap a shape painted after both fills is covered and passes, its line naming the cover and leaving its paint to check-seams.py", () => {
   const r = contactsIn(`${A(49)}\n${B(51)}\n${STRIP()}`);
   assert.equal(gapClass(r), "covered", r.lines.join("\n"));
-  assert.match(r.lines.find((l) => l.includes(": covered: ")), /: covered: the edges run 2 px apart, but \S+:4 <path id="strip">, painted over both, fills the gap\. --contact 'a\.2-b\.4=#b@/);
+  assert.match(r.lines.find((l) => l.includes(": covered: ")), /: covered: the edges run 2 px apart, and \S+:4 <path id="strip">, painted over both, spans the gap; whether its paint hides it is measured by check-seams\.py \(vault\.contacts-seam\), not here\. --contact 'a\.2-b\.4=#b@/);
   assert.equal(r.status, 0, r.lines.join("\n"));
 });
 
@@ -662,26 +663,23 @@ test("a gap over a shape painted before both, or between them, still fails as se
   }
 });
 
-function assertUncovered(cover) {
-  const r = contactsIn(`${A(49)}\n${B(51)}\n${cover}`);
+function assertUncovered(cover, contacts = contactsIn) {
+  const r = contacts(`${A(49)}\n${B(51)}\n${cover}`);
   assert.equal(gapClass(r), "separate", cover);
   assert.equal(r.status, 1, cover);
   assert.ok(r.lines.some((l) => /: separate: .+draw both sides from one shared curve.+--contact 'a\.2-b\.4=/.test(l)), cover);
 }
 
-test("a translucent shape over the gap does not cover it, nor does one that fills only its middle", () => {
-  for (const cover of [STRIP(' opacity="0.5"'), STRIP(' style="fill-opacity: 50%"'), `<g opacity=".9">${STRIP()}</g>`, `<g fill-opacity="0.5">${STRIP()}</g>`]) assertUncovered(cover);
-  assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n${STRIP(' opacity="1" fill-opacity="100%"')}`)), "covered");
+test("a shape that fills only the gap's middle does not cover it", () => {
   assertUncovered('<path id="strip" fill="#0c0" d="M49.5 10 H50.5 V50 H49.5 Z"/>');
 });
 
-test("a shape hidden by visibility, or clipped or masked, does not cover the gap; one set visible again in a hidden group does", () => {
-  const clip = '<defs><clipPath id="k"><rect width="1" height="1"/></clipPath><mask id="n"><rect width="1" height="1" fill="#fff"/></mask></defs>';
-  for (const cover of [STRIP(' visibility="hidden"'), STRIP(' style="visibility: collapse"'), `<g visibility="hidden">${STRIP()}</g>`, `${clip}${STRIP(' clip-path="url(#k)"')}`, `${clip}<g mask="url(#n)">${STRIP()}</g>`]) {
+test("a shape hidden by visibility or display does not cover the gap; one set visible again in a hidden group does", () => {
+  for (const cover of [STRIP(' visibility="hidden"'), STRIP(' style="visibility: collapse"'), `<g visibility="hidden">${STRIP()}</g>`, STRIP(' display="none"'), STRIP(' style="display: None"'), `<g display="none">${STRIP()}</g>`]) {
     assertUncovered(cover);
   }
   assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n<g visibility="hidden">${STRIP(' visibility="visible"')}</g>`)), "covered");
-  assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n${STRIP(' clip-path="none"')}`)), "covered");
+  assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n<g style="visibility: hidden">${STRIP(' style="visibility: unset"')}</g>`)), "separate");
 });
 
 test("a shape in another <svg> on the page does not cover a gap, since the page, not the file, places it", () => {
@@ -698,154 +696,47 @@ test("--contacts names each shape in a group whose transform it cannot read as u
   assert.match(r.lines[0], /:3 <path id="b">: could not read the shape, so its contacts are not measured: unreadable transform 'wobble\(2\)'/);
 });
 
-function assertUnproved(body, why, prefix = "") {
-  const r = contactsIn(`${prefix}${A(49)}\n${B(51)}\n${body}`);
-  assert.equal(gapClass(r), "covered", body);
-  assert.equal(r.status, 6, `${body}\n${r.lines.join("\n")}`);
-  const line = r.lines.find((l) => l.includes(": covered: "));
-  assert.match(line, /would fill the gap, but its paint is not proved opaque \(.+\), so the gap is not measured; judge it under vault\.contacts-code\. --contact /, body);
-  assert.ok(line.includes(why), `${why}\n${line}`);
-  assert.match(r.lines.at(-1), /, 0 failing, \d+ not measured$/);
-}
-
-test("#541: a cover whose fill colour carries alpha lets the ground through: the gap fails as separate, naming the alpha", () => {
-  for (const fill of ["#0c08", "#00cc0080", "rgba(0, 204, 0, 0.5)", "rgb(0 204 0 / 50%)", "hsla(120, 100%, 40%, .5)", "oklch(0.7 0.2 140 / 0.5)", "transparent"]) {
-    assertUncovered(`<path id="strip" fill="${fill}" d="M48 10 H52 V50 H48 Z"/>`);
-  }
-  const r = contactsIn(`${A(49)}\n${B(51)}\n<path id="strip" style="fill: rgba(0,204,0,0.5)" d="M48 10 H52 V50 H48 Z"/>`);
-  assert.match(r.lines.find((l) => l.includes("a.2-b.4=")), /<path id="strip">, painted over both, lets the ground through \(fill rgba\(0,204,0,0\.5\), of alpha 0\.5\)/);
-  assertUncovered('<g color="rgba(0,0,0,0.5)"><path id="strip" fill="currentColor" d="M48 10 H52 V50 H48 Z"/></g>');
-  for (const fill of ["#0c0", "#00cc00ff", "rgb(0, 204, 0)", "rgba(0, 204, 0, 1)", "hsl(120 100% 40% / 100%)", "green", "currentColor"]) {
-    const ok = contactsIn(`${A(49)}\n${B(51)}\n<path id="strip" fill="${fill}" d="M48 10 H52 V50 H48 Z"/>`);
-    assert.equal(gapClass(ok), "covered", fill);
-    assert.equal(ok.status, 0, `${fill}\n${ok.lines.join("\n")}`);
-  }
+test("#585: every shape painted over a gap is named as its cover, in painting order, and --json gives their selectors", () => {
+  const file = path.join(scratch, "covers.svg");
+  fs.writeFileSync(file, `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${A(49)}${B(51)}<g>${STRIP(' fill-opacity=".3"').replace('id="strip"', 'id="thin"')}</g><path fill="#0c0" d="M47 10 H53 V50 H47 Z"/></svg>`);
+  const r = runInProcess(SCRIPT, ["--contacts", file]);
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(r.stdout, /: covered: the edges run 2 px apart, and \S+ <path id="thin"> and \S+ <path>, painted over both, span the gap; whether their paint hides it is measured by check-seams\.py/);
+  const json = JSON.parse(runInProcess(SCRIPT, ["--contacts", "--json", file]).stdout);
+  const gap = json.contacts.find((c) => c.name === "a.2-b.4");
+  assert.deepEqual([gap.cls, gap.covers], ["covered", ["#thin", ":root>path:nth-of-type(3)"]]);
+  assert.ok(json.contacts.filter((c) => c.cls !== "covered").every((c) => c.covers.length === 0));
 });
 
-test("#541: a gradient cover passes only where every stop it paints with is opaque, its own or the ones its href lends it", () => {
-  const strip = (id) => `<path id="strip" fill="url(#${id})" d="M48 10 H52 V50 H48 Z"/>`;
-  const defs = `<defs><linearGradient id="solid"><stop offset="0" stop-color="#0c0"/><stop offset="1" stop-color="rgb(0 0 200)"/></linearGradient>
-<linearGradient id="fade"><stop offset="0" stop-color="#0c0"/><stop offset="1" stop-color="#0c0" stop-opacity="0.5"/></linearGradient>
-<radialGradient id="lent" href="#fade"/><radialGradient id="lentSolid" xlink:href="#solid"/><linearGradient id="empty"/></defs>`;
-  for (const id of ["solid", "lentSolid"]) assert.equal(contactsIn(`${A(49)}\n${B(51)}\n${defs}${strip(id)}`).status, 0, id);
-  for (const id of ["fade", "lent", "empty"]) assertUncovered(`${defs}${strip(id)}`);
-  assertUnproved(`<defs><pattern id="dots"><rect width="1" height="1"/></pattern></defs>${strip("dots")}`, "a pattern, which it does not read");
-  assertUnproved(strip("nowhere"), "which names no paint server in the file");
-  assertUnproved(`<defs><pattern id="p"><rect width="1" height="1"/></pattern><linearGradient id="viaPattern" href="#p"/></defs>${strip("viaPattern")}`, "a gradient whose href #p names no gradient in the file");
-});
-
-test("#541: a cover that sets a blend mode, on it or an ancestor, lets the ground through; mix-blend-mode normal does not", () => {
-  for (const cover of [STRIP(' mix-blend-mode="multiply"'), `<g style="mix-blend-mode: screen">${STRIP()}</g>`]) assertUncovered(cover);
-  const r = contactsIn(`${A(49)}\n${B(51)}\n${STRIP(' style="mix-blend-mode: multiply"')}`);
-  assert.match(r.lines.find((l) => l.includes("a.2-b.4=")), /lets the ground through \(mix-blend-mode multiply on line 4\)/);
-  assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n${STRIP(' style="mix-blend-mode: normal"')}`)), "covered");
-});
-
-test("#541: a cover in a document whose stylesheet may thin paint is not measured; one setting only opaque paint still passes", () => {
-  for (const css of [".t{opacity:.5}", "path { fill-opacity: 0.5 !important }", "/* c */ g{mix-blend-mode:multiply}", ".s{fill:rgba(0,0,0,.5)}", "#strip{display:none}", "@import url(x.css);", "stop{stop-opacity:.3}", "@keyframes f{to{opacity:0}}"]) {
-    assertUnproved(STRIP(' class="t"'), "stylesheet", `<style>${css}</style>\n`);
-  }
-  assertUnproved(STRIP(' class="t"'), "a stylesheet rule setting opacity: .5", "<style><![CDATA[.t{opacity:.5}]]></style>\n");
-  for (const css of [".t{fill:#0c0}", "svg{display:block} body{background:#fff;opacity:1}", "/* .t{opacity:.5} */"]) {
-    const r = contactsIn(`<style>${css}</style>\n${A(49)}\n${B(51)}\n${STRIP(' class="t"')}`);
-    assert.equal(gapClass(r), "covered", css);
-    assert.equal(r.status, 0, `${css}\n${r.lines.join("\n")}`);
-  }
-  assertUnproved(STRIP(' opacity="0.5"'), "may override", "<style>.t{fill:#0c0}</style>\n");
-  const file = path.join(scratch, "linked.html");
-  fs.writeFileSync(file, `<!doctype html><html><head><link rel="stylesheet" href="art.css"></head><body><svg width="100" height="100">${A(49)}${B(51)}${STRIP()}</svg></body></html>`);
-  const linked = runInProcess(SCRIPT, ["--contacts", file]);
-  assert.equal(linked.status, 6, linked.stdout);
-  assert.match(linked.stdout, /: covered: .+a linked stylesheet, which it does not read/);
-});
-
-test("#541: a cover through a filter, or with an opacity or colour it cannot read, is not measured", () => {
-  assertUnproved(STRIP(' filter="url(#blur)"'), "filter url(#blur) on line 4");
-  assertUnproved(STRIP(' style="fill-opacity: var(--a)"'), "fill-opacity var(--a)");
-  assertUnproved(`<g opacity="calc(1)">${STRIP()}</g>`, "opacity calc(1) on line 4");
-  assertUnproved(STRIP(' fill="var(--brand)"'), "fill var(--brand), a colour it cannot read");
-});
-
-test("#324: a cover's style declarations are read in any case, an !important one over a later plain one, and only the -webkit- forms browsers apply", () => {
-  const styled = (style) => `<path id="strip" style="${style}" d="M48 10 H52 V50 H48 Z"/>`;
-  for (const style of ["fill:#0c0; Opacity:.5", "fill:#0c0; opacity: .5 !important", "fill:#0c0; FILL-OPACITY: 50%", "fill:#0c0; opacity:.3 !important; opacity:1", "fill: rgba(0,204,0,.3); -webkit-fill: #0c0", "fill:#0c0; opacity:.3; -webkit-opacity:1", "fill:#0c0; fill-opacity:.3; -webkit-fill-opacity:1", "fill: NONE", "fill:#0c0; display: None", "fill:#0c0; -webkit-mask-image: linear-gradient(#000, transparent)", "fill:#0c0; -webkit-mask-box-image: url(m.png)", "fill:#0c0; mask-border: url(m.png) 30", "fill:#0c0; -webkit-mask-box-image-source: url(m.png)"]) {
-    assertUncovered(styled(style));
-  }
-  assertUnproved(STRIP(' style="-webkit-filter: opacity(.2)"'), "filter opacity(.2) on line 4");
-  assertUnproved(STRIP(' class="t"'), "a stylesheet rule setting filter: blur(1px)", "<style>.t{-webkit-filter:blur(1px)}</style>\n");
-  const ok = contactsIn(`${A(49)}\n${B(51)}\n${styled("FILL:#0c0; Opacity: 1 !important; opacity: .5; -webkit-filter: none; Visibility: Visible")}`);
-  assert.equal(gapClass(ok), "covered", ok.lines.join("\n"));
-  assert.equal(ok.status, 0, ok.lines.join("\n"));
-});
-
-test("#324: unset takes an inherited paint from the parent, a keyword it does not resolve leaves the cover unread, and a mask-image lets the ground through", () => {
-  const strip = (style) => `<path id="strip" style="${style}" d="M48 10 H52 V50 H48 Z"/>`;
-  for (const kw of ["unset", "inherit", "UNSET"]) {
-    assertUncovered(`<g style="fill: rgba(0,204,0,.3)">${strip(`fill: ${kw}`)}</g>`);
-    assertUncovered(`<g color="rgba(0,0,0,.3)"><path id="strip" fill="currentColor" style="color: ${kw}" d="M48 10 H52 V50 H48 Z"/></g>`);
-  }
-  for (const kw of ["initial", "revert", "revert-layer"]) assertUnproved(strip(`fill: ${kw}`), `fill ${kw}, a colour it cannot read`);
-  assertUncovered(STRIP(' style="mask-image: linear-gradient(#000, transparent)"'));
-  const ok = contactsIn(`${A(49)}\n${B(51)}\n<g style="fill: #0c0">${strip("fill: unset; clip-path: unset; mask: initial; mask-image: none")}</g>`);
-  assert.equal(gapClass(ok), "covered", ok.lines.join("\n"));
-  assert.equal(ok.status, 0, ok.lines.join("\n"));
-});
-
-test("#324: a gradient cover whose stop an <animate> or <set> changes is not measured, a stop inherits the gradient's stop-color only when told to, and an href naming no gradient says so", () => {
-  const strip = '<path id="strip" fill="url(#g)" d="M48 10 H52 V50 H48 Z"/>';
-  assertUnproved(`<defs><linearGradient id="g"><stop stop-color="#0c0"><animate attributeName="stop-opacity" values="1;0.1"/></stop></linearGradient></defs>${strip}`, "a gradient with a <animate> of stop-opacity");
-  assertUnproved(`<defs><linearGradient id="g"><stop id="s0" stop-color="#0c0"/></linearGradient></defs>${strip}<set href="#s0" attributeName="stop-opacity" to="0.1"/>`, "a gradient with a <set> of stop-opacity");
-  assertUnproved(`<defs><linearGradient id="h"><stop id="s1" stop-color="#0c0"/></linearGradient><linearGradient id="g" href="#h"/></defs>${strip}<set href="#s1" attributeName="stop-color" to="transparent"/>`, "a gradient with a <set> of stop-color");
-  assertUnproved(`<defs><linearGradient id="g" href="#gone"/></defs>${strip}`, "a gradient whose href #gone names no gradient in the file");
-  assertUnproved(`<defs><linearGradient id="g" href="#a"/></defs>${strip}`, "a gradient whose href #a names no gradient in the file");
-  assertUncovered(`<defs><linearGradient id="g" stop-color="transparent"><stop stop-color="inherit"/></linearGradient></defs>${strip}`);
-  for (const defs of [`<linearGradient id="g" stop-color="transparent"><stop/></linearGradient>`, `<linearGradient id="g" stop-color="#0c0"><stop style="stop-color: inherit"/></linearGradient>`, `<linearGradient id="g"><stop stop-color="#0c0"><animate attributeName="offset" values="0;1"/></stop></linearGradient>`]) {
-    const ok = contactsIn(`${A(49)}\n${B(51)}\n<defs>${defs}</defs>${strip}`);
-    assert.equal(ok.status, 0, `${defs}\n${ok.lines.join("\n")}`);
-  }
-});
-
-test("#541: of several shapes over a gap, an opaque one covers it wherever it lies; one whose paint is unread outranks a translucent one", () => {
-  const thin = STRIP(' fill-opacity="0.5"');
-  for (const body of [`${thin}\n${STRIP()}`, `${STRIP()}\n${thin}`]) {
-    const r = contactsIn(`${A(49)}\n${B(51)}\n${body}`);
-    assert.match(r.lines.find((l) => l.includes("a.2-b.4=")), /: covered: the edges run 2 px apart, but \S+ <path id="strip">, painted over both, fills the gap\./, body);
-  }
-  assertUnproved(`${thin}\n${STRIP(' filter="url(#f)"')}`, "filter url(#f) on line 5");
-  assertUnproved(`<g opacity="0.5">${STRIP(' filter="url(#f)"')}</g>\n${STRIP(' filter="url(#f)"')}`, "filter url(#f) on line 5");
-});
-
-test("#541: a cover whose paint an <animate> or <set> changes, on it, an ancestor or by href, is not measured", () => {
-  const anim = '<animate attributeName="fill-opacity" values="1;0.2" dur="1s"/>';
-  assertUnproved(`<path id="strip" fill="#0c0" d="M48 10 H52 V50 H48 Z">${anim}</path>`, "a <animate> of fill-opacity on line 4, which it does not play");
-  assertUnproved(`<g><set attributeName="visibility" to="hidden"/>${STRIP()}</g>`, "a <set> of visibility");
-  assertUnproved(`${STRIP()}<animate href="#strip" attributeName="opacity" values="1;0"/>`, "a <animate> of opacity");
-  assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n<path id="strip" fill="#0c0" d="M48 10 H52 V50 H48 Z"><animate attributeName="d" dur="1s"/></path>`)), "covered");
-});
-
-test("#541: --contacts --json marks a pass resting on paint it could not prove opaque", () => {
-  const file = path.join(scratch, "unproved.svg");
-  fs.writeFileSync(file, `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><style>.t{opacity:.5}</style>${A(49)}${B(51)}${STRIP()}</svg>`);
-  const r = runInProcess(SCRIPT, ["--contacts", "--json", file]);
-  assert.equal(r.status, 6, r.stdout);
-  const { contacts } = JSON.parse(r.stdout);
-  const gap = contacts.find((c) => c.name === "a.2-b.4");
-  assert.deepEqual([gap.cls, gap.unproved], ["covered", true]);
-});
-
-test("#489: an underlap whose upper fill is translucent, sets a blend mode or sits under a stylesheet that may thin paint is not measured; opaque, it passes", () => {
-  for (const attrs of [' fill-opacity="0.5"', ' fill="#00c8"', ' mix-blend-mode="multiply"']) {
-    const r = contactsIn(`${A(51)}\n<path id="b" fill="#00c"${attrs} d="M50 10 H90 V50 H50 Z"/>`.replace('fill="#00c" fill=', "fill="));
-    assert.ok(classes(r).includes("underlap"), attrs);
-    assert.equal(r.status, 6, `${attrs}\n${r.lines.join("\n")}`);
-    assert.match(r.lines.find((l) => l.includes(": underlap: ")), /but the upper fill does not hide the lower \(.+\) where they overlap, so the band is not measured; judge it under vault\.contacts-look\. --contact /);
-  }
-  assert.equal(contactsIn(`<path id="a" fill="#c00" fill-opacity="0.5" d="M10 10 H51 V50 H10 Z"/>\n${B()}`).status, 0);
-  const sheet = contactsIn(`<style>p{color:var(--ink)}</style>\n${A(51)}\n${B()}`);
-  assert.equal(sheet.status, 6, sheet.lines.join("\n"));
-  assert.match(sheet.lines.find((l) => l.includes(": underlap: ")), /the upper fill is not proved opaque \(a stylesheet rule setting color: var\(--ink\), which it does not match to shapes\)/);
+test("#585: an underlap is listed as one whatever its upper fill's paint, which check-seams.py's mattes read", () => {
   const fixture = path.join(__dirname, "fixtures", "check-seams", "translucent.html");
   const r = runInProcess(SCRIPT, ["--contacts", fixture]);
-  assert.equal(r.status, 6, r.stdout);
-  assert.match(r.stdout, /: underlap: .+but the upper fill does not hide the lower \(fill-opacity 0\.5\) where they overlap.+--contact 'under\.2-over\.4=#over@/);
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(r.stdout, /: underlap: one fill runs on under the other, the edges 2 px apart\. --contact 'under\.2-over\.4=#over@/);
+});
+
+const htmlContactsIn = (body) => contactsIn(body, 'width="100" height="100"', true);
+
+test("#585: in an HTML page attribute names are read as its parser reads them, folded to lower case with the first of two kept", () => {
+  assertUncovered(STRIP(' VISIBILITY="hidden" visibility="visible"'), htmlContactsIn);
+  assertUncovered(STRIP(' DISPLAY="none"'), htmlContactsIn);
+  assertUncovered(STRIP(' STYLE="visibility: hidden"'), htmlContactsIn);
+  assert.equal(gapClass(htmlContactsIn(`${A(49)}\n${B(51)}\n${STRIP(' visibility="visible" VISIBILITY="hidden"')}`)), "covered");
+  const moved = htmlContactsIn(`${A()}\n<path ID="b" TRANSFORM="translate(1 0)" fill="#00c" d="M50 10 H90 V50 H50 Z"/>`);
+  assert.deepEqual(moved.found.map((c) => [c.cls, c.contact.match(CONTACT)[1]]), [["separate", "a.2-b.4"]]);
+  assert.match(moved.found[0].contact, /=#b@49\.5,/);
+  const ring = htmlContactsIn('<path FILL-RULE="evenodd" fill="#c00" d="M10 10 H90 V90 H10 Z M30 30 H70 V70 H30 Z"/>\n<path fill="#00c" d="M30 30 H70 V70 H30 Z"/>');
+  assert.deepEqual([...new Set(ring.found.map((c) => c.cls))], ["shared edge, no underlap"]);
+  const file = path.join(scratch, "viewbox.html");
+  fs.writeFileSync(file, `<!doctype html><html><body><svg width="400" height="400" VIEWBOX="0 0 100 100">${A()}${B(51)}</svg></body></html>`);
+  assert.match(runInProcess(SCRIPT, ["--contacts", file]).stdout, /^no two shapes come within 2 px/);
+});
+
+test("#585: in an XML SVG attribute names are case-sensitive, so an uppercase one is no presentation attribute", () => {
+  for (const attrs of [' Display="none"', ' VISIBILITY="hidden"', ' Style="visibility: hidden"']) {
+    assert.equal(gapClass(contactsIn(`${A(49)}\n${B(51)}\n${STRIP(attrs)}`)), "covered", attrs);
+  }
+  const r = contactsIn(`${A()}\n<path ID="b" TRANSFORM="translate(1 0)" fill="#00c" d="M50 10 H90 V50 H50 Z"/>`);
+  assert.deepEqual(r.found.map((c) => c.cls), ["shared edge, no underlap"]);
+  assert.match(r.found[0].contact, /^a\.2-path2\.4=:root>path:nth-of-type\(2\)@50,/);
 });
