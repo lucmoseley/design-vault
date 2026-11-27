@@ -174,7 +174,7 @@ Two portable items not in the tables above: T5 (sentence case; Vault N; low) and
 - (b) Manta-only value: **6** (C12, T2, T3, S1, S4, M1).
 - (c) Manta decision that carries a portable method: **32**.
 
-Of the 42 portable items (a + c), design-vault holds **2 in full** (P4, P5) and **5 in part** (T1, P1, P2, P6, V1). The other **35 are absent** from the vault. Of those 35, impeccable covers **9** in substance (C1, C4, C7, S5, Z1, Z3, A1, A2, and T4's 45–75 range). Map #96 or a sibling ticket plans **10 more** in whole or part (C3 and Z4 as rules via #98 → #103; C5, C8, S3 via #117; C11 via #104 W13; L5 via #112; L8 via #78; L9 via #100; S6 via #104 W7). That leaves **16** that nothing covers: C2, C6, C9, C10, C13, L1, L2, L3, L4, L6, L7, L10, S2, T5, Z2, P3 (ranked in §3.3), plus two parts of P6.
+Of the 42 portable items (a + c), design-vault holds **2 in full** (P4, P5) and **5 in part** (T1, P1, P2, P6, V1). The other **35 are absent** from the vault. Of those 35, impeccable covers **9** in substance (C1, C4, C7, S5, Z1, Z3, A1, A2, and T4's 45–75 range). Map #96 or a sibling ticket takes up **7 more** in whole or part (C3 as a gate question, #103; C5, C8, S3 via #117; L5 via #112; L8 via #78; S6 via #104 W7), and Z4 becomes a critique point (#103). That leaves **18** that nothing covers: C2, C6, C9, C10, C13, L1, L2, L3, L4, L6, L7, L10, S2, T5, Z2, P3 (ranked in §3.3); C11, an accepted gap (#101); and L9, Manta's own code (#103); plus two parts of P6.
 
 ### 3.2 The answer
 

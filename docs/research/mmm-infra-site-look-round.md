@@ -160,7 +160,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Ruling:** taken up in #77.
 - **Confidence:** 70% (55%–85%).
 
-### P1–P4: The #22 photo work inside this session (ruled in #93)
+### P1–P4: The #22 photo work inside this session (routed to #93)
 These four are inside 631cff6d (6 to 8 Oct). The t3 session list does not include them.
 - **P1: The shortlist had a duplicate.** The session showed "five" photos. Founder: "I believe 3 and 6 are the same photo" (631cff6d L8792). No dedup step. Owner: the photo method (g1). Already filed: no. Confidence 85% (75%–95%).
 - **P2: An untested judgement became an ask to Mark.** Blind scorers called a clean edit "unrealistic", and the session drafted email asks to Mark from that. Founder: "Surely these tasks are trivial?" (631cff6d L8894). The session said that the judgement was not tested. Owner: g1. Already filed: no. Confidence 75% (60%–85%).

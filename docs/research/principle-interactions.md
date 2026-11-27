@@ -2,7 +2,7 @@
 
 Question: Where the design principles from map #96 depend on context or pull against each other, how is each resolved, so that the house rules work as one system?
 
-Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/gallery.json`). Manta = lucmoseley/mantahostels (read-only here; out of write scope). Rule ids: B1-B53 and X1-X9 are Manta rules, G and R are vault rules, all from the census `docs/research/design-rules-census.md` §1-§4. K1-K27 are from `docs/research/manta-element-coverage.md` §4 (#118). C1-C10, B7.x and D1-D3 are from `docs/research/function-fit.md` (#127). F5 is `docs/research/adopt-or-build.md:141`-`:160` (#119). "#117 E<n>" is `docs/research/surface-styling.md` Part E (`:315`-`:331`). "#123 D<n>" is `docs/research/text-presentation.md` Part D (`:289`-`:301`). Era: T = timeless; E = era-bound, current as of the date given.
+Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/gallery.json`). Manta = lucmoseley/mantahostels (read-only here; out of write scope). Rule ids: B1-B53 and X1-X9 are Manta rules, G and R are vault rules, all from the census `docs/research/design-rules-census.md` §1-§4. K1-K27 are from `docs/research/manta-element-coverage.md` §4 (#118). C1-C10, B7.x and D1-D3 are from `docs/research/function-fit.md` (#127). F5 is `docs/research/adopt-or-build.md:139`-`:158` (#119). "#117 E<n>" is `docs/research/surface-styling.md` Part E (`:315`-`:331`). "#123 D<n>" is `docs/research/text-presentation.md` Part D (`:289`-`:301`). Era: T = timeless; E = era-bound, current as of the date given.
 
 ## Summary
 
@@ -17,7 +17,7 @@ Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/galler
    - Bottom sheet (E62): 6 of 12 now, 7 after mantahostels#2988.
 
    Every remaining property is a double-allowed answer (K6 rest shadow, K10 shape, numerals), a gap (sheet radius, scrim, placeholder token, nesting fallback, focus under a sheet) or a Manta fault the rules already decide (control edge 1.24:1, hero input with `outline:none` and no replacement, a compare "checkbox" that a keyboard cannot reach).
-5. **Rule form.** A rule that names applies-when (function code plus context), the property it writes and what it yields to lets the critic detect a clash mechanically. A clash is two matching rules that write one property of one part with different outputs, where neither yields to the other. Section 5 gives the schema, three rewritten rules and a worked detection.
+5. **Rule form.** A rule that names applies-when (function code plus context), the property it writes and what it yields to lets the critic detect a clash mechanically. A clash is two matching rules that write one property of one part with different values, where neither yields to the other. Section 5 gives the schema, three rewritten rules and a worked detection.
 
 **Recommended answer to #121.** Adopt the dependency order function → role → treatment → value, with #119 F5 precedence inside each step. Write every gate question in the section 5 form, with its applies-when condition. Resolve the conflicts as in the section 3 table. Put the 11 rulings below to the founder. Send the Manta-only fixes to lucmoseley/mantahostels.
 
@@ -45,7 +45,7 @@ Confidence: 0.7 that this order and form remove the conflicts without a new clas
 | Step | Question | Reads (context factors, in this order) | Decided by | Output |
 |---|---|---|---|---|
 | 1 Function | What does this part do? N, A, I, S, T, R (R-trust), C or D. | The part, not the component (#127 B7.1). The task priority of the page (#127 B3). The client brief or an inference, by the ask-or-infer rule (`docs/research/function-questions.md:233`-`:242`). | ARIA / M3 / HIG categories (#127 B7.1) | One code per part |
-| 2 Role | Which signifier and which token role carry this function here? | Brand tone and zone energy (B1). Density and mode, Operate or Read (#119 table, `adopt-or-build.md:199`). | #127 B7.2 carriers and never-borrowed set; B3 prominence ladder | A role, for example primary action, control edge, link, status chip, card edge |
+| 2 Role | Which signifier and which token role carry this function here? | Brand tone and zone energy (B1). Density and mode, Operate or Read (#119 table, `adopt-or-build.md:197`). | #127 B7.2 carriers and never-borrowed set; B3 prominence ladder | A role, for example primary action, control edge, link, status chip, card edge |
 | 3 Treatment | Which property expresses the role: border, fill, shadow, shape, weight, motion? | Ground (sand, white, turquoise, ink, photo). Surrounding treatments (#117 E1-E4: neighbours, existing separators). Device and input (#117 E6; WCAG 2.5.7, 2.5.8). | WCAG (level 1), domain evidence (level 3), #117 Part E, #123 Part D | A treatment per property |
 | 4 Value | Which number? | The project's one value system (#119 F5 kind 3) | The project rules file (level 2) | A token value |
 
@@ -295,7 +295,7 @@ Worked example, hero search box (E19), property shadow:
 - `#117 B2.1` matches only if `floats = yes`. The hero box does not float, so it does not match.
 - The box carries `--shadow-popover` → a breach of B46, not a clash.
 
-The critic reports "B46 breach: rest shadow above the ceiling", and it can report this only after R3 sets the number. With the current text ("heavy" undefined) the output is not comparable, and the critic must report "rule not checkable".
+The critic reports "B46 breach: rest shadow above the ceiling", and it can report this only after R3 sets the number. With the current text ("heavy" undefined) the values are not comparable, and the critic must report "rule not checkable".
 
 ## Bound
 
