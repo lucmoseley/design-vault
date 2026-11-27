@@ -316,7 +316,7 @@ const drawn = (f, { frames, span, shown, morphs }) => {
 };
 """
 
-BLOCKERS_JS = (
+UNSEEKABLE_JS = (
     r"""
 ({ before, frames, span, shown }) => {
   """
@@ -670,7 +670,7 @@ def measure(at):
                 before = page.evaluate("() => window.__flow.markSweep()")
                 sweep(page)
             reasons = page.evaluate(
-                BLOCKERS_JS,
+                UNSEEKABLE_JS,
                 {
                     "before": before,
                     "frames": REWRITE_FRAMES,
