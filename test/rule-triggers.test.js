@@ -65,6 +65,11 @@ test("a gallery.json outside the project directory's own data/ is no trigger", (
   assert.equal(edit(sid, path.join(scratch, "elsewhere", "data", "gallery.json")), null);
 });
 
+test("a worktree's gallery.json under the project's .claude/worktrees/ triggers from the main checkout", () => {
+  assert.equal(edit(freshSession(), ".claude/worktrees/implement-1-ab/data/gallery.json").permissionDecision, "deny");
+  assert.equal(edit(freshSession(), ".claude/worktrees/implement-1-ab/test/data/gallery.json"), null);
+});
+
 test("a subagent is told on its own, the main session's latch notwithstanding", () => {
   const sid = freshSession();
   assert.equal(edit(sid, "data/gallery.json").permissionDecision, "deny");
@@ -73,7 +78,7 @@ test("a subagent is told on its own, the main session's latch notwithstanding", 
 });
 
 test("an ingest.js run is the same trigger as a gallery.json edit", () => {
-  for (const command of ["node ingest.js --from list.txt", "cd /x && node ./ingest.js", "node /home/u/design-vault/ingest.js", "LIMIT=3 node ingest.js", "env LIMIT=3 node ingest.js", "./ingest.js", 'node "/home/u/my vault/ingest.js"', 'node "$W/ingest.js"']) {
+  for (const command of ["node ingest.js --from list.txt", "cd /x && node ./ingest.js", "node /home/u/design-vault/ingest.js", "LIMIT=3 node ingest.js", "env LIMIT=3 node ingest.js", "time node ingest.js", "sudo node ingest.js", "./ingest.js", 'node "/home/u/my vault/ingest.js"', 'node "$W/ingest.js"']) {
     const sid = freshSession();
     assert.equal(bash(sid, command)?.permissionDecision, "deny", command);
     assert.equal(edit(sid, "data/gallery.json"), null, command);
@@ -100,6 +105,9 @@ test("prose quoting a trigger, in quotes or a heredoc body, prints nothing", () 
     "ls node ingest.js",
     "echo then node x/session-checkout.js land",
     "man git commit plugin/x",
+    "git commit -m x -- docs/plugin/x.md",
+    "git commit -m x && cat docs/plugin/y.md",
+    'git commit -m "fix a/plugin/x"',
     "cat > notes.md <<'EOF'\nnode ingest.js\ngit commit plugin/a.md\nnode session-checkout.js land\nEOF",
   ]) assert.equal(bash(sid, command), null, command);
 });
@@ -168,7 +176,19 @@ test("an off-trigger call, the common path, loads no repo module and starts no c
   const r = callCost(SCRIPT, [], { stdin: JSON.stringify({ session_id: "pin", cwd: repo, tool_name: "Bash", tool_input: { command: "ls" } }) });
   assert.equal(r.stdout, "");
   assert.deepEqual(r.children, []);
-  assert.deepEqual(r.modules.filter((m) => m !== "rule-triggers.js"), []);
+  assert.deepEqual(r.modules.sort(), ["rule-triggers.js", "scripts/lib/resolve-core.js"]);
+});
+
+test("a session already told pays no git read on a later commit", () => {
+  const sid = freshSession();
+  fs.writeFileSync(path.join(repo, "plugin", "b.md"), "b");
+  git(repo, "add", "plugin/b.md");
+  assert.equal(bash(sid, "git commit -m plugin").additionalContext, RELEASE);
+  const { callCost } = require(path.join(resolveCore(), "scripts", "lib", "call-cost-harness.js"));
+  const r = callCost(SCRIPT, [], { stdin: JSON.stringify({ session_id: sid, cwd: repo, tool_name: "Bash", tool_input: { command: "git commit -m plugin" } }), cwd: repo, env: { ...process.env, CLAUDE_PROJECT_DIR: repo } });
+  assert.equal(r.stdout, "");
+  assert.ok(!r.children.includes("git -C"), r.children.join(", "));
+  git(repo, "reset", "-q");
 });
 
 test("a malformed payload exits 0 printing nothing", () => {
