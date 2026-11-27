@@ -70,6 +70,9 @@ ALL_GROUND = 0.95
 DARK = 1e-4
 # guess, #341
 WINDOW = 5
+# guess, #544
+REACH_PAST_CONTACT_PX = 1
+
 # guess, #341
 UNDERLAP_CSS_PX = 1
 
@@ -241,7 +244,7 @@ def matte_name(shot, ground):
     return shot["file"].replace(".png", f"-{ground}.png")
 
 
-def judge(contact, shots, out, reach):
+def judge(contact, shots, out, *, reach):
     seen, lost = {}, []
     for shot in shots:
         mats = {}
@@ -280,6 +283,7 @@ def judge(contact, shots, out, reach):
 def main(argv):
     args = parse(argv)
     listed = list_contacts(args.file)
+    reach = listed["contactPx"] + REACH_PAST_CONTACT_PX
     for line in listed["notes"] + listed["unread"]:
         print(line)
     contacts = listed["contacts"]
@@ -316,8 +320,7 @@ def main(argv):
                 c,
                 [s for s in result["shots"] if s["contact"] == c["name"]],
                 look.out,
-                # guess, #341: one CSS px past the distance check-curves.js lists a contact at
-                listed["contactPx"] + 1,
+                reach=reach,
             )
             lines += said
             faults += failed

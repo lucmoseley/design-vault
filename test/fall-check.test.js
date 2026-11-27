@@ -139,6 +139,7 @@ test("bad usage and a table it cannot read exit 2, naming why", () => {
     [[], /--check <value>. argument missing/],
     [["--check", "again.md"], /--check wants one table file/],
     [["--landing", "soft"], /--landing wants thud or sink/],
+    [["--landing=thud"], /--landing wants its value as the next argument, not after =/],
     [["--json"], /--json is not taken with --check/],
   ];
   for (const [extra, why] of cases) {

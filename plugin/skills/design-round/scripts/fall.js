@@ -196,7 +196,9 @@ function parse(values) {
 function main(argv) {
   let at;
   try {
-    const { values } = parseArgs({ args: argv, options: OPTIONS, strict: true });
+    const { values, tokens } = parseArgs({ args: argv, options: OPTIONS, strict: true, tokens: true });
+    const joined = tokens.find((t) => t.kind === "option-terminator" || t.inlineValue);
+    if (joined) throw new Error(joined.kind === "option-terminator" ? "-- is not taken" : `${joined.rawName} wants its value as the next argument, not after =`);
     if ("check" in values) return check(values);
     at = parse(values);
   } catch (err) {
