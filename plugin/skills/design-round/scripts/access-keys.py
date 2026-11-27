@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -678,6 +679,46 @@ def change(page, handle, within_ms):
         return None
     finally:
         handle.evaluate("(e) => { e.__watch.on = false; }")
+
+
+def turns_js(selectors, since, until):
+    return (
+        "(([selectors, since, until, limit]) => {"
+        + r"""
+  const frame = window.requestAnimationFrame.bind(window), wait = window.setTimeout.bind(window);
+  const turns = window.__turns = [];
+  wait(() => {
+    for (const e of selectors.flatMap((s) => [...document.querySelectorAll(s)])) {
+"""
+        + SIG_JS
+        + r"""
+      const first = sig(true), turn = { el: e, at: null };
+      turns.push(turn);
+      const tick = (now) => {
+        if (now > until) return;
+        if (sig(true) !== first) turn.at = now;
+        else frame(tick);
+      };
+      frame(tick);
+    }
+  }, Math.max(0, since - performance.now()));
+})"""
+        + f"({json.dumps([list(selectors), since, until, WATCH_LIMIT])});"
+    )
+
+
+TURNED_JS = "(e) => (window.__turns || []).some((t) => t.el === e && t.at !== null)"
+
+
+def turned(page, handles, until):
+    starts = [_shot(h) for h in handles]
+    out = [False] * len(handles)
+    while True:
+        for k, h in enumerate(handles):
+            out[k] = out[k] or h.evaluate(TURNED_JS) or _differs(starts[k], _shot(h))
+        if all(out) or page.evaluate("() => performance.now()") >= until:
+            return out
+        page.wait_for_timeout(ROTATE_POLL_MS)
 
 
 def still(handle):

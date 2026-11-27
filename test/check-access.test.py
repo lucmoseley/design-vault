@@ -686,11 +686,9 @@ class TimedChange(Browsed):
         self.assertTrue(all(matches), unmeasured)
         windows = [tuple(map(float, m.groups())) for m in matches]
         self.assertEqual(len(windows), 2, unmeasured)
-        (start1, end1), (start2, end2) = sorted(windows)
         rounding = 0.1
-        self.assertGreaterEqual(start1, long_s)
-        self.assertGreaterEqual(start2, end1)
         for start, end in windows:
+            self.assertEqual(start, long_s)  # #642
             self.assertGreaterEqual(end - start, rotate_s - rounding)
 
     UNSEEN = (

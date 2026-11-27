@@ -146,9 +146,10 @@ check-layout.py does, and measures each question at both:
   active span is over 5 s, and each video playing that loops or runs over
   5 s without its own controls, fails unless a button, switch or checkbox
   named for pausing, stopping or hiding it stops it when clicked. So does a
-  declared carousel shown whose pixels, or the boxes inside it, change past
-  5 s from load and within ROTATE_MS of that, as vault.carousel-focus reads
-  a change, unless such a control, clicked with the pointer then moved off,
+  declared carousel shown whose boxes inside it, or the images they show,
+  change past 5 s from load and within ROTATE_MS of that, or whose pixels
+  change between the check's first look past 5 s and the end of that span,
+  unless such a control, clicked with the pointer then moved off,
   holds it still for its slide's span as vault.carousel-focus timed it, or
   ROTATE_MS where that timed none, and STILL_SLACK_MS more. One that holds
   still through that watch while the page still runs an interval or holds
@@ -781,7 +782,7 @@ TIMERS_JS = r"""
   const live = new Set(), ran = new Map(), set = window.setInterval, clear = window.clearInterval;
   window.setInterval = function (fn, ...a) {
     const id = set.call(this, function (...b) {
-      ran.set(id, performance.now());
+      (ran.get(id) || ran.set(id, []).get(id)).push(performance.now());
       return typeof fn === 'function' ? fn.apply(this, b) : (0, eval)(String(fn));
     }, ...a);
     live.add(id);
@@ -851,8 +852,9 @@ LIVE_JS = "() => window.__timers.live.size > 0 || window.__flow.pending.size > 0
 UNSEEN_JS = r"""
 ([since, watch]) => {
   const t = window.__timers, pending = [...window.__flow.pending.keys()];
+  const watched = (at) => at >= since && at <= since + watch;
   return {
-    intervals: [...t.live].filter((id) => !(t.ran.get(id) >= since)),
+    intervals: [...t.live].filter((id) => !(t.ran.get(id) || []).some(watched)),
     timeouts: pending.filter((id) => !(t.waits.get(id) <= watch)),
     known: [...t.live, ...pending],
     watch,
@@ -1187,7 +1189,9 @@ def motion_answers(context, url, carousels, *, mouse):
 def pause_answer(context, url, carousels, spans):
     from playwright.sync_api import Error as PlaywrightError
 
+    since, until = prelude.LONG_MS, prelude.LONG_MS + keys.ROTATE_MS
     page = context.new_page()
+    page.add_init_script(keys.turns_js(carousels, since, until))
     page.add_init_script(flow.COLLECTOR_JS)
     page.add_init_script(TIMERS_JS)
     page.goto(url, wait_until="load")
@@ -1219,22 +1223,18 @@ def pause_answer(context, url, carousels, spans):
             declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
     turning, stilled, others, unseen = [], [], [], None
     if page.evaluate(prelude.page_js(TIMED_JS), len(carousels)):
-        page.wait_for_timeout(
-            max(0, prelude.LONG_MS - page.evaluate("() => performance.now()"))
-        )
-        since = prelude.LONG_MS  # #628
-        for c in declared:
-            start = page.evaluate("() => performance.now()")
-            if keys.change(page, c[1], keys.ROTATE_MS) is None:
-                stilled.append((c[0], start, page.evaluate("() => performance.now()")))
-            else:
+        page.wait_for_timeout(max(0, since - page.evaluate("() => performance.now()")))
+        turns = keys.turned(page, [c[1] for c in declared], until)  # #642
+        end = page.evaluate("() => performance.now()")
+        for c, m in zip(declared, turns, strict=True):
+            if m:
                 turning.append(c)
-        page.wait_for_timeout(
-            max(0, since + keys.ROTATE_MS - page.evaluate("() => performance.now()"))
-        )
+            else:
+                stilled.append((c[0], since, end))
+        page.wait_for_timeout(max(0, until - end))
         others = page.evaluate(
             prelude.page_js(ROTATION_JS),
-            [list(carousels), since, since + keys.ROTATE_MS],
+            [list(carousels), since, until],  # #628
         )
         if not page.evaluate(LIVE_JS):
             stilled = []
