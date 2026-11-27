@@ -21,6 +21,7 @@ python3 test/check-clip.test.py
 python3 test/check-flow.test.py	chromium
 python3 test/runner.test.py	chromium
 python3 test/planted-faults-runner.test.py
+python3 test/planted-faults-score.test.py
 python3 test/check-flow-records.test.py	images chromium
 python3 test/check-frames.test.py	chromium
 python3 test/check-overlay.test.py	images chromium
