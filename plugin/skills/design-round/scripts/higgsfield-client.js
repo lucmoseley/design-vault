@@ -14,6 +14,7 @@ const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
 const STEM = /^v\d+-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ROUND = /^r\d+$/;
 const STILL_BRAND = /^(?:avif|avis|heic|heix|heim|heis|hevc|hevx|mif1|msf1)$/;
+const DECIMAL = /^-?\d+(?:\.\d+)?$/;
 const ENDPOINT_ID = /^[a-z0-9][a-z0-9.-]*(?:\/[a-z0-9][a-z0-9.-]*)*$/;
 const DOCTYPE_WITHIN_BYTES = 64; // #583 guess
 const PRICE_DECIMALS = 3; // #583 guess
@@ -56,6 +57,7 @@ function sniff(bytes) {
 }
 
 const dollars = (usd) => `$${usd.toFixed(PRICE_DECIMALS)}`;
+const parseDecimal = (text) => (DECIMAL.test(text) ? Number(text) : NaN);
 
 function readCredentials(value) {
   const colon = (value ?? "").indexOf(":");
@@ -66,9 +68,10 @@ function readCredentials(value) {
 }
 
 function readCeiling(value) {
-  const ceiling = Number(value);
-  if (value === undefined || String(value).trim() === "" || !Number.isFinite(ceiling) || ceiling < 0) {
-    throw new Error("HIGGSFIELD_ROUND_CEILING_USD must be set, in the environment or ~/.higgsfield.env, to the most one round may spend, in dollars; the founder sets it");
+  const ceiling = parseDecimal(value);
+  if (!Number.isFinite(ceiling) || ceiling < 0) {
+    const got = value === undefined ? "" : "; it holds something else, not shown in case it is the key";
+    throw new Error(`HIGGSFIELD_ROUND_CEILING_USD must be set, in the environment or ~/.higgsfield.env, to the most one round may spend, in dollars, such as 2.50; the founder sets it${got}`);
   }
   return ceiling;
 }
@@ -119,7 +122,7 @@ function spentIn(roundDir) {
       error.message += ". Check the Higgsfield console for that job's charge, then mend the line to carry it";
       throw error;
     }
-    const usd = Number(entry.usd);
+    const usd = readUsd(entry.usd);
     if (!Number.isFinite(usd)) throw refuse("holds no usd figure");
     if (usd < 0) throw refuse("holds a negative usd figure");
     if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
@@ -268,7 +271,7 @@ function unlockAll(held, log) {
 
 function readUsd(value) {
   if (typeof value === "number") return value;
-  if (typeof value === "string" && value.trim()) return Number(value);
+  if (typeof value === "string") return parseDecimal(value);
   return NaN;
 }
 
@@ -534,8 +537,11 @@ function parseArgs(argv) {
     else if (flag === "--prompt") job.prompt = valueAt(++i, "a prompt");
     else if (flag === "--aspect-ratio") job.aspect_ratio = valueAt(++i, "a ratio such as 16:9");
     else if (flag === "--resolution") job.resolution = valueAt(++i, "a resolution tier");
-    else if (flag === "--max-usd") job.max_usd = Number(valueAt(++i, "the most the job can cost, in dollars"));
-    else if (flag === "--set") {
+    else if (flag === "--max-usd") {
+      const given = valueAt(++i, "the most the job can cost, in dollars");
+      job.max_usd = parseDecimal(given);
+      if (Number.isNaN(job.max_usd)) throw new Error(`--max-usd takes the most the job can cost, in dollars, such as 0.25; got ${JSON.stringify(given)}`);
+    } else if (flag === "--set") {
       const pair = valueAt(++i, "<field>=<value>");
       const equals = pair.indexOf("=");
       if (equals < 1) throw new Error(`--set takes <field>=<value>; got ${JSON.stringify(pair)}`);
@@ -560,7 +566,8 @@ function settings(env, file = ENV_FILE) {
       if (match) fromFile[match[1]] = match[2].trim().replace(/^(["'])(.*)\1$/, "$2");
     }
   }
-  return Object.fromEntries(SETTINGS.map((name) => [name, env[name] ?? fromFile[name]]));
+  const nonBlank = (value) => value?.trim() || undefined;
+  return Object.fromEntries(SETTINGS.map((name) => [name, nonBlank(env[name]) ?? nonBlank(fromFile[name])]));
 }
 
 module.exports = { render, parseArgs, settings };
