@@ -4,7 +4,7 @@
     "marketing-studio/image/sunburst": {
       "name": "GPT Image 2.5 Sunburst",
       "tier": "2k",
-      "note": "4k is offered at about $1 an image, past the house's max_usd 0.6 cap (prompts.md §GPT Image 2.5), so the largest size the house may request is 2k's. 4k's size is not on record; measure it into this row if the cap lifts. It offers 21:9, 3:2 and 9:16, but its Higgsfield page says only that \"exact pixel dimensions depend on the aspect ratio\" (docs.higgsfield.ai/docs/models/marketing-studio-image/sunburst, read 27 Nov 2026), and every render on record is 16:9, so no size at those is on record.",
+      "note": "4k is offered at about $1 an image, past the house's max_usd 0.6 cap (prompts.md §GPT Image 2.5), so the largest size the house may request is 2k's. 4k's size is not on record; measure it into this row if the cap lifts. It offers 21:9, 3:2 and 9:16, but its Higgsfield page says only that \"exact pixel dimensions depend on the aspect ratio\" (docs.higgsfield.ai/docs/models/marketing-studio-image/sunburst, read 27 Nov 2026), and every render on record is 16:9.",
       "sizes": {
         "16:9": { "size": "2688x1520", "source": "measured: the 30 Sep calibration renders r1–r3/v12-gpt-sunburst.png and design-vault#52's r1/v1-gpt-sunburst-palette.png, quality high (roster.md, design-vault#51)" }
       }
@@ -12,7 +12,7 @@
     "marketing-studio/image/flare": {
       "name": "GPT Image 2.5 Flare",
       "tier": "2k",
-      "note": "As Sunburst: 4k is past the house's max_usd 0.6 cap, and its size is not on record. It offers 21:9, 3:2 and 9:16, but its Higgsfield page says only that \"exact pixel dimensions depend on the aspect ratio\" (docs.higgsfield.ai/docs/models/marketing-studio-image/flare, read 27 Nov 2026), and every render on record is 16:9, so no size at those is on record.",
+      "note": "As Sunburst: 4k is past the house's max_usd 0.6 cap, and its size is not on record. Its 21:9, 3:2 and 9:16 are as Sunburst's (docs.higgsfield.ai/docs/models/marketing-studio-image/flare, read 27 Nov 2026).",
       "sizes": {
         "16:9": { "size": "2688x1520", "source": "measured: the 30 Sep calibration renders r1–r3/v11-gpt-flare.png, quality high" }
       }
@@ -20,7 +20,7 @@
     "xai/grok-imagine-image-2.0": {
       "name": "Grok Imagine 2.0",
       "tier": "2k",
-      "note": "It offers 3:2 and 9:16, not 21:9. Neither Higgsfield's page nor xAI's image-generation guide (read 27 Nov 2026) gives a pixel size for a tier at any aspect ratio, and every render on record is 16:9, so no size at those is on record.",
+      "note": "It offers 3:2 and 9:16, not 21:9. Neither Higgsfield's page nor xAI's image-generation guide (read 27 Nov 2026) gives a pixel size for a tier at any aspect ratio, and every render on record is 16:9.",
       "sizes": {
         "16:9": { "size": "2816x1584", "source": "measured: the 30 Sep calibration renders r1–r3/v3-grok.png at 2k, quality medium; docs: \"resolution accepts 1k or 2k\" (docs/research/image-model-fact-bar.md F1, F5)" }
       }
@@ -28,7 +28,7 @@
     "alibaba/qwen-image-3/text-to-image": {
       "name": "Qwen Image 3",
       "tier": "2k",
-      "note": "It offers 21:9, 3:2 and 9:16. Higgsfield's page says \"exact provider-recommended dimensions are selected automatically\", and Alibaba's API reference (updated 20 Nov 2026, read 27 Nov 2026) gives only a 512x512 to 2048x2048 pixel area, so no size at those is on record.",
+      "note": "It offers 21:9, 3:2 and 9:16. Higgsfield's page says \"exact provider-recommended dimensions are selected automatically\", and Alibaba's API reference (read 27 Nov 2026) gives only a 512x512 to 2048x2048 pixel area.",
       "sizes": {
         "16:9": { "size": "2048x1152", "source": "measured: the 30 Sep calibration renders r1–r3/v2-qwen.png at 2k, the larger of its tiers 1k and 2k (docs/research/image-model-fact-bar.md F1, F5)" },
         "1:1": { "size": "1536x1536", "source": "docs: Higgsfield's Qwen Image 3 page, \"2k square maps to 1536 by 1536 pixels\" (docs/research/image-model-fact-bar.md F5)" }
@@ -62,12 +62,12 @@
     },
     "midjourney/v8.1": {
       "name": "Midjourney V8.1",
-      "note": "Its --hd renders at 2048px (Midjourney's Parameter List and Version articles, help-centre API, read 25 Nov 2026), which names no size per aspect ratio, so no size is on record.",
+      "note": "Its --hd renders at 2048px (Midjourney's Parameter List and Version articles, help-centre API, read 25 Nov 2026), which names no size per aspect ratio.",
       "sizes": {}
     },
     "midjourney/v8.2": {
       "name": "Midjourney V8.2",
-      "note": "Midjourney's default since 24 Jul 2026 (Version article, help-centre API, articles/32199405667853, read 27 Nov 2026), so the house template, --ar 21:9 --hd with no --v (prompts.md §Midjourney), renders here. The Upscalers article (articles/32804058614669, updated 27 Jul 2026, read 27 Nov 2026) tables HD at 1:1, 4:3, 2:3 and 16:9 only, none of 21:9, 3:2 or 9:16, and warns that \"exact pixels dimensions for HD images in some aspect ratios may vary slightly\", so no size is on record until a render is measured.",
+      "note": "Midjourney's default (Version article, help-centre API, articles/32199405667853, read 27 Nov 2026), so the house template, --ar 21:9 --hd with no --v (prompts.md §Midjourney), renders here. The Upscalers article (articles/32804058614669, read 27 Nov 2026) tables HD at 1:1, 4:3, 2:3 and 16:9 only, none of 21:9, 3:2 or 9:16, and warns that \"exact pixels dimensions for HD images in some aspect ratios may vary slightly\"; measure a render into this row.",
       "sizes": {}
     },
     "recraft-api": {
