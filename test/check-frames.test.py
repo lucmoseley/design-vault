@@ -1,3 +1,4 @@
+# #616
 import json
 import os
 import pathlib
@@ -23,6 +24,7 @@ frames = siblings.load(SCRIPTS, "check-frames.py")
 runner = siblings.load(SCRIPTS, "runner.py")
 conditions = siblings.load(SCRIPTS, "conditions.py")
 NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS = 10
+MID_BOTTOM_MS = 1000
 RUN_TIMEOUT_S = 180  # guess, #501
 
 
@@ -399,10 +401,12 @@ class StagedBuilds(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.dir)
 
-    def check_against(self, edit):
+    def check_against(self, edit, at_ms):
         with open(self.hashes, encoding="utf8") as fh:
             record = json.load(fh)
         edit(record)
+        record["frames"] = [f for f in record["frames"] if f["ms"] == at_ms]
+        self.assertEqual(len(record["frames"]), 1, at_ms)
         edited = os.path.join(self.dir, "edited.json")
         with open(edited, "w", encoding="utf8") as fh:
             json.dump(record, fh)
@@ -441,7 +445,9 @@ class StagedBuilds(unittest.TestCase):
     def test_a_later_stage_the_page_lists_first_is_timed_from_the_earliest_start(
         self,
     ):
-        proc = hash_page(self.page, "--wait", "body.play #bottom")
+        proc = hash_page(
+            self.page, "--wait", "body.play #bottom", "--times", str(MID_BOTTOM_MS)
+        )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertRegex(proc.stdout, r"start at 2 moments, 0, [1-9][\d.]* ms")
 
@@ -453,7 +459,7 @@ class StagedBuilds(unittest.TestCase):
             bottom["ms"] += NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS
             nudged["ms"] = bottom["ms"]
 
-        proc = self.check_against(nudge)
+        proc = self.check_against(nudge, MID_BOTTOM_MS)
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn(
             f"start at 2 moments, 0, {frames.ms(round(nudged['ms'], 3))} ms, as the saved run timed them",
@@ -466,7 +472,7 @@ class StagedBuilds(unittest.TestCase):
         def moved(record):
             bottom_of(record)["ms"] += 300
 
-        proc = self.check_against(moved)
+        proc = self.check_against(moved, 0)
         self.assertRegex(
             proc.stdout,
             r"  this load started animations away from the file's moments \(div#bottom [\d.]+ ms then, "
@@ -478,7 +484,7 @@ class StagedBuilds(unittest.TestCase):
         def renamed(record):
             bottom_of(record)["name"] = "div#gone"
 
-        proc = self.check_against(renamed)
+        proc = self.check_against(renamed, 0)
         self.assertIn(
             "  the page makes different animations from the ones the file saved, so this load timed them",
             proc.stdout,
@@ -486,7 +492,7 @@ class StagedBuilds(unittest.TestCase):
         self.assertIn("as one load timed them", proc.stdout)
 
     def test_check_against_a_file_saved_with_no_timeline_times_the_page_itself(self):
-        proc = self.check_against(lambda record: record.pop("timeline"))
+        proc = self.check_against(lambda record: record.pop("timeline"), 0)
         self.assertIn(
             "  the file saves no timeline, so this load timed them", proc.stdout
         )
