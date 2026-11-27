@@ -400,16 +400,16 @@ function findRuns(d) {
 
 const NODE_WRITTEN = new Set(["path", "polygon", "polyline"]);
 
-function nodeWrittenShapes(text, html) {
-  const { shapes, referable, refs } = drawnShapes(text, html);
+function nodeWrittenShapes(tree) {
+  const { shapes, referable, refs } = drawnShapes(tree);
   return [...shapes, ...referable.filter((s) => s.ids.some((i) => refs.has(i)))]
     .filter((s) => NODE_WRITTEN.has(s.tag.toLowerCase()))
     .sort((a, b) => a.offset - b.offset);
 }
 
-function checkText(text, html) {
+function checkTree(tree) {
   const breaches = [];
-  for (const { line, tag, id, d, error } of nodeWrittenShapes(text, html)) {
+  for (const { line, tag, id, d, error } of nodeWrittenShapes(tree)) {
     if (error !== undefined) {
       breaches.push({ line, tag, id, error });
       continue;
@@ -532,12 +532,17 @@ const SVG_TAG_CASE = Object.fromEntries(
 );
 
 function parseAttrs(text, html) {
-  const attrs = {};
+  const attrs = [];
   for (const [, written, dq, sq] of text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
     // https://html.spec.whatwg.org/multipage/parsing.html#attribute-name-state: an HTML parser folds names and keeps the first of two
     const name = html ? (SVG_CASE[written.toLowerCase()] ?? written.toLowerCase()) : written;
-    if (!(html && name in attrs)) attrs[name] = dq ?? sq;
+    if (!(html && attrs.some(([n]) => n === name))) attrs.push([name, dq ?? sq]);
   }
+  return attrs;
+}
+
+function styled(list) {
+  const attrs = Object.fromEntries(list);
   const important = new Set();
   for (const decl of (attrs.style ?? "").split(";")) {
     const [name, ...value] = decl.split(":");
@@ -589,22 +594,20 @@ const DRAWN = new Set(["path", "polygon", "polyline", "circle", "ellipse", "rect
 // https://www.w3.org/TR/css-cascade-5/#inherit-initial: on an inherited property unset acts as inherit
 const isInheritedValue = (v) => v === undefined || ["inherit", "unset"].includes(keyword(v));
 
-function drawnShapes(text, html) {
-  const out = [];
-  const referable = [];
-  const refs = new Set();
-  const notes = [];
-  const stack = [{ name: null, seen: {}, selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, evenodd: false, undrawn: false, visible: true, transformError: undefined }];
-  const step = (parent, tag) => {
-    parent.seen[tag] = (parent.seen[tag] ?? 0) + 1;
-    return parent.selector === null ? ":root" : `${parent.selector}>${tag}:nth-of-type(${parent.seen[tag]})`;
-  };
+const SVG_NS = "http://www.w3.org/2000/svg";
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+
+function writtenTree(text, html) {
+  const tree = { children: [] };
+  const stack = [{ name: null, node: tree, ns: null, svg: false }];
+  const lineAt = (offset) => text.slice(0, offset).split("\n").length;
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction: the parser adds the <html>, <head> and <body>
   // a page leaves out, and drops a second one
   let mode = html ? "initial" : "body";
   const imply = (name) => {
-    const parent = stack[stack.length - 1];
-    stack.push({ ...parent, name, seen: {}, selector: step(parent, name) });
+    const node = { name, tag: name, ns: HTML_NS, attrs: [], children: [] };
+    stack[stack.length - 1].node.children.push(node);
+    stack.push({ name, node, ns: HTML_NS, svg: false });
   };
   const leaveHead = () => {
     stack.length = stack.findIndex((el) => el.name === "html") + 1;
@@ -650,19 +653,41 @@ function drawnShapes(text, html) {
     if (!tag) continue;
     const name = tag.toLowerCase();
     if (html && !admit(name)) continue;
-    const attrs = parseAttrs(rest, html);
     const parent = stack[stack.length - 1];
-    const line = text.slice(0, m.index).split("\n").length;
+    const attrs = parseAttrs(rest, html);
+    const svg = parent.svg || name === "svg";
+    const xmlns = attrs.find(([n]) => n === "xmlns")?.[1];
+    const ns = html ? (svg ? SVG_NS : HTML_NS) : (xmlns ?? parent.ns);
+    const node = { name: !html ? tag : !svg ? name : (SVG_TAG_CASE[name] ?? name), tag, ns, attrs, children: [], line: lineAt(m.index), offset: m.index };
+    parent.node.children.push(node);
+    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors: an HTML parser ignores a self-closing slash outside foreign content
+    const selfClosed = /\/\s*$/.test(rest) && (!html || svg);
+    if (!selfClosed && !VOID.has(name)) stack.push({ name, node, ns, svg });
+    if (RAW.has(name) || (html && !svg && HTML_RAW.has(name))) {
+      const end = text.toLowerCase().indexOf(`</${name}`, markup.lastIndex);
+      markup.lastIndex = end < 0 ? text.length : end;
+      textFrom = markup.lastIndex;
+    }
+  }
+  return tree;
+}
+
+function drawnShapes(tree) {
+  const out = [];
+  const referable = [];
+  const refs = new Set();
+  const notes = [];
+  const enter = (node, parent, chain) => {
+    const name = node.name.toLowerCase();
+    const attrs = styled(node.attrs);
+    const { line, tag, offset } = node;
     const id = attrs.id;
     for (const v of Object.values(attrs)) for (const [, ref] of v.matchAll(/url\(\s*["']?#([^)"'\s]+)/g)) refs.add(ref);
     const href = attrs.href ?? attrs["xlink:href"];
     if (href?.startsWith("#")) refs.add(href.slice(1));
-    const selector = step(parent, !html ? tag : parent.root === null && name !== "svg" ? name : (SVG_TAG_CASE[name] ?? name));
     const el = {
-      name,
-      seen: {},
-      selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : selector,
-      root: parent.root ?? (name === "svg" ? m.index : null),
+      selector: id ? (/^[A-Za-z_][\w-]*$/.test(id) ? `#${id}` : `[id="${id.replace(/["\\]/g, "\\$&")}"]`) : chain,
+      root: parent.root ?? (name === "svg" ? offset : null),
       ids: id ? [...parent.ids, id] : parent.ids,
       matrix: parent.matrix,
       fill: isInheritedValue(attrs.fill) ? parent.fill : keyword(attrs.fill) !== "none",
@@ -684,7 +709,7 @@ function drawnShapes(text, html) {
     }
     if (DRAWN.has(name)) {
       const list = el.undrawn ? referable : out;
-      const base = { line, tag, id, offset: m.index, ...(el.undrawn ? { ids: el.ids } : { order: out.length + 1 }) };
+      const base = { line, tag, id, offset, ...(el.undrawn ? { ids: el.ids } : { order: out.length + 1 }) };
       try {
         let shape;
         if (name === "path") shape = attrs.d && { d: attrs.d };
@@ -699,15 +724,18 @@ function drawnShapes(text, html) {
         list.push({ ...base, error: err.message });
       }
     }
-    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors: an HTML parser ignores a self-closing slash outside foreign content
-    const selfClosed = /\/\s*$/.test(rest) && (!html || el.root !== null);
-    if (!selfClosed && !VOID.has(name)) stack.push(el);
-    if (RAW.has(name) || (html && el.root === null && HTML_RAW.has(name))) {
-      const end = text.toLowerCase().indexOf(`</${name}`, markup.lastIndex);
-      markup.lastIndex = end < 0 ? text.length : end;
-      textFrom = markup.lastIndex;
+    return el;
+  };
+  const visit = (node, parent) => {
+    const seen = {};
+    for (const child of node.children) {
+      // https://www.w3.org/TR/selectors-4/#the-nth-of-type-pseudo: siblings of one type share a local name and a namespace
+      const type = `${child.ns} ${child.name}`;
+      seen[type] = (seen[type] ?? 0) + 1;
+      visit(child, enter(child, parent, parent.selector === null ? ":root" : `${parent.selector}>${child.name}:nth-of-type(${seen[type]})`));
     }
-  }
+  };
+  visit(tree, { selector: null, root: null, ids: [], matrix: IDENTITY, fill: true, evenodd: false, undrawn: false, visible: true, transformError: undefined });
   return { shapes: out, referable, refs, notes };
 }
 
@@ -899,8 +927,8 @@ function printContacts(argv) {
   const texts = readFiles(files);
   if (!texts) return 2;
   const [notes, unread, listed] = [[], [], []];
-  for (const { file, text, html } of texts) {
-    const { shapes: found, notes: noted } = drawnShapes(text, html);
+  for (const { file, tree } of texts) {
+    const { shapes: found, notes: noted } = drawnShapes(tree);
     for (const note of noted) notes.push(`${file}:${note}`);
     const readable = [];
     for (const s of found) {
@@ -942,7 +970,7 @@ function readFiles(files) {
   const out = [];
   for (const file of files) {
     try {
-      out.push({ file, text: fs.readFileSync(file, "utf8"), html: !XML_FILE.test(file) });
+      out.push({ file, tree: writtenTree(fs.readFileSync(file, "utf8"), !XML_FILE.test(file)) });
     } catch (err) {
       console.error(`${file}: ${err.message}`);
       return null;
@@ -986,8 +1014,8 @@ function printBends(files) {
   const texts = readFiles(files);
   if (!texts) return 2;
   let unread = 0;
-  for (const { file, text, html } of texts) {
-    for (const shape of nodeWrittenShapes(text, html)) {
+  for (const { file, tree } of texts) {
+    for (const shape of nodeWrittenShapes(tree)) {
       let found;
       let { error } = shape;
       if (error === undefined) {
@@ -1021,8 +1049,8 @@ function main(argv) {
   const texts = readFiles(argv);
   if (!texts) return 2;
   let found = 0;
-  for (const { file, text, html } of texts) {
-    for (const b of checkText(text, html)) {
+  for (const { file, tree } of texts) {
+    for (const b of checkTree(tree)) {
       found++;
       if (b.error) console.log(`${where(file, b)}: could not read the path: ${b.error}`);
       else if (b.corner?.kink) console.log(`${where(file, b)}: the curve and straight line meeting at (${pointText(b.corner.at)}) turn ${b.corner.angle.toPrecision(3)}° there, past the ${b.corner.allowed.toPrecision(2)}° their written precision allows but under the ${((NEAR_TANGENT * 180) / Math.PI).toPrecision(2)}° a meant corner turns; put the curve's handle in line with the straight side, unless vault.curves-script excuses the kink`);
