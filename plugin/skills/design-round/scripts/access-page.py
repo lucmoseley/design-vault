@@ -118,6 +118,7 @@ const meet = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2
 // guess, #501
 const DRAWN = 2;
 const empty = (r) => r[2] - r[0] < DRAWN || r[3] - r[1] < DRAWN;
+const onScreen = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
 const clips = (cs) => cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || cs.clipPath !== 'none' || cs.clip !== 'auto';
 const contentBox = (el) => {
   const r = el.getBoundingClientRect(), cs = css(el), px = (k) => parseFloat(cs[k]);
