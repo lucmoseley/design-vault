@@ -11,6 +11,7 @@
  */
 "use strict";
 const { gitIn } = require("./git-read.js");
+const { REPO_MARKDOWN_FORM, parseRepoMarkdown } = require("./repo-markdown.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -30,12 +31,6 @@ const ART_ONLY = "art-only";
 const list = (value) => (Array.isArray(value) ? value : []);
 const isText = (value) => typeof value === "string" && value.trim() !== "";
 const isBare = (name) => isText(name) && !name.includes("/") && !name.includes("\\") && name !== ".." && name !== ".";
-const isRepoMarkdown = (value) => {
-  const match = typeof value === "string" && value.match(/^([^\s\\:]+\.md) in ([\w.-]+)\/([\w.-]+)$/);
-  if (!match) return false;
-  const [, file, owner, repo] = match;
-  return !file.startsWith("/") && !file.split("/").includes("..") && ![owner, repo].some((name) => /^\.+$/.test(name));
-};
 const isWebAddress = (value) => {
   try {
     return typeof value === "string" && /^https?:\/\//i.test(value) && Boolean(new URL(value));
@@ -117,8 +112,8 @@ function validate(gallery, imageExists, { staged = false, styleIds = new Set() }
     if (!Array.isArray(project?.groups))
       fault("group-list", `projects.${key}.groups is missing or not a list — a project with no group carries []`);
     for (const [field, required] of [["rules", true], ["gate", false]])
-      if ((required || project?.[field] !== undefined) && !isRepoMarkdown(project?.[field]))
-        fault(`project-${field}`, `projects.${key}.${field} ${JSON.stringify(project?.[field])} is not \`<path to a .md file> in <owner>/<repo>\`, the path inside the repo`);
+      if ((required || project?.[field] !== undefined) && !parseRepoMarkdown(project?.[field]))
+        fault(`project-${field}`, `projects.${key}.${field} ${JSON.stringify(project?.[field])} is not ${REPO_MARKDOWN_FORM}, the path inside the repo`);
     if (project?.desktop !== undefined && !(typeof project.desktop === "string" && /^[1-9]\d*x[1-9]\d*$/.test(project.desktop)))
       fault("project-desktop", `projects.${key}.desktop ${JSON.stringify(project.desktop)} is not a width and height in px, as \`1536x864\``);
   }
