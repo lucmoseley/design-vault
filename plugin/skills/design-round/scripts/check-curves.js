@@ -449,7 +449,8 @@ const FAULTS = new Set(CLASSES.slice(0, 2));
 
 const IDENTITY = [1, 0, 0, 1, 0, 0];
 // https://www.w3.org/TR/SVG2/struct.html#DefsElement: shapes in these are not drawn where they stand
-const UNDRAWN = new Set(["defs", "clippath", "mask", "symbol", "marker", "pattern"]);
+const UNDRAWN = new Set(["defs", "clipPath", "mask", "symbol", "marker", "pattern"]);
+const SVG_NS = "http://www.w3.org/2000/svg";
 const RAW = new Set(["script", "style"]);
 // a file:// page's parser follows its extension's MIME type: https://source.chromium.org/chromium/chromium/src/+/main:net/base/mime_util.cc
 const XML_FILE = /\.(?:svg|xhtml?|xht|xml)$/i;
@@ -617,7 +618,10 @@ function loadParse5() {
   try {
     parse5Loaded = require("parse5");
   } catch (err) {
-    console.error(`check-curves.js: the design-vault plugin's npm packages are not installed, so it cannot read an HTML file (${err.message.split("\n")[0]}); run \`claude plugin update design-vault@lucmoseley\`, or in a vault clone \`npm ci --ignore-scripts --prefix plugin\``);
+    const fix = err.code === "MODULE_NOT_FOUND"
+      ? "the design-vault plugin's npm packages are not installed; run `claude plugin update design-vault@lucmoseley`, or in a vault clone `npm ci --ignore-scripts --prefix plugin`"
+      : `Node ${process.versions.node} cannot require() parse5, an ES module; run it on Node 20.19 or later`;
+    console.error(`check-curves.js cannot read an HTML file (${err.message.split("\n")[0]}): ${fix}`);
     parse5Loaded = null;
   }
   return parse5Loaded;
@@ -629,7 +633,7 @@ function drawnShapes(tree) {
   const refs = new Set();
   const notes = [];
   const enter = (node, parent, chain) => {
-    const name = node.name.toLowerCase();
+    const name = node.ns == null || node.ns === SVG_NS ? node.name : null;
     const attrs = buildAttrs(node.attrs);
     const { line, name: tag, offset } = node;
     const id = attrs.id;

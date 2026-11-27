@@ -208,7 +208,7 @@ with open(os.path.join(HERE, "fixtures", "tree-pages.json"), encoding="utf8") as
     TREE_PAGES = [(page["name"], page["body"]) for page in json.load(fh)]
 
 
-def matches_in_chromium(tab, page):
+def selector_match_counts(tab, page):
     listed = subprocess.run(
         ["node", CURVES, "--contacts", "--json", page],
         capture_output=True,
@@ -216,6 +216,7 @@ def matches_in_chromium(tab, page):
         timeout=RUN_S,
         check=False,
     )
+    assert listed.returncode in (0, 1), listed.stderr
     contacts = json.loads(listed.stdout)["contacts"]
     selectors = [s for c in contacts for s in (c["lower"], c["upper"], *c["covers"])]
     assert any(c["covers"] for c in contacts), listed.stdout
@@ -339,7 +340,9 @@ class Edges(unittest.TestCase):
                         proc = run(path, os.path.join(self.tmp.name, name))
                         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
                         self.assertIn("pass path1.2-path2.4 (covered): ", proc.stdout)
-                        self.assertEqual(set(matches_in_chromium(tab, path)), {1}, name)
+                        self.assertEqual(
+                            set(selector_match_counts(tab, path)), {1}, name
+                        )
             finally:
                 browser.close()
 
