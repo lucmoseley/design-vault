@@ -515,7 +515,7 @@ function parseAttrs(text) {
   return [...text.matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(([, name, dq, sq]) => [name, dq ?? sq]);
 }
 
-function styled(list) {
+function buildAttrs(list) {
   const attrs = Object.fromEntries(list);
   const important = new Set();
   for (const decl of (attrs.style ?? "").split(";")) {
@@ -568,7 +568,7 @@ const DRAWN = new Set(["path", "polygon", "polyline", "circle", "ellipse", "rect
 // https://www.w3.org/TR/css-cascade-5/#inherit-initial: on an inherited property unset acts as inherit
 const isInheritedValue = (v) => v === undefined || ["inherit", "unset"].includes(keyword(v));
 
-function xmlTree(text) {
+function parseXmlTree(text) {
   const tree = { children: [] };
   const stack = [{ name: null, node: tree, ns: null }];
   const markup = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[!?][^>]*>|<\/([\w:.-]+)\s*>|<([\w:.-]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
@@ -584,7 +584,7 @@ function xmlTree(text) {
     const parent = stack[stack.length - 1];
     const attrs = parseAttrs(rest);
     const ns = attrs.find(([n]) => n === "xmlns")?.[1] ?? parent.ns;
-    const node = { name: tag, tag, ns, attrs, children: [], line: text.slice(0, m.index).split("\n").length, offset: m.index };
+    const node = { name: tag, ns, attrs, children: [], line: text.slice(0, m.index).split("\n").length, offset: m.index };
     parent.node.children.push(node);
     if (!/\/\s*$/.test(rest)) stack.push({ name: tag, node, ns });
     if (RAW.has(tag.toLowerCase())) {
@@ -595,11 +595,12 @@ function xmlTree(text) {
   return tree;
 }
 
-function htmlTree(text, parse5) {
+function parseHtmlTree(text) {
+  const parse5 = loadParse5();
+  if (!parse5) return null;
   const elements = (n) => n.childNodes.filter((c) => c.tagName !== undefined).map(element);
   const element = (n) => ({
     name: n.tagName,
-    tag: n.tagName,
     ns: n.namespaceURI,
     attrs: n.attrs.map((a) => [a.prefix ? `${a.prefix}:${a.name}` : a.name, a.value]),
     children: elements(n),
@@ -609,13 +610,17 @@ function htmlTree(text, parse5) {
   return { children: elements(parse5.parse(text, { sourceCodeLocationInfo: true, scriptingEnabled: true })) };
 }
 
+let parse5Loaded;
+
 function loadParse5() {
+  if (parse5Loaded !== undefined) return parse5Loaded;
   try {
-    return require("parse5");
+    parse5Loaded = require("parse5");
   } catch (err) {
     console.error(`check-curves.js: the design-vault plugin's npm packages are not installed, so it cannot read an HTML file (${err.message.split("\n")[0]}); run \`claude plugin update design-vault@lucmoseley\`, or in a vault clone \`npm ci --ignore-scripts --prefix plugin\``);
-    return null;
+    parse5Loaded = null;
   }
+  return parse5Loaded;
 }
 
 function drawnShapes(tree) {
@@ -625,8 +630,8 @@ function drawnShapes(tree) {
   const notes = [];
   const enter = (node, parent, chain) => {
     const name = node.name.toLowerCase();
-    const attrs = styled(node.attrs);
-    const { line, tag, offset } = node;
+    const attrs = buildAttrs(node.attrs);
+    const { line, name: tag, offset } = node;
     const id = attrs.id;
     for (const v of Object.values(attrs)) for (const [, ref] of v.matchAll(/url\(\s*["']?#([^)"'\s]+)/g)) refs.add(ref);
     const href = attrs.href ?? attrs["xlink:href"];
@@ -870,10 +875,10 @@ function printContacts(argv) {
     console.error("usage: node check-curves.js --contacts [--json] <file> [<file> ...]");
     return 2;
   }
-  const texts = readFiles(files);
-  if (!texts) return 2;
+  const trees = readFiles(files);
+  if (!trees) return 2;
   const [notes, unread, listed] = [[], [], []];
-  for (const { file, tree } of texts) {
+  for (const { file, tree } of trees) {
     const { shapes: found, notes: noted } = drawnShapes(tree);
     for (const note of noted) notes.push(`${file}:${note}`);
     const readable = [];
@@ -914,7 +919,6 @@ function printContacts(argv) {
 
 function readFiles(files) {
   const out = [];
-  let parse5;
   for (const file of files) {
     let text;
     try {
@@ -923,12 +927,9 @@ function readFiles(files) {
       console.error(`${file}: ${err.message}`);
       return null;
     }
-    if (XML_FILE.test(file)) out.push({ file, tree: xmlTree(text) });
-    else {
-      parse5 ??= loadParse5();
-      if (!parse5) return null;
-      out.push({ file, tree: htmlTree(text, parse5) });
-    }
+    const tree = XML_FILE.test(file) ? parseXmlTree(text) : parseHtmlTree(text);
+    if (!tree) return null;
+    out.push({ file, tree });
   }
   return out;
 }
@@ -965,10 +966,10 @@ function printBends(files) {
     console.error("usage: node check-curves.js --bends <file> [<file> ...] | --bends --json < shapes.json");
     return 2;
   }
-  const texts = readFiles(files);
-  if (!texts) return 2;
+  const trees = readFiles(files);
+  if (!trees) return 2;
   let unread = 0;
-  for (const { file, tree } of texts) {
+  for (const { file, tree } of trees) {
     for (const shape of nodeWrittenShapes(tree)) {
       let found;
       let { error } = shape;
@@ -1000,10 +1001,10 @@ function main(argv) {
     console.error("usage: node check-curves.js <file> [<file> ...]");
     return 2;
   }
-  const texts = readFiles(argv);
-  if (!texts) return 2;
+  const trees = readFiles(argv);
+  if (!trees) return 2;
   let found = 0;
-  for (const { file, tree } of texts) {
+  for (const { file, tree } of trees) {
     for (const b of checkTree(tree)) {
       found++;
       if (b.error) console.log(`${where(file, b)}: could not read the path: ${b.error}`);

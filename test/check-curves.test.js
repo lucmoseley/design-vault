@@ -3,7 +3,6 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
 const { after, test } = require("node:test");
 const { runInProcess } = require("./core-run-in-process.js");
 
@@ -579,12 +578,8 @@ test("a saved page's shapes are read past its script and style text, its void ta
   assert.ok(r.stdout.includes(`: separate: `) && r.stdout.includes(` --contact 'a.2-path2.4=${selector}@50.5,`), r.stdout);
 });
 
-// #668
 const TREE_PAGES = (svg) => [
-  [`<!doctype html><table><tr><td>${svg}</td></tr></table>`, "table:nth-of-type(1)>tbody:nth-of-type(1)>tr:nth-of-type(1)>td:nth-of-type(1)>"],
-  [`<!doctype html><p>x<div>${svg}</div>`, "div:nth-of-type(1)>"],
-  [`<!doctype html><ul><li>a<li>${svg}</ul>`, "ul:nth-of-type(1)>li:nth-of-type(2)>"],
-  [`<!doctype html><table>${svg}</table>`, ""],
+  ...JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "tree-pages.json"), "utf8")).map(({ body, chain }) => [`<!doctype html>${body.replace("{svg}", svg)}`, chain]),
   [`<!doctype html><b>1<p>2</b>${svg}</p>`, "p:nth-of-type(1)>"],
   [`<!doctype html><template>${svg}</template><i>${svg}</i>`, "i:nth-of-type(1)>"],
 ];
@@ -653,7 +648,7 @@ test("#668: with no parse5 to load, an HTML file exits 2 naming the install, and
     fs.copyFileSync(SCRIPT, copy);
     const run = (name, text) => {
       fs.writeFileSync(path.join(dir, name), text);
-      return spawnSync(process.execPath, [copy, "--contacts", path.join(dir, name)], { encoding: "utf8" });
+      return runInProcess(copy, ["--contacts", path.join(dir, name)]);
     };
     const html = run("page.html", `<!doctype html><svg width="100" height="100">${A()}${B()}</svg>`);
     assert.equal(html.status, 2, html.stderr);

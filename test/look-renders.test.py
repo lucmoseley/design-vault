@@ -151,13 +151,8 @@ class Contacts(unittest.TestCase):
 CURVES_RUN_S = 60
 
 
-# #668
-TREE_PAGES = (
-    ("tbody", "<table><tr><td>{svg}</td></tr></table>"),
-    ("p-closed-by-div", "<p>x<div>{svg}</div>"),
-    ("sibling-li", "<ul><li>a<li>{svg}</ul>"),
-    ("foster-parented", "<table>{svg}</table>"),
-)
+with open(os.path.join(HERE, "fixtures", "tree-pages.json"), encoding="utf8") as fh:
+    TREE_PAGES = [(page["name"], page["body"]) for page in json.load(fh)]
 
 
 class ContactsFromCheckCurves(unittest.TestCase):
