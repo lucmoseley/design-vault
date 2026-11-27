@@ -826,6 +826,7 @@ class Pause(unittest.TestCase):
         self,
     ):
         self.unwatched_after_5_s(
+            # guess, #646
             "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => document.querySelector('.lane').setAttribute('data-w', String(Math.random()))), 50));"
         )
 
