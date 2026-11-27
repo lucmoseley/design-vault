@@ -18,10 +18,14 @@ package is missing.
 import argparse
 import importlib
 import os
-import pathlib
 import sys
 
-REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+runner = siblings.load(HERE, "runner.py")
 
 KEY_DISTANCE = 14.0  # guess, #54
 BORDER = 8  # guess, #54
@@ -113,11 +117,7 @@ def main(argv):
         for package in ("numpy", "PIL", "scipy"):
             importlib.import_module(package)
     except ImportError as err:
-        print(
-            f"cutout: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
-            file=sys.stderr,
-        )
-        sys.exit(3)
+        sys.exit(runner.missing(err))
     import numpy as np
     from PIL import Image
 
