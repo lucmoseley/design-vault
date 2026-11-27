@@ -30,15 +30,22 @@
 "use strict";
 
 const fs = require("node:fs");
+const { parseArgs } = require("node:util");
 const { fall, thud, thudStray, settle, css, joltLine, jumpPx, DEFAULT_TOLERANCE, VIEW_CM, FRAME_MS } = require("./fall-motion.js");
 
 const USAGE = `usage: node fall.js --drop PX --scale PX_PER_M --sink PX [--damping Z] [--tolerance PX] [--view-cm CM] [--json]
        node fall.js --settle PX --ms MS [--damping Z] [--tolerance PX] [--view-cm CM] [--json]
        node fall.js --check TABLE [--landing thud|sink]`;
 
-const FLAGS = { "--drop": "drop", "--scale": "scale", "--sink": "sink", "--settle": "distance", "--ms": "ms", "--damping": "damping", "--tolerance": "tolerance", "--view-cm": "viewCm" };
-const FLAG_OF = Object.fromEntries(Object.entries(FLAGS).map(([f, k]) => [k, f]));
-const FALL_ARGS = Object.fromEntries(["--drop", "--scale", "--sink", "--damping", "--tolerance", "--view-cm"].map((f) => [f.slice(2), FLAGS[f]]));
+const NUMBER_FLAGS = { drop: "drop", scale: "scale", sink: "sink", settle: "distance", ms: "ms", damping: "damping", tolerance: "tolerance", "view-cm": "viewCm" };
+const FLAG_OF = Object.fromEntries(Object.entries(NUMBER_FLAGS).map(([f, k]) => [k, `--${f}`]));
+const FALL_ARGS = Object.fromEntries(["drop", "scale", "sink", "damping", "tolerance", "view-cm"].map((f) => [f, NUMBER_FLAGS[f]]));
+const OPTIONS = {
+  ...Object.fromEntries(Object.keys(NUMBER_FLAGS).map((f) => [f, { type: "string" }])),
+  json: { type: "boolean" },
+  check: { type: "string", multiple: true },
+  landing: { type: "string", multiple: true },
+};
 const THUD_ARGS = ["drop", "scale"];
 // guess, #333
 const LENGTH_MS = 0.5;
@@ -148,20 +155,18 @@ function checkTable({ easings, cues }, landing) {
   return { faults, unmeasured, landings, checked: falls.length - unmeasured.length };
 }
 
-function check(argv) {
-  let file;
-  let landing = null;
-  try {
-    for (let i = 0; i < argv.length; i++) {
-      if (argv[i] === "--check" && i + 1 < argv.length && file === undefined) file = argv[++i];
-      else if (argv[i] === "--landing" && ["thud", "sink"].includes(argv[i + 1]) && landing === null) landing = argv[++i];
-      else if (argv[i] === "--landing") throw new Error("--landing wants thud or sink, once");
-      else throw new Error(argv[i] === "--check" ? "--check wants one table file" : `${argv[i]} is not taken with --check`);
-    }
-  } catch (err) {
-    console.error(`${err.message}\n${USAGE}`);
+function check(values) {
+  const other = Object.keys(values).find((k) => k !== "check" && k !== "landing");
+  let why = null;
+  if (other) why = `--${other} is not taken with --check`;
+  else if (values.check.length !== 1) why = "--check wants one table file";
+  else if (values.landing && (values.landing.length !== 1 || !["thud", "sink"].includes(values.landing[0]))) why = "--landing wants thud or sink, once";
+  if (why) {
+    console.error(`${why}\n${USAGE}`);
     return 2;
   }
+  const [file] = values.check;
+  const landing = values.landing ? values.landing[0] : null;
   let result;
   try {
     result = checkTable(parseTable(fs.readFileSync(file, "utf8")), landing);
@@ -177,14 +182,10 @@ function check(argv) {
   return result.unmeasured.length ? 6 : 0;
 }
 
-function parse(argv) {
-  const at = { damping: 1, tolerance: DEFAULT_TOLERANCE, viewCm: VIEW_CM, json: false };
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--json") at.json = true;
-    else if (FLAGS[argv[i]] && i + 1 < argv.length) at[FLAGS[argv[i]]] = Number(argv[++i]);
-    else if (FLAGS[argv[i]]) throw new Error(`${argv[i]} wants a value`);
-    else throw new Error(`unknown argument ${argv[i]}`);
-  }
+function parse(values) {
+  if ("landing" in values) throw new Error("--landing is taken with --check alone");
+  const at = { damping: 1, tolerance: DEFAULT_TOLERANCE, viewCm: VIEW_CM, json: values.json === true };
+  for (const [f, k] of Object.entries(NUMBER_FLAGS)) if (f in values) at[k] = Number(values[f]);
   at.settle = "distance" in at;
   const [wanted, other] = at.settle ? [["distance", "ms"], ["drop", "scale", "sink"]] : [["drop", "scale", "sink"], ["ms"]];
   for (const k of other) if (k in at) throw new Error(`--${k} is not taken by a ${at.settle ? "settle" : "fall"}`);
@@ -193,10 +194,11 @@ function parse(argv) {
 }
 
 function main(argv) {
-  if (argv.includes("--check")) return check(argv);
   let at;
   try {
-    at = parse(argv);
+    const { values } = parseArgs({ args: argv, options: OPTIONS, strict: true });
+    if ("check" in values) return check(values);
+    at = parse(values);
   } catch (err) {
     console.error(`${err.message}\n${USAGE}`);
     return 2;

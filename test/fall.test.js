@@ -107,7 +107,7 @@ test("it refuses a missing drop, a zero sink and an underdamped landing, naming 
     [["--scale", "800", "--sink", "4"], /--drop wants a number above 0/],
     [["--drop", "240", "--scale", "800", "--sink", "0"], /--sink wants a number above 0/],
     [["--drop", "240", "--scale", "800", "--sink", "4", "--damping", "0.5"], /--damping wants 1/],
-    [["--scale", "800", "--sink", "4", "--drop"], /--drop wants a value/],
+    [["--scale", "800", "--sink", "4", "--drop"], /--drop <value>. argument missing/],
   ];
   for (const [args, why] of cases) {
     const p = cli(...args);

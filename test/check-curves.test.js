@@ -554,7 +554,8 @@ test("--contacts --json gives each contact's two shapes, its point and a point 1
   for (const args of [["--contacts", "--json", file], ["--contacts", file, "--json"]]) {
     const r = runInProcess(SCRIPT, args);
     assert.equal(r.status, 1, r.stderr);
-    const { notes, unread, contacts } = JSON.parse(r.stdout);
+    const { contactPx, notes, unread, contacts } = JSON.parse(r.stdout);
+    assert.equal(contactPx, 2);
     assert.deepEqual([notes, unread], [[], []]);
     assert.equal(contacts.length, 1);
     const [c] = contacts;
