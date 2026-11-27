@@ -234,17 +234,18 @@ PAGES = {
                 "record": "vault.card-type",
                 "stage": "treatment",
                 "area": "surfaces",
-                "what": "The three ranking principles under the lede sit as a row of like cards, and the middle one alone ('Recent stays count more than old ones.') takes a dark fill with white text, though it is the same kind of thing as the other two.",
+                "what": "A row of three destination cards (Canggu, Uluwatu, Ubud) under the ranking principles, each a link of the same kind, and the middle one alone (Uluwatu) is shaped differently: square corners where the others are rounded, and its text centred where theirs is set left.",
                 "edits": [
                     (
-                        "<ol><li>No hostel can pay for a higher position.</li>",
-                        '<ol class="cards"><li>No hostel can pay for a higher position.</li>',
+                        "average.</li></ol><section><h2>Ranking method",
+                        'average.</li></ol><ul class="dest-grid ranked"><li><a class="dest-card" href="/destinations/canggu"><span class="dest-card__region">Bali</span><span class="dest-card__name">Canggu</span><span class="dest-card__cta">See the ranking</span></a></li>'
+                        '<li><a class="dest-card" href="/destinations/uluwatu"><span class="dest-card__region">Bali</span><span class="dest-card__name">Uluwatu</span><span class="dest-card__cta">See the ranking</span></a></li>'
+                        '<li><a class="dest-card" href="/destinations/ubud"><span class="dest-card__region">Bali</span><span class="dest-card__name">Ubud</span><span class="dest-card__cta">See the ranking</span></a></li></ul>'
+                        "<section><h2>Ranking method",
                     )
                 ],
-                "css": ".prose ol.cards{list-style:none;padding:0;max-width:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:24px}"
-                ".prose ol.cards li{margin:0!important;padding:20px;background:#fff;border:1px solid #ede6d6;border-radius:12px;font-weight:600}"
-                ".prose ol.cards li:nth-child(2){background:#0a3542;color:#fff;border-color:#0a3542}"
-                "@media (max-width:767px){.prose ol.cards{grid-template-columns:minmax(0,1fr)}}",
+                "css": ".prose ul.ranked{padding:0;margin-top:24px}.prose ul.ranked li{margin:0}.prose ul.ranked a{text-decoration:none;font-weight:inherit}"
+                ".ranked li:nth-child(2) .dest-card{border-radius:0;align-items:center;text-align:center;justify-content:center;padding:44px 20px}",
             },
         ],
     },

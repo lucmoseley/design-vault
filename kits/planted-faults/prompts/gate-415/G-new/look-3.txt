@@ -20,19 +20,19 @@ Look questions, for the critics, pass 3 of 4, treatment and value, once the func
    Applies to: every chart mark `vault.chart-contrast` finds under 3:1
 14. vault.zebra-rows: Are alternating row fills used only on a wide table of many columns, or a label-and-value spec table, where the eye must track along a row, each stripe a subtle tint in the direction of reading, and every other table read by alignment, space and rules alone?
    Applies to: every data table
-16. vault.count-badge: Does each mark of new or waiting items show a number where the visitor needs the count, and a plain dot only where the count does not matter and the control's label already says what the dot marks, and does a count that describes its item sit as a plain number beside an icon naming what it counts?
+17. vault.count-badge: Does each mark of new or waiting items show a number where the visitor needs the count, and a plain dot only where the count does not matter and the control's label already says what the dot marks, and does a count that describes its item sit as a plain number beside an icon naming what it counts?
    Applies to: every mark of new or waiting items (unread, new, pending), and every count shown beside an item it describes (comments, replies, items)
-25. vault.disabled-legibility: Does a disabled control look muted, a grey or desaturated fill and label at lower contrast than its live state, yet stay legible, and does one a visitor must learn the reason for stay focusable with `aria-disabled`?
+26. vault.disabled-legibility: Does a disabled control look muted, a grey or desaturated fill and label at lower contrast than its live state, yet stay legible, and does one a visitor must learn the reason for stay focusable with `aria-disabled`?
    Applies to: every control a visitor cannot use right now, not content shown as unavailable, such as a full hostel's row, which keeps `vault.contrast`
-26. vault.curves-look: Viewed at 8× zoom, is the tightest bend of every curve free of corners?
+27. vault.curves-look: Viewed at 8× zoom, is the tightest bend of every curve free of corners?
    Applies to: the tightest bend of every curve
-27. vault.contacts-look: Rendered at device pixel ratios 1, 2 and 3, and each render magnified 4× without being drawn again, does every contact close with no gap, no overlap and no seam of the ground along an edge both sides share (the conflation seam, which a shared edge does not cure)?
+28. vault.contacts-look: Rendered at device pixel ratios 1, 2 and 3, and each render magnified 4× without being drawn again, does every contact close with no gap, no overlap and no seam of the ground along an edge both sides share (the conflation seam, which a shared edge does not cure)?
    Applies to: every place two elements touch, on the first frame, every key frame and the last
-29. vault.icon-fill: Does each icon take its outline form by default, beside text, in toolbars and lists, and its filled form only for a selected or current item (the current tab or nav item) or the few statuses that must draw the eye, never filled throughout?
+30. vault.icon-fill: Does each icon take its outline form by default, beside text, in toolbars and lists, and its filled form only for a selected or current item (the current tab or nav item) or the few statuses that must draw the eye, never filled throughout?
    Applies to: every interface icon with an outline and a filled form
-32. vault.pixel-image-kind: Is each such image declared as the round's `pixel-image` part, and is no photograph declared as one?
+33. vault.pixel-image-kind: Is each such image declared as the round's `pixel-image` part, and is no photograph declared as one?
    Applies to: every raster image shown larger than its natural size whose content is pixels or hard edges: pixel art, a QR or bar code, a screenshot of interface or a line diagram
-33. vault.rtl-icons: In the right-to-left render, are icons showing reading direction or forward and back movement mirrored (back, next, previous, a text-lines icon, a volume slider), while logos, check marks, slashes, clocks and clockwise arrows, right-handed objects such as a search glass, and media playback buttons and their progress bar keep their left-to-right form?
+34. vault.rtl-icons: In the right-to-left render, are icons showing reading direction or forward and back movement mirrored (back, next, previous, a text-lines icon, a volume slider), while logos, check marks, slashes, clocks and clockwise arrows, right-handed objects such as a search glass, and media playback buttons and their progress bar keep their left-to-right form?
    Applies to: every icon on a page in a right-to-left language, rendered with `dir="rtl"`
 35. vault.illustration-detail: Does each illustration use as few elements as carry its message, in flat fills from the palette or its tints, with no shadow or gradient save to show depth or a telling feature, and the same line widths, radii and colours across a set?
    Applies to: every illustration the asset draws or commissions
