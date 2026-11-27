@@ -29,7 +29,7 @@ OWN_COLOUR = 8
 # guess, #163
 EDGE_LINES = range(-2, 3)
 # guess, #197
-DRAWN = 1.02
+EDGE_DRAWN_RATIO = 1.02
 # guess, #163
 FILL_INSET = 4
 # WCAG 1.4.11 asks a focus indicator for 3:1: https://www.w3.org/TR/WCAG22/#non-text-contrast
@@ -209,7 +209,7 @@ def control_edge(shot, behind, boxes):
         best = edge_contrast(shot, behind[i], b["rect"])
         if best is None and i == 0:
             return None
-        if best is not None and best.ratio >= DRAWN:
+        if best is not None and best.ratio >= EDGE_DRAWN_RATIO:
             return Edge(b, best.ratio, best.behind)
     return Edge(None, None, None)
 

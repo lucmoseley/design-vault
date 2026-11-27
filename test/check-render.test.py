@@ -22,6 +22,12 @@ SIBLINGS = os.path.join(
 CRASH_EXIT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "crash_exit.py"
 )
+RUNNER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "runner.py"
+)
+FAIL_OPEN = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "fail_open.py"
+)
 SIZES = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "references", "render-sizes.json"
 )
@@ -281,6 +287,8 @@ class Size(unittest.TestCase):
         shutil.copy(SPEND_LOG, scripts)
         shutil.copy(SIBLINGS, scripts)
         shutil.copy(CRASH_EXIT, scripts)
+        shutil.copy(RUNNER, scripts)
+        shutil.copy(FAIL_OPEN, scripts)
         render = self.render("v1-a", (10, 10))
         for broken in (
             None,
@@ -496,7 +504,7 @@ class Checkerboard(unittest.TestCase):
                 )
                 self.assertEqual(done.returncode, 3, done.stderr)
                 self.assertIn(
-                    f"check-render: {package} is missing — python3 -m pip install -r",
+                    f"check-render.py: {package} is missing — python3 -m pip install -r",
                     done.stderr,
                 )
 

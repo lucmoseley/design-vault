@@ -97,13 +97,11 @@
 			"test/chromium-suites.test.js",
 			"test/corrections-log.test.js",
 			"test/failed-files.test.js",
-			"test/ingest.test.js",
 			"test/ledger-check.test.js",
 			"test/round-log.test.js",
 			"test/rule-store-pointers.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js",
-			"test/validate.test.js"
+			"test/suite-budget.test.js"
 		],
 		"index.html": [
 			"test/calibration-packet.test.js"
@@ -144,7 +142,8 @@
 			"test/gate-wording.test.js"
 		],
 		"plugin/skills/design-critique/rules.md": [
-			"test/gate-select.test.js"
+			"test/gate-select.test.js",
+			"test/gate.test.js"
 		],
 		"plugin/skills/design-critique/rules/buttons.md": [
 			"test/gate-select.test.js",
@@ -271,7 +270,8 @@
 			"test/select-suites.test.js"
 		],
 		"plugin/skills/design-round/SKILL.md": [
-			"test/gate-wording.test.js"
+			"test/gate-wording.test.js",
+			"test/gate.test.js"
 		],
 		"plugin/skills/design-round/references/calibration.md": [
 			"test/rule-store-pointers.test.js"
@@ -291,6 +291,9 @@
 		"plugin/skills/design-round/scripts/fall.js": [
 			"test/failed-files.test.js",
 			"test/fall-check.test.js",
+			"test/fall.test.js"
+		],
+		"plugin/skills/design-round/scripts/flow-pace.json": [
 			"test/fall.test.js"
 		],
 		"plugin/skills/design-round/scripts/gate-form.js": [
@@ -337,6 +340,9 @@
 		],
 		"release-check.js": [
 			"test/release-check.test.js",
+			"test/rule-store-pointers.test.js"
+		],
+		"repo-markdown.js": [
 			"test/rule-store-pointers.test.js"
 		],
 		"round-log.js": [
@@ -2480,6 +2486,11 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/repo-markdown.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/review-page.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
@@ -2566,6 +2577,13 @@
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
+		],
+		"test/validator-files.js": [
+			"test/bundle.test.js",
+			"test/ingest.test.js",
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js",
+			"test/validate.test.js"
 		],
 		"test/vendor-axe.test.js": [
 			"test/ledger-check.test.js",

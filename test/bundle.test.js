@@ -7,6 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { after, test } = require("node:test");
 const { runInProcess } = require("./core-run-in-process.js");
+const VALIDATOR_FILES = require("./validator-files.js");
 
 const ROOT = path.join(__dirname, "..");
 const { writeBundle } = require(path.join(ROOT, "bundle.js"));
@@ -93,7 +94,7 @@ test("an unknown argument is refused by name", () => {
 });
 
 test("pre-commit.local ends the hook on a refusing gate, under plain sh with more of the hook after it", () => {
-  const repo = makeRepo(["bundle.js", "validate.js", "git-read.js", ".husky/pre-commit.local"]);
+  const repo = makeRepo(["bundle.js", ...VALIDATOR_FILES, ".husky/pre-commit.local"]);
   const hook = () => spawnSync("sh", ["-c", ". ./.husky/pre-commit.local; echo HOOK-WENT-ON"], { cwd: repo.dir, encoding: "utf8" });
 
   repo.stage("data/styles.json", "[1]\n");

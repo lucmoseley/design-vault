@@ -12,17 +12,16 @@ SCRIPT = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "check-load.py"
 )
 FIXTURES = os.path.join(HERE, "fixtures", "load")
-SCRIPTS = os.path.dirname(SCRIPT)
-sys.path.insert(0, SCRIPTS)
-import siblings  # noqa: E402
-
-load = siblings.load(SCRIPTS, "check-load.py")
 
 
 # guess, #170
 RUN_TIMEOUT_S = 180
-# A script that holds the throttled load 40% past QUIET_MS; the 40% is a guess (#154).
-SLOW_LOAD_BYTES = int(load.DOWN_BYTES * load.QUIET_MS / 1000 * 1.4)
+# Lighthouse's mobileSlow4G, devtools-scaled: https://github.com/GoogleChrome/lighthouse/blob/main/core/config/constants.js
+ROUND_TRIP_MS = 150 * 3.75
+DOWN_BYTES_S = 1.6 * 1024 * 0.9 * 1024 / 8
+# guess: 40% past check-load.py's 5 s quiet window, #556
+SLOW_LOAD_S = 7
+SLOW_LOAD_BYTES = int(DOWN_BYTES_S * SLOW_LOAD_S)
 
 
 def run(page, *args):
@@ -32,24 +31,17 @@ def run(page, *args):
     )
 
 
-class Profile(unittest.TestCase):
-    def test_the_network_is_lighthouses_scaled_slow_4g_in_bytes_per_second(self):
-        self.assertEqual(load.LATENCY_MS, 562.5)
-        self.assertAlmostEqual(load.DOWN_BYTES, 188743.68)
-        self.assertAlmostEqual(load.UP_BYTES, 86400)
-        self.assertEqual((load.CPU_SLOWDOWN, load.SCALE), (4, 1.75))
-        self.assertEqual(load.SCREEN, {"width": 412, "height": 823})
-
-
 class Pages(unittest.TestCase):
-    def test_content_shown_at_once_passes_after_the_throttled_round_trip_170(self):
+    def test_content_shown_at_once_passes_after_the_throttled_round_trip_on_lighthouses_phone_170(
+        self,
+    ):
         proc = run("at-once.html")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("the median of 3 run(s); limit 2500 ms", proc.stdout)
         ms = [int(line.split()[0]) for line in proc.stdout.splitlines()[2:]]
         self.assertEqual(len(ms), 3)
-        self.assertTrue(all(load.LATENCY_MS < m < 2500 for m in ms), ms)
-        self.assertIn(" ms, h1#title", proc.stdout)
+        self.assertTrue(all(ROUND_TRIP_MS < m < 2500 for m in ms), ms)
+        self.assertIn(" ms, h1#w412-h823-x175-moto", proc.stdout)
 
     def test_a_headline_revealed_3_s_in_fails(self):
         proc = run("late.html", "--runs", "1")

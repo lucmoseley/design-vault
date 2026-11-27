@@ -250,8 +250,8 @@ test("a change of the critics' model, or a gate-list record changed after the la
   assert.deepEqual(run("--model", "claude-opus-5-5"), ["calibration unknown — data/calibration-log.jsonl line 2: the last run records no model"]);
 });
 
-test("--model and --gate each take a value, and any other option, --rules among them, is a usage error", () => {
-  for (const [args, said] of [[["--model"], /--model takes a value: --model <value>/], [["--gate"], /--gate takes a value/], [["--colour", "x"], /unknown argument "--colour"/], [["--rules", "x"], /unknown argument "--rules"/]]) {
+test("--log, --previous, --model and --gate each take a value, and any other option, --rules among them, is a usage error", () => {
+  for (const [args, said] of [[["--log"], /^round-log\.js: Option '--log <value>' argument missing\n$/], [["--previous"], /'--previous <value>' argument missing/], [["--model"], /'--model <value>' argument missing/], [["--gate"], /'--gate <value>' argument missing/], [["--colour", "x"], /Unknown option '--colour'/], [["--rules", "x"], /Unknown option '--rules'/], [["--log", ""], /^round-log\.js: Option '--log <value>' argument missing\n$/]]) {
     const r = runInProcess(SCRIPT, args);
     assert.equal(r.status, 2, args.join(" "));
     assert.match(r.stderr, said);

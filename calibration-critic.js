@@ -33,7 +33,8 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { CRITICS } = require("./calibration-log.js");
+const { CRITIC_LETTERS } = require("./calibration-log.js");
+const { isObject, parseFlags } = require("./log-gate.js");
 
 const CONFINED = [
   "--print",
@@ -55,13 +56,7 @@ const claudeBin = () => process.env.WFC_CLAUDE_BIN || "claude";
 const QUESTION = /^\s*\d+\.\s+([\w.-]+)/;
 
 function parseArgs(argv) {
-  const options = { packet: null, answers: null, round: null, model: null, out: null, canary: false };
-  for (let i = 0; i < argv.length; i++) {
-    const name = argv[i].replace(/^--/, "");
-    if (argv[i] === "--canary") options.canary = true;
-    else if (argv[i].startsWith("--") && name in options && name !== "canary" && argv[i + 1]) options[name] = argv[++i];
-    else throw new Error(`unknown argument ${JSON.stringify(argv[i])}`);
-  }
+  const options = parseFlags(argv, { packet: null, answers: null, round: null, model: null, out: null, canary: false }, ["canary"]);
   const modes = [options.packet, options.round, options.canary].filter(Boolean).length;
   if (modes !== 1) throw new Error("give one of --packet <dir>, --round <folder> or --canary");
   if (!options.model || !(options.packet ? options.answers : options.out)) throw new Error(`--model and ${options.packet ? "--answers" : "--out"} are both needed`);
@@ -93,8 +88,6 @@ function questionTexts(text) {
   }
   return texts;
 }
-
-const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 
 function answerFaults(asked, data) {
   if (!isObject(data)) return ["the answer is not a JSON object"];
@@ -238,7 +231,7 @@ function packet({ packet: dir, model, answers }) {
   const status = canary({ model, out: path.join(answers, "canary.json") });
   if (status !== 0) return status;
   for (const folder of fs.readdirSync(dir).sort()) {
-    for (const letter of CRITICS) {
+    for (const letter of CRITIC_LETTERS) {
       const out = path.join(answers, folder, `critic-${letter}.json`);
       const first = runCritic({ round: path.join(dir, folder), model, out });
       const status = first === 1 ? runCritic({ round: path.join(dir, folder), model, out }) : first;

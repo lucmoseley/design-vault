@@ -28,13 +28,13 @@
  * Each figure's disagreements number of − agree − unsure (of − agree for pick).
  */
 "use strict";
-const { isText, isDate, parseRows, runGate } = require("./log-gate.js");
+const { isObject, isText, isDate, parseRows, runGate } = require("./log-gate.js");
 
 const LOG = "data/calibration-log.jsonl";
 const FIELDS = ["date", "round_log_rows", "model", "canary_held_on", "rounds", "pick", "questions", "entries", "new_questions", "critics", "disagreements", "settles", "where"];
 const ROUND = /^[\w.-]+\/[\w.-]+#[1-9]\d* r[1-9]\d*$/;
 const VERSION = /^\d+\.\d+\.\d+$/;
-const CRITICS = ["a", "b", "c"];
+const CRITIC_LETTERS = ["a", "b", "c"];
 const ANSWERS = ["yes", "no"];
 const KINDS = {
   pick: ["round", "critic", "founder", "leader", "turned_on"],
@@ -42,7 +42,6 @@ const KINDS = {
   entry: ["round", "critic", "candidate", "on", "principle", "rule", "founder", "answer", "evidence"],
 };
 
-const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 const isCount = (v) => Number.isInteger(v) && v >= 0;
 const isName = (v) => v === null || isText(v);
 
@@ -62,7 +61,7 @@ function disagreementFaults(at, d, rounds) {
   const fields = KINDS[d.kind];
   for (const key of Object.keys(d)) if (key !== "kind" && !fields.includes(key)) faults.push(`${at}: ${key} is not a ${d.kind} disagreement's field`);
   if (!rounds.includes(d.round)) faults.push(`${at}: round ${JSON.stringify(d.round)} is not one of the run's rounds`);
-  if (!CRITICS.includes(d.critic)) faults.push(`${at}: critic ${JSON.stringify(d.critic)} is not a, b or c`);
+  if (!CRITIC_LETTERS.includes(d.critic)) faults.push(`${at}: critic ${JSON.stringify(d.critic)} is not a, b or c`);
   if (d.kind === "pick") {
     if (!isName(d.founder) || !isName(d.leader) || d.founder === d.leader) faults.push(`${at}: founder and leader are not two different picks, each a name or null`);
     if (!isText(d.turned_on)) faults.push(`${at}: turned_on is missing — the lens or question the critic's leader turned on`);
@@ -98,7 +97,7 @@ function checkCalibrationLog(text, previousText = "") {
     const rounds = Array.isArray(row.rounds) ? row.rounds : [];
     if (!rounds.length || !rounds.every((r) => typeof r === "string" && ROUND.test(r)) || new Set(rounds).size !== rounds.length)
       fault("rounds", `${at}: rounds is not a list of one or more different "owner/repo#n r<k>"`);
-    if (!(Array.isArray(row.critics) && row.critics.length === 3 && row.critics.every((c) => isObject(c) && Object.keys(c).sort().join() === "answers,unsure" && isCount(c.answers) && isCount(c.unsure) && c.unsure <= c.answers)))
+    if (!(Array.isArray(row.critics) && row.critics.length === CRITIC_LETTERS.length && row.critics.every((c) => isObject(c) && Object.keys(c).sort().join() === "answers,unsure" && isCount(c.answers) && isCount(c.unsure) && c.unsure <= c.answers)))
       fault("critics", `${at}: critics is not three { unsure, answers }, unsure no more than answers`);
     const tested = row.new_questions;
     if (!(isObject(tested) && Object.entries(tested).every(([id, n]) => id.trim() !== "" && isObject(n) && Object.keys(n).sort().join() === "no,unsure,yes" && Object.values(n).every(isCount))))
@@ -140,4 +139,4 @@ const main = (argv) => runGate(argv, { log: LOG, name: "calibration-log.js", nou
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { checkCalibrationLog, CRITICS };
+module.exports = { checkCalibrationLog, CRITIC_LETTERS };

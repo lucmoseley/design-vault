@@ -38,6 +38,36 @@ class GoneProcess(unittest.TestCase):
         self.assertIsNone(runner.driver_pid(gone.pid))
 
 
+class BrowserPids(unittest.TestCase):
+    def alive(self, script):
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                f"import os, time\n{script}print(flush=True)\ntime.sleep({CASE_LIMIT_S})\n",
+                "--remote-debugging-pipe",
+            ],
+            stdout=subprocess.PIPE,
+            start_new_session=True,
+        )
+        self.addCleanup(proc.wait)
+        self.addCleanup(lambda: os.killpg(proc.pid, signal.SIGKILL))
+        proc.stdout.readline()
+        return proc.pid
+
+    def test_a_fork_the_browser_has_not_yet_execd_is_not_a_second_browser_662(self):
+        browser = self.alive(
+            f"if os.fork() == 0:\n    time.sleep({CASE_LIMIT_S})\n    os._exit(0)\n"
+        )
+        (fork,) = runner.descendants(browser)
+        self.assertIn("--remote-debugging-pipe", runner.process_args(fork))
+        self.assertEqual(runner.browser_pids([browser, fork]), [browser])
+
+    def test_two_browsers_neither_the_others_child_are_both_kept_662(self):
+        browsers = [self.alive(""), self.alive("")]
+        self.assertEqual(runner.browser_pids(browsers), browsers)
+
+
 def raises(exc):
     def work():
         raise exc

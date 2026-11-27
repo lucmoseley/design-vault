@@ -59,7 +59,7 @@ function sniff(bytes) {
 const dollars = (usd) => `$${usd.toFixed(PRICE_DECIMALS)}`;
 const parseDecimal = (text) => (DECIMAL.test(text) ? Number(text) : NaN);
 
-function readCredentials(value) {
+function checkCredentials(value) {
   const colon = (value ?? "").indexOf(":");
   if (colon < 1 || colon === value.length - 1) {
     throw new Error("HIGGSFIELD_API_KEY must be set, in the environment or ~/.higgsfield.env, to <key id>:<key secret>, as the Higgsfield console issues them");
@@ -67,7 +67,7 @@ function readCredentials(value) {
   return value;
 }
 
-function readCeiling(value) {
+function parseCeiling(value) {
   const ceiling = parseDecimal(value);
   if (!Number.isFinite(ceiling) || ceiling < 0) {
     const got = value === undefined ? "" : "; it holds something else, not shown in case it is the key";
@@ -122,7 +122,7 @@ function spentIn(roundDir) {
       error.message += ". Check the Higgsfield console for that job's charge, then mend the line to carry it";
       throw error;
     }
-    const usd = readUsd(entry.usd);
+    const usd = parseUsd(entry.usd);
     if (!Number.isFinite(usd)) throw refuse("holds no usd figure");
     if (usd < 0) throw refuse("holds a negative usd figure");
     if (typeof entry.idempotency_key === "string" && entry.idempotency_key) bySubmission.set(entry.idempotency_key, usd);
@@ -269,7 +269,7 @@ function unlockAll(held, log) {
   }
 }
 
-function readUsd(value) {
+function parseUsd(value) {
   if (typeof value === "number") return value;
   if (typeof value === "string") return parseDecimal(value);
   return NaN;
@@ -277,7 +277,7 @@ function readUsd(value) {
 
 async function estimate(ctx, job) {
   const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input });
-  const usd = readUsd(answer?.usd);
+  const usd = parseUsd(answer?.usd);
   if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
   if (answer?.type !== "description") throw new Error(`the estimate for ${job.model} is neither a usd figure nor a price rule: ${JSON.stringify(answer)}`);
@@ -342,7 +342,7 @@ async function save(ctx, job, outputs, files) {
 async function render(jobs, options = {}) {
   const log = options.log ?? console.log;
   const ctx = {
-    credentials: readCredentials(options.credentials),
+    credentials: checkCredentials(options.credentials),
     fetch: options.fetch ?? globalThis.fetch,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     now: options.now ?? Date.now,
@@ -350,7 +350,7 @@ async function render(jobs, options = {}) {
     retryDeadlineMs: options.retryDeadlineMs ?? RETRY_DEADLINE_MS,
     timeout: options.timeout ?? AbortSignal.timeout,
   };
-  const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
+  const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : parseCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
   const made = [];
@@ -558,7 +558,7 @@ function parseArgs(argv) {
   return { jobs, estimateOnly };
 }
 
-function settings(env, file = ENV_FILE) {
+function readSettings(env, file = ENV_FILE) {
   const fromFile = {};
   if (fs.existsSync(file)) {
     for (const line of fs.readFileSync(file, "utf8").split("\n")) {
@@ -570,4 +570,4 @@ function settings(env, file = ENV_FILE) {
   return Object.fromEntries(SETTINGS.map((name) => [name, nonBlank(env[name]) ?? nonBlank(fromFile[name])]));
 }
 
-module.exports = { render, parseArgs, settings };
+module.exports = { render, parseArgs, readSettings };

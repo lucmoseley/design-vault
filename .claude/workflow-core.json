@@ -379,6 +379,7 @@
 		"plugin/skills/design-round/scripts/drive-form.py": "library",
 		"plugin/skills/design-round/scripts/drive-pointer.py": "library",
 		"plugin/skills/design-round/scripts/check-flow.py": "program",
+		"plugin/skills/design-round/scripts/flow-pace.py": "library",
 		"plugin/skills/design-round/scripts/check-layout.py": "program",
 		"plugin/skills/design-round/scripts/check-measure.py": "program",
 		"plugin/skills/design-round/scripts/check-frames.py": "program",

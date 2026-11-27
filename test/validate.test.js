@@ -7,6 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { after, test } = require("node:test");
 const { runInProcess } = require("./core-run-in-process.js");
+const VALIDATOR_FILES = require("./validator-files.js");
 
 const ROOT = path.join(__dirname, "..");
 const VALIDATE = path.join(ROOT, "validate.js");
@@ -238,11 +239,14 @@ test("a Style guide that is not JSON, or holds no styles list, is refused", () =
   }
 });
 
+function copyValidatorModules(repo) {
+  for (const file of VALIDATOR_FILES) fs.copyFileSync(path.join(ROOT, file), path.join(repo, file));
+}
+
 test("--staged alone refuses an entry still carrying proposed_manta_groups (#4)", () => {
   const repo = tempDir("validate-proposal-");
   const git = (...args) => execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], { cwd: repo, stdio: "pipe" });
-  fs.copyFileSync(VALIDATE, path.join(repo, "validate.js"));
-  fs.copyFileSync(path.join(ROOT, "git-read.js"), path.join(repo, "git-read.js"));
+  copyValidatorModules(repo);
   fs.mkdirSync(path.join(repo, "data"));
   fs.copyFileSync(STYLES, path.join(repo, "data", "styles.json"));
   fs.cpSync(path.join(FIXTURES, "images"), path.join(repo, "images"), { recursive: true });
@@ -262,8 +266,7 @@ test("--staged alone refuses an entry still carrying proposed_manta_groups (#4)"
 test("--staged reads the gallery and images from the index, not the working tree", () => {
   const repo = tempDir("validate-staged-");
   const git = (...args) => execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], { cwd: repo, stdio: "pipe" });
-  fs.copyFileSync(VALIDATE, path.join(repo, "validate.js"));
-  fs.copyFileSync(path.join(ROOT, "git-read.js"), path.join(repo, "git-read.js"));
+  copyValidatorModules(repo);
   fs.mkdirSync(path.join(repo, "data"));
   fs.copyFileSync(STYLES, path.join(repo, "data", "styles.json"));
   fs.cpSync(path.join(FIXTURES, "images"), path.join(repo, "images"), { recursive: true });
