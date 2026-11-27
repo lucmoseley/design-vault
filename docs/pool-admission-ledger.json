@@ -8,24 +8,9 @@
 		},
 		{
 			"file": "CLAUDE.md",
-			"headline": "Two readers, two registers.",
-			"claim": "A session writes a founder-read field in design jargon, or an AI-read field such as `image_recipe` in loose plain English.",
-			"route": "trigger",
-			"ticket": 593
-		},
-		{
-			"file": "CLAUDE.md",
-			"headline": "A `note` carries the founder's intent, not the picture's contents.",
-			"claim": "A session drafts a `note` describing what the picture shows, or invents the founder's reason for saving it, instead of quoting his intent or saying none was found.",
-			"route": "trigger",
-			"ticket": 593
-		},
-		{
-			"file": "CLAUDE.md",
-			"headline": "A session that lands a commit touching `plugin/` releases it before it ends",
-			"claim": "A session lands a `plugin/` change and ends without moving the marketplace pin, so no project gets the fix.",
-			"route": "trigger",
-			"ticket": 593
+			"headline": "A review of library references put to the founder asks one plain question per reference.",
+			"claim": "A session puts the founder a review of references as a wall of questions or design jargon instead of one plain question each.",
+			"route": "no-trigger"
 		},
 		{
 			"file": "AGENTS.md",

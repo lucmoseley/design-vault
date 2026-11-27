@@ -56,6 +56,7 @@
 		"plugin/skills/design-round/scripts/video-sheet.py": {},
 		"release-check.js": {},
 		"round-log.js": {},
+		"rule-triggers.js": {},
 		"scripts/de00-look-test.py": {},
 		"server.py": {},
 		"test/all.sh": {},

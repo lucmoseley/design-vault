@@ -28,9 +28,7 @@ State: being built — the build order is the spec lucmoseley/mantahostels#3631.
 
 ## Conventions specific to this repo
 
-- **Two readers, two registers.** The founder reads `title`, `description`, `note`, `fit.<project>.take` and a collection's `name`, `description` and `deployFor`: plain English a non-designer follows, any design term glossed in a few words. `image_recipe`, `vocabulary`, `composition` and a collection's `imageStyle`, `vocabulary` and `risk` feed an AI and stay technical (design-vault#2 Q6).
-- **A `note` carries the founder's intent, not the picture's contents.** Draft it from his own words about why he saved the reference — the ten-site note in lucmoseley/mantahostels#3037, the background-art principles in lucmoseley/mantahostels#3057 — and lead with what he was after: a feel, a behaviour, one part. Where no words of his exist, name the overall feel, hedge at most one likely part, and say no note from him was found; he saved many references "for specific small parts of them, or their vague overall 'vibe'". A review put to him asks one plain question per reference.
-- **A session that lands a commit touching `plugin/` releases it before it ends**, by README §Releasing a plugin change. `release-check.js` prints the unreleased count at session start; it reports and never refuses (#58).
+- A review of library references put to the founder asks one plain question per reference.
 
 <!-- Formatter of record, source layout, deploy trigger, and any rule that exists
      only because of THIS product. Workflow-wide conventions are already in

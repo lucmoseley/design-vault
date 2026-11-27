@@ -19,6 +19,12 @@
 			"id": "node \"$CLAUDE_PROJECT_DIR/ledger-upkeep.js\"",
 			"matcher": "startup|resume|clear",
 			"covers": []
+		},
+		{
+			"event": "PreToolUse",
+			"id": "node \"$CLAUDE_PROJECT_DIR/rule-triggers.js\"",
+			"matcher": "Edit|Write|MultiEdit|Bash",
+			"covers": ["Edit", "Write", "MultiEdit", "Bash"]
 		}
 	],
 	"registeredElsewhere": {},
