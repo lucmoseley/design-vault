@@ -38,6 +38,29 @@ class GoneProcess(unittest.TestCase):
         self.assertIsNone(runner.driver_pid(gone.pid))
 
 
+class BrowserPids(unittest.TestCase):
+    def test_a_fork_the_browser_has_not_yet_execd_is_not_a_second_browser_662(self):
+        forks = (
+            "import os, sys, time\n"
+            "if os.fork() == 0:\n"
+            "    time.sleep(60)\n"
+            "    os._exit(0)\n"
+            "print(flush=True)\n"
+            "time.sleep(60)\n"
+        )
+        browser = subprocess.Popen(
+            [sys.executable, "-c", forks, "--remote-debugging-pipe"],
+            stdout=subprocess.PIPE,
+            start_new_session=True,
+        )
+        self.addCleanup(browser.wait)
+        self.addCleanup(lambda: os.killpg(browser.pid, signal.SIGKILL))
+        browser.stdout.readline()
+        (fork,) = runner.descendants(browser.pid)
+        self.assertIn("--remote-debugging-pipe", runner.process_args(fork))
+        self.assertEqual(runner.browser_pids([browser.pid, fork]), [browser.pid])
+
+
 def raises(exc):
     def work():
         raise exc
