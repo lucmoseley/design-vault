@@ -169,12 +169,13 @@ test("a reference toggles in and out of the selection, which holds five at most 
 });
 
 test("switching project drops the picks and selections the new project does not offer (#584)", () => {
-  const acme = V.switchProject(view({ pick: { look: "flat", group: "icons", part: "hero" } }), ["a", "d"], "acme");
+  const acme = V.keptOnSwitch(view({ pick: { look: "flat", group: "icons", part: "hero" } }), ["a", "d"], "acme");
   assert.deepEqual(acme.selection, ["a", "d"]);
   assert.deepEqual(acme.pick, { look: "flat", part: "hero", motion: null, group: null });
-  const manta = V.switchProject(view({ project: "acme", pick: { part: "pricing" } }), ["a", "d"], "manta");
+  const manta = V.keptOnSwitch(view({ project: "acme", pick: { part: "pricing" } }), ["a", "d"], "manta");
   assert.deepEqual(manta.selection, ["a"]);
   assert.equal(manta.pick.part, null);
+  assert.deepEqual(V.keptOnSwitch(view(), ["gone", "a"], "manta").selection, ["a"]);
 });
 
 test("the page opens on the stored project, else the default, else the first, with the stored selection pruned (#584)", () => {
@@ -185,6 +186,7 @@ test("the page opens on the stored project, else the default, else the first, wi
   const acmeFirst = { acme: DATA.projects.acme, manta: DATA.projects.manta };
   assert.equal(V.startView(view({ data: { ...DATA, projects: acmeFirst } }), null, []).project, "manta");
   assert.equal(V.startView(view({ data: { ...DATA, projects: { acme: DATA.projects.acme } } }), null, []).project, "acme");
+  assert.equal(V.startView(view({ data: { ...DATA, projects: {} } }), "gone", []).project, "manta");
   assert.deepEqual(start("manta", ["gone", "d", "a", "b"]).selection, ["a", "b"]);
   assert.deepEqual(start("acme", ["a", "b", "c", "x", "y", "d"]).selection, ["a", "b", "c"]);
   assert.deepEqual(start("manta", "not a list").selection, []);

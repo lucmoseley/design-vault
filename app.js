@@ -165,7 +165,7 @@ function renderProjectOptions(){
  $('fitSelect').value=fit;
 }
 function switchProject(key){
- const next=VaultView.switchProject(view(),[...selected],key);
+ const next=VaultView.keptOnSwitch(view(),[...selected],key);
  setProject(key);saveLocal('taste-vault-project',project);setFit('any');renderProjectOptions();
  setSelection(next.selection);Object.entries(next.pick).forEach(([way,id])=>setPick(way,id));
 }
