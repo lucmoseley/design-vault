@@ -200,8 +200,9 @@ suites_needing() {
 }
 if [ -f plugin/package.json ] && for_npm="$(suites_needing npm)"; then
   need "the plugin's npm packages at plugin/package-lock.json's versions, for $for_npm" 'npm ci --ignore-scripts --prefix plugin' \
-    node -e 'for (const [at, { version }] of Object.entries(require("./plugin/package-lock.json").packages))
-      if (at && require(`./plugin/${at}/package.json`).version !== version) process.exit(1)'
+    node -e 'for (const [at, entry] of Object.entries(require("./plugin/package-lock.json").packages))
+      if (at && !entry.link && !entry.optional && !entry.dev && require(`./plugin/${at}/package.json`).version !== entry.version) process.exit(1)
+      require("./plugin/node_modules/parse5")'
 fi
 if [[ " ${run[*]} " == *" python3 "* ]]; then
   pip_install='python3 -m pip install --only-binary :all: -r plugin/requirements.txt'

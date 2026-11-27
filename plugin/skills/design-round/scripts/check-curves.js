@@ -405,7 +405,7 @@ const NODE_WRITTEN = new Set(["path", "polygon", "polyline"]);
 function nodeWrittenShapes(tree) {
   const { shapes, referable, refs } = drawnShapes(tree);
   return [...shapes, ...referable.filter((s) => s.ids.some((i) => refs.has(i)))]
-    .filter((s) => NODE_WRITTEN.has(s.tag.toLowerCase()))
+    .filter((s) => NODE_WRITTEN.has(s.tag))
     .sort((a, b) => a.offset - b.offset);
 }
 
@@ -588,7 +588,7 @@ function parseXmlTree(text) {
     const node = { name: tag, ns, attrs, children: [], line: text.slice(0, m.index).split("\n").length, offset: m.index };
     parent.node.children.push(node);
     if (!/\/\s*$/.test(rest)) stack.push({ name: tag, node, ns });
-    if (RAW.has(tag.toLowerCase())) {
+    if (RAW.has(tag)) {
       const end = text.indexOf(`</${tag}`, markup.lastIndex);
       markup.lastIndex = end < 0 ? text.length : end;
     }
@@ -618,9 +618,10 @@ function loadParse5() {
   try {
     parse5Loaded = require("parse5");
   } catch (err) {
-    const fix = err.code === "MODULE_NOT_FOUND"
-      ? "the design-vault plugin's npm packages are not installed; run `claude plugin update design-vault@lucmoseley`, or in a vault clone `npm ci --ignore-scripts --prefix plugin`"
-      : `Node ${process.versions.node} cannot require() parse5, an ES module; run it on Node 20.19 or later`;
+    // https://nodejs.org/api/modules.html#loading-ecmascript-modules-using-require: on by default from v20.19.0 and v22.12.0
+    const fix = err.code === "ERR_REQUIRE_ESM"
+      ? `Node ${process.versions.node} cannot require() parse5, an ES module; run it on Node 20.19+ or 22.12+`
+      : "the design-vault plugin's npm packages are missing or broken; run `claude plugin update design-vault@lucmoseley`, or in a vault clone `npm ci --ignore-scripts --prefix plugin`";
     console.error(`check-curves.js cannot read an HTML file (${err.message.split("\n")[0]}): ${fix}`);
     parse5Loaded = null;
   }
