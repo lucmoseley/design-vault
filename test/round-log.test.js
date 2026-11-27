@@ -251,7 +251,7 @@ test("a change of the critics' model, or a gate-list record changed after the la
 });
 
 test("--log, --previous, --model and --gate each take a value, and any other option, --rules among them, is a usage error", () => {
-  for (const [args, said] of [[["--log"], /^round-log\.js: --log takes a value: --log <value>\n$/], [["--previous"], /--previous takes a value/], [["--model"], /--model takes a value: --model <value>/], [["--gate"], /--gate takes a value/], [["--colour", "x"], /unknown argument "--colour"/], [["--rules", "x"], /unknown argument "--rules"/]]) {
+  for (const [args, said] of [[["--log"], /^round-log\.js: Option '--log <value>' argument missing\n$/], [["--previous"], /'--previous <value>' argument missing/], [["--model"], /'--model <value>' argument missing/], [["--gate"], /'--gate <value>' argument missing/], [["--colour", "x"], /Unknown option '--colour'/], [["--rules", "x"], /Unknown option '--rules'/], [["--log", ""], /^round-log\.js: Option '--log <value>' argument missing\n$/]]) {
     const r = runInProcess(SCRIPT, args);
     assert.equal(r.status, 2, args.join(" "));
     assert.match(r.stderr, said);

@@ -139,7 +139,8 @@
 			"test/gate-wording.test.js"
 		],
 		"plugin/skills/design-critique/rules.md": [
-			"test/gate-select.test.js"
+			"test/gate-select.test.js",
+			"test/gate.test.js"
 		],
 		"plugin/skills/design-critique/rules/buttons.md": [
 			"test/gate-select.test.js",
@@ -266,7 +267,8 @@
 			"test/select-suites.test.js"
 		],
 		"plugin/skills/design-round/SKILL.md": [
-			"test/gate-wording.test.js"
+			"test/gate-wording.test.js",
+			"test/gate.test.js"
 		],
 		"plugin/skills/design-round/references/calibration.md": [
 			"test/rule-store-pointers.test.js"

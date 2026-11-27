@@ -1,4 +1,5 @@
 <!doctype html>
-<!-- check-load.py's page whose headline shows at once, in a system font. -->
+<!-- check-load.py's page whose headline shows at once, in a system font, its id naming the screen, scale and phone it was drawn on. -->
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body><h1 id="title" style="font: 700 40px/1.2 sans-serif">The main content shows at once</h1></body></html>
+<body><h1 id="title" style="font: 700 40px/1.2 sans-serif">The main content shows at once</h1>
+<script>document.getElementById("title").id = `w${screen.width}-h${screen.height}-x${devicePixelRatio * 100}-${/moto g power/.test(navigator.userAgent) ? "moto" : "other"}`;</script></body></html>

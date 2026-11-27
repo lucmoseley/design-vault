@@ -1,5 +1,6 @@
 "use strict";
 const { spawnSync } = require("child_process");
+const { parseArgs: parseStrict } = require("node:util");
 const fs = require("fs");
 const path = require("path");
 const { gitIn } = require("./git-read.js");
@@ -32,17 +33,11 @@ function parseRows(text, fault) {
 }
 
 function parseFlags(argv, defaults, booleans = []) {
-  const options = Object.fromEntries(Object.entries(defaults).map(([name, value]) => [name, Array.isArray(value) ? [...value] : value]));
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    const name = arg.slice(2);
-    if (!arg.startsWith("--") || !Object.hasOwn(options, name)) throw new Error(`unknown argument ${JSON.stringify(arg)}`);
-    if (booleans.includes(name)) options[name] = true;
-    else if (!argv[i + 1]) throw new Error(`${arg} takes a value: ${arg} <value>`);
-    else if (Array.isArray(options[name])) options[name].push(argv[++i]);
-    else options[name] = argv[++i];
-  }
-  return options;
+  const options = Object.fromEntries(Object.entries(defaults).map(([name, value]) => [name, booleans.includes(name) ? { type: "boolean" } : { type: "string", multiple: Array.isArray(value) }]));
+  const { values } = parseStrict({ args: argv, options, strict: true });
+  const empty = Object.keys(values).find((name) => [values[name]].flat().includes(""));
+  if (empty) throw new Error(`Option '--${empty} <value>' argument missing`);
+  return { ...defaults, ...values };
 }
 
 function parseArgs(argv, extra = {}) {

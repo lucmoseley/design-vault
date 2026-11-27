@@ -150,7 +150,7 @@ test("bad usage, a folder that is no round, or a claude with no version is a usa
     [run(["--round", round, "--canary", "--model", "m", "--out", out]), /give one of --packet <dir>, --round <folder> or --canary/],
     [run(["--model", "m", "--out", out]), /give one of --packet <dir>, --round <folder> or --canary/],
     [run(["--packet", path.dirname(round), "--model", "m", "--out", out]), /--model and --answers are both needed/],
-    [run(["--round", round, "--model", "m", "--out", out, "--seed", "1"]), /unknown argument "--seed"/],
+    [run(["--round", round, "--model", "m", "--out", out, "--seed", "1"]), /Unknown option '--seed'/],
     [run(["--round", dir, "--model", "m", "--out", out]), /holds no gate-list/],
     [run(["--round", bare, "--model", "m", "--out", out]), /holds no copy-bans/],
     [run(["--canary", "--model", "m", "--out", out], { STUB_VERSION: "unknown" }), /claude --version printed no version/],

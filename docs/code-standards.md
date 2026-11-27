@@ -15,7 +15,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `data/vault-data.js` | library: a static data table derived from `data/gallery.json` and `data/styles.json` by `node bundle.js`, so a fault in it is fixed in `bundle.js` (#32) |
 | `plugin/review-page/review.js` | library: the shared review page's logic: checking the data file and the feedback boxes (#120) |
 | `git-read.js` | library: git run for the programs that judge a commit from the index or HEAD, under one read cap (#141) |
-| `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line, and the row reader the calibration packet and critic examples use (#166, #168) |
+| `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line; the row reader, round-tag patterns, shape checks and strict flag parser the calibration scripts and critic examples use (#166, #168, #556) |
 | `plugin/skills/design-project/scripts/colour_space.py` | library: the colour maths every check shares (#644) |
 | `plugin/skills/design-round/scripts/access-pixels.py` | library: the pixel maths check-access.py measures its screenshots with (#198) |
 | `plugin/skills/design-round/scripts/access-answers.py` | library: check-access.py's questions, and how each width's findings merge into one answer per question (#214) |
@@ -50,7 +50,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/higgsfield-api.js` | library, risk path: the one request that carries the Higgsfield key, refused off api.higgsfield.ai, and its retry, for higgsfield-client.js (#588) |
 | `plugin/skills/design-round/scripts/gate-form.js` | library: the gate question form gate.js reads and checks, and the asset vocabulary corrections-log.js and critic-examples.js share with it (#187) |
 | `plugin/skills/design-round/scripts/check-flow.py` | program: measures whether a candidate's motion keeps one pace or jolts between long pauses; also a library of the page probes and pacing constants the page-reading scripts share (#60) |
-| `plugin/skills/design-round/scripts/flow-pace.py` | library: the pace maths check-flow.py reports — its samples, morphs, pauses, jolts, jumps and speed steps — split out so its tests call what the program calls, with the thresholds it shares with fall-motion.js read from `flow-pace.json` (#556) |
+| `plugin/skills/design-round/scripts/flow-pace.py` | library: the pace maths check-flow.py reports — its samples, morphs, pauses, jolts, jumps and speed steps, and when a page's status has settled — split out so its tests call what the program calls, with the thresholds it shares with fall-motion.js read from `flow-pace.json` (#556) |
 | `plugin/skills/design-round/scripts/check-layout.py` | program: loads a page at every width for sideways scroll, cut-off text and overlaps; also a library of the page load and width sweep check-markup.py and probe.py read pages at (#78) |
 | `plugin/skills/design-round/scripts/check-measure.py` | program: renders both ends of each width range a page's media queries set and reads its line lengths; also a library of the line-length probe check-layout.py runs (#86, #122) |
 | `plugin/skills/design-round/scripts/check-frames.py` | program: proves a motion candidate's frames; also a library that opens a candidate, reads its timeline and seeks it to a time (#67) |

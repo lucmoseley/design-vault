@@ -277,10 +277,10 @@ test("bad usage and an unreadable file exit 2, saying why on stderr", () => {
 test("gate-form's asset classes and facts are the terms rules.md and design-round's SKILL.md give their readers (#556)", () => {
   const fs = require("node:fs");
   const { ASSET_CLASSES, ASSET_FACTS } = require(FORM);
-  const read = (...parts) => fs.readFileSync(path.join(ROOT, "plugin", "skills", ...parts), "utf8");
+  const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
   const terms = (span) => [...span.matchAll(/`([\w-]+)`/g)].map((m) => m[1]);
-  const rule = read("design-critique", "rules.md").match(/each one of: (.*?) \(the asset's class\); (.*?) \(facts the round declares/);
+  const rule = read("plugin/skills/design-critique/rules.md").match(/each one of: (.*?) \(the asset's class\); (.*?) \(facts the round declares/);
   assert.deepEqual([terms(rule[1]), terms(rule[2])], [ASSET_CLASSES, ASSET_FACTS]);
-  const skill = read("design-round", "SKILL.md").match(/^- `asset` is the brief's asset class, as gate\.js names it \((.*?)\)\.$/m);
+  const skill = read("plugin/skills/design-round/SKILL.md").match(/^- `asset` is the brief's asset class, as gate\.js names it \((.*?)\)\.$/m);
   assert.deepEqual(terms(skill[1]), ASSET_CLASSES);
 });
