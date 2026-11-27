@@ -164,6 +164,7 @@ class Seams(unittest.TestCase):
         self.assertIn(
             "NOT MEASURED under.2-over.4 at 0 ms 1x, 0 ms 2x, 0 ms 3x", proc.stdout
         )
+        self.assertIn("within 3 CSS px of its crop's centre", proc.stdout)
         self.assertIn("Judge it under vault.contacts-look", proc.stdout)
 
 
