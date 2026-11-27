@@ -57,6 +57,7 @@ stderr.
 
 import argparse
 import datetime
+import contextlib
 import json
 import os
 import pathlib
@@ -67,15 +68,15 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
 
-access = siblings.load(HERE, "check-access.py")
+conditions = siblings.load(HERE, "conditions.py")
 prelude = siblings.load(HERE, "access-page.py")
-layout, flow = access.layout, access.flow
+flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
 
 FILES = (
     "parts.json",
     "key.txt",
-    *(f"key-{name}.png" for name, _, _ in access.VIEWPORTS),
+    *(f"key-{name}.png" for name, _, _ in conditions.VIEWPORTS),
 )
 # guess, #501
 KEY_TEXT = 40
@@ -283,17 +284,19 @@ UNKEY_JS = "() => document.getElementById('__parts_map_key')?.remove()"
 
 
 def run(at):
-    with runner.chromium() as browser:
+    with runner.chromium() as browser, contextlib.ExitStack() as opened:
         found = []
-        for name, width, height in access.VIEWPORTS:
-            context = browser.new_context(
-                viewport={"width": width, "height": height}, **layout.device(width)
+        for name, width, _ in conditions.VIEWPORTS:
+            page = opened.enter_context(
+                conditions.open_page(
+                    browser,
+                    at.url,
+                    width=width,
+                    timeout=at.timeout,
+                    init_scripts=(LISTEN_JS,),
+                )
             )
-            context.set_default_timeout(at.timeout)
-            context.add_init_script(LISTEN_JS)
-            page = context.new_page()
-            page.goto(at.url, wait_until="load")
-            page.evaluate(layout.SETTLE_JS)
+            conditions.settle(page)
             found.append((name, page, page.evaluate(MAP_JS)))
         parts = number(found)
         for name, page, got in found:
@@ -478,7 +481,7 @@ def main(argv):
     found = {
         "url": at.url,
         "run_at": when.isoformat(),
-        "viewports": {name: [w, h] for name, w, h in access.VIEWPORTS},
+        "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
         "unread_stylesheets": unread,
         "answers": {"vault.one-target": answer},
         "parts": parts,

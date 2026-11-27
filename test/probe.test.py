@@ -69,7 +69,7 @@ def values(url, table, parts=None):
     page = BROWSER.new_page()
     try:
         page.goto(url)
-        page.evaluate(layout.SETTLE_JS)
+        layout.conditions.settle(page)
         return [
             {s.subject: (s.value, s.verdict) for s in r.subjects}
             for r in probe.read(page, probe.parse(table), parts)

@@ -12,6 +12,8 @@ FIXTURES = os.path.join(HERE, "fixtures", "drivers")
 URL = pathlib.Path(FIXTURES, "conditions.html").resolve().as_uri()
 # guess, #304
 VIEWPORT = {"width": 400, "height": 300}
+# guess: long enough for the fixture's load on a busy machine, #643
+TIMEOUT_MS = 1500
 
 
 RUNNER = os.path.join(
@@ -143,6 +145,57 @@ class Combined(unittest.TestCase):
     def test_init_scripts_run_before_the_page(self):
         got = read("window.seen", init_scripts=("window.seen = document.readyState",))
         self.assertEqual(got, "loading")
+
+
+class Viewer(unittest.TestCase):
+    SIZE = "[innerWidth, innerHeight, navigator.maxTouchPoints > 0]"
+
+    def test_a_phone_width_gives_touch_and_the_phone_height(self):
+        with conditions.open_page(BROWSER, URL, width=conditions.PHONE_WIDTH) as page:
+            got = page.evaluate(self.SIZE)
+        self.assertEqual(got, [conditions.PHONE_WIDTH, conditions.HEIGHTS[0], True])
+
+    def test_a_desktop_width_gives_neither(self):
+        with conditions.open_page(BROWSER, URL, width=conditions.DESKTOP_WIDTH) as page:
+            got = page.evaluate(self.SIZE)
+        self.assertEqual(got, [conditions.DESKTOP_WIDTH, conditions.HEIGHTS[2], False])
+
+    def test_a_given_viewport_keeps_the_widths_device(self):
+        with conditions.open_page(
+            BROWSER, URL, width=conditions.PHONE_WIDTH, viewport=VIEWPORT
+        ) as page:
+            got = page.evaluate(self.SIZE)
+        self.assertEqual(got, [VIEWPORT["width"], VIEWPORT["height"], True])
+
+    def test_each_band_has_its_height(self):
+        self.assertEqual(
+            [
+                conditions.height_at(w, (1, 2, 3))
+                for w in (320, 767, 768, 1023, 1024, 2560)
+            ],
+            [1, 1, 2, 2, 3, 3],
+        )
+
+    def test_timeout_sets_the_contexts_default(self):
+        with conditions.open_page(BROWSER, URL, timeout=TIMEOUT_MS) as page:
+            with self.assertRaisesRegex(Exception, f"Timeout {TIMEOUT_MS}ms"):
+                page.wait_for_selector("#never-there")
+
+
+class Settle(unittest.TestCase):
+    ANIMATE = """() => {
+      const el = document.body;
+      el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 60000 });
+      for (let i = 0; i < 2; i++)
+        el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1000, iterations: Infinity });
+    }"""
+    RUNNING = "document.getAnimations().filter((a) => a.playState === 'running').length"
+
+    def test_returns_the_looping_count_and_finishes_the_rest(self):
+        with conditions.open_page(BROWSER, URL, viewport=VIEWPORT) as page:
+            page.evaluate(self.ANIMATE)
+            self.assertEqual(conditions.settle(page), 2)
+            self.assertEqual(page.evaluate(self.RUNNING), 2)
 
 
 class Refusals(unittest.TestCase):

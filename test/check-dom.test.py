@@ -212,7 +212,9 @@ def stamped(body, parts=None, head=""):
         with dom.conditions.open_page(
             BROWSER, url, init_scripts=(dom.LISTEN_JS,)
         ) as page:
-            dom.layout.load(page, url, dom.layout.PHONE_WIDTH, dom.layout.HEIGHTS)
+            dom.layout.load(
+                page, url, dom.conditions.PHONE_WIDTH, dom.conditions.HEIGHTS
+            )
             dom.stamp(page, parts or {})
             return page.evaluate(
                 """() => Object.fromEntries([...document.querySelectorAll('[id]'), document.documentElement].map((el) => [
