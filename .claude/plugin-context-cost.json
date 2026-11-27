@@ -1,0 +1,13 @@
+{
+	"about": "Per-plugin always-on context cost, in tokens as `claude plugin details <name>` reports it, keyed by the `enabledPlugins` name in .claude/settings.json. check-context-budget.js reads it every session and WARNs on an enabled plugin with no row here. An `uncounted` component is one the figure omits, such as an MCP server's tool schemas.",
+	"plugins": {
+		"design-vault@lucmoseley": {
+			"tokens": 417,
+			"measured": "2026-11-27"
+		},
+		"workflow-core@workflow-core": {
+			"tokens": 1869,
+			"measured": "2026-11-25"
+		}
+	}
+}

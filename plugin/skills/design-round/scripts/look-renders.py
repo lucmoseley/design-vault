@@ -49,6 +49,7 @@ stderr.
 """
 
 import argparse
+import dataclasses
 import hashlib
 import io
 import json
@@ -207,30 +208,28 @@ def parse(argv):
     return args
 
 
-def open_page(browser, args, scale, timeline=None):
+def open_page(browser, load, scale, *, width, timeline=None):
     return frames.open_page(
-        browser, args, scale, device=conditions.device(args.width), timeline=timeline
+        browser, load, scale, device=conditions.device(width), timeline=timeline
     )
 
 
 def fit(browser, args):
     # #354
-    context, page, _ = open_page(browser, args, 1)
+    load = frames.Load(args.url, args.viewport_size, args.timeout, args.wait)
+    context, page, _ = open_page(browser, load, 1, width=args.width)
     try:
         drawn = page.evaluate(SVG_ROOT_JS)
     finally:
         context.close()
     if drawn is None:
-        return frames.args_with(args, full_page=True)
-    size = args.viewport_size
-    return frames.args_with(
-        args,
-        full_page=False,
-        viewport_size={
-            "width": max(size["width"], drawn[0]),
-            "height": max(size["height"], drawn[1]),
-        },
-    )
+        return load, True
+    size = load.viewport
+    viewport = {
+        "width": max(size["width"], drawn[0]),
+        "height": max(size["height"], drawn[1]),
+    }
+    return dataclasses.replace(load, viewport=viewport), False
 
 
 def square(centre, size):
@@ -250,13 +249,15 @@ def magnify(png):
 
 
 def render_contacts(browser, args, also=None):
-    args = fit(browser, args)
-    prep = frames.read_timeline(browser, args, 1, conditions.device(args.width))
+    load, full_page = fit(browser, args)
+    prep = frames.read_timeline(browser, load, 1, conditions.device(args.width))
     times = frames.key_times(prep, args.times)
     shots = []
     for scale in SCALES:
         for t in times:
-            context, page, _ = open_page(browser, args, scale, prep["timeline"])
+            context, page, _ = open_page(
+                browser, load, scale, width=args.width, timeline=prep["timeline"]
+            )
             try:
                 frames.seek(page, t)
                 taken = []
@@ -267,7 +268,7 @@ def render_contacts(browser, args, also=None):
                             [f"has no drawn element {c['sel']} for contact {c['name']}"]
                         )
                     png = page.screenshot(
-                        clip=square(point, CONTACT_SIZE), full_page=args.full_page
+                        clip=square(point, CONTACT_SIZE), full_page=full_page
                     )
                     name = f"{c['name']}-{frames.ms(t)}ms-{scale}x.png"
                     big = magnify(png)
@@ -284,10 +285,12 @@ def render_contacts(browser, args, also=None):
                     shots.append(shot)
                 if also:
                     for c, point, png, shot in taken:
-                        shot.update(also(page, args, contact=c, point=point, png=png))
+                        shot.update(
+                            also(page, full_page, contact=c, point=point, png=png)
+                        )
             finally:
                 context.close()
-    return {"viewport": args.viewport_size, "times": times, "shots": shots}
+    return {"viewport": load.viewport, "times": times, "shots": shots}
 
 
 def find_bends(shapes):
@@ -320,8 +323,8 @@ def find_bends(shapes):
 
 
 def render_bends(browser, args):
-    args = fit(browser, args)
-    context, page, prep = open_page(browser, args, ZOOM)
+    load, full_page = fit(browser, args)
+    context, page, prep = open_page(browser, load, ZOOM, width=args.width)
     try:
         frames.seek(page, prep["end"])
         bends, unread = find_bends(page.evaluate(SHAPES_JS))
@@ -330,13 +333,13 @@ def render_bends(browser, args):
             page.screenshot(
                 path=os.path.join(args.out, b["file"]),
                 clip=square(b["at"], BEND_SIZE),
-                full_page=args.full_page,
+                full_page=full_page,
             )
         frames.refuse_chain(page)
     finally:
         context.close()
     return {
-        "viewport": args.viewport_size,
+        "viewport": load.viewport,
         "end_ms": prep["end"],
         "bends": bends,
         "unread": unread,

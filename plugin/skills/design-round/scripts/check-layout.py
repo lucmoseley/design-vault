@@ -1112,8 +1112,8 @@ def settle_focal(found, arts, focal):
     ]
 
 
-def gating(at):
-    return at.step <= GATE_STEP and at.span == (conditions.LOW, conditions.HIGH)
+def gating(step, span):
+    return step <= GATE_STEP and span == (conditions.LOW, conditions.HIGH)
 
 
 def answers(at, runs, text_runs):
@@ -1162,7 +1162,7 @@ def report(at, widths, runs, shots, *, text_runs, verdicts, looping, when, json_
         f"check-layout: {at.url}",
         f"swept {len(widths)} widths, {at.span[0]}–{at.span[1]} px every {at.step} px{f' to {STEPPED}' if at.span[0] < STEPPED < at.span[1] else ''}; the first screen is {bands}",
     ]
-    if not gating(at):
+    if not gating(at.step, at.span):
         lines.append(
             f"NOT A GATING SWEEP: the craft gate needs {conditions.LOW}–{conditions.HIGH} px every {GATE_STEP} px or finer to {STEPPED}"
         )
@@ -1418,7 +1418,7 @@ def main(argv):
             {
                 "url": at.url,
                 "run_at": when.isoformat(),
-                "gating": gating(at),
+                "gating": gating(at.step, at.span),
                 "step": at.step,
                 "span": at.span,
                 "looping_animations": looping,
