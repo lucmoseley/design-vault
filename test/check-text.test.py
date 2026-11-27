@@ -135,6 +135,7 @@ class FaultPage(unittest.TestCase):
         self.assertEqual(code, 1, out)
         got = by_id(data)
         self.assertEqual(sorted(got), sorted(RECORDS))
+        self.assertEqual(list(data), ["url", "run_at", "parts", "answers", "findings"])
         for rid in RECORDS:
             with self.subTest(rid):
                 self.assertEqual(got[rid]["answer"], "fail", out)

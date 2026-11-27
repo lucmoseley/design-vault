@@ -122,7 +122,6 @@ stderr.
 import argparse
 import collections
 import contextlib
-import datetime
 import io
 import json
 import os
@@ -141,6 +140,7 @@ from fail_open import expected  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 layout = siblings.load(HERE, "check-layout.py")
 conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -1447,11 +1447,7 @@ def page_options(p, at):
 
 def main(argv):
     p, at = parse_args(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "probe.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "probe.json")
     widths = layout.sweep_widths(at.step, *at.span)
 
     def run():
@@ -1476,39 +1472,33 @@ def main(argv):
         return code
     swept, looping = got
     found = findings(at.rules, swept)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        gating=layout.gating(at.step, at.span),
+        step=at.step,
+        span=at.span,
+        heights=dict(zip([b[0] for b in conditions.BANDS], at.heights, strict=True)),
+        parts=at.parts,
+        looping_animations=looping,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+        widths=[
             {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "gating": layout.gating(at.step, at.span),
-                "step": at.step,
-                "span": at.span,
-                "heights": dict(
-                    zip([b[0] for b in conditions.BANDS], at.heights, strict=True)
-                ),
-                "parts": at.parts,
-                "looping_animations": looping,
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-                "widths": [
+                "width": w,
+                "lines": [
                     {
-                        "width": w,
-                        "lines": [
-                            {
-                                "id": r.rule.id,
-                                "line": r.rule.line,
-                                "subjects": [s._asdict() for s in r.subjects],
-                            }
-                            for r in results
-                        ],
+                        "id": r.rule.id,
+                        "line": r.rule.line,
+                        "subjects": [s._asdict() for s in r.subjects],
                     }
-                    for w, results in swept
+                    for r in results
                 ],
-            },
-            fh,
-            indent=1,
-        )
+            }
+            for w, results in swept
+        ],
+    )
     print(report(at, widths, found, looping=looping, json_path=json_path))
     return 1 if any(f["misses"] for f in found) else 0
 

@@ -48,9 +48,6 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 """
 
 import argparse
-import contextlib
-import datetime
-import json
 import os
 import sys
 
@@ -62,6 +59,7 @@ from crash_exit import run_main  # noqa: E402
 
 
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 probe = siblings.load(HERE, "probe.py")
 conditions = siblings.load(HERE, "conditions.py")
 
@@ -454,11 +452,7 @@ def parse_args(argv):
 
 def main(argv):
     _, at = parse_args(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "text.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "text.json")
 
     def run():
         with runner.chromium() as browser:
@@ -483,19 +477,14 @@ def main(argv):
     found = checks.findings(
         at.values, loads, at.lists, conditions.DESKTOP_WIDTH, unjudged=unjudged
     )
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "parts": at.parts,
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-            },
-            fh,
-            indent=1,
-            ensure_ascii=False,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        parts=at.parts,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+    )
     print(report(at.url, found))
     return 1 if any(f["misses"] for f in found) else 0
 

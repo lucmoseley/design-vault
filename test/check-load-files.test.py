@@ -159,6 +159,7 @@ class FixturePages(unittest.TestCase):
     def test_the_fault_page_fails_each_marked_record_on_one_miss_and_exits_1(self):
         proc, got = self.runs["fault"]
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertEqual(list(got), ["url", "run_at", "answers", "findings", "fonts"])
         with open(FAULT, encoding="utf8") as fh:
             marked = set(re.findall(r'data-fault="([^"]+)"', fh.read()))
         self.assertEqual(marked, {x.id for x in SHIPPED})

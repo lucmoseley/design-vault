@@ -135,6 +135,7 @@ class TheCommandLine(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(written["answers"], dict.fromkeys(RECORDS, "fail"))
         self.assertEqual(written["url"], FAULT.as_uri())
+        self.assertEqual(list(written), ["url", "run_at", "answers", "findings"])
         for record in RECORDS:
             self.assertIn(f"{record}: fail", printed)
 

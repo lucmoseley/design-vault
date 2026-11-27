@@ -58,6 +58,10 @@ class StaticPill(unittest.TestCase):
     def test_one_tap_target_each_passes(self):
         self.assertEqual(self.code, 0, self.out + self.err)
         self.assertEqual(
+            list(self.found),
+            ["url", "run_at", "viewports", "unread_stylesheets", "answers", "parts"],
+        )
+        self.assertEqual(
             self.found["answers"]["vault.one-target"], {"answer": "pass", "faults": []}
         )
 

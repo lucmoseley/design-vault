@@ -69,10 +69,7 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import contextlib
-import datetime
 import difflib
-import json
 import os
 import re
 import sys
@@ -87,6 +84,7 @@ from fail_open import expected  # noqa: E402
 
 
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 form = siblings.load(HERE, "drive-form.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
@@ -469,11 +467,7 @@ def parse_args(argv):
 
 def main(argv):
     p, at = parse_args(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "cross.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "cross.json")
     phone_line = next((line for line in at.lines if line.check == "phone"), None)
 
     def run():
@@ -499,27 +493,23 @@ def main(argv):
         return code
     pages, unread, walks, phones = got
     found = findings(at.lines, pages, walks, phones=phones, home=at.url)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+        pages=pages,
+        unread=[{"url": u, "why": w} for u, w in unread],
+        flows=[
             {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-                "pages": pages,
-                "unread": [{"url": u, "why": w} for u, w in unread],
-                "flows": [
-                    {
-                        "start": w.start,
-                        "ended": w.ended,
-                        "steps": [s._asdict() for s in w.steps],
-                    }
-                    for w in walks
-                ],
-            },
-            fh,
-            indent=1,
-        )
+                "start": w.start,
+                "ended": w.ended,
+                "steps": [s._asdict() for s in w.steps],
+            }
+            for w in walks
+        ],
+    )
     print(report(at, found, unread, walks))
     return 1 if any(f["misses"] for f in found) else 0
 

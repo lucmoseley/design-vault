@@ -1385,6 +1385,10 @@ class Questions(unittest.TestCase):
         self.assertEqual({a["answer"] for a in found["answers"].values()}, {"pass"})
         self.assertEqual(list(found["answers"]), [q for q, _ in answering.QUESTIONS])
         self.assertEqual(
+            list(found),
+            ["url", "run_at", "looping_animations", "viewports", "answers"],
+        )
+        self.assertEqual(
             found["viewports"], {"desktop": [1920, 633], "phone": [390, 664]}
         )
 

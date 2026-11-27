@@ -122,10 +122,7 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import datetime
-import json
 import os
-import pathlib
 import re
 import sys
 
@@ -137,6 +134,7 @@ from crash_exit import run_main  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 conditions = siblings.load(HERE, "conditions.py")
 
 
@@ -1378,13 +1376,7 @@ def parse(argv):
 
 def main(argv):
     p, at = parse(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    for old in [
-        *pathlib.Path(at.out).glob("layout-*-*.png"),
-        pathlib.Path(at.out, "layout.json"),
-    ]:
-        old.unlink(missing_ok=True)
+    when, json_path = answers_file.start(at.out, "layout.json", "layout-*-*.png")
     try:
         got, code = runner.run_browser(lambda: run(at, when), at.timeout, at.url)
     except BadSelectorError as exc:
@@ -1412,46 +1404,39 @@ def main(argv):
         named = {**at.checks, **{n: at.modes[n] for n in at.unmet}}
         record_answers = records.answers(named, by_mode, rec.seen, at.unmet)
     widths = [w for w, _ in found]
-    json_path = os.path.join(at.out, "layout.json")
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "gating": gating(at.step, at.span),
-                "step": at.step,
-                "span": at.span,
-                "looping_animations": looping,
-                "heights": dict(
-                    zip([b[0] for b in conditions.BANDS], at.heights, strict=True)
-                ),
-                "cta": at.cta,
-                "focal": at.focal,
-                "answers": verdicts,
-                "ranges": runs,
-                "screenshots": shots,
-                "widths": [{"width": w, "faults": f} for w, f in found],
-                "records": {
-                    "answers": record_answers,
-                    "not_judged": {at.modes[n].id: why for n, why in at.unmet.items()},
-                    "ranges": record_runs,
-                }
-                if at.records
-                else None,
-                "text": {
-                    name: {
-                        "record": at.modes[name].id,
-                        "value": at.modes[name].value,
-                        "ranges": text_runs[name],
-                        **({"default_sizes": raised} if name == "size" else {}),
-                        "widths": [{"width": w, "faults": f} for w, f in text[name]],
-                    }
-                    for name in at.text
-                },
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        gating=gating(at.step, at.span),
+        step=at.step,
+        span=at.span,
+        looping_animations=looping,
+        heights=dict(zip([b[0] for b in conditions.BANDS], at.heights, strict=True)),
+        cta=at.cta,
+        focal=at.focal,
+        answers=verdicts,
+        ranges=runs,
+        screenshots=shots,
+        widths=[{"width": w, "faults": f} for w, f in found],
+        records={
+            "answers": record_answers,
+            "not_judged": {at.modes[n].id: why for n, why in at.unmet.items()},
+            "ranges": record_runs,
+        }
+        if at.records
+        else None,
+        text={
+            name: {
+                "record": at.modes[name].id,
+                "value": at.modes[name].value,
+                "ranges": text_runs[name],
+                **({"default_sizes": raised} if name == "size" else {}),
+                "widths": [{"width": w, "faults": f} for w, f in text[name]],
+            }
+            for name in at.text
+        },
+    )
     print(
         report(
             at,

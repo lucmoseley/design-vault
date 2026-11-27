@@ -121,10 +121,7 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import contextlib
-import datetime
 import io
-import json
 import os
 import re
 import secrets
@@ -146,6 +143,7 @@ conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 layout = probe.layout
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 
 TABLE = os.path.join(HERE, "check-dom.table")
 WIDTHS = (conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH)
@@ -688,11 +686,7 @@ def parse_args(argv):
 
 def main(argv):
     p, at = parse_args(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "dom.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "dom.json")
 
     def go():
         with runner.chromium() as browser:
@@ -715,19 +709,14 @@ def main(argv):
         return code
     rules = [r for _, results in swept[:1] for r in (x.rule for x in results)]
     found = probe.findings(rules, swept)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "parts": at.parts,
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-            },
-            fh,
-            indent=2,
-        )
-        fh.write("\n")
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        parts=at.parts,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+    )
     print(report(at.url, found))
     print(f"every finding: {json_path}")
     return 1 if any(f["answer"] == "fail" for f in found) else 0

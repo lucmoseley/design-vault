@@ -1409,6 +1409,26 @@ class Screenshots(unittest.TestCase):
     def test_each_shot_carries_the_run_time_and_an_earlier_runs_are_gone(self):
         code, stdout, stderr, found, out = DONE["shots"]
         self.assertEqual(code, 0, stdout + stderr)
+        self.assertEqual(
+            list(found),
+            [
+                "url",
+                "run_at",
+                "gating",
+                "step",
+                "span",
+                "looping_animations",
+                "heights",
+                "cta",
+                "focal",
+                "answers",
+                "ranges",
+                "screenshots",
+                "widths",
+                "records",
+                "text",
+            ],
+        )
         run_at = datetime.datetime.fromisoformat(found["run_at"])
         stamp = run_at.strftime("%Y%m%dT%H%M%SZ")
         names = sorted(p.name for p in pathlib.Path(out).glob("*.png"))
