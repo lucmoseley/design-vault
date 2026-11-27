@@ -258,12 +258,10 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import datetime
 import io
 import itertools
 import json
 import os
-import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -277,6 +275,7 @@ from fail_open import expected  # noqa: E402
 flow = siblings.load(HERE, "check-flow.py")
 conditions = siblings.load(HERE, "conditions.py")
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 try:
     import numpy as np
     from PIL import Image
@@ -1672,11 +1671,8 @@ MODES = {
 
 def main(argv):
     at = parse(argv)
-    os.makedirs(at.out, exist_ok=True)
     mode = MODES[at.pointer]
-    json_path = os.path.join(at.out, mode.report)
-    pathlib.Path(json_path).unlink(missing_ok=True)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    when, json_path = answers_file.start(at.out, mode.report)
     try:
         got, code = runner.run_browser(lambda: mode.run(at), at.timeout, at.url)
     except BadSelectorError as exc:
@@ -1689,18 +1685,14 @@ def main(argv):
         return code
     found, looping = got
     result = answering.answers(found, mode.questions)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "looping_animations": looping,
-                "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
-                "answers": result,
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        looping_animations=looping,
+        viewports={name: [w, h] for name, w, h in conditions.VIEWPORTS},
+        answers=result,
+    )
     print(
         report(
             at.url,

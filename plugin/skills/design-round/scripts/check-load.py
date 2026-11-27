@@ -89,10 +89,8 @@ import argparse
 import base64
 import collections
 import contextlib
-import datetime
 import functools
 import http.server
-import json
 import os
 import re
 import statistics
@@ -109,6 +107,7 @@ from fail_open import expected  # noqa: E402
 
 
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 fontfile = siblings.load(HERE, "font-file.py")
 probe = siblings.load(HERE, "probe.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -1023,11 +1022,7 @@ def files_report(url, found, read):
 
 
 def files_main(at):
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "files.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "files.json")
     server, url = serve(at.url)
 
     def run():
@@ -1042,25 +1037,21 @@ def files_main(at):
     if code:
         return code
     found = findings(at.lines, read, declared=at.declared, undeclared=at.undeclared)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-                "fonts": {
-                    _short(src): font._replace(
-                        chars=len(font.chars), features=sorted(font.features)
-                    )._asdict()
-                    if isinstance(font, fontfile.Font)
-                    else {"error": font}
-                    for src, font in read["fonts"].items()
-                },
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+        fonts={
+            _short(src): font._replace(
+                chars=len(font.chars), features=sorted(font.features)
+            )._asdict()
+            if isinstance(font, fontfile.Font)
+            else {"error": font}
+            for src, font in read["fonts"].items()
+        },
+    )
     print(files_report(at.url, found, read))
     return 1 if any(f["misses"] for f in found) else 0
 

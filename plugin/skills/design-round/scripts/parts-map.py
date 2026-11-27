@@ -56,11 +56,9 @@ stderr.
 """
 
 import argparse
-import datetime
 import contextlib
 import json
 import os
-import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -72,9 +70,9 @@ conditions = siblings.load(HERE, "conditions.py")
 prelude = siblings.load(HERE, "access-page.py")
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 
-FILES = (
-    "parts.json",
+KEY_FILES = (
     "key.txt",
     *(f"key-{name}.png" for name, _, _ in conditions.VIEWPORTS),
 )
@@ -468,10 +466,7 @@ def parse(argv):
 
 def main(argv):
     at = parse(argv)
-    os.makedirs(at.out, exist_ok=True)
-    for f in FILES:
-        pathlib.Path(at.out, f).unlink(missing_ok=True)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    when, json_path = answers_file.start(at.out, "parts.json", *KEY_FILES)
     got, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code
@@ -480,18 +475,15 @@ def main(argv):
     for p in parts:
         del p["path"]
     found = {
-        "url": at.url,
-        "run_at": when.isoformat(),
         "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
         "unread_stylesheets": unread,
         "answers": {"vault.one-target": answer},
         "parts": parts,
     }
-    with open(os.path.join(at.out, "parts.json"), "w", encoding="utf8") as fh:
-        json.dump(found, fh, indent=1)
+    answers_file.write(json_path, at.url, when, **found)
     with open(os.path.join(at.out, "key.txt"), "w", encoding="utf8") as fh:
         fh.write(key(parts))
-    print(report(found, at.out))
+    print(report({"url": at.url, **found}, at.out))
     return 1 if answer["answer"] == "fail" else 0
 
 

@@ -219,6 +219,9 @@ class TheCommand(unittest.TestCase):
             data = json.loads(pathlib.Path(out, "markup.json").read_text())
         self.assertEqual(done.returncode, 1)
         self.assertEqual(data["answers"], dict.fromkeys(RECORDS, "fail"))
+        self.assertEqual(
+            list(data), ["url", "run_at", "axe", "parts", "answers", "findings"]
+        )
 
     def test_a_missing_page_exits_2(self):
         code, _, err, _ = run(FIXTURES / "nowhere.html")

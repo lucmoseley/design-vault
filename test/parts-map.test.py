@@ -55,6 +55,12 @@ class StaticPill(unittest.TestCase):
         self.code, self.out, self.err, self.found, self.dir = DONE["pill"]
         self.parts = by_text(self.found)
 
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            list(self.found),
+            ["url", "run_at", "viewports", "unread_stylesheets", "answers", "parts"],
+        )
+
     def test_one_tap_target_each_passes(self):
         self.assertEqual(self.code, 0, self.out + self.err)
         self.assertEqual(

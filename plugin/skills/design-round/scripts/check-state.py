@@ -142,9 +142,7 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 import argparse
 import colorsys
 import contextlib
-import datetime
 import io
-import json
 import math
 import os
 import re
@@ -162,6 +160,7 @@ from fail_open import expected, fail_open  # noqa: E402
 
 
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 form = siblings.load(HERE, "drive-form.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
 overlay = siblings.load(HERE, "drive-overlay.py")
@@ -2860,11 +2859,7 @@ def parse_args(argv):
 
 def main(argv):
     _, at = parse_args(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "state.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "state.json")
 
     def work():
         with runner.chromium() as browser:
@@ -2883,17 +2878,13 @@ def main(argv):
     found, code = runner.run_browser(work, at.timeout, at.url)
     if code:
         return code
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+    )
     print(report(at.url, found))
     return 1 if any(f["misses"] for f in found) else 0
 

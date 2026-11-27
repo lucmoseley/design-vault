@@ -40,9 +40,6 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import contextlib
-import datetime
-import json
 import os
 import re
 import sys
@@ -57,6 +54,7 @@ AXE = os.path.join(HERE, "..", "vendor", "axe-core", "axe.min.js")
 
 
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 conditions = siblings.load(HERE, "conditions.py")
 layout = siblings.load(HERE, "check-layout.py")
 probe = siblings.load(HERE, "probe.py")
@@ -258,11 +256,7 @@ def parse_args(argv):
 
 def main(argv):
     p, at = parse_args(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "markup.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
+    when, json_path = answers_file.start(at.out, "markup.json")
     with open(AXE, encoding="utf8") as fh:
         source = fh.read()
 
@@ -287,19 +281,15 @@ def main(argv):
         return code
     version, swept = got
     found = findings(at.table, swept)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "axe": version,
-                "parts": at.parts,
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        axe=version,
+        parts=at.parts,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+    )
     print(report(at.url, found))
     return 1 if any(f["misses"] for f in found) else 0
 

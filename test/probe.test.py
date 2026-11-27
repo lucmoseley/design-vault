@@ -97,6 +97,24 @@ class TheTable(unittest.TestCase):
         with open(os.path.join(cls.out, "probe.json"), encoding="utf8") as fh:
             cls.got = json.load(fh)
 
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            list(self.got),
+            [
+                "url",
+                "run_at",
+                "gating",
+                "step",
+                "span",
+                "heights",
+                "parts",
+                "looping_animations",
+                "answers",
+                "findings",
+                "widths",
+            ],
+        )
+
     def test_names_exactly_the_planted_misses_300(self):
         misses = {
             (f["id"], m["subject"], m["value"], m["from"], m["to"])

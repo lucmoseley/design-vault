@@ -1406,6 +1406,28 @@ class Records(unittest.TestCase):
 
 
 class Screenshots(unittest.TestCase):
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            list(DONE["shots"][3]),
+            [
+                "url",
+                "run_at",
+                "gating",
+                "step",
+                "span",
+                "looping_animations",
+                "heights",
+                "cta",
+                "focal",
+                "answers",
+                "ranges",
+                "screenshots",
+                "widths",
+                "records",
+                "text",
+            ],
+        )
+
     def test_each_shot_carries_the_run_time_and_an_earlier_runs_are_gone(self):
         code, stdout, stderr, found, out = DONE["shots"]
         self.assertEqual(code, 0, stdout + stderr)

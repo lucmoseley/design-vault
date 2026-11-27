@@ -34,6 +34,7 @@ python3 test/check-access-pointer.test.py	images chromium
 python3 test/palette.test.py
 python3 test/colour-space.test.py	images
 python3 test/rule-table.test.py
+python3 test/answers-file.test.py
 python3 test/siblings.test.py
 python3 test/crash-exit.test.py	images
 python3 test/child.test.py	chromium

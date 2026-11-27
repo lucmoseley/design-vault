@@ -156,6 +156,12 @@ class FixturePages(unittest.TestCase):
         self.assertEqual(set(got["answers"].values()), {"pass"}, proc.stdout)
         self.assertEqual(set(got["answers"]), {x.id for x in SHIPPED})
 
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            list(self.runs["fault"][1]),
+            ["url", "run_at", "answers", "findings", "fonts"],
+        )
+
     def test_the_fault_page_fails_each_marked_record_on_one_miss_and_exits_1(self):
         proc, got = self.runs["fault"]
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)

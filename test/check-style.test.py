@@ -45,6 +45,7 @@ import siblings  # noqa: E402
 
 style = siblings.load(SCRIPTS, "check-style.py")
 RAN = {}
+KEYS = {}
 WORK = []
 
 
@@ -79,7 +80,9 @@ def setUpModule():
         proc = job.result()
         found = os.path.join(work, name, "style.json")
         with open(found, encoding="utf8") as fh:
-            RAN[name] = (proc, json.load(fh)["findings"])
+            got = json.load(fh)
+        RAN[name] = (proc, got["findings"])
+        KEYS[name] = list(got)
 
 
 def tearDownModule():
@@ -110,6 +113,23 @@ def table_ids():
 
 
 class Pages(unittest.TestCase):
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            KEYS["fault"],
+            [
+                "url",
+                "run_at",
+                "gating",
+                "step",
+                "span",
+                "parts",
+                "brief",
+                "looping_animations",
+                "answers",
+                "findings",
+            ],
+        )
+
     def test_309_the_fault_page_fails_every_record_on_its_plant(self):
         proc, found = RAN["fault"]
         self.assertEqual(proc.returncode, 1, proc.stderr)

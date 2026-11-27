@@ -313,6 +313,9 @@ class TheFixtures(unittest.TestCase):
                 written = json.load(fh)
         self.assertEqual(ran.returncode, 1)
         self.assertEqual(written["answers"]["vault.paste-allowed"], "fail")
+        self.assertEqual(
+            list(written), ["url", "run_at", "parts", "answers", "findings"]
+        )
         self.assertIn("vault.paste-allowed: fail", ran.stdout)
 
     def test_the_program_exits_2_on_a_table_it_cannot_read(self):
