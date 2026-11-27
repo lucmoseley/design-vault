@@ -57,11 +57,12 @@ python3 test/check-state.test.py	images chromium
 python3 test/check-text.test.py	chromium
 python3 test/drive-pointer.test.py	chromium
 python3 test/video-sheet.test.py	images video'
+known_needs=(images chromium openssl video npm)
 suites=()
 declare -A needs=()
 while IFS=$'\t' read -r suite need; do
   for word in ${need:-}; do
-    [[ $word == images || $word == chromium || $word == openssl || $word == video || $word == npm ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium, openssl, video and npm" >&2 && exit 2; }
+    [[ " ${known_needs[*]} " == *" $word "* ]] || { echo "test/all.sh: $suite needs '$word', which is none of ${known_needs[*]}" >&2 && exit 2; }
   done
   suites+=("$suite")
   needs[$suite]=${need:-}
