@@ -58,6 +58,9 @@ try:
     maths = siblings.load(HERE, "access-pixels.py")
 except ImportError as err:
     sys.exit(runner.missing(err))
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 
 WIDTH = layout.DESKTOP_WIDTH
 SETTLE_MS = 4000  # guess, #170
@@ -230,7 +233,7 @@ def pixels(args):
             print(f"look.py: {x:g},{y:g} is outside the {w}x{h} image", file=sys.stderr)
             return 2
         colours.append(shot[int(y), int(x)])
-    ratio = float(maths.contrast(*colours))
+    ratio = float(colour_space.contrast(*colours))
     print(f"{maths.hexed(colours[0])} against {maths.hexed(colours[1])}: {ratio:.2f}:1")
     return 0
 

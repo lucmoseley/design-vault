@@ -11,6 +11,7 @@ set -u
 # #491
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
+# code-edges loads: failed-files.js
 registry='node --test --test-reporter=./test/failed-files.js
 bash test/design-round-pointer.test.sh
 python3 test/cutout.test.py	images
@@ -30,6 +31,7 @@ python3 test/check-access.test.py	images chromium
 python3 test/check-access-contrast.test.py	images chromium
 python3 test/check-access-pointer.test.py	images chromium
 python3 test/palette.test.py
+python3 test/colour-space.test.py	images
 python3 test/rule-table.test.py
 python3 test/siblings.test.py
 python3 test/child.test.py	chromium

@@ -168,6 +168,9 @@ rule_table = siblings.load(HERE, "rule-table.py")
 conditions = siblings.load(HERE, "conditions.py")
 markup = siblings.load(HERE, "check-markup.py")
 probe = siblings.load(HERE, "probe.py")
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 
 TABLE = os.path.join(HERE, "check-state.table")
 ITEMS = "; "
@@ -631,20 +634,6 @@ def rgb(css):
     return tuple(nums[:3])
 
 
-def luminance(c):
-    def lin(v):
-        v /= 255
-        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-
-    r, g, b = c
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-
-
-def contrast(a, b):
-    la, lb = sorted((luminance(a), luminance(b)), reverse=True)
-    return (la + 0.05) / (lb + 0.05)
-
-
 def reveals(page, el):
     pointer.leave(page, el)
     page.evaluate("() => __st.mark()")
@@ -1021,9 +1010,11 @@ def _inverse(page, el, lum):
     surface = rgb(page.evaluate("(el) => __st.background(el)", el))
     ground = rgb(page.evaluate("(el) => __st.background(el.parentElement)", el))
     ink = rgb(page.evaluate("(el) => getComputedStyle(el).color", el))
-    if (luminance(surface) > lum) == (luminance(ground) > lum):
+    if (colour_space.luminance(surface) > lum) == (
+        colour_space.luminance(ground) > lum
+    ):
         return "sits on a surface of the page's own lightness, not the inverse"
-    if (luminance(ink) > lum) == (luminance(surface) > lum):
+    if (colour_space.luminance(ink) > lum) == (colour_space.luminance(surface) > lum):
         return "its text is not the inverse text"
     return None
 
@@ -1717,7 +1708,7 @@ def check_target(run, line, ans):
                 ground = rgb(
                     page.evaluate("(el) => __st.background(el.parentElement)", target)
                 )
-                got = contrast(fill, ground)
+                got = colour_space.contrast(fill, ground)
                 if got > ratio:
                     ans.miss(
                         line,
@@ -1744,7 +1735,7 @@ def _ink(png):
     img = Image.open(io.BytesIO(png)).convert("RGB")
     counts = img.getcolors(img.width * img.height)
     ground = max(counts)[1]
-    ink = max((c for _, c in counts), key=lambda c: contrast(c, ground))
+    ink = max((c for _, c in counts), key=lambda c: colour_space.contrast(c, ground))
     return ground, ink
 
 
@@ -1808,11 +1799,11 @@ def check_visited(run, line, ans):
                             at,
                             "its visited colour is no less saturated than its link colour",
                         )
-                    if contrast(now, ground) < ratio:
+                    if colour_space.contrast(now, ground) < ratio:
                         ans.miss(
                             line,
                             at,
-                            f"its visited colour is {contrast(now, ground):.2f}:1 on its ground, under {ratio}:1",
+                            f"its visited colour is {colour_space.contrast(now, ground):.2f}:1 on its ground, under {ratio}:1",
                         )
                 ans.met(line)
         finally:

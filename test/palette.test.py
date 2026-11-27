@@ -6,8 +6,6 @@ import unittest
 HERE = os.path.dirname(__file__)
 SCRIPTS = os.path.join(HERE, "..", "plugin", "skills", "design-project", "scripts")
 SCRIPT = os.path.join(SCRIPTS, "palette.py")
-sys.path.insert(0, SCRIPTS)
-import colour_space  # noqa: E402
 
 LOGO = ["--logo", "blue=#0070C0", "--logo", "grey=#404040"]
 
@@ -28,38 +26,6 @@ def row(out, pair):
         if line.startswith(f"| {pair} |"):
             return [c.strip() for c in line.strip("|").split("|")][1:]
     raise AssertionError(f"no row for {pair} in:\n{out}")
-
-
-class ColourSpace(unittest.TestCase):
-    def test_de2000_matches_every_published_pair_to_four_places(self):
-        # Sharma, Wu & Dalal 2005, Table 1: https://hajim.rochester.edu/ece/sites/gsharma/ciede2000/
-        cases = [
-            ((50, 2.6772, -79.7751), (50, 0, -82.7485), 2.0425),
-            ((50, 0, 0), (50, -1, 2), 2.3669),
-            ((50, 2.4900, -0.0010), (50, -2.4900, 0.0011), 7.2195),
-            ((50, 2.5, 0), (73, 25, -18), 27.1492),
-            ((50, 2.5, 0), (50, 3.1736, 0.5854), 1.0000),
-            ((60.2574, -34.0099, 36.2677), (60.4626, -34.1751, 39.4387), 1.2644),
-            ((90.8027, -2.0831, 1.4410), (91.1528, -1.6435, 0.0447), 1.4441),
-            ((2.0776, 0.0795, -1.1350), (0.9033, -0.0636, -0.5514), 0.9082),
-        ]
-        for p, q, want in cases:
-            self.assertAlmostEqual(colour_space.de2000(p, q), want, places=4)
-
-    def test_white_is_lab_100_0_0_black_is_lab_0_0_0_and_white_is_oklch_lightness_1_with_no_chroma(
-        self,
-    ):
-        for h, want in (("#FFFFFF", (100, 0, 0)), ("#000000", (0, 0, 0))):
-            for got, w in zip(colour_space.lab(h), want, strict=True):
-                self.assertAlmostEqual(got, w, places=2)
-        lightness, chroma, _ = colour_space.oklch("#FFFFFF")
-        self.assertAlmostEqual(lightness, 1, places=4)
-        self.assertAlmostEqual(chroma, 0, places=4)
-
-    def test_black_on_white_is_21_to_1(self):
-        self.assertAlmostEqual(
-            colour_space.contrast("#000000", "#FFFFFF"), 21, places=6
-        )
 
 
 class NearMiss(unittest.TestCase):
