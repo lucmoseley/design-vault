@@ -32,6 +32,24 @@
   ];
   const picked = v => WAYS.filter(w => v.pick[w.key]);
 
+  // #501
+  const MAX_SELECTED = 5, DEFAULT_PROJECT = 'manta';
+  const toggleSelected = (selection, id) => selection.includes(id) ? selection.filter(s => s !== id)
+    : selection.length < MAX_SELECTED ? [...selection, id] : null;
+  const keepInProject = (v, selection) => selection.filter(id => {
+    const e = v.data.entries.find(entry => entry.id === id);
+    return e && inProject(v, e);
+  });
+  function switchProject(v, selection, project) {
+    const at = { ...v, project };
+    return { selection: keepInProject(at, selection), pick: Object.fromEntries(WAYS.map(w => [w.key, w.ids(at).includes(v.pick[w.key]) ? v.pick[w.key] : null])) };
+  }
+  function startView(v, storedProject, storedSelection) {
+    const wanted = storedProject || DEFAULT_PROJECT;
+    const project = Object.hasOwn(v.data.projects || {}, wanted) ? wanted : Object.keys(v.data.projects || {})[0] || DEFAULT_PROJECT;
+    return { project, selection: keepInProject({ ...v, project }, (Array.isArray(storedSelection) ? storedSelection : []).slice(0, MAX_SELECTED)) };
+  }
+
   const searchTexts = new WeakMap();
   function searchText(v, e) {
     if (!searchTexts.has(v.data)) searchTexts.set(v.data, new Map());
@@ -96,7 +114,7 @@
   const imagePrompt = e => `Vault: ${VAULT}\n${e.image_recipe}\n\nComposition: ${e.composition || 'Use the reference composition.'}\n\nUse ${referencePath(e)} as a style reference. Match treatment, texture, palette and balance while adapting the subject to our project. Return the artwork asset only; keep interface text and controls in code.`;
 
   Object.assign(exports, {
-    inProject, libraryEntries, fitOf, verdictOf, projectName, projectGroups, groupLabel, partNames,
+    MAX_SELECTED, toggleSelected, switchProject, startView, inProject, libraryEntries, fitOf, verdictOf, projectName, projectGroups, groupLabel, partNames,
     styleNames, siteAddress, motionSummary, WAYS, picked, fitPasses, countFor, visibleEntries,
     visibleStyles, viewHash, readHash, buildBrief, collectionBrief, styleBrief, imagePrompt,
   });

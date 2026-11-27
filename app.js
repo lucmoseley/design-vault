@@ -2,16 +2,12 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DATA, STYLES, showStyles=false, fit='any', queryTests=[], sort='newest', currentId=null, toastTimer;
-// #501
-const MAX_SELECTED=5, DEFAULT_PROJECT='manta';
 const stored = key => {try{return JSON.parse(localStorage.getItem(key));}catch{return null;}};
-const storedSelection=stored('taste-vault-selection');
-let project=stored('taste-vault-project')||DEFAULT_PROJECT, selected=new Set((Array.isArray(storedSelection)?storedSelection:[]).slice(0,MAX_SELECTED)), prefs={includeDna:false,overrides:'',...stored('taste-vault-preferences')};
+let project, selected=new Set(), prefs={includeDna:false,overrides:'',...stored('taste-vault-preferences')};
 function setShowStyles(on){showStyles=on;}
 function setFit(value){fit=value;}
 function setProject(key){project=key;}
 function setSelection(ids){selected=new Set(ids);saveLocal('taste-vault-selection',[...selected]);}
-const pruneSelection = keep => setSelection([...selected].filter(keep));
 const collectionFor = id => DATA.collections.find(c=>c.id===id);
 const entryFor = id => DATA.entries.find(e=>e.id===id);
 const view = () => ({data:DATA,styles:STYLES,project,pick,fit,sort,showStyles,queryTests,prefs});
@@ -20,7 +16,6 @@ const groupFor = id => projectGroups().find(g=>g.id===id);
 const groupLabel = id => VaultView.groupLabel(view(),id);
 const fitOf = e => VaultView.fitOf(view(),e);
 const projectName = () => VaultView.projectName(view());
-const inProject = e => VaultView.inProject(view(),e);
 const libraryEntries = () => VaultView.libraryEntries(view());
 const verdictOf = e => VaultView.verdictOf(view(),e);
 const fitBadge = e => `<span class="fit-badge fit-${verdictOf(e)}">${esc(verdictOf(e))}</span>`;
@@ -121,13 +116,15 @@ function styleCard(s){return `<article class="style-card"><div class="style-prev
 function renderTray(){
  $('compareTray').hidden=!selected.size;
  $('trayThumbs').innerHTML=[...selected].map(id=>{const e=entryFor(id);return `<img src="${imagePath(e)}" alt="${esc(e.title)}">`;}).join('');
- $('selectionCount').textContent=selected.size+' / '+MAX_SELECTED+' selected';
+ $('selectionCount').textContent=selected.size+' / '+VaultView.MAX_SELECTED+' selected';
  $('compareButton').disabled=selected.size<2;
  if(currentId){$('detailSelect').textContent=selected.has(currentId)?'Remove from comparison':'Select to compare';$('detailSelect').setAttribute('aria-pressed',selected.has(currentId));}
 }
 function toggleSelection(id){
  const focused=document.activeElement?.dataset?.select;
- if(selected.has(id))pruneSelection(s=>s!==id);else if(selected.size<MAX_SELECTED)setSelection([...selected,id]);else{notify(MAX_SELECTED+' selected. Remove one to add another.');return;}
+ const next=VaultView.toggleSelected([...selected],id);
+ if(!next){notify(VaultView.MAX_SELECTED+' selected. Remove one to add another.');return;}
+ setSelection(next);
  render();
  if(focused)document.querySelector(`[data-select="${CSS.escape(focused)}"]`)?.focus();
 }
@@ -168,19 +165,19 @@ function renderProjectOptions(){
  $('fitSelect').value=fit;
 }
 function switchProject(key){
+ const next=VaultView.switchProject(view(),[...selected],key);
  setProject(key);saveLocal('taste-vault-project',project);setFit('any');renderProjectOptions();
- pruneSelection(id=>inProject(entryFor(id)));
- WAYS.forEach(w=>{if(!w.items().some(i=>i.id===pick[w.key]))setPick(w.key,null);});
+ setSelection(next.selection);Object.entries(next.pick).forEach(([way,id])=>setPick(way,id));
 }
 function chooseProject(key){switchProject(key);showView();}
 async function boot(){
  try{
   if(location.protocol==='file:'){await new Promise((loaded,failed)=>{const s=document.createElement('script');s.src='data/vault-data.js';s.onload=loaded;s.onerror=()=>failed(new Error('The copy of your library this page reads is missing — ask Claude to run node bundle.js.'));document.head.append(s);});({gallery:DATA,styles:STYLES}=window.VAULT_DATA);}
   else [DATA,STYLES]=await Promise.all(['data/gallery.json','data/styles.json'].map(async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('Unable to load your library.');return r.json();}));
-  if(!Object.hasOwn(DATA.projects||{},project))setProject(Object.keys(DATA.projects||{})[0]||DEFAULT_PROJECT);
-  renderProjectOptions();
-  $('browseHint').firstElementChild.textContent=`Select up to ${MAX_SELECTED} references to compare`;
-  pruneSelection(id=>entryFor(id)&&inProject(entryFor(id)));readHash();showView();
+  const start=VaultView.startView(view(),stored('taste-vault-project'),stored('taste-vault-selection'));
+  setProject(start.project);setSelection(start.selection);renderProjectOptions();
+  $('browseHint').firstElementChild.textContent=`Select up to ${VaultView.MAX_SELECTED} references to compare`;
+  readHash();showView();
  }catch(error){$('grid').innerHTML=`<div class="empty-state"><h2>Your library couldn't load</h2><p>${esc(error.message)} Refresh the page to try again.</p></div>`;return;}
  $('searchInput').oninput=event=>{setQuery(event.target.value);render();};$('sortSelect').onchange=event=>{sort=event.target.value;render();};
  $('resetSearch').onclick=()=>searchLibrary('');
