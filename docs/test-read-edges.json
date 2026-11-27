@@ -343,7 +343,8 @@
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
 			"test/run-lanes.test.js",
-			"test/select-suites.test.js"
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
 		],
 		"search.js": [
 			"test/rule-store-pointers.test.js"
@@ -358,7 +359,8 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
-			"test/select-suites.test.js"
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
 		],
 		"test/bundle.test.js": [
 			"test/ledger-check.test.js",
@@ -561,7 +563,8 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
-			"test/select-suites.test.js"
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
 		],
 		"test/drive-form.test.py": [
 			"test/ledger-check.test.js",
@@ -2500,14 +2503,16 @@
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
 			"test/run-lanes.test.js",
-			"test/select-suites.test.js"
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
 		],
 		"test/run-lanes.sh": [
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
 			"test/run-lanes.test.js",
-			"test/select-suites.test.js"
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
 		],
 		"test/run-lanes.test.js": [
 			"test/ledger-check.test.js",
@@ -2527,7 +2532,8 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
-			"test/select-suites.test.js"
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js"
 		],
 		"test/select-suites.test.js": [
 			"test/ledger-check.test.js",
@@ -2540,6 +2546,11 @@
 		],
 		"test/siblings.test.py": [
 			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/suite-budget.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/validate.test.js": [
