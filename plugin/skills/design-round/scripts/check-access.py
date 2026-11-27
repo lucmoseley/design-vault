@@ -1384,7 +1384,7 @@ def judge(got, shots, measured, table):
         if worst is not None:
             big = maths.large(text["size"], text["weight"], table.floors)
             readings.append(
-                contrasts.Reading(
+                contrasts.PartReading(
                     text["subject"], "large text" if big else "text", worst
                 )
             )
@@ -1430,7 +1430,7 @@ def judge(got, shots, measured, table):
                 }
             )
         elif edge.box is not None:
-            readings.append(contrasts.Reading(subject, "control edge", edge.ratio))
+            readings.append(contrasts.PartReading(subject, "control edge", edge.ratio))
     out["vault.target-size"].faults.extend(got["targetFaults"])
     out["vault.colour-script"].faults.extend(got["linkFaults"])
     for qid, judged in measured.items():
