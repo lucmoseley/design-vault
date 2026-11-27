@@ -135,28 +135,24 @@ import siblings  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 
 
 records = siblings.load(HERE, "layout-records.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 
 
-# WCAG 2.2 reflow is judged at 320 CSS px wide: https://www.w3.org/WAI/WCAG22/Understanding/reflow.html
-LOW = 320
-STEPPED, HIGH = 1920, 2560  # guess, #197
+STEPPED = 1920  # guess, #197
 GATE_STEP = 5  # guess, #78
-BANDS = (
-    ("phone", 320, 767),
-    ("tablet", 768, 1023),
-    ("desktop", 1024, HIGH),
+SHOT_WIDTHS = (
+    conditions.LOW,
+    conditions.PHONE_WIDTH,
+    conditions.BANDS[1][1],
+    conditions.BANDS[2][1],
+    1536,
+    conditions.DESKTOP_WIDTH,
+    conditions.HIGH,
 )  # guess, #501
-PHONE_MAX = BANDS[0][2]
-HEIGHTS = (664, 921, 768 - flow.DESKTOP_BARS)  # measured 390x664, 768x921, #252
-MOTION_HEIGHTS = (*HEIGHTS[:2], flow.DESKTOP_WINDOW[1])
-PHONE_WIDTH, DESKTOP_WIDTH = 390, flow.DESKTOP_SCREEN[0]  # guess, #197
-SHOT_WIDTHS = (320, PHONE_WIDTH, 768, 1024, 1536, DESKTOP_WIDTH, HIGH)  # guess, #501
-PHONE = {"has_touch": True}  # #229
-MOBILE = {**PHONE, "is_mobile": True}
 # Zoom must reach 200%: https://www.w3.org/WAI/standards-guidelines/act/rules/b4f0c3/
 ZOOM = 2
 SCALE_SLACK = 0.01  # guess, #501
@@ -259,17 +255,6 @@ def parse_table(text):
         out[fields[1]] = Mode(fields[0], fields[1], value)
     return out
 
-
-SETTLE_JS = r"""
-async () => {
-  await document.fonts.ready;
-  let looping = 0;
-  for (const a of document.getAnimations()) { try { a.finish(); } catch (e) { looping++; } }
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  return looping;
-}
-"""
 
 MEASURE_JS = (
     flow.LABEL_JS
@@ -691,27 +676,12 @@ def viewport_faults(width, got):
     return faults
 
 
-def sweep_widths(step, low=LOW, high=HIGH):
+def sweep_widths(step, low=conditions.LOW, high=conditions.HIGH):
     widths = list(range(low, min(high, STEPPED) + 1, step)) or [low]
     for end in (min(high, STEPPED), high):
         if widths[-1] < end:
             widths.append(end)
     return widths
-
-
-def height_at(width, heights):
-    for (_, low, high), tall in zip(BANDS, heights, strict=True):
-        if low <= width <= high:
-            return tall
-    raise ValueError(f"{width} px is outside {LOW}–{HIGH}")
-
-
-def is_phone(width):
-    return width <= PHONE_MAX
-
-
-def device(width):
-    return PHONE if is_phone(width) else {}
 
 
 def ranges(found, kinds=KINDS):
@@ -756,10 +726,10 @@ def stamp(when):
 
 
 def load(page, url, width, heights, *, view=None):
-    w, h = view or (width, height_at(width, heights))
+    w, h = view or (width, conditions.height_at(width, heights))
     page.set_viewport_size({"width": w, "height": h})
     page.goto(url, wait_until="load")
-    return page.evaluate(SETTLE_JS)
+    return conditions.settle(page)
 
 
 def text_faults(base, got, *, grow=None):
@@ -793,7 +763,7 @@ def text_faults(base, got, *, grow=None):
 
 def zoomed(width, height, factor):
     w, h = round(width / factor), round(height / factor)
-    return (w, h) if w >= LOW else None
+    return (w, h) if w >= conditions.LOW else None
 
 
 def measure(page, cta, focal=()):
@@ -806,16 +776,16 @@ def measure(page, cta, focal=()):
 def spaced_at(page, at, width, base):
     load(page, at.url, width, at.heights)
     page.evaluate(SPACING_JS, at.modes["spacing"].value)
-    page.evaluate(SETTLE_JS)
+    conditions.settle(page)
     return text_faults(base, measure(page, None))
 
 
 def zoomed_at(page_as, at, width, base):
     factor = at.modes["zoom"].value
-    view = zoomed(width, height_at(width, at.heights), factor)
+    view = zoomed(width, conditions.height_at(width, at.heights), factor)
     if not view:
         return None
-    page = page_as({**device(width), "device_scale_factor": factor})
+    page = page_as({**conditions.device(width), "device_scale_factor": factor})
     load(page, at.url, width, at.heights, view=view)
     got = measure(page, None)
     got["sizes"] = [[i, s, px * factor] for i, s, px in got["sizes"]]
@@ -823,7 +793,7 @@ def zoomed_at(page_as, at, width, base):
 
 
 def sized_at(page_as, at, width, base, *, raised):
-    page = page_as(device(width), raised)
+    page = page_as(conditions.device(width), raised)
     load(page, at.url, width, at.heights)
     return text_faults(base, measure(page, None), grow=at.modes["size"].value)
 
@@ -893,8 +863,10 @@ def read_records(page, at, width, rec, *, page_as, raised, safe):
         base = {int(k): v for k, v in fluid["sizes"].items()}
         if base:
             v = checks["fluid-zoom"].value
-            tall = height_at(width, at.heights)
-            zoom = page_as({**device(width), "device_scale_factor": v["zoom"]})
+            tall = conditions.height_at(width, at.heights)
+            zoom = page_as(
+                {**conditions.device(width), "device_scale_factor": v["zoom"]}
+            )
             load(
                 zoom,
                 at.url,
@@ -906,7 +878,7 @@ def read_records(page, at, width, rec, *, page_as, raised, safe):
                 int(k): [None, px * v["zoom"]]
                 for k, (_, px) in zoom.evaluate(records.SIZES_JS, list(base)).items()
             }
-            sized = page_as(device(width), raised["fluid-zoom"])
+            sized = page_as(conditions.device(width), raised["fluid-zoom"])
             load(sized, at.url, width, at.heights)
             sized_px = {
                 int(k): val
@@ -918,7 +890,7 @@ def read_records(page, at, width, rec, *, page_as, raised, safe):
                 ["fluid-zoom"],
             )
     if "label-value" in checks and "label-value" in got["seen"]:
-        sized = page_as(device(width), raised["label-value"])
+        sized = page_as(conditions.device(width), raised["label-value"])
         load(sized, at.url, width, at.heights)
         more = sized.evaluate(rec.read, {**args, "lines": rec.lines(("label-value",))})
         size = checks["label-value"].value["size"]
@@ -962,11 +934,11 @@ def records_after(browser, at, rec, page_as):
         for w, faults in records.logo_faults(logos):
             rec.add(w, faults)
     if "tabs-narrow" in checks:
-        off = browser.new_context(java_script_enabled=False, **PHONE)
+        off = browser.new_context(java_script_enabled=False, **conditions.PHONE)
         off.set_default_timeout(at.timeout)
         bare = off.new_page()
         for w in narrow(rec.phone_under, "tabs-narrow"):
-            page = page_as(device(w))
+            page = page_as(conditions.device(w))
             load(page, at.url, w, at.heights)
             panels = page.evaluate(records.TABS_JS, None)
             if not panels:
@@ -975,7 +947,9 @@ def records_after(browser, at, rec, page_as):
             faults = records.tab_faults(panels, True)
             ids = [p["id"] for p in panels if p["id"]]
             if ids:
-                bare.set_viewport_size({"width": w, "height": height_at(w, at.heights)})
+                bare.set_viewport_size(
+                    {"width": w, "height": conditions.height_at(w, at.heights)}
+                )
                 bare.goto(at.url, wait_until="load")
                 faults += records.tab_faults(bare.evaluate(records.TABS_JS, ids), False)
             rec.add(w, faults)
@@ -984,7 +958,7 @@ def records_after(browser, at, rec, page_as):
         overlay = siblings.load(HERE, "drive-overlay.py")
         under = checks["popover-sheet"].value["under"]
         for w in narrow(under, "popover-sheet"):
-            page = page_as(device(w))
+            page = page_as(conditions.device(w))
             load(page, at.url, w, at.heights)
             faults = []
             for ov in overlay.find(page):
@@ -1030,11 +1004,11 @@ def run(at, when):
             return pages[key]
 
         def page_at(width):
-            return page_as(device(width))
+            return page_as(conditions.device(width))
 
         raised = None
         defaults = (
-            page_at(LOW).evaluate(DEFAULT_SIZES_JS)
+            page_at(conditions.LOW).evaluate(DEFAULT_SIZES_JS)
             if "size" in at.text
             or (rec and {"fluid-zoom", "label-value"} & set(at.checks))
             else None
@@ -1049,7 +1023,7 @@ def run(at, when):
                     factor = at.checks[name].value[key]
                     record_sizes[name] = tuple(round(px * factor) for px in defaults)
             if "safe-bottom" in at.checks:
-                context = browser.new_context(**PHONE)
+                context = browser.new_context(**conditions.PHONE)
                 context.set_default_timeout(at.timeout)
                 safe = context.new_page()
                 context.new_cdp_session(safe).send(
@@ -1063,8 +1037,8 @@ def run(at, when):
             base = measure(page, at.cta, at.focal)
             arts.append((width, base["arts"]))
             faults = [f for f in base["faults"] if "place" not in f]
-            if is_phone(width):
-                mobile = page_as(MOBILE)
+            if conditions.is_phone(width):
+                mobile = page_as(conditions.MOBILE)
                 load(mobile, at.url, width, at.heights)
                 faults = faults + viewport_faults(width, mobile.evaluate(VIEWPORT_JS))
             found.append((width, faults))
@@ -1137,7 +1111,7 @@ def settle_focal(found, arts, focal):
 
 
 def gating(at):
-    return at.step <= GATE_STEP and at.span == (LOW, HIGH)
+    return at.step <= GATE_STEP and at.span == (conditions.LOW, conditions.HIGH)
 
 
 def answers(at, runs, text_runs):
@@ -1173,14 +1147,14 @@ def condition(mode):
             f"letter spacing {v['letter-spacing']:g} and word spacing {v['word-spacing']:g} times the font size"
         )
     if mode.name == "zoom":
-        return f"at {mode.value * 100:g}% browser zoom, on screens {LOW * mode.value:g} px wide and wider"
+        return f"at {mode.value * 100:g}% browser zoom, on screens {conditions.LOW * mode.value:g} px wide and wider"
     return f"with the browser's default text size raised to {mode.value * 100:g}%"
 
 
 def report(at, widths, runs, shots, *, text_runs, verdicts, looping, when, json_path):
     bands = ", ".join(
         f"{tall} px tall at {low}–{high} px ({name})"
-        for (name, low, high), tall in zip(BANDS, at.heights, strict=True)
+        for (name, low, high), tall in zip(conditions.BANDS, at.heights, strict=True)
     )
     lines = [
         f"check-layout: {at.url}",
@@ -1188,7 +1162,7 @@ def report(at, widths, runs, shots, *, text_runs, verdicts, looping, when, json_
     ]
     if not gating(at):
         lines.append(
-            f"NOT A GATING SWEEP: the craft gate needs {LOW}–{HIGH} px every {GATE_STEP} px or finer to {STEPPED}"
+            f"NOT A GATING SWEEP: the craft gate needs {conditions.LOW}–{conditions.HIGH} px every {GATE_STEP} px or finer to {STEPPED}"
         )
     if looping:
         lines.append(
@@ -1274,13 +1248,13 @@ def parse(argv):
     p.add_argument("--step", type=int, default=GATE_STEP, metavar="PX")
     p.add_argument(
         "--widths",
-        default=f"{LOW}-{HIGH}",
+        default=f"{conditions.LOW}-{conditions.HIGH}",
         metavar="LOW-HIGH",
-        help=f"part of {LOW}–{HIGH} px to sweep",
+        help=f"part of {conditions.LOW}–{conditions.HIGH} px to sweep",
     )
     p.add_argument(
         "--heights",
-        default=",".join(map(str, HEIGHTS)),
+        default=",".join(map(str, conditions.HEIGHTS)),
         metavar="PHONE,TABLET,DESKTOP",
         help="the first screen's height in each band",
     )
@@ -1383,7 +1357,7 @@ def parse(argv):
             p.error(f"{at.table} has no phone-width line, which --records needs")
     if at.step < 1:
         p.error("--step wants 1 or more")
-    wants = f"--heights wants three heights in px, e.g. {','.join(map(str, HEIGHTS))}"
+    wants = f"--heights wants three heights in px, e.g. {','.join(map(str, conditions.HEIGHTS))}"
     try:
         at.heights = tuple(int(n) for n in at.heights.split(","))
     except ValueError:
@@ -1392,9 +1366,9 @@ def parse(argv):
         p.error(wants)
     m = re.fullmatch(r"(\d+)-(\d+)", at.widths)
     at.span = (int(m[1]), int(m[2])) if m else ()
-    if not at.span or not LOW <= at.span[0] <= at.span[1] <= HIGH:
+    if not at.span or not conditions.LOW <= at.span[0] <= at.span[1] <= conditions.HIGH:
         p.error(
-            f"--widths wants LOW-HIGH within {LOW}-{HIGH}, e.g. 1100-1340 — got {at.widths!r}"
+            f"--widths wants LOW-HIGH within {conditions.LOW}-{conditions.HIGH}, e.g. 1100-1340 — got {at.widths!r}"
         )
     at.url = runner.page_url(p, at.url)
     return p, at
@@ -1446,7 +1420,9 @@ def main(argv):
                 "step": at.step,
                 "span": at.span,
                 "looping_animations": looping,
-                "heights": dict(zip([b[0] for b in BANDS], at.heights, strict=True)),
+                "heights": dict(
+                    zip([b[0] for b in conditions.BANDS], at.heights, strict=True)
+                ),
                 "cta": at.cta,
                 "focal": at.focal,
                 "answers": verdicts,

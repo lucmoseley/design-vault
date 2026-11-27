@@ -75,6 +75,7 @@ import siblings  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 UnmeasurableError = runner.UnmeasurableError
 
 NAME_JS = (
@@ -724,7 +725,7 @@ def parse(argv):
         s.add_argument(
             "--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS"
         )
-        s.add_argument("--viewport", default=flow.DESKTOP, metavar="WxH")
+        s.add_argument("--viewport", default=conditions.DESKTOP, metavar="WxH")
     last.add_argument(
         "--at",
         required=True,
@@ -762,7 +763,7 @@ def parse(argv):
         help="fail a frame whose hash differs from this file's",
     )
     at = p.parse_args(argv)
-    at.viewport_size = flow.size_arg(p, "--viewport", at.viewport)
+    at.viewport_size = conditions.size_arg(p, "--viewport", at.viewport)
     if at.mode == "hash":
         if at.check and at.times:
             p.error("--check renders the frames its file names; drop --times")
