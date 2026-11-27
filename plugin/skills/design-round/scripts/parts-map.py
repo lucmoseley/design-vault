@@ -72,7 +72,7 @@ flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
 answers_file = siblings.load(HERE, "answers-file.py")
 
-KEYS = (
+KEY_FILES = (
     "key.txt",
     *(f"key-{name}.png" for name, _, _ in conditions.VIEWPORTS),
 )
@@ -466,7 +466,7 @@ def parse(argv):
 
 def main(argv):
     at = parse(argv)
-    when, json_path = answers_file.start(at.out, "parts.json", *KEYS)
+    when, json_path = answers_file.start(at.out, "parts.json", *KEY_FILES)
     got, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code

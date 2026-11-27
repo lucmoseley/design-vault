@@ -16,6 +16,8 @@ def start(out, name, *stale):
 def write(path, url, when, **fields):
     if "answers" not in fields:
         raise TypeError("write() needs an answers field")
+    if {"url", "run_at"} & fields.keys():
+        raise TypeError(f"write() sets url and run_at itself, not {sorted(fields)}")
     with open(path, "w", encoding="utf8") as fh:
         json.dump(
             {"url": url, "run_at": when.isoformat(), **fields},

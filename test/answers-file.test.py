@@ -64,6 +64,14 @@ class Write(unittest.TestCase):
                 answers_file.write(path, "u", when, findings=[])
             self.assertFalse(os.path.exists(path))
 
+    def test_a_field_named_url_or_run_at_is_refused(self):
+        with tempfile.TemporaryDirectory() as out:
+            when, path = answers_file.start(out, "run.json")
+            for name in ("url", "run_at"):
+                with self.assertRaises(TypeError):
+                    answers_file.write(path, "u", when, answers={}, **{name: "x"})
+            self.assertFalse(os.path.exists(path))
+
 
 if __name__ == "__main__":
     unittest.main()

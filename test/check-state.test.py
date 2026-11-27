@@ -130,12 +130,16 @@ class TheFixtures(unittest.TestCase):
 
 
 class TheCommandLine(unittest.TestCase):
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            list(RUNS["fault"][3]), ["url", "run_at", "answers", "findings"]
+        )
+
     def test_the_fault_page_exits_1_and_replaces_an_earlier_run_s_findings(self):
         code, printed, _, written = RUNS["fault"]
         self.assertEqual(code, 1)
         self.assertEqual(written["answers"], dict.fromkeys(RECORDS, "fail"))
         self.assertEqual(written["url"], FAULT.as_uri())
-        self.assertEqual(list(written), ["url", "run_at", "answers", "findings"])
         for record in RECORDS:
             self.assertIn(f"{record}: fail", printed)
 

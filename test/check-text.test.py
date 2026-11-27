@@ -130,12 +130,15 @@ def misses(check, *blocks, **given):
 
 
 class FaultPage(unittest.TestCase):
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        _, _, _, data = run(FAULT, *OFFER)
+        self.assertEqual(list(data), ["url", "run_at", "parts", "answers", "findings"])
+
     def test_314_fails_each_record_at_its_planted_element_alone(self):
         code, out, _, data = run(FAULT, *OFFER)
         self.assertEqual(code, 1, out)
         got = by_id(data)
         self.assertEqual(sorted(got), sorted(RECORDS))
-        self.assertEqual(list(data), ["url", "run_at", "parts", "answers", "findings"])
         for rid in RECORDS:
             with self.subTest(rid):
                 self.assertEqual(got[rid]["answer"], "fail", out)

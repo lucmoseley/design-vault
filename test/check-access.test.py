@@ -1379,15 +1379,17 @@ class Questions(unittest.TestCase):
             {"vault.carousel-focus"},
         )
 
+    def test_the_answers_file_keeps_its_keys_in_order(self):
+        self.assertEqual(
+            list(DONE["clean"][3]),
+            ["url", "run_at", "looping_animations", "viewports", "answers"],
+        )
+
     def test_a_clean_page_passes_every_question(self):
         code, stdout, stderr, found = DONE["clean"]
         self.assertEqual(code, 0, stdout + stderr)
         self.assertEqual({a["answer"] for a in found["answers"].values()}, {"pass"})
         self.assertEqual(list(found["answers"]), [q for q, _ in answering.QUESTIONS])
-        self.assertEqual(
-            list(found),
-            ["url", "run_at", "looping_animations", "viewports", "answers"],
-        )
         self.assertEqual(
             found["viewports"], {"desktop": [1920, 633], "phone": [390, 664]}
         )
