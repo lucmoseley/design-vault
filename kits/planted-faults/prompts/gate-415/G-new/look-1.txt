@@ -1,44 +1,42 @@
-Gate list for web-surface, has-cta: 20 question(s).
+Gate list for web-surface, has-cta: 19 question(s).
 
-Look questions, for the critics, pass 1 of 4, function and role: function: data, forms, imagery, interaction, layout:
+Look questions, for the critics, pass 1 of 4, function and role: function: data, forms, imagery, interaction, layout, navigation, system:
 
 12. vault.table-markup-look: Is content set in rows and columns built as a `table` of `tr`, `th` and `td`, or with the ARIA table roles, never as a grid of plain `div`s?
    Applies to: content set in rows and columns a visitor reads across and down
-18. vault.auth-paste-look: Does no step ask for chosen characters of a password, and where a step blocks paste or a password manager, does it offer another way to sign in that needs no remembering or transcription?
+19. vault.auth-paste-look: Does no step ask for chosen characters of a password, and where a step blocks paste or a password manager, does it offer another way to sign in that needs no remembering or transcription?
    Applies to: every sign-in, sign-up or verification step
-19. vault.redundant-entry: Within one process, is every answer the visitor already gave that is not filled in for them offered to pick (a "same as" checkbox, a carried-forward answer, an earlier upload to reuse), save where re-entry is essential, needed for security, or the earlier answer no longer valid?
+20. vault.redundant-entry: Within one process, is every answer the visitor already gave that is not filled in for them offered to pick (a "same as" checkbox, a carried-forward answer, an earlier upload to reuse), save where re-entry is essential, needed for security, or the earlier answer no longer valid?
    Applies to: every process that asks a visitor for the same information twice: a second address, a repeated upload, a later step needing an earlier answer
-20. vault.keep-answers: Where a form is long, can the visitor save and resume it, and does a problem page say what happened to their answers?
+21. vault.keep-answers: Where a form is long, can the visitor save and resume it, and does a problem page say what happened to their answers?
    Applies to: every form, above all a long or multi-step one
-21. vault.form-help: Does a long or complex form offer a way to get help that keeps the visitor on the form, with more help offered where they hit the same error again?
+22. vault.form-help: Does a long or complex form offer a way to get help that keeps the visitor on the form, with more help offered where they hit the same error again?
    Applies to: every long or complex form
-22. vault.sign-in: Can every sign-in step be passed without remembering, transcribing or solving anything, save recognising objects or the visitor's own pictures: paste and password-manager autofill allowed (`autocomplete="username"`, `current-password`, `one-time-code`), the password showable, and a passkey, an email link or a third-party sign-in offered beside any puzzle or code to retype?
+23. vault.sign-in: Can every sign-in step be passed without remembering, transcribing or solving anything, save recognising objects or the visitor's own pictures: paste and password-manager autofill allowed (`autocomplete="username"`, `current-password`, `one-time-code`), the password showable, and a passkey, an email link or a third-party sign-in offered beside any puzzle or code to retype?
    Applies to: every sign-in, sign-up and verification step
-23. vault.time-limit-look: Where a time limit gives no warning with one action to extend it, can the visitor turn it off or set it to at least ten times its length, or is it a real-time event, an essential limit or one over 20 hours, and does an automatic redirect give "Go now" and "Stay" controls?
+24. vault.time-limit-look: Where a time limit gives no warning with one action to extend it, can the visitor turn it off or set it to at least ten times its length, or is it a real-time event, an essential limit or one over 20 hours, and does an automatic redirect give "Go now" and "Stay" controls?
    Applies to: every time limit the page sets: a session timeout, an automatic redirect, a timed step
-24. vault.one-thing-per-page: Is a long form split across pages that each hold one thing (one piece of information, one decision or one question), with pages merged only where user research shows the visitors answer them together, and is no page cut down by spreading the same fields over more steps rather than dropping the fields the task does not need?
+25. vault.one-thing-per-page: Is a long form split across pages that each hold one thing (one piece of information, one decision or one question), with pages merged only where user research shows the visitors answer them together, and is no page cut down by spreading the same fields over more steps rather than dropping the fields the task does not need?
    Applies to: every form longer than one screen of questions, checkout included
-28. vault.icon-use: Does each icon mark an action or a piece of information a visitor looks for (a phone number, a download, a share) rather than decorate, take the conventional symbol for that one meaning and no other, and carry a visible text label, save the few icons nearly everyone knows (home, print, the magnifier for search) and the icon-only controls `vault.carry-act` allows, each with an accessible name?
+29. vault.icon-use: Does each icon mark an action or a piece of information a visitor looks for (a phone number, a download, a share) rather than decorate, take the conventional symbol for that one meaning and no other, and carry a visible text label, save the few icons nearly everyone knows (home, print, the magnifier for search) and the icon-only controls `vault.carry-act` allows, each with an accessible name?
    Applies to: every icon on the page other than a logo
-30. vault.image-earns: Does each image carry information the visitor uses (the product, the place, the real person, the evidence) or a feeling the brief names, none being generic stock or AI filler set to fill space?
+31. vault.image-earns: Does each image carry information the visitor uses (the product, the place, the real person, the evidence) or a feeling the brief names, none being generic stock or AI filler set to fill space?
    Applies to: every photo and illustration on the page that is not an icon or the logo
-34. vault.flash-limit (script owed): Does nothing on the page flash more than three times in any one second, or does every faster flash stay below the general and red flash thresholds: no more than a quarter of any 10° field, about 341 × 256 px at 1024 × 768?
-   Applies to: every video, animation, canvas and image that flashes or strobes, and a motion asset
 36. vault.affordance: Does every part a visitor can act on look as if they can, and every part they cannot look as if they cannot, save a hidden link that goes where a part that does look actable also goes, which is reported and does not fail?
-   Applies to: each part on the parts map's key, at desktop and phone width, answered part by part: does it look as if a visitor can act on it?
+   Applies to: each part on the parts map's key, at desktop and phone width, answered part by part
 37. vault.whole-target-look: Does each accordion heading and chip that does one thing take a press anywhere it is drawn, its words, icon and count included, and not only where its words sit?
    Applies to: every composite part that does one thing and is no row, list item or article: an accordion heading, a chip
-39. vault.drag-alternative: Can everything a drag or a multipoint gesture such as a pinch does also be done by single taps or clicks with no drag or multipoint gesture (a tap on the slider track, move-up and move-down buttons, a "Choose file" button beside the drop zone, previous and next buttons, map pan and zoom buttons, a refresh button, a tap on the sheet's grabber), keyboard support alone not counting?
+38. vault.drag-alternative: Can everything a drag or a multipoint gesture such as a pinch does also be done by single taps or clicks with no drag or multipoint gesture (a tap on the slider track, move-up and move-down buttons, a "Choose file" button beside the drop zone, previous and next buttons, map pan and zoom buttons, a refresh button, a tap on the sheet's grabber), keyboard support alone not counting?
    Applies to: every part the page lets a visitor drag: a slider, a reorderable list, a drop zone, a swipe carousel or row, a map, a resizable sheet, a custom pull-to-refresh; and every multipoint gesture the page reads, such as a pinch zoom
-41. vault.scroller-focus (script owed): Can the Tab key reach each scrolling box whose content has no focusable part, by `tabindex="0"` with `role="region"` and a name, so the arrow keys scroll it, and does it show focus as `vault.focus` asks?
-   Applies to: every scrolling box (`overflow: auto` or `scroll`) that scrolls at the width checked
-42. vault.roving-focus (script owed): Is each composite widget one Tab stop, the arrow keys moving among its items (by roving `tabindex` or `aria-activedescendant`), and does focus enter on its selected item, or its first where none is selected?
-   Applies to: every composite widget: a tab list, radio group, chip set, toolbar, listbox, grid or segmented control
-43. vault.menu-focus (script owed): When the menu opens, does focus move to its first item (to its last on Up Arrow), do Up and Down Arrow move between items, Escape close it and return focus to the button that opened it, and Tab leave and close it?
-   Applies to: every menu a button opens (`role="menu"`), an action menu or a dropdown of commands
-44. vault.carousel-focus (script owed): Does the carousel stop rotating while focus or the pointer is inside it, put its rotation control first in its Tab order, leave focus where it was when previous or next is pressed, and keep slides out of view out of the Tab order and the accessibility tree (`inert`, or `interactivity: inert`), so Tab never lands on an unseen slide?
-   Applies to: every carousel or slideshow
-45. vault.motion-input: Can each thing device or body motion does also be done with an on-screen control, and can the visitor turn the response to motion off?
+39. vault.motion-input: Can each thing device or body motion does also be done with an on-screen control, and can the visitor turn the response to motion off?
    Applies to: every feature worked by shaking, tilting or moving the device or the body
-47. vault.visual-order (script owed): Do the parts a visitor reads or tabs to appear in their source order, with no `order`, grid placement, `row-reverse`, absolute position or positive `tabindex` moving one out of its sequence?
-   Applies to: every part a visitor reads or tabs to, at desktop and phone width
+45. vault.stack-order: When the page falls to one column, do its parts come in the page's priority order (the brief's ranking of the visitor's tasks, the main content before its supporting pane), with no group's members pushed apart by the stacking?
+   Applies to: the page at each width where it falls to one column, at phone width and at 200% text
+48. vault.exit-warning-look: Does each link that leaves the site tell its destination by its link text and an external-link indicator?
+   Applies to: every link or button that takes the visitor to another site
+49. vault.carousel-use: Is a hero one static image or message and a set of items a grid or list, a carousel used only for a set the visitor browses one at a time that the page cannot lay out (a listing's photos)?
+   Applies to: every hero, and every set of like items shown on the page
+51. vault.once-only-back: After an action in a flow that must happen once, does the browser's Back button still work and show a sensible message, rather than repeat the action?
+   Applies to: every flow step that follows an action that must happen once: a payment taken, a booking or form sent
+62. vault.borrowing: Does each part show its function only by that function's own look, never one another kind of part keeps for itself (a static label shaped and filled like the button, a heading in the link colour, a fact in the filter chip's shape), with each distinct look meaning one function across the page?
+   Applies to: every part, against every other part on the page

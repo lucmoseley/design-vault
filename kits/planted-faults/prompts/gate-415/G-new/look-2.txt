@@ -1,44 +1,36 @@
-Gate list for web-surface, has-cta: 20 question(s).
+Gate list for web-surface, has-cta: 16 question(s).
 
-Look questions, for the critics, pass 2 of 4, function and role: function: layout, navigation, system; role: buttons, colour, feedback, forms, imagery, layout, navigation, overlays, surfaces, text:
+Look questions, for the critics, pass 2 of 4, function and role: role: buttons, colour, data, feedback, forms, imagery, layout, navigation, overlays, surfaces, text:
 
-50. vault.stack-order: When the page falls to one column, do its parts come in the page's priority order (the brief's ranking of the visitor's tasks, the main content before its supporting pane), with no group's members pushed apart by the stacking?
-   Applies to: the page at each width where it falls to one column, at phone width and at 200% text
-53. vault.exit-warning-look: Does each link that leaves the site tell its destination by its link text and an external-link indicator?
-   Applies to: every link or button that takes the visitor to another site
-54. vault.carousel-use: Is a hero one static image or message and a set of items a grid or list, a carousel used only for a set the visitor browses one at a time that the page cannot lay out (a listing's photos)?
-   Applies to: every hero, and every set of like items shown on the page
-56. vault.once-only-back: After an action in a flow that must happen once, does the browser's Back button still work and show a sensible message, rather than repeat the action?
-   Applies to: every flow step that follows an action that must happen once: a payment taken, a booking or form sent
-68. vault.borrowing: Does each part show its function only by that function's own look, never one another kind of part keeps for itself (a static label shaped and filled like the button, a heading in the link colour, a fact in the filter chip's shape), with each distinct look meaning one function across the page?
-   Applies to: every part, against every other part on the page
 1. vault.primary-action: Does each view hold at most one part that looks like its main action, with no other part matching or outweighing it?
    Applies to: each view: the first screen and every screen below it, at desktop and phone width
 5. vault.destructive-action: Does each destructive button take a secondary or text rung wherever it sits beside other actions, never the primary style even where it is the likeliest choice, with the danger hue on a filled button kept for the final confirmation of the loss, and a label naming that loss so the red is never its only cue?
    Applies to: every button that deletes data or does what a visitor cannot easily undo
 9. vault.imagery-colour: Do the colours of parts near a photograph or artwork sit with it, accents drawn from the image or checked beside it, while controls over a colourful image stay neutral or clearly apart from its colours?
    Applies to: every part on or beside a photograph or artwork: a hero's text and buttons, a card over its image, a section beside its illustration
-10. vault.gradient-function: Does every gradient, glow or pattern behind content do one job (a scrim under text on an image, a light or depth cue on a raised surface, a brand ground where vault.tone-colour-share lets the surface go committed, an ambient pattern on a message or promotional area, a chart or progress ring), with none behind a region visitors work in, per vault.decoration-place?
-   Applies to: every gradient, glow or pattern drawn behind content
-15. vault.badge-kind: Does each small label take the part its content asks for: a count or metric in a badge, a status or other attribute that changes what a visitor does in a status label, descriptive metadata that only classifies or filters in a tag, with none of them made a link or a button and each status label an adjective, not a verb?
+10. vault.gradient-function: Does every gradient, glow or pattern behind content, and every blurred or glowing orb drawn as an object, do one job (a scrim under text on an image, a light or depth cue on a raised surface, a brand ground where vault.tone-colour-share lets the surface go committed, an ambient pattern on a message or promotional area, a chart or progress ring), with none behind a region visitors work in, per vault.decoration-place?
+   Applies to: every gradient, glow or pattern drawn behind content, and every blurred or glowing orb wherever it sits
+15. vault.table-narrow-form: At phone width, does each wide table take the form its use needs, with its headers kept and never shrunk to fit: scrolling for a table read across rows or columns, label-value blocks for a list of records, two items or one tab each for a comparison, collapsible single-column sections for a spec sheet?
+   Applies to: each data table wider than the screen at phone width
+16. vault.badge-kind: Does each small label take the part its content asks for: a count or metric in a badge, a status or other attribute that changes what a visitor does in a status label, descriptive metadata that only classifies or filters in a tag, with none of them made a link or a button and each status label an adjective, not a verb?
    Applies to: every small label beside or on an item: a count, a status, a category or other metadata
-17. vault.choice-control: Where a visitor may pick only one option, is the set a radio group (or a select box), and where they may pick several, a set of checkboxes, with a single checkbox only for one option toggled on or off?
+18. vault.choice-control: Where a visitor may pick only one option, is the set a radio group (or a select box), and where they may pick several, a set of checkboxes, with a single checkbox only for one option toggled on or off?
    Applies to: every set of options a visitor chooses from
-31. vault.map-list: Does the results page show the list beside an interactive map in one view on the page itself, not the map in a separate tab or an overlay?
+32. vault.map-list: Does the results page show the list beside an interactive map in one view on the page itself, not the map in a separate tab or an overlay?
    Applies to: a results page for things a visitor compares by place (stays, venues, shops), at widths with room for two columns
-49. vault.pane-split: Where two panes sit side by side, does the main pane take about 70% and the supporting pane about 30%, and does each keep its minimum content width, the page showing one pane wherever both cannot?
+44. vault.pane-split: Where two panes sit side by side, does the main pane take about 70% and the supporting pane about 30%, and does each keep its minimum content width, the page showing one pane wherever both cannot?
    Applies to: a page whose main and supporting panes sit side by side, at each width from 840 px the round renders
-51. vault.component-swap: Where a part changes component with width, is it swapped only for one doing the same job with the same items in the same order: a bottom navigation bar for a rail, tabs for stacked sections, a wide table for stacked rows, a side pane for a sheet?
+46. vault.component-swap: Where a part changes component with width, is it swapped only for one doing the same job with the same items in the same order: a bottom navigation bar for a rail, tabs for stacked sections, a wide table for stacked rows, a side pane for a sheet?
    Applies to: each part that changes component as the window narrows or widens
-55. vault.filter-place: Beside a map, do filters and sort sit in a horizontal bar above the list and map, never a vertical sidebar; on a desktop listing with no map, do they stay visible in a persistent panel; on a phone, are they one fixed button opening a drawer, with the applied filters shown above the results?
+50. vault.filter-place: Beside a map, do filters and sort sit in a horizontal bar above the list and map, never a vertical sidebar; on a desktop listing with no map, do they stay visible in a persistent panel; on a phone, are they one fixed button opening a drawer, with the applied filters shown above the results?
    Applies to: a results or listing page with filters or sort, at desktop and phone width
-58. vault.bar-overflow: As the window narrows, does each bar keep its most-used actions in view and move the rest, least used first, into one "More" menu at its trailing end, so that on a phone a wide toolbar never runs off the screen (standing on a side edge, as one practitioner's demo does, is allowed)?
+52. vault.bar-overflow: As the window narrows, does each bar keep its most-used actions in view and move the rest, least used first, into one "More" menu at its trailing end, so that on a phone a wide toolbar never runs off the screen (standing on a side edge, as one practitioner's demo does, is allowed)?
    Applies to: each bar of actions or tools (the header's end items, a toolbar, a drawing or editing bar) as the window narrows
-59. vault.sheet-grabber: Does each resizable sheet show a grabber at its top edge that a tap or click on cycles through its resting heights, a named button to screen readers, drawn at 3:1 against the sheet where it is the only sign the sheet resizes?
+53. vault.sheet-grabber: Does each resizable sheet show a grabber at its top edge that a tap or click on cycles through its resting heights, a named button to screen readers, drawn at 3:1 against the sheet where it is the only sign the sheet resizes?
    Applies to: every bottom sheet or panel a visitor can resize by dragging
-60. vault.dialog-default-look: Is an action that destroys something the visitor did not deliberately choose to destroy neither the dialog's default button nor in the primary style, and is the default otherwise the action the visitor most likely came to take?
+54. vault.dialog-default-look: Is an action that destroys something the visitor did not deliberately choose to destroy neither the dialog's default button nor in the primary style, and is the default otherwise the action the visitor most likely came to take?
    Applies to: every dialog, alert or confirmation whose action destroys something
-66. vault.region-ground: Does the content sit on the default surface, each persistent sidebar, rail, toolbar or panel either sharing it behind a divider or one neutral level apart, and does a region change its ground across screen widths only where it becomes another component, such as a rail turning into a bottom bar or a docked panel into a drawer?
+60. vault.region-ground: Does the content sit on the default surface, each persistent sidebar, rail, toolbar or panel either sharing it behind a divider or one neutral level apart, and does a region change its ground across screen widths only where it becomes another component, such as a rail turning into a bottom bar or a docked panel into a drawer?
    Applies to: every persistent region of an app or signed-in tool: sidebar, rail, toolbar, panel, and the frame around the content
-72. vault.sibling-emphasis: Does an item set apart from its equal siblings differ by a step a glance catches, bold or heavier against regular (never semibold against regular), a fill on the item itself, its size or its position, and not by a hue that marks links or actions, nor by a tag where buttons sit?
+66. vault.sibling-emphasis: Does an item set apart from its equal siblings differ by a step a glance catches, bold or heavier against regular (never semibold against regular), a fill on the item itself, its size or its position, and not by a hue that marks links or actions, nor by a tag where buttons sit?
    Applies to: one item set apart from equal siblings: new, recommended, current or selected in a list, row or set of cards
