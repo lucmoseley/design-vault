@@ -11,6 +11,9 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 rule_table = siblings.load(HERE, "rule-table.py")
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 
 NUMBER = r"(\d+(?:\.\d+)?)"
 Check = collections.namedtuple("Check", "pattern parse needs")
@@ -396,28 +399,10 @@ def slow_update_faults(got):
     return out
 
 
-# #477
-def _linear(rgb):
-    import numpy as np
-
-    return np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
-
-
-# WCAG weighs linear sRGB as 0.2126 R + 0.7152 G + 0.0722 B: https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
-def relative_luminance(rgb):
-    import numpy as np
-
-    return _linear(rgb) @ np.array([0.2126, 0.7152, 0.0722])
-
-
 def chromaticity(rgb):
     import numpy as np
 
-    lin = _linear(rgb)
-    m = np.array(
-        [[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]]
-    )
-    xyz = lin @ m.T
+    xyz = colour_space.lin(rgb) @ np.array(colour_space.SRGB_TO_XYZ).T
     d = xyz[..., 0] + 15 * xyz[..., 1] + 3 * xyz[..., 2]
     d = np.where(d == 0, 1, d)
     uv = np.stack([4 * xyz[..., 0] / d, 9 * xyz[..., 1] / d], axis=-1)
@@ -472,7 +457,7 @@ def box_sum(mask, h, w):
 def flash_faults(rgb, times, px, v):
     import numpy as np
 
-    lum = relative_luminance(rgb)
+    lum = colour_space.linear_luminance(colour_space.lin(rgb))
     uv, share = chromaticity(rgb)
     kinds = {
         "general": luminance_transitions(lum, v),

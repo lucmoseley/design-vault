@@ -74,7 +74,9 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
-UnmeasurableError = flow.UnmeasurableError
+runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
+UnmeasurableError = runner.UnmeasurableError
 
 NAME_JS = (
     flow.LABEL_JS
@@ -721,9 +723,9 @@ def parse(argv):
         s.add_argument("--out", required=True, metavar="DIR", help="where the PNGs go")
         s.add_argument("--wait", metavar="SELECTOR")
         s.add_argument(
-            "--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS"
+            "--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS"
         )
-        s.add_argument("--viewport", default=flow.DESKTOP, metavar="WxH")
+        s.add_argument("--viewport", default=conditions.DESKTOP, metavar="WxH")
     last.add_argument(
         "--at",
         required=True,
@@ -761,7 +763,7 @@ def parse(argv):
         help="fail a frame whose hash differs from this file's",
     )
     at = p.parse_args(argv)
-    at.viewport_size = flow.size_arg(p, "--viewport", at.viewport)
+    at.viewport_size = conditions.size_arg(p, "--viewport", at.viewport)
     if at.mode == "hash":
         if at.check and at.times:
             p.error("--check renders the frames its file names; drop --times")
@@ -800,7 +802,7 @@ def parse(argv):
         for path in at.asset:
             if not os.path.isfile(path):
                 p.error(f"no such file: {path}")
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -809,7 +811,7 @@ HASH_ARGS = ["--disable-threaded-animation"]
 
 
 def run(at, assets):
-    with flow.chromium(HASH_ARGS if at.mode == "hash" else []) as browser:
+    with runner.chromium(HASH_ARGS if at.mode == "hash" else []) as browser:
         blank = browser.new_page()
         if at.mode == "last":
             return check_last(browser, blank, at, assets)
@@ -829,7 +831,7 @@ def main(argv):
         except ValueError as exc:
             p.error(str(exc))
     os.makedirs(at.out, exist_ok=True)
-    result, code = flow.run_browser(
+    result, code = runner.run_browser(
         lambda: run(at, assets),
         at.timeout,
         at.url,

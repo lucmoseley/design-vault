@@ -159,7 +159,7 @@ import siblings  # noqa: E402
 from fail_open import expected, fail_open  # noqa: E402
 
 
-flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 form = siblings.load(HERE, "drive-form.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
 overlay = siblings.load(HERE, "drive-overlay.py")
@@ -167,12 +167,13 @@ rule_table = siblings.load(HERE, "rule-table.py")
 conditions = siblings.load(HERE, "conditions.py")
 markup = siblings.load(HERE, "check-markup.py")
 probe = siblings.load(HERE, "probe.py")
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 
 TABLE = os.path.join(HERE, "check-state.table")
 ITEMS = "; "
-VIEWPORT = dict(
-    zip(("width", "height"), map(int, flow.DESKTOP.split("x")), strict=True)
-)
+VIEWPORT = dict(zip(("width", "height"), conditions.DESKTOP_WINDOW, strict=True))
 TRACK_CLICK = 0.25  # guess, #312
 TRACK_ENDS = (0.03, 0.97)  # guess, #312
 DRAG_PAST = (40, 60)  # guess, #312
@@ -630,20 +631,6 @@ def rgb(css):
     return tuple(nums[:3])
 
 
-def luminance(c):
-    def lin(v):
-        v /= 255
-        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-
-    r, g, b = c
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-
-
-def contrast(a, b):
-    la, lb = sorted((luminance(a), luminance(b)), reverse=True)
-    return (la + 0.05) / (lb + 0.05)
-
-
 def reveals(page, el):
     pointer.leave(page, el)
     page.evaluate("() => __st.mark()")
@@ -1020,9 +1007,11 @@ def _inverse(page, el, lum):
     surface = rgb(page.evaluate("(el) => __st.background(el)", el))
     ground = rgb(page.evaluate("(el) => __st.background(el.parentElement)", el))
     ink = rgb(page.evaluate("(el) => getComputedStyle(el).color", el))
-    if (luminance(surface) > lum) == (luminance(ground) > lum):
+    if (colour_space.luminance(surface) > lum) == (
+        colour_space.luminance(ground) > lum
+    ):
         return "sits on a surface of the page's own lightness, not the inverse"
-    if (luminance(ink) > lum) == (luminance(surface) > lum):
+    if (colour_space.luminance(ink) > lum) == (colour_space.luminance(surface) > lum):
         return "its text is not the inverse text"
     return None
 
@@ -1716,7 +1705,7 @@ def check_target(run, line, ans):
                 ground = rgb(
                     page.evaluate("(el) => __st.background(el.parentElement)", target)
                 )
-                got = contrast(fill, ground)
+                got = colour_space.contrast(fill, ground)
                 if got > ratio:
                     ans.miss(
                         line,
@@ -1743,7 +1732,7 @@ def _ink(png):
     img = Image.open(io.BytesIO(png)).convert("RGB")
     counts = img.getcolors(img.width * img.height)
     ground = max(counts)[1]
-    ink = max((c for _, c in counts), key=lambda c: contrast(c, ground))
+    ink = max((c for _, c in counts), key=lambda c: colour_space.contrast(c, ground))
     return ground, ink
 
 
@@ -1766,7 +1755,7 @@ def check_visited(run, line, ans):
             ans.unjudged(
                 line,
                 None,
-                f":visited needs Playwright's full Chromium, which did not start: {flow.first_line(exc)}",
+                f":visited needs Playwright's full Chromium, which did not start: {runner.first_line(exc)}",
             )
             return
         try:
@@ -1807,11 +1796,11 @@ def check_visited(run, line, ans):
                             at,
                             "its visited colour is no less saturated than its link colour",
                         )
-                    if contrast(now, ground) < ratio:
+                    if colour_space.contrast(now, ground) < ratio:
                         ans.miss(
                             line,
                             at,
-                            f"its visited colour is {contrast(now, ground):.2f}:1 on its ground, under {ratio}:1",
+                            f"its visited colour is {colour_space.contrast(now, ground):.2f}:1 on its ground, under {ratio}:1",
                         )
                 ans.met(line)
         finally:
@@ -2104,7 +2093,7 @@ def check_enter(run, line, ans):
 
 def unreached(page, line, ans, el, *, exc):
     ans.unjudged(
-        line, info(page, el), f"the pointer cannot reach it: {flow.first_line(exc)}"
+        line, info(page, el), f"the pointer cannot reach it: {runner.first_line(exc)}"
     )
 
 
@@ -2790,7 +2779,7 @@ def findings(run, table):
             RUNS[line.check](run, line, ans)
         except (PlaywrightError, form.FormError) as exc:
             fail_open(exc, f"{line.check} is said as not judged")
-            ans.unjudged(line, None, f"the check stopped: {flow.first_line(exc)}")
+            ans.unjudged(line, None, f"the check stopped: {runner.first_line(exc)}")
     return ans.done()
 
 
@@ -2837,7 +2826,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -2863,7 +2852,7 @@ def parse_args(argv):
         p.error(f"cannot read --table {at.table}: {exc.strerror}")
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -2876,7 +2865,7 @@ def main(argv):
         os.unlink(json_path)
 
     def work():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             with conditions.open_page(browser, at.url, viewport=VIEWPORT) as first:
                 first.set_default_navigation_timeout(at.timeout)
             run = Run(
@@ -2889,7 +2878,7 @@ def main(argv):
             )
             return findings(run, at.lines)
 
-    found, code = flow.run_browser(work, at.timeout, at.url)
+    found, code = runner.run_browser(work, at.timeout, at.url)
     if code:
         return code
     with open(json_path, "w", encoding="utf8") as fh:

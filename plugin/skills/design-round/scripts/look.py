@@ -51,20 +51,23 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 
-layout = siblings.load(HERE, "check-layout.py")
 frames = siblings.load(HERE, "check-frames.py")
-flow = frames.flow
+runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 try:
     maths = siblings.load(HERE, "access-pixels.py")
 except ImportError as err:
-    sys.exit(flow.missing(err))
+    sys.exit(runner.missing(err))
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 
-WIDTH = layout.DESKTOP_WIDTH
+WIDTH = conditions.DESKTOP_WIDTH
 SETTLE_MS = 4000  # guess, #170
 FIRST_SCREEN = {
-    "zoom": ("check-layout.py's first screen", layout.HEIGHTS),
-    "measure": ("check-layout.py's first screen", layout.HEIGHTS),
-    "scrub": ("the motion scripts' window", layout.MOTION_HEIGHTS),
+    "zoom": ("check-layout.py's first screen", conditions.HEIGHTS),
+    "measure": ("check-layout.py's first screen", conditions.HEIGHTS),
+    "scrub": ("the motion scripts' window", conditions.MOTION_HEIGHTS),
 }
 
 MEASURE_JS = r"""
@@ -130,8 +133,8 @@ def parse(argv):
             numbers(p, f, getattr(args, f.strip("-")), 2) for f in ("--at", "--against")
         )
         return args
-    if not layout.LOW <= args.width <= layout.HIGH:
-        p.error(f"--width {args.width} is outside {layout.LOW}–{layout.HIGH}")
+    if not conditions.LOW <= args.width <= conditions.HIGH:
+        p.error(f"--width {args.width} is outside {conditions.LOW}–{conditions.HIGH}")
     for flag, least in (
         ("scale", 1),
         ("step", 1),
@@ -144,8 +147,8 @@ def parse(argv):
         if value is not None and value < least:
             p.error(f"--{flag} wants {least} or more")
     if args.height is None:
-        args.height = layout.height_at(args.width, FIRST_SCREEN[args.cmd][1])
-    args.url = flow.page_url(p, args.page)
+        args.height = conditions.height_at(args.width, FIRST_SCREEN[args.cmd][1])
+    args.url = runner.page_url(p, args.page)
     if args.cmd == "zoom":
         args.clip = numbers(p, "--clip", args.clip, 4)
     if args.cmd == "measure":
@@ -157,9 +160,9 @@ def settled_page(browser, args, scale=1):
     page = browser.new_page(
         viewport={"width": args.width, "height": args.height},
         device_scale_factor=scale,
-        **layout.device(args.width),
+        **conditions.device(args.width),
     )
-    page.set_default_timeout(flow.LOAD_TIMEOUT_MS)
+    page.set_default_timeout(runner.LOAD_TIMEOUT_MS)
     page.goto(args.url, wait_until="load")
     page.evaluate("document.fonts.ready")
     return page
@@ -183,10 +186,10 @@ def scrub(browser, args):
     at = frames.args_with(
         args,
         viewport_size={"width": args.width, "height": args.height},
-        timeout=flow.LOAD_TIMEOUT_MS,
+        timeout=runner.LOAD_TIMEOUT_MS,
     )
     context, page, prep = frames.open_page(
-        browser, at, 1, device=layout.device(args.width)
+        browser, at, 1, device=conditions.device(args.width)
     )
     try:
         shots = frames.seek_shots(page, range(0, args.until + 1, args.step))
@@ -215,7 +218,7 @@ def pixels(args):
     try:
         from PIL import Image
     except ImportError as err:
-        sys.exit(flow.missing(err))
+        sys.exit(runner.missing(err))
     import numpy as np
 
     try:
@@ -230,7 +233,7 @@ def pixels(args):
             print(f"look.py: {x:g},{y:g} is outside the {w}x{h} image", file=sys.stderr)
             return 2
         colours.append(shot[int(y), int(x)])
-    ratio = float(maths.contrast(*colours))
+    ratio = float(colour_space.contrast(*colours))
     print(f"{maths.hexed(colours[0])} against {maths.hexed(colours[1])}: {ratio:.2f}:1")
     return 0
 
@@ -246,12 +249,12 @@ def main(argv):
     }[args.cmd]
 
     def run():
-        with flow.chromium(flags) as browser:
+        with runner.chromium(flags) as browser:
             return work(browser, args)
 
-    said, code = flow.run_browser(
+    said, code = runner.run_browser(
         run,
-        flow.LOAD_TIMEOUT_MS,
+        runner.LOAD_TIMEOUT_MS,
         args.url,
         (
             f"cannot scrub {args.url}, because this page:",

@@ -3,9 +3,9 @@
   python3 face-profile.py <url or file> --out DIR [--widths W,W,…] [--wait SEL]
         [--timeout MS]
 
-It loads the page at check-layout.py's phone and desktop widths (--widths
+It loads the page at conditions.py's phone and desktop widths (--widths
 names others), the phone with a touch screen, and lets its fonts load and its
-animations finish as check-layout.py does. Each element drawing text of its
+animations finish as conditions.py does. Each element drawing text of its
 own is put under a setting: its font family, weight, style, stretch, size,
 font-size-adjust, font-variation-settings and font-optical-sizing. A setting
 is read once, through a ruler element given those properties and no
@@ -55,8 +55,8 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
 
-layout = siblings.load(HERE, "check-layout.py")
-flow = layout.flow
+conditions = siblings.load(HERE, "conditions.py")
+runner = siblings.load(HERE, "runner.py")
 
 AXES = ("wght", "wdth", "opsz", "GRAD")
 BEYOND = {  # guess, #501
@@ -378,40 +378,35 @@ def parse(argv):
     p.add_argument(
         "--widths",
         metavar="W,W,…",
-        help=f"the viewport widths in px; {layout.PHONE_WIDTH} and {layout.DESKTOP_WIDTH} by default",
+        help=f"the viewport widths in px; {conditions.PHONE_WIDTH} and {conditions.DESKTOP_WIDTH} by default",
     )
     p.add_argument("--wait", metavar="SELECTOR")
-    p.add_argument("--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS")
+    p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
     at = p.parse_args(argv)
     if at.widths:
         try:
             at.widths = sorted({int(w) for w in at.widths.split(",")})
         except ValueError:
             p.error(f"--widths wants whole px, e.g. 390,1440 — got {at.widths!r}")
-        if not all(layout.LOW <= w <= layout.HIGH for w in at.widths):
-            p.error(f"--widths wants widths from {layout.LOW} to {layout.HIGH}")
+        if not all(conditions.LOW <= w <= conditions.HIGH for w in at.widths):
+            p.error(f"--widths wants widths from {conditions.LOW} to {conditions.HIGH}")
     else:
-        at.widths = [layout.PHONE_WIDTH, layout.DESKTOP_WIDTH]
-    at.url = flow.page_url(p, at.url)
+        at.widths = [conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH]
+    at.url = runner.page_url(p, at.url)
     return at
 
 
 def run(at):
     found = {}
-    with flow.chromium() as browser:
+    with runner.chromium() as browser:
         for w in at.widths:
-            context = browser.new_context(
-                viewport={"width": w, "height": layout.height_at(w, layout.HEIGHTS)},
-                **layout.device(w),
-            )
-            context.set_default_timeout(at.timeout)
-            page = context.new_page()
-            page.goto(at.url, wait_until="load", timeout=at.timeout)
-            if at.wait:
-                page.wait_for_selector(at.wait, timeout=at.timeout)
-            page.evaluate(layout.SETTLE_JS)
-            found[w] = profile(page)
-            context.close()
+            with conditions.open_page(
+                browser, at.url, width=w, timeout=at.timeout
+            ) as page:
+                if at.wait:
+                    page.wait_for_selector(at.wait, timeout=at.timeout)
+                conditions.settle(page)
+                found[w] = profile(page)
     return found
 
 
@@ -420,7 +415,7 @@ def main(argv):
     path = os.path.join(at.out, "face-profile.json")
     if os.path.exists(path):
         os.remove(path)
-    found, code = flow.run_browser(lambda: run(at), at.timeout, at.url)
+    found, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code
     os.makedirs(at.out, exist_ok=True)

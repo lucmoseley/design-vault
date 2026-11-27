@@ -5,8 +5,8 @@ design-critique's rules/: whether a visitor can act on it, read from the DOM.
 USAGE
   python3 parts-map.py <url or file> --out DIR [--timeout MS]
 
-It loads the page at check-access.py's desktop and phone widths, the phone's
-with a touch screen, lets it settle as check-layout.py does, and lists each
+It loads the page at conditions.py's desktop and phone widths, the phone's
+with a touch screen, lets it settle as conditions.py does, and lists each
 part:
 
 - every part a visitor can act on: a link, button, form control, summary, an
@@ -57,6 +57,7 @@ stderr.
 
 import argparse
 import datetime
+import contextlib
 import json
 import os
 import pathlib
@@ -67,14 +68,15 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import siblings  # noqa: E402
 
-access = siblings.load(HERE, "check-access.py")
+conditions = siblings.load(HERE, "conditions.py")
 prelude = siblings.load(HERE, "access-page.py")
-layout, flow = access.layout, access.flow
+flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 
 FILES = (
     "parts.json",
     "key.txt",
-    *(f"key-{name}.png" for name, _, _ in access.VIEWPORTS),
+    *(f"key-{name}.png" for name, _, _ in conditions.VIEWPORTS),
 )
 # guess, #501
 KEY_TEXT = 40
@@ -282,17 +284,19 @@ UNKEY_JS = "() => document.getElementById('__parts_map_key')?.remove()"
 
 
 def run(at):
-    with flow.chromium() as browser:
+    with runner.chromium() as browser, contextlib.ExitStack() as opened:
         found = []
-        for name, width, height in access.VIEWPORTS:
-            context = browser.new_context(
-                viewport={"width": width, "height": height}, **layout.device(width)
+        for name, width, _ in conditions.VIEWPORTS:
+            page = opened.enter_context(
+                conditions.open_page(
+                    browser,
+                    at.url,
+                    width=width,
+                    timeout=at.timeout,
+                    init_scripts=(LISTEN_JS,),
+                )
             )
-            context.set_default_timeout(at.timeout)
-            context.add_init_script(LISTEN_JS)
-            page = context.new_page()
-            page.goto(at.url, wait_until="load")
-            page.evaluate(layout.SETTLE_JS)
+            conditions.settle(page)
             found.append((name, page, page.evaluate(MAP_JS)))
         parts = number(found)
         for name, page, got in found:
@@ -452,12 +456,12 @@ def parse(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
     at = p.parse_args(argv)
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return at
 
 
@@ -467,7 +471,7 @@ def main(argv):
     for f in FILES:
         pathlib.Path(at.out, f).unlink(missing_ok=True)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    got, code = flow.run_browser(lambda: run(at), at.timeout, at.url)
+    got, code = runner.run_browser(lambda: run(at), at.timeout, at.url)
     if code:
         return code
     parts, unread = got
@@ -477,7 +481,7 @@ def main(argv):
     found = {
         "url": at.url,
         "run_at": when.isoformat(),
-        "viewports": {name: [w, h] for name, w, h in access.VIEWPORTS},
+        "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
         "unread_stylesheets": unread,
         "answers": {"vault.one-target": answer},
         "parts": parts,

@@ -30,6 +30,7 @@ boxes = siblings.load(SCRIPTS, "access-boxes.py")
 contrasts = siblings.load(SCRIPTS, "access-contrast.py")
 keys = siblings.load(SCRIPTS, "access-keys.py")
 prelude = siblings.load(SCRIPTS, "access-page.py")
+colour_space = maths.colour_space
 with open(contrasts.TABLE) as table:
     FLOORS = contrasts.parse_table(table.read()).floors
 
@@ -154,17 +155,6 @@ class OneCopy(unittest.TestCase):  # #606
 
 
 class Arithmetic(unittest.TestCase):
-    def test_contrast_matches_wcags_published_pairs(self):
-        self.assertAlmostEqual(
-            float(maths.contrast([0, 0, 0], [255, 255, 255])), 21.0, places=3
-        )
-        self.assertAlmostEqual(
-            float(maths.contrast([0x76] * 3, [255] * 3)), 4.54, places=2
-        )
-        self.assertAlmostEqual(
-            float(maths.contrast([0x77] * 3, [255] * 3)), 4.48, places=2
-        )
-
     def text(self, rgb, size=16, weight=400, alpha=1.0):
         return {
             "subject": "p",
@@ -628,6 +618,32 @@ class LateMotionRead(Browsed):
                 'div.slide "slide" runs 60.0 s from the page\'s load and ended while the controls named for pausing it were tried'
             ],
         )
+
+
+class PageContrast(Browsed):
+    def test_the_pages_contrast_is_colour_spaces_on_every_pair(self):
+        greys = [[v] * 3 for v in (0, 10, 11, 0x76, 0x77, 128, 255)]
+        primaries = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+        pairs = [(a, b) for a in greys + primaries for b in greys + primaries]
+        pairs += [
+            ([10] * 3, [11] * 3),
+            ([0x76] * 3, [0x77] * 3),
+            ([200, 10, 10], [200, 10, 11]),
+        ]
+        page = self.browser.new_page()
+        try:
+            got = page.evaluate(
+                "(pairs) => {"
+                + prelude.page_js("return pairs.map(([a, b]) => contrast(a, b));")
+                + "}",
+                pairs,
+            )
+        finally:
+            page.close()
+        for ratio, (a, b) in zip(got, pairs, strict=True):
+            self.assertAlmostEqual(
+                ratio, colour_space.contrast(a, b), places=9, msg=(a, b)
+            )
 
 
 class Hold(unittest.TestCase):

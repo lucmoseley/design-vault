@@ -139,6 +139,7 @@ import siblings  # noqa: E402
 
 
 flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
 layout = siblings.load(HERE, "check-layout.py")
 conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -1204,9 +1205,9 @@ def sweep(
     rules,
     *,
     widths=None,
-    heights=layout.HEIGHTS,
+    heights=conditions.HEIGHTS,
     parts=None,
-    timeout=flow.LOAD_TIMEOUT_MS,
+    timeout=runner.LOAD_TIMEOUT_MS,
     **given,
 ):
     widths = widths or layout.sweep_widths(layout.GATE_STEP)
@@ -1223,7 +1224,7 @@ def pages(browser, url, *, widths, heights, timeout, given):
     with contextlib.ExitStack() as stack:
         open_ = {}
         for width in widths:
-            options = layout.device(width)
+            options = conditions.device(width)
             key = tuple(sorted(options.items()))
             if key not in open_:
                 page = stack.enter_context(
@@ -1291,7 +1292,7 @@ def report(at, widths, found, *, looping, json_path):
     ]
     if not layout.gating(at):
         lines.append(
-            f"NOT A GATING SWEEP: the craft gate needs {layout.LOW}–{layout.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
+            f"NOT A GATING SWEEP: the craft gate needs {conditions.LOW}–{conditions.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
         )
     if looping:
         lines.append(
@@ -1378,7 +1379,7 @@ def parse_args(argv):
     page_arguments(p, "probe.json")
     p.add_argument(
         "--heights",
-        default=",".join(map(str, layout.HEIGHTS)),
+        default=",".join(map(str, conditions.HEIGHTS)),
         metavar="PHONE,TABLET,DESKTOP",
         help="the screen's height in each band",
     )
@@ -1390,7 +1391,7 @@ def parse_args(argv):
         at.heights = ()
     if len(at.heights) != 3 or min(at.heights) < 1:
         p.error(
-            f"--heights wants three heights in px, e.g. {','.join(map(str, layout.HEIGHTS))}"
+            f"--heights wants three heights in px, e.g. {','.join(map(str, conditions.HEIGHTS))}"
         )
     try:
         with open(at.table, encoding="utf8") as fh:
@@ -1404,7 +1405,7 @@ def parse_args(argv):
         p.error(
             f"--parts {at.declaration} declares {', '.join(sorted(named & unselected))} with no selector, which a part: line reads; give one with --part"
         )
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -1415,14 +1416,14 @@ def page_arguments(p, out_file):
     p.add_argument("--step", type=int, default=layout.GATE_STEP, metavar="PX")
     p.add_argument(
         "--widths",
-        default=f"{layout.LOW}-{layout.HIGH}",
+        default=f"{conditions.LOW}-{conditions.HIGH}",
         metavar="LOW-HIGH",
-        help=f"part of {layout.LOW}–{layout.HIGH} px to read",
+        help=f"part of {conditions.LOW}–{conditions.HIGH} px to read",
     )
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -1433,9 +1434,9 @@ def page_options(p, at):
         p.error("--step wants 1 or more")
     m = re.fullmatch(r"(\d+)-(\d+)", at.widths)
     at.span = (int(m[1]), int(m[2])) if m else ()
-    if not at.span or not layout.LOW <= at.span[0] <= at.span[1] <= layout.HIGH:
+    if not at.span or not conditions.LOW <= at.span[0] <= at.span[1] <= conditions.HIGH:
         p.error(
-            f"--widths wants LOW-HIGH within {layout.LOW}-{layout.HIGH}, e.g. 1100-1340 — got {at.widths!r}"
+            f"--widths wants LOW-HIGH within {conditions.LOW}-{conditions.HIGH}, e.g. 1100-1340 — got {at.widths!r}"
         )
     at.parts, unselected = part_options(p, at)
     return unselected
@@ -1451,7 +1452,7 @@ def main(argv):
     widths = layout.sweep_widths(at.step, *at.span)
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return sweep(
                 browser,
                 at.url,
@@ -1463,7 +1464,7 @@ def main(argv):
             )
 
     try:
-        got, code = flow.run_browser(run, at.timeout, at.url)
+        got, code = runner.run_browser(run, at.timeout, at.url)
     except ProbeError as exc:
         p.print_usage(sys.stderr)
         print(f"probe.py: error: {exc}", file=sys.stderr)
@@ -1481,7 +1482,7 @@ def main(argv):
                 "step": at.step,
                 "span": at.span,
                 "heights": dict(
-                    zip([b[0] for b in layout.BANDS], at.heights, strict=True)
+                    zip([b[0] for b in conditions.BANDS], at.heights, strict=True)
                 ),
                 "parts": at.parts,
                 "looping_animations": looping,

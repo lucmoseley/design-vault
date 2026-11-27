@@ -37,9 +37,9 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 frames = siblings.load(HERE, "check-frames.py")
-flow = frames.flow
-layout = siblings.load(HERE, "check-layout.py")
-UnmeasurableError = flow.UnmeasurableError
+runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
+UnmeasurableError = runner.UnmeasurableError
 
 # guess, #501
 TILE = {"desktop": 320, "phone": 180}
@@ -146,7 +146,7 @@ def tile(browser, at, size, viewport, *, shots, end):
 
 
 def run(at):
-    with flow.chromium(frames.HASH_ARGS) as browser:
+    with runner.chromium(frames.HASH_ARGS) as browser:
         record = {"page": at.url, "step_ms": at.step, "sheets": {}}
         for size, viewport in (("desktop", at.desktop), ("phone", at.phone)):
             shots, end = shoot(browser, at, viewport)
@@ -201,30 +201,30 @@ def parse(argv):
         metavar="MS",
         help="time between frames; 250, as cth9191/animate's review sheets (mmm-infra#28)",
     )
-    p.add_argument("--desktop", default=flow.DESKTOP, metavar="WxH")
+    p.add_argument("--desktop", default=conditions.DESKTOP, metavar="WxH")
     p.add_argument(
         "--phone",
-        default=f"{layout.PHONE_WIDTH}x{layout.HEIGHTS[0]}",
+        default=f"{conditions.PHONE_WIDTH}x{conditions.HEIGHTS[0]}",
         metavar="WxH",
         help="check-layout.py's phone first screen by default, Safari's on a 390x844 iPhone",
     )
     p.add_argument("--wait", metavar="SELECTOR")
-    p.add_argument("--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS")
+    p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
     at = p.parse_args(argv)
     if at.step < 1:
         p.error("--step wants at least 1 ms")
     at.desktop, at.phone = (
-        flow.size_arg(p, "--desktop", at.desktop),
-        flow.size_arg(p, "--phone", at.phone),
+        conditions.size_arg(p, "--desktop", at.desktop),
+        conditions.size_arg(p, "--phone", at.phone),
     )
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return at
 
 
 def main(argv):
     at = parse(argv)
     os.makedirs(at.out, exist_ok=True)
-    record, code = flow.run_browser(
+    record, code = runner.run_browser(
         lambda: run(at),
         at.timeout,
         at.url,

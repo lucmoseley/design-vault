@@ -142,10 +142,11 @@ import siblings  # noqa: E402
 probe = siblings.load(HERE, "probe.py")
 conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
-flow, layout = probe.flow, probe.layout
+layout = probe.layout
+runner = siblings.load(HERE, "runner.py")
 
 TABLE = os.path.join(HERE, "check-dom.table")
-WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
+WIDTHS = (conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH)
 PAGE, RTL, MISSING = "page", "under rtl", "on missing page"
 DEFINE = re.compile(r"define (\$[\w-]+) = (.+)")
 NAME = re.compile(r"\$[\w-]+")
@@ -534,7 +535,7 @@ def run(browser, url, blocks, *, parts, unset, timeout):
         ) as page:
             page.set_default_timeout(timeout)
             for width in WIDTHS:
-                layout.load(page, target, width, layout.HEIGHTS)
+                layout.load(page, target, width, conditions.HEIGHTS)
                 stamp(page, parts)
                 if load == MISSING:
                     page.evaluate(
@@ -652,7 +653,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -679,7 +680,7 @@ def parse_args(argv):
         p.error(f"cannot read --table {at.table}: {exc.strerror}")
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -692,7 +693,7 @@ def main(argv):
         os.unlink(json_path)
 
     def go():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return run(
                 browser,
                 at.url,
@@ -703,7 +704,7 @@ def main(argv):
             )
 
     try:
-        swept, code = flow.run_browser(go, at.timeout, at.url)
+        swept, code = runner.run_browser(go, at.timeout, at.url)
     except probe.ProbeError as exc:
         p.print_usage(sys.stderr)
         print(f"check-dom.py: error: --table: {exc}", file=sys.stderr)

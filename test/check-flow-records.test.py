@@ -829,6 +829,21 @@ class Pause(unittest.TestCase):
             "onresize = () => { document.querySelector('.backdrop').style.transform = `translateY(${Math.random() * 10}px)`; };"
         )
 
+    def test_a_change_a_debounced_resize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        self.unwatched_after_5_s(
+            # guess, #646
+            "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => document.querySelector('.lane').setAttribute('data-w', String(Math.random()))), 50));"
+        )
+
+    def test_a_change_a_body_onresize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        self.unwatched_after_5_s(
+            "document.body.onresize = () => document.querySelector('.lane').setAttribute('data-w', String(Math.random()));"
+        )
+
     def test_a_change_past_rotate_ms_from_5_s_is_not_read_628_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):

@@ -12,18 +12,18 @@ sys.path.insert(0, HERE)
 import child  # noqa: E402
 
 
-FLOW = os.path.join(
-    HERE, "..", "plugin", "skills", "design-round", "scripts", "check-flow.py"
+RUNNER = os.path.join(
+    HERE, "..", "plugin", "skills", "design-round", "scripts", "runner.py"
 )
 DRIVER = os.path.join(
     HERE, "..", "plugin", "skills", "design-round", "scripts", "drive-form.py"
 )
-SCRIPTS = os.path.dirname(FLOW)
+SCRIPTS = os.path.dirname(RUNNER)
 sys.path.insert(0, SCRIPTS)
 import siblings  # noqa: E402
 
 driver = siblings.load(SCRIPTS, os.path.basename(DRIVER))
-flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
+runner = siblings.load(SCRIPTS, os.path.basename(RUNNER))
 PAGE_FILE = pathlib.Path(HERE, "fixtures", "drivers", "form.html").resolve()
 PAGE = PAGE_FILE.as_uri()
 OPEN = contextlib.ExitStack()
@@ -32,7 +32,7 @@ BROWSER = None
 
 def setUpModule():
     global BROWSER
-    BROWSER = OPEN.enter_context(flow.chromium())
+    BROWSER = OPEN.enter_context(runner.chromium())
 
 
 def tearDownModule():

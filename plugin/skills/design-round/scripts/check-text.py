@@ -6,7 +6,7 @@ USAGE
   python3 check-text.py <page> --out DIR [--parts FILE] [--part NAME=SELECTOR]…
         [--words FILE]… [--own-case] [--table FILE] [--timeout MS]
 
-The page loads at phone and desktop width, as check-layout.py loads it, and
+The page loads at conditions.py's phone and desktop widths, and
 every text check runs at both. It loads again at desktop width right to
 left (conditions.py's rtl) for vault.rtl-digit-order, and under each
 browser locale vault.locale-numbers and vault.week-hour name. Each text's
@@ -59,8 +59,7 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 
-flow = siblings.load(HERE, "check-flow.py")
-layout = siblings.load(HERE, "check-layout.py")
+runner = siblings.load(HERE, "runner.py")
 probe = siblings.load(HERE, "probe.py")
 conditions = siblings.load(HERE, "conditions.py")
 
@@ -68,7 +67,7 @@ checks = siblings.load(HERE, "text-checks.py")
 
 TABLE = os.path.join(HERE, "check-text.table")
 WORDS = os.path.join(HERE, "check-text.words")
-WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
+WIDTHS = (conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH)
 PAGE, RTL, Load = checks.PAGE, checks.RTL, checks.Load
 
 
@@ -299,12 +298,12 @@ def sweep(browser, url, *, values, words, parts, nulls, timeout):
         options = {
             "viewport": {
                 "width": width,
-                "height": layout.height_at(width, layout.HEIGHTS),
+                "height": conditions.height_at(width, conditions.HEIGHTS),
             }
         }
         with conditions.open_page(browser, url, **given, **options) as page:
             page.set_default_timeout(timeout)
-            page.evaluate(layout.SETTLE_JS)
+            conditions.settle(page)
             data = read_page(page, values)
             if condition.startswith("locale="):
                 asks = sorted(
@@ -328,7 +327,7 @@ def sweep(browser, url, *, values, words, parts, nulls, timeout):
                 )
             if (
                 condition == PAGE
-                and width == layout.DESKTOP_WIDTH
+                and width == conditions.DESKTOP_WIDTH
                 and "vault.offer-end-date" in values
             ):
                 data["offer"] = read_offer(
@@ -339,14 +338,14 @@ def sweep(browser, url, *, values, words, parts, nulls, timeout):
     for width in WIDTHS:
         one(PAGE, width)
     if "vault.rtl-digit-order" in values:
-        one(RTL, layout.DESKTOP_WIDTH, rtl=True)
+        one(RTL, conditions.DESKTOP_WIDTH, rtl=True)
     locales = []
     for rid in ("vault.locale-numbers", "vault.week-hour"):
         for tag in values.get(rid, {}).get("locales", "").split():
             if tag not in locales:
                 locales.append(tag)
     for tag in locales:
-        one(f"locale={tag}", layout.DESKTOP_WIDTH, locale=tag)
+        one(f"locale={tag}", conditions.DESKTOP_WIDTH, locale=tag)
     return loads
 
 
@@ -414,7 +413,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -447,7 +446,7 @@ def parse_args(argv):
         p.error(f"cannot read {exc.filename}: {exc.strerror}")
     except (checks.TableError, checks.WordsError) as exc:
         p.error(str(exc))
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -460,7 +459,7 @@ def main(argv):
         os.unlink(json_path)
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return sweep(
                 browser,
                 at.url,
@@ -471,7 +470,7 @@ def main(argv):
                 timeout=at.timeout,
             )
 
-    loads, code_ = flow.run_browser(run, at.timeout, at.url)
+    loads, code_ = runner.run_browser(run, at.timeout, at.url)
     if code_:
         return code_
     unjudged = (
@@ -480,7 +479,7 @@ def main(argv):
         else {}
     )
     found = checks.findings(
-        at.values, loads, at.lists, layout.DESKTOP_WIDTH, unjudged=unjudged
+        at.values, loads, at.lists, conditions.DESKTOP_WIDTH, unjudged=unjudged
     )
     with open(json_path, "w", encoding="utf8") as fh:
         json.dump(

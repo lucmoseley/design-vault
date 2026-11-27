@@ -70,8 +70,8 @@ def without(package, *args):
 
 
 class Siblings(unittest.TestCase):  # #558
-    def test_check_layout_and_check_frames_share_one_check_flow(self):
-        self.assertIs(look.layout.flow, look.frames.flow)
+    def test_look_and_check_frames_share_one_conditions(self):
+        self.assertIs(look.conditions, look.frames.conditions)
 
 
 class Height(unittest.TestCase):

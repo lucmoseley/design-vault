@@ -66,13 +66,14 @@ from fail_open import expected  # noqa: E402
 
 frames = siblings.load(HERE, "check-frames.py")
 look = siblings.load(HERE, "look.py")
-layout = look.layout
 flow = frames.flow
+runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 try:
     from PIL import Image, ImageDraw
 except ImportError as err:
-    sys.exit(flow.missing(err))
-UnmeasurableError = flow.UnmeasurableError
+    sys.exit(runner.missing(err))
+UnmeasurableError = runner.UnmeasurableError
 
 SCALES = (1, 2, 3)
 MAGNIFY = 4
@@ -171,18 +172,19 @@ def parse(argv):
         s.add_argument("--height", type=int)
         s.add_argument("--wait", metavar="SELECTOR")
         s.add_argument(
-            "--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS"
+            "--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS"
         )
     contacts.add_argument(
         "--contact", action="append", required=True, metavar="NAME=[SELECTOR@]X,Y"
     )
     contacts.add_argument("--times", metavar="MS,MS,…")
     args = p.parse_args(argv)
-    if not layout.LOW <= args.width <= layout.HIGH:
-        p.error(f"--width {args.width} is outside {layout.LOW}–{layout.HIGH}")
+    if not conditions.LOW <= args.width <= conditions.HIGH:
+        p.error(f"--width {args.width} is outside {conditions.LOW}–{conditions.HIGH}")
     args.viewport_size = {
         "width": args.width,
-        "height": args.height or layout.height_at(args.width, layout.MOTION_HEIGHTS),
+        "height": args.height
+        or conditions.height_at(args.width, conditions.MOTION_HEIGHTS),
     }
     if args.mode == "contacts":
         found = []
@@ -201,13 +203,13 @@ def parse(argv):
             ]
         except ValueError:
             p.error("--times wants numbers of ms, or `end`")
-    args.url = flow.page_url(p, args.url)
+    args.url = runner.page_url(p, args.url)
     return args
 
 
 def open_page(browser, args, scale, timeline=None):
     return frames.open_page(
-        browser, args, scale, device=layout.device(args.width), timeline=timeline
+        browser, args, scale, device=conditions.device(args.width), timeline=timeline
     )
 
 
@@ -249,7 +251,7 @@ def magnify(png):
 
 def render_contacts(browser, args, also=None):
     args = fit(browser, args)
-    prep = frames.read_timeline(browser, args, 1, layout.device(args.width))
+    prep = frames.read_timeline(browser, args, 1, conditions.device(args.width))
     times = frames.key_times(prep, args.times)
     shots = []
     for scale in SCALES:
@@ -501,10 +503,10 @@ def main(argv):
     clear(args.out)
 
     def run():
-        with flow.chromium(frames.HASH_ARGS) as browser:
+        with runner.chromium(frames.HASH_ARGS) as browser:
             return render(browser, args)
 
-    result, code = flow.run_browser(
+    result, code = runner.run_browser(
         run,
         args.timeout,
         args.url,

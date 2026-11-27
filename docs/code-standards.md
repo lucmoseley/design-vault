@@ -16,6 +16,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/review-page/review.js` | library: the shared review page's logic: checking the data file and the feedback boxes (#120) |
 | `git-read.js` | library: git run for the programs that judge a commit from the index or HEAD, under one read cap (#141) |
 | `log-gate.js` | library: what the round, corrections and calibration logs' gates share, reading a log from git and their command line, and the row reader the calibration packet and critic examples use (#166, #168) |
+| `plugin/skills/design-project/scripts/colour_space.py` | library: the colour maths every check shares (#644) |
 | `plugin/skills/design-round/scripts/access-pixels.py` | library: the pixel maths check-access.py measures its screenshots with (#198) |
 | `plugin/skills/design-round/scripts/access-answers.py` | library: check-access.py's questions, and how each width's findings merge into one answer per question (#214) |
 | `plugin/skills/design-round/scripts/access-keys.py` | library: check-access.py's keyboard and focus questions read from its Tab walk and from keys and mouse presses on a page of their own (#315) |
@@ -38,7 +39,8 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/check-markup.py` | library: runs the vendored axe-core in a page, for check-state.py's driven states too (#312); also a program that answers the markup records `check-markup.table` maps to axe rule ids (#307) |
 | `plugin/skills/design-round/scripts/look-renders.py` | library: the contact crops check-seams.py measures, with a hook that shoots its mattes at each frame and scale (#341); also a program that renders vault.contacts-look's and vault.curves-look's sheets (#228) |
 | `plugin/skills/design-round/scripts/check-state.py` | program: drives a page into the states a visitor reaches, by hover, press, keys, forms, overlays and the clock, and answers the records `check-state.table` maps to its checks (#312) |
-| `plugin/skills/design-round/scripts/conditions.py` | library: opens a page under forced colours, a colour scheme, print, a locale, right-to-left, a pointer type or blocked requests, for the family scripts (#304) |
+| `plugin/skills/design-round/scripts/runner.py` | library: launches Chromium for every design-round script, watches for a call that would never return, and maps each failure to exits 3 to 7 with its message (#640) |
+| `plugin/skills/design-round/scripts/conditions.py` | library: the viewer the checks open pages as — the screen sizes, the device at a width and the settle — and a page opened under forced colours, a colour scheme, print, a locale, right-to-left, a pointer type or blocked requests (#304, #643) |
 | `plugin/skills/design-round/scripts/drive-overlay.py` | library: finds a page's menus, dialogs and popovers and opens and closes them by click, keyboard and Escape, for the family scripts (#303) |
 | `plugin/skills/design-round/scripts/drive-form.py` | library: fills a form with valid or planted invalid values, submits it, and reads the page once it settles, for the family scripts (#302) |
 | `plugin/skills/design-round/scripts/drive-pointer.py` | library: hovers, presses, clicks, drags and wheel-scrolls a page with the mouse and returns once it settles, for the family scripts (#301) |

@@ -16,9 +16,9 @@ USAGE
         [--contrast-table FILE] [--timeout MS]
   python3 check-access.py <url or file> --out DIR --pointer [--pointer-table FILE] [--timeout MS]
 
-It loads the page at check-layout.py's desktop and phone widths, the latter
+It loads the page at conditions.py's desktop and phone widths, the latter
 with a touch screen, lets its fonts load and its animations finish as
-check-layout.py does, and measures each question at both:
+conditions.py does, and measures each question at both:
 
 - vault.contrast: every line of text, each ::before and ::after whose content
   holds text, and each form control's value, button label, chosen option or
@@ -274,13 +274,14 @@ import siblings  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
-layout = siblings.load(HERE, "check-layout.py")
-flow = layout.flow
+flow = siblings.load(HERE, "check-flow.py")
+conditions = siblings.load(HERE, "conditions.py")
+runner = siblings.load(HERE, "runner.py")
 try:
     import numpy as np
     from PIL import Image
 except ImportError as err:
-    sys.exit(flow.missing(err))
+    sys.exit(runner.missing(err))
 maths = siblings.load(HERE, "access-pixels.py")
 prelude = siblings.load(HERE, "access-page.py")
 answering = siblings.load(HERE, "access-answers.py")
@@ -289,13 +290,6 @@ keys = siblings.load(HERE, "access-keys.py")
 contrasts = siblings.load(HERE, "access-contrast.py")
 pointing = siblings.load(HERE, "access-pointer.py")
 
-VIEWPORTS = tuple(
-    (name, width, layout.height_at(width, layout.HEIGHTS))
-    for name, width in (
-        ("desktop", layout.DESKTOP_WIDTH),
-        ("phone", layout.PHONE_WIDTH),
-    )
-)
 WATCH_MS = 1000  # guess, #164
 PAUSE_WINDOW = (prelude.LONG_MS, prelude.LONG_MS + keys.ROTATE_MS)  # #628
 WALK_SLACK = 20  # guess, #501
@@ -707,41 +701,34 @@ MOTION_JS = (
 () => {
   const f = window.__flow;
   f.scan();
-  const out = { long: [], ended: [], scripted: [], painted: [] };
+  const out = { long: [], ended: [], scripted: [] };
   const motions = [];
-  const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
   // #368
   for (const [a, rec] of f.seen) {
     const el = a.effect && a.effect.target;
     const running = a.playState === 'running';
-    if (a.timeline !== document.timeline || !el || !(running ? on(el) : rec.ended)) continue;
+    if (a.timeline !== document.timeline || !el || !(running ? onScreen(el) : rec.ended)) continue;
     const span = a.effect.getComputedTiming().activeDuration / Math.abs(a.playbackRate || 1);
     if (!(span > LONG_MS)) continue;
     const name = a.animationName || a.id;
     const motion = { subject: label(el, a.effect.pseudoElement || ''),
       what: `${name ? `"${name}" ` : ''}${span === Infinity ? 'loops forever' : `runs ${(span / 1000).toFixed(1)} s`}` };
     if (!running) { out.ended.push(motion); continue; }
-    motions.push({ stopped: () => !rec.ended && (a.playState !== 'running' || !document.getAnimations().includes(a) || !on(el)),
+    motions.push({ stopped: () => !rec.ended && (a.playState !== 'running' || !document.getAnimations().includes(a) || !onScreen(el)),
       ended: () => rec.ended });
     out.long.push(motion);
   }
   for (const v of document.querySelectorAll('video')) {
-    if (!on(v) || v.controls || (v.paused && !v.autoplay) || (!v.loop && v.duration <= LONG_MS / 1000)) continue;
-    motions.push({ stopped: () => !v.ended && (v.paused || !on(v)), ended: () => v.ended });
+    if (!onScreen(v) || v.controls || (v.paused && !v.autoplay) || (!v.loop && v.duration <= LONG_MS / 1000)) continue;
+    motions.push({ stopped: () => !v.ended && (v.paused || !onScreen(v)), ended: () => v.ended });
     out.long.push({ subject: label(v), what: v.loop ? 'plays on a loop' : 'plays a video longer than 5 s' });
   }
   window.__motions = motions;
-  const animated = document.getAnimations().map((a) => a.effect && a.effect.target).filter(Boolean);
-  for (const [el, log] of f.rewrites) if (el.isConnected && on(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
-  for (const el of document.querySelectorAll('canvas, img, svg')) {
-    if (!on(el) || el.parentElement.closest('svg') || animated.some((t) => t === el || el.contains(t) || t.contains(el))) continue;
-    const r = el.getBoundingClientRect();
-    out.painted.push({ subject: label(el), rect: [r.left + scrollX, r.top + scrollY, r.right + scrollX, r.bottom + scrollY].map(Math.round) });
-  }
+  for (const [el, log] of f.rewrites) if (el.isConnected && onScreen(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
   const name = (el) => [el.getAttribute('aria-label'), el.textContent, el.title, el.value].filter(Boolean).join(' ');
   const PAUSE = /\b(pause|stop|hide|play|resume|freeze|motion|animations?)\b/i;
   window.__pauses = [...document.querySelectorAll('button, input[type=button], input[type=checkbox], [role=button], [role=switch], [role=checkbox], [aria-pressed]')]
-    .filter((el) => on(el) && !disabled(el) && PAUSE.test(name(el))).slice(0, PAUSE_TRIES);
+    .filter((el) => onScreen(el) && !disabled(el) && PAUSE.test(name(el))).slice(0, PAUSE_TRIES);
   document.addEventListener('submit', (e) => e.preventDefault(), true);
   out.pauses = window.__pauses.length;
   return out;
@@ -774,6 +761,20 @@ CLICKABLE_JS = r"""
   frame();
 })
 """
+
+PAINTED_JS = (
+    flow.LABEL_JS
+    + r"""
+() => {
+  const animated = document.getAnimations().map((a) => a.effect && a.effect.target).filter(Boolean);
+  return [...document.querySelectorAll('canvas, img, svg')].flatMap((el) => {
+    if (!onScreen(el) || el.parentElement.closest('svg') || animated.some((t) => t === el || el.contains(t) || t.contains(el))) return [];
+    const r = el.getBoundingClientRect();
+    return [{ subject: label(el), rect: [r.left + scrollX, r.top + scrollY, r.right + scrollX, r.bottom + scrollY].map(Math.round) }];
+  });
+}
+"""
+)
 
 STOPPED_JS = "() => window.__motions.flatMap((m, i) => (m.stopped() ? [i] : []))"
 ENDED_JS = "() => window.__motions.flatMap((m, i) => (m.ended() ? [i] : []))"
@@ -811,7 +812,7 @@ TIMERS_JS = r"""
   });
   watch.observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true });
   addEventListener('scroll', (e) => note(e.target), true);
-  // The viewport holds its size, so a resize the browser fires is a full-page screenshot's, and what its handlers change is unwatched.
+  // #628, #647
   const unwatched = new WeakSet(), quiet = new WeakMap();
   const quieted = (fn) => {
     if (!fn || (typeof fn !== 'function' && typeof fn.handleEvent !== 'function')) return fn;
@@ -895,12 +896,11 @@ ROTATION_JS = (
     + CHANGED_JS
     + r"""
 ([selectors, since, until]) => {
-  const on = (el) => shown(el) && !empty(box(el.getBoundingClientRect()));
   const carousels = selectors.flatMap((s) => [...document.querySelectorAll(s)]);
   const rest = [...changedSince(since, until)].filter((el) => !carousels.some((c) => c.contains(el))).map((el) => el.parentElement || el);
   const roots = window.__rotations = [];
   for (const root of rest)
-    if (on(root) && !rest.some((o) => o !== root && o.contains(root)) && !roots.includes(root)) roots.push(root);
+    if (onScreen(root) && !rest.some((o) => o !== root && o.contains(root)) && !roots.includes(root)) roots.push(root);
   return roots.map((r) => label(r));
 }
 """
@@ -920,7 +920,7 @@ ROTATED_JS = (
 CAROUSEL_JS = (
     flow.LABEL_JS
     + r"""
-(e) => ({ subject: label(e), on: shown(e) && !empty(box(e.getBoundingClientRect())) })
+(e) => ({ subject: label(e), on: onScreen(e) })
 """
 )
 
@@ -1187,34 +1187,54 @@ def motion_answers(context, url, carousels, *, mouse):
     )
 
 
+def loaded_page(context, url, *scripts):
+    page = context.new_page()
+    for script in scripts:
+        page.add_init_script(script)
+    page.goto(url, wait_until="load")
+    page.evaluate("() => document.fonts.ready")
+    return page
+
+
+def drawn_unmeasured(context, url):
+    page = loaded_page(context, url)
+    before = page.screenshot(full_page=True)
+    page.wait_for_timeout(WATCH_MS)
+    after = page.screenshot(full_page=True)
+    painted = page.evaluate(prelude.page_js(PAINTED_JS))
+    page.close()
+    a, b = (decoded(png).astype(int) for png in (before, after))
+    drawn = []
+    for p in painted:
+        x, y = maths.pixels(a, p["rect"]), maths.pixels(b, p["rect"])
+        if len(x) and len(x) == len(y) and np.abs(x - y).max() > maths.PAINT_NOISE:
+            drawn.append(
+                f"{p['subject']} changes as it is drawn, which this check cannot time"
+            )
+    return drawn
+
+
 def pause_answer(context, url, carousels, spans):
     from playwright.sync_api import Error as PlaywrightError
 
     since, until = PAUSE_WINDOW
-    page = context.new_page()
-    page.add_init_script(keys.turns_js(carousels, since, until))
-    page.add_init_script(flow.COLLECTOR_JS)
-    page.add_init_script(TIMERS_JS)
-    page.goto(url, wait_until="load")
-    page.evaluate("() => document.fonts.ready")
-    before = page.screenshot(full_page=True)
+    unmeasured = drawn_unmeasured(context, url)  # #646
+    page = loaded_page(
+        context,
+        url,
+        keys.turns_js(carousels, since, until),
+        flow.COLLECTOR_JS,
+        TIMERS_JS,
+    )
     page.wait_for_timeout(WATCH_MS)
-    after = page.screenshot(full_page=True)
     got = page.evaluate(prelude.page_js(MOTION_JS))
-    unmeasured = [
+    unmeasured += [
         f"{m['subject']} {m['what']} from the page's load and ended before a control could be tried on it"
         for m in got["ended"]
     ] + [
         f"{s} is moved frame by frame by a script, which this check cannot time"
         for s in got["scripted"]
     ]
-    a, b = (decoded(png).astype(int) for png in (before, after))
-    for painted in got["painted"]:
-        x, y = maths.pixels(a, painted["rect"]), maths.pixels(b, painted["rect"])
-        if len(x) and len(x) == len(y) and np.abs(x - y).max() > maths.PAINT_NOISE:
-            unmeasured.append(
-                f"{painted['subject']} changes as it is drawn, which this check cannot time"
-            )
     declared = []
     for n, el in enumerate(
         el for sel in carousels for el in page.query_selector_all(sel)
@@ -1437,21 +1457,6 @@ class BadSelectorError(Exception):
         self.selectors = selectors
 
 
-def open_page(browser, at, width, height, **scheme):
-    context = browser.new_context(
-        viewport={"width": width, "height": height}, **layout.device(width), **scheme
-    )
-    context.set_default_timeout(at.timeout)
-    context.add_init_script(LISTEN_JS)
-    return (context, *load(context, at.url))
-
-
-def load(context, url):
-    page = context.new_page()
-    page.goto(url, wait_until="load")
-    return page, page.evaluate(layout.SETTLE_JS)
-
-
 def read_texts(page, logotype):
     got = page.evaluate(prelude.page_js(MEASURE_JS), logotype)
     if "bad" in got:
@@ -1478,24 +1483,37 @@ def read_texts(page, logotype):
 
 
 def contrast_answers(page, at, texts, table):
+    def fresh():
+        again = page.context.new_page()
+        again.goto(at.url, wait_until="load")
+        conditions.settle(again)
+        return again
+
     found, readings = contrasts.measure(
         page,
         table,
         parts=at.parts,
         absent=at.absent,
         texts=texts,
-        fresh=lambda: load(page.context, at.url)[0],
+        fresh=fresh,
     )
     if "bad" in found:
         raise BadSelectorError("--parts", found["bad"])
     return found, readings
 
 
-def theme_answer(browser, at, width, height, *, light, answered, readings):
+def theme_answer(browser, at, width, *, light, answered, readings):
     out, shipped = answering.unjudged(), []
     for name, options in contrasts.SCHEMES:
-        context, page, _ = open_page(browser, at, width, height, **options)
-        try:
+        with conditions.open_page(
+            browser,
+            at.url,
+            width=width,
+            timeout=at.timeout,
+            init_scripts=(LISTEN_JS,),
+            **options,
+        ) as page:
+            conditions.settle(page)
             if contrasts.signature(page) == light:
                 continue
             shipped.append(name)
@@ -1512,8 +1530,6 @@ def theme_answer(browser, at, width, height, *, light, answered, readings):
                 )
             for mine, theirs in zip(out, found, strict=True):
                 mine.extend(theirs)
-        finally:
-            context.close()
     if not shipped:
         out.notes.append(
             "the page draws the same colours in a dark scheme and under more contrast, so it ships its light one alone"
@@ -1531,27 +1547,31 @@ def merge(into, more):
 
 def run(at):
     found, looping = [], 0
-    with flow.chromium() as browser:
-        for name, width, height in VIEWPORTS:
-            context, page, loops = open_page(browser, at, width, height)
-            looping = max(looping, loops)
-            got, shots = read_texts(page, at.logotype)
-            measured, contrast_readings = contrast_answers(
-                page, at, (got, shots), at.table
-            )
-            light = contrasts.signature(page)
-            merge(measured, tab_walk(page, at.carousels))
-            driven, measured["vault.pause"] = motion_answers(
-                context, at.url, at.carousels, mouse=name == "desktop"
-            )
-            merge(measured, driven)
-            context.close()
+    with runner.chromium() as browser:
+        for name, width, _ in conditions.VIEWPORTS:
+            with conditions.open_page(
+                browser,
+                at.url,
+                width=width,
+                timeout=at.timeout,
+                init_scripts=(LISTEN_JS,),
+            ) as page:
+                looping = max(looping, conditions.settle(page))
+                got, shots = read_texts(page, at.logotype)
+                measured, contrast_readings = contrast_answers(
+                    page, at, (got, shots), at.table
+                )
+                light = contrasts.signature(page)
+                merge(measured, tab_walk(page, at.carousels))
+                driven, measured["vault.pause"] = motion_answers(
+                    page.context, at.url, at.carousels, mouse=name == "desktop"
+                )
+                merge(measured, driven)
             answered, judge_readings = judge(got, shots, measured, at.table)
             answered["vault.theme-contrast"] = theme_answer(
                 browser,
                 at,
                 width,
-                height,
                 light=light,
                 answered=answered,
                 readings=judge_readings + contrast_readings,
@@ -1561,7 +1581,7 @@ def run(at):
 
 
 def report(url, result, *, looping, json_path, questions):
-    sizes = " and ".join(f"{w}x{h} ({name})" for name, w, h in VIEWPORTS)
+    sizes = " and ".join(f"{w}x{h} ({name})" for name, w, h in conditions.VIEWPORTS)
     lines = [f"check-access: {url}", f"measured at {sizes}"]
     if looping:
         lines.append(
@@ -1612,7 +1632,7 @@ def parse(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -1629,7 +1649,7 @@ def parse(argv):
         help="the contrast figures, one line per record value",
     )
     at = p.parse_args(argv)
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     if at.pointer:
         try:
             with open(at.pointer_table, encoding="utf8") as fh:
@@ -1662,8 +1682,8 @@ def parse(argv):
 
 def pointer_run(at):
     # #317
-    with flow.chromium(("--allow-file-access-from-files",)) as browser:
-        return pointing.run(browser, at, VIEWPORTS)
+    with runner.chromium(("--allow-file-access-from-files",)) as browser:
+        return pointing.run(browser, at)
 
 
 Mode = collections.namedtuple("Mode", "report run questions")
@@ -1681,7 +1701,7 @@ def main(argv):
     pathlib.Path(json_path).unlink(missing_ok=True)
     when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     try:
-        got, code = flow.run_browser(lambda: mode.run(at), at.timeout, at.url)
+        got, code = runner.run_browser(lambda: mode.run(at), at.timeout, at.url)
     except BadSelectorError as exc:
         print(
             f"check-access.py: {exc.option} is not a CSS selector: {', '.join(exc.selectors)}",
@@ -1698,7 +1718,7 @@ def main(argv):
                 "url": at.url,
                 "run_at": when.isoformat(),
                 "looping_animations": looping,
-                "viewports": {name: [w, h] for name, w, h in VIEWPORTS},
+                "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
                 "answers": result,
             },
             fh,

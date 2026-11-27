@@ -60,10 +60,11 @@ probe = siblings.load(HERE, "probe.py")
 cross = siblings.load(HERE, "check-cross.py")
 conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
-flow, layout = probe.flow, probe.layout
+layout = probe.layout
+runner = siblings.load(HERE, "runner.py")
 
 TABLE = os.path.join(HERE, "check-style.table")
-ACROSS_WIDTH = layout.DESKTOP_WIDTH
+ACROSS_WIDTH = conditions.DESKTOP_WIDTH
 SAME = "same"
 DEFAULT = "page as it loads"
 
@@ -286,7 +287,7 @@ def _across(browser, url, block, *, parts, timeout):
         browser,
         url,
         read=read,
-        viewport={"width": ACROSS_WIDTH, "height": layout.HEIGHTS[-1]},
+        viewport={"width": ACROSS_WIDTH, "height": conditions.HEIGHTS[-1]},
     )
     out = {}
     for n, rule in enumerate(block.rules):
@@ -389,7 +390,7 @@ def report(at, widths, found, *, looping, json_path):
     ]
     if not layout.gating(at):
         lines.append(
-            f"NOT A GATING SWEEP: the craft gate needs {layout.LOW}–{layout.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
+            f"NOT A GATING SWEEP: the craft gate needs {conditions.LOW}–{conditions.HIGH} px every {layout.GATE_STEP} px or finer to {layout.STEPPED}"
         )
     if looping:
         lines.append(
@@ -426,7 +427,7 @@ def parse_args(argv):
     )
     at = p.parse_args(argv)
     probe.page_options(p, at)
-    at.heights = layout.HEIGHTS
+    at.heights = conditions.HEIGHTS
     at.brief = {}
     for given in at.brief_given:
         key, eq, value = given.partition("=")
@@ -441,7 +442,7 @@ def parse_args(argv):
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
     at.rules = [r for b in at.blocks for r in b.rules]
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -456,7 +457,7 @@ def main(argv):
     blocks = [without(b, at.parts) for b in at.blocks]
 
     def go():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return run(
                 browser,
                 at.url,
@@ -469,7 +470,7 @@ def main(argv):
             )
 
     try:
-        got, code = flow.run_browser(go, at.timeout, at.url)
+        got, code = runner.run_browser(go, at.timeout, at.url)
     except probe.ProbeError as exc:
         p.print_usage(sys.stderr)
         print(f"check-style.py: error: {exc}", file=sys.stderr)

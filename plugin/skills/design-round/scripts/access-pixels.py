@@ -1,6 +1,17 @@
 import collections
+import os
+import sys
 
 import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import siblings  # noqa: E402
+
+colour_space = siblings.load(
+    HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
+)
 
 Floors = collections.namedtuple("Floors", "body large large_px large_bold_px bold")
 # guess, #163
@@ -27,22 +38,10 @@ FOCUS_RATIO = 3.0
 STILL_MARGIN = 2
 
 
-def luminance(rgb):
-    # WCAG weighs linear sRGB as 0.2126 R + 0.7152 G + 0.0722 B: https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
-    c = np.asarray(rgb, dtype=float) / 255
-    lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-    return lin @ np.array([0.2126, 0.7152, 0.0722])
-
-
 def large(size, weight, floors):
     return size >= floors.large_px - PX_SLACK or (
         size >= floors.large_bold_px - PX_SLACK and weight >= floors.bold
     )
-
-
-def contrast(a, b):
-    la, lb = luminance(a), luminance(b)
-    return (np.maximum(la, lb) + 0.05) / (np.minimum(la, lb) + 0.05)
 
 
 def hexed(rgb):
@@ -124,7 +123,7 @@ def text_reading(shot, ink, text, floors, *, held=()):
     if not len(behind):
         return None, None, None
     seen = alpha * np.array(rgb, dtype=float) + (1 - alpha) * behind
-    ratios = contrast(seen, behind)
+    ratios = colour_space.contrast(seen, behind)
     worst = float(np.percentile(ratios, WORST_SHARE))
     need = floors.large if large(text["size"], text["weight"], floors) else floors.body
     if worst >= need:
@@ -173,7 +172,7 @@ def edge_contrast(shot, behind, rect):
         if not len(drawn) or not len(under):
             continue
         ground = np.median(under, axis=0)
-        ratio = float(contrast(np.median(drawn, axis=0), ground))
+        ratio = float(colour_space.contrast(np.median(drawn, axis=0), ground))
         if best is None or ratio > best.ratio:
             best = Reading(ratio, ground)
     return best
@@ -220,7 +219,7 @@ def focus_changed(on, off, region, still):
     if not len(a):
         return 0
     keep = pixels(np.repeat(still[..., None], 3, axis=-1), region)[:, 0].astype(bool)
-    return int(np.count_nonzero((contrast(a, b) >= FOCUS_RATIO) & keep))
+    return int(np.count_nonzero((colour_space.contrast(a, b) >= FOCUS_RATIO) & keep))
 
 
 def still_pixels(on, off, on_again, off_again):

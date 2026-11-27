@@ -11,6 +11,7 @@ set -u
 # #491
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
+# code-edges loads: failed-files.js
 registry='node --test --test-reporter=./test/failed-files.js
 bash test/design-round-pointer.test.sh
 python3 test/cutout.test.py	images
@@ -18,6 +19,7 @@ python3 test/check-render.test.py	images
 python3 test/check-logo.test.py	images chromium
 python3 test/check-clip.test.py
 python3 test/check-flow.test.py	chromium
+python3 test/runner.test.py	chromium
 python3 test/check-flow-records.test.py	images chromium
 python3 test/check-frames.test.py	chromium
 python3 test/check-overlay.test.py	images chromium
@@ -29,6 +31,7 @@ python3 test/check-access.test.py	images chromium
 python3 test/check-access-contrast.test.py	images chromium
 python3 test/check-access-pointer.test.py	images chromium
 python3 test/palette.test.py
+python3 test/colour-space.test.py	images
 python3 test/rule-table.test.py
 python3 test/siblings.test.py
 python3 test/child.test.py	chromium
@@ -223,7 +226,7 @@ process.stdout.write(String(require(`${core}/scripts/lib/suite-ceiling.js`).ceil
     [[ $ceiling_ms =~ ^[0-9]+$ ]] && ((ceiling_ms / 1000 > SECONDS)); then
     export VAULT_SUITE_BUDGET=$((ceiling_ms / 1000 - SECONDS))
   else
-    echo "the suite ceiling will not read from workflow-core, so this run is not judged against it before it starts"
+    echo "the suite ceiling will not read from workflow-core or is already spent, so this run is not judged against it before it starts"
   fi
 fi
 bash "$vault/test/run-lanes.sh" "${run[@]}" || exit 1

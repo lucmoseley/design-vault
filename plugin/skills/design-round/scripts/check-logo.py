@@ -54,7 +54,8 @@ import siblings  # noqa: E402
 REQUIREMENTS = HERE.parents[2] / "requirements.txt"
 
 
-flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 colour_space = siblings.load(
     HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
@@ -428,14 +429,14 @@ def read_page(browser, args):
             page.wait_for_selector(args.wait)
         endless = page.evaluate(FINISH_JS)
         if endless:
-            raise flow.UnmeasurableError(
+            raise runner.UnmeasurableError(
                 [
                     f"{endless} animation(s) never end, so the logo may be read mid-motion"
                 ]
             )
         found = page.locator(args.at)
         if found.count() != 1:
-            raise flow.UnmeasurableError(
+            raise runner.UnmeasurableError(
                 [f"--at {args.at} matches {found.count()} elements, not one"]
             )
         r = found.element_handle().evaluate(RECT_JS)
@@ -450,7 +451,9 @@ def read_page(browser, args):
         round((r["y"] + r["height"]) * s) - round(r["y"] * s),
     )
     if box[2] <= 0 or box[3] <= 0:
-        raise flow.UnmeasurableError([f"--at {args.at} is not drawn: its box is empty"])
+        raise runner.UnmeasurableError(
+            [f"--at {args.at} is not drawn: its box is empty"]
+        )
     return Image.open(io.BytesIO(png)).convert("RGB"), box
 
 
@@ -487,7 +490,7 @@ def measure(args, kind, logo, browser):
         or box[0] + box[2] > placed_image.width
         or box[1] + box[3] > placed_image.height
     ):
-        raise flow.UnmeasurableError([f"--at {args.at} is drawn partly off the page"])
+        raise runner.UnmeasurableError([f"--at {args.at} is drawn partly off the page"])
     grid = build_grid(placed_image, box, resampled, band)
     colours = Colours()
     unchanged_marks, ground_marks = set(), set()
@@ -527,9 +530,9 @@ def parse(argv):
         metavar="N",
         help="device scale on a page",
     )
-    p.add_argument("--viewport", default=flow.DESKTOP, metavar="WxH")
+    p.add_argument("--viewport", default=conditions.DESKTOP, metavar="WxH")
     p.add_argument("--wait", metavar="SELECTOR")
-    p.add_argument("--timeout", type=int, default=flow.PLAY_TIMEOUT_MS, metavar="MS")
+    p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
     p.add_argument("--out", metavar="DIR", help="where the marked PNGs go")
     args = p.parse_args(argv)
     try:
@@ -538,8 +541,8 @@ def parse(argv):
             if not os.path.isfile(args.target):
                 raise UsageError(f"no such file: {args.target}")
         else:
-            args.viewport_size = flow.size_arg(p, "--viewport", args.viewport)
-            args.url = flow.page_url(p, args.target)
+            args.viewport_size = conditions.size_arg(p, "--viewport", args.viewport)
+            args.url = runner.page_url(p, args.target)
     except UsageError as err:
         p.error(str(err))
     return args
@@ -566,11 +569,11 @@ def main(argv):
     def work():
         if kind == "raster" and args.box:
             return measure(args, kind, logo, None)
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return measure(args, kind, logo, browser)
 
     try:
-        result, code = flow.run_browser(
+        result, code = runner.run_browser(
             work,
             args.timeout,
             None if args.box else args.url,

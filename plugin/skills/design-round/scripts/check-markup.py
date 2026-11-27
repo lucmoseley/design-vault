@@ -54,7 +54,8 @@ import siblings  # noqa: E402
 AXE = os.path.join(HERE, "..", "vendor", "axe-core", "axe.min.js")
 
 
-flow = siblings.load(HERE, "check-flow.py")
+runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 layout = siblings.load(HERE, "check-layout.py")
 probe = siblings.load(HERE, "probe.py")
 rule_table = siblings.load(HERE, "rule-table.py")
@@ -62,7 +63,7 @@ rule_table = siblings.load(HERE, "rule-table.py")
 TABLE = os.path.join(HERE, "check-markup.table")
 SEP = " | "
 OFF = "off"
-WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
+WIDTHS = (conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH)
 RULE_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 PART = re.compile(r"part:(\S+)")
 
@@ -162,7 +163,7 @@ def sweep(browser, url, *, table, parts, source, timeout):
     page.set_default_timeout(timeout)
     out = {}
     for width in WIDTHS:
-        layout.load(page, url, width, layout.HEIGHTS)
+        layout.load(page, url, width, conditions.HEIGHTS)
         page.evaluate(source)
         missing = sorted({r for line in table.lines for r in line.rules} - known(page))
         if missing:
@@ -236,7 +237,7 @@ def parse_args(argv):
     p.add_argument(
         "--timeout",
         type=int,
-        default=flow.LOAD_TIMEOUT_MS,
+        default=runner.LOAD_TIMEOUT_MS,
         metavar="MS",
         help="for each load",
     )
@@ -249,7 +250,7 @@ def parse_args(argv):
         p.error(f"cannot read --table {at.table}: {exc.strerror}")
     except TableError as exc:
         p.error(f"--table {at.table}: {exc}")
-    at.url = flow.page_url(p, at.url)
+    at.url = runner.page_url(p, at.url)
     return p, at
 
 
@@ -264,7 +265,7 @@ def main(argv):
         source = fh.read()
 
     def run():
-        with flow.chromium() as browser:
+        with runner.chromium() as browser:
             return sweep(
                 browser,
                 at.url,
@@ -275,7 +276,7 @@ def main(argv):
             )
 
     try:
-        got, code = flow.run_browser(run, at.timeout, at.url)
+        got, code = runner.run_browser(run, at.timeout, at.url)
     except TableError as exc:
         p.print_usage(sys.stderr)
         print(f"check-markup.py: error: --table: {exc}", file=sys.stderr)
