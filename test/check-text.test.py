@@ -117,7 +117,7 @@ def load(*blocks, **data):
         "browser": LOCALES["en-US"],
     }
     base.update(data)
-    return checks.Load(checks.PAGE, text.layout.DESKTOP_WIDTH, base)
+    return checks.Load(checks.PAGE, text.conditions.DESKTOP_WIDTH, base)
 
 
 def found(check, *blocks, values=None, **data):

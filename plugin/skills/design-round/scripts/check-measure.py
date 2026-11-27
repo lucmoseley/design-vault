@@ -32,6 +32,7 @@ print on stderr.
 """
 
 import argparse
+import contextlib
 import math
 import os
 import pathlib
@@ -46,15 +47,15 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 from fail_open import fail_open  # noqa: E402
 
-layout = siblings.load(HERE, "check-layout.py")
-flow = layout.flow
+conditions = siblings.load(HERE, "conditions.py")
+flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
 
 DEFAULT_UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 )
-NARROWEST, WIDEST = layout.LOW, layout.HIGH
+NARROWEST, WIDEST = conditions.LOW, conditions.HIGH
 SHOWN = 3  # guess, #501
 
 MEDIA_JS = r"""
@@ -334,19 +335,23 @@ def fetch(page, href):
 
 
 def run(at):
-    with runner.chromium() as browser:
+    with runner.chromium() as browser, contextlib.ExitStack() as opened:
         page_if_phone = {}
 
         def page_at(width):
-            phone = layout.is_phone(width)
+            phone = conditions.is_phone(width)
             viewport = {"width": width, "height": at.height}
             if phone not in page_if_phone:
-                context = browser.new_context(
-                    viewport=viewport, user_agent=DEFAULT_UA, **layout.device(width)
+                page = opened.enter_context(
+                    conditions.open_page(
+                        browser,
+                        at.url,
+                        width=width,
+                        timeout=at.timeout,
+                        viewport=viewport,
+                        user_agent=DEFAULT_UA,
+                    )
                 )
-                context.set_default_timeout(at.timeout)
-                page = context.new_page()
-                page.goto(at.url, wait_until="load", timeout=at.timeout)
                 if at.wait:
                     page.wait_for_selector(at.wait, timeout=at.timeout)
                 page_if_phone[phone] = page
@@ -365,7 +370,7 @@ def run(at):
                 media += [m.strip() for m in AT_MEDIA.findall(text)]
         breaks = {"starts": range_starts(media), "unread": unread}
         if any(INPUT.search(m) for m in media):
-            breaks["starts"].add(layout.PHONE_MAX + 1)
+            breaks["starts"].add(conditions.PHONE_MAX + 1)
         results = []
         for w in at.widths or widths(breaks["starts"]):
             page = page_at(w)
