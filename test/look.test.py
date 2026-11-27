@@ -247,7 +247,15 @@ def first_dark_x(png, row) -> int | None:
     return int(dark[0]) if dark.size else None
 
 
-ROW_A, ROW_B = 60, 140
+def middle_row(fixture, box):
+    with open(fixture, encoding="utf8") as fh:
+        css = fh.read()
+    top = re.search(rf"#{box} {{ top: (\d+)px; }}", css).group(1)
+    height = re.search(r"\ndiv \{[^}]*height: (\d+)px", css).group(1)
+    return int(top) + int(height) // 2
+
+
+ROW_A, ROW_B = (middle_row(STAGGERED, box) for box in "ab")
 # 100 ms of staggered.html's half-px-a-ms move, a guess at a timer's lateness, #547.
 STAGGER_PX = 50
 

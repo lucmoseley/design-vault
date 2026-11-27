@@ -301,9 +301,7 @@ class LateStart(unittest.TestCase):
         )
 
 
-class Scripted(unittest.TestCase):
-    """#546"""
-
+class Scripted(unittest.TestCase):  # #546
     TRAILER = "\nCheck its frames by eye.\n"
 
     def refused(self, proc, why):

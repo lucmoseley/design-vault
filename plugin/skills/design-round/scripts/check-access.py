@@ -1154,10 +1154,23 @@ def hold_ms(span):
 
 
 def motion_answers(context, url, carousels, *, mouse):
-    driven, spans = keys.driven(context, url, carousels, mouse=mouse)
-    return driven, answering.Judged(
-        *pause_answer(context, url, carousels, spans), [], []
+    driven = keys.driven(context, url, carousels, mouse=mouse)
+    return driven.answers, answering.Judged(
+        *pause_answer(context, url, carousels, driven.spans), [], []
     )
+
+
+Carousel = collections.namedtuple("Carousel", "subject el span")
+
+
+def span_of(spans, n, subject):
+    if n < len(spans) and spans[n].subject == subject:
+        return spans[n].span
+    return None
+
+
+def move_pointer_off(page):
+    page.mouse.move(0, 0)
 
 
 def loaded_page(context, url, *scripts):
@@ -1214,16 +1227,16 @@ def pause_answer(context, url, carousels, spans):
     ):
         c = el.evaluate(prelude.page_js(CAROUSEL_JS))
         if c["on"]:
-            declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
+            declared.append(Carousel(c["subject"], el, span_of(spans, n, c["subject"])))
     turning, stilled, others, unseen, read = [], [], [], None, since
     if page.evaluate(prelude.page_js(TIMED_JS), len(carousels)):
         page.wait_for_timeout(max(0, since - page.evaluate("() => performance.now()")))
-        turns, read = keys.turned(page, [c[1] for c in declared], until)  # #642
+        turns, read = keys.turned(page, [c.el for c in declared], until)  # #642
         for c, m in zip(declared, turns, strict=True):
             if m:
                 turning.append(c)
             else:
-                stilled.append((c[0], m is False))
+                stilled.append((c.subject, m is False))
         page.wait_for_timeout(max(0, until - page.evaluate("() => performance.now()")))
         others = page.evaluate(
             prelude.page_js(ROTATION_JS),
@@ -1255,15 +1268,15 @@ def pause_answer(context, url, carousels, spans):
             expected(exc, "counted unclickable")
             unclickable += 1
             continue
-        page.mouse.move(0, 0)
+        move_pointer_off(page)
         page.evaluate(
             "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
         )
         stopped.update(page.evaluate(STOPPED_JS))
-        for k, (_, el, span) in enumerate(turning):
+        for k, c in enumerate(turning):
             if (
                 k not in held
-                and keys.change(page, el, hold_ms(span), in_window=True) is None
+                and keys.change(page, c.el, hold_ms(c.span), in_window=True) is None
             ):
                 held.add(k)
         if len(held_others) < len(others):
@@ -1301,8 +1314,8 @@ def pause_answer(context, url, carousels, spans):
     ]
     changing = f"changes what it shows more than {prelude.LONG_MS / 1000:g} s after the page's load, and {tried}"
     found += [
-        {"subject": subject, "detail": changing}
-        for k, (subject, _, _) in enumerate(turning)
+        {"subject": c.subject, "detail": changing}
+        for k, c in enumerate(turning)
         if k not in held
     ]
     unmeasured += [

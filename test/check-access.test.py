@@ -6,6 +6,7 @@ import re
 import sys
 import tempfile
 import unittest
+import urllib.parse
 
 import numpy as np
 
@@ -577,7 +578,7 @@ class Browsed(unittest.TestCase):
         cls.browser.close()
         cls.playwright.stop()
 
-    def pause_answer(self, fixture, watch_ms=None, init=None, carousels=()):
+    def pause_answer(self, fixture, watch_ms=None, init=None, carousels=(), **query):
         access = siblings.load(SCRIPTS, "check-access.py")
         if watch_ms is not None:
             self.addCleanup(setattr, access, "WATCH_MS", access.WATCH_MS)
@@ -586,15 +587,16 @@ class Browsed(unittest.TestCase):
         try:
             if init:
                 context.add_init_script(init)
-            return access.pause_answer(context, fixture_url(fixture), carousels, [])
+            return access.pause_answer(
+                context, fixture_page(fixture, **query), carousels, []
+            )
         finally:
             context.close()
 
 
-def fixture_url(fixture):
-    name, _, query = fixture.partition("?")
+def fixture_page(name, **query):
     return pathlib.Path(FIXTURES, name).resolve().as_uri() + (
-        f"?{query}" if query else ""
+        f"?{urllib.parse.urlencode(query)}" if query else ""
     )
 
 
@@ -661,27 +663,42 @@ class Hold(unittest.TestCase):
                 self.assertEqual(access.hold_ms(span), want)
 
 
-class TimedChange(Browsed):
+class SpanOf(unittest.TestCase):
+    def test_a_span_is_read_only_where_its_subject_matches_the_carousel_at_its_index(
+        self,
+    ):
+        access = siblings.load(SCRIPTS, "check-access.py")
+        spans = [access.keys.Span("main > div.slides", 2000.0)]
+        for n, subject, want in (
+            (0, "main > div.slides", 2000.0),
+            (0, "main > div.other", None),
+            (1, "main > div.slides", None),
+        ):
+            with self.subTest(n=n, subject=subject):
+                self.assertEqual(access.span_of(spans, n, subject), want)
+
+
+class TimedChange(Browsed):  # #545
     CHANGING = "changes what it shows more than 5 s after the page's load, and no control on the page is named for pausing, stopping or hiding it"
     UNDECLARED = f"main > div.slides {CHANGING}; no carousel was declared, so whether the change shows cannot be told"
 
     def test_a_declared_carousel_with_no_pause_control_fails_naming_it_and_that_no_control_pauses_it(
         self,
     ):
-        for route in ("class", "text", "hidden", "scroll"):
-            with self.subTest(route=route):
+        for turn_by in ("class", "text", "hidden", "scroll"):
+            with self.subTest(turn_by=turn_by):
                 self.assertEqual(
                     self.pause_answer(
-                        f"carousel.html?route={route}", carousels=[".slides"]
+                        "carousel.html", carousels=[".slides"], turn_by=turn_by
                     ),
                     ([{"subject": "main > div.slides", "detail": self.CHANGING}], []),
                 )
 
     def test_an_undeclared_carousel_with_no_pause_control_cannot_be_measured(self):
-        for route in ("class", "text"):
-            with self.subTest(route=route):
+        for turn_by in ("class", "text"):
+            with self.subTest(turn_by=turn_by):
                 self.assertEqual(
-                    self.pause_answer(f"carousel.html?route={route}"),
+                    self.pause_answer("carousel.html", turn_by=turn_by),
                     ([], [self.UNDECLARED]),
                 )
 
@@ -693,7 +710,7 @@ class TimedChange(Browsed):
         # guess, #154
         every = prelude.LONG_MS + 3 * access.keys.ROTATE_MS
         faults, unmeasured = self.pause_answer(
-            f"carousel.html?every={every}", carousels=[".slides", "main > div"]
+            "carousel.html", carousels=[".slides", "main > div"], every_ms=every
         )
         self.assertEqual(faults, [])
         held = re.compile(
@@ -719,13 +736,13 @@ class TimedChange(Browsed):
         self,
     ):
         self.assertEqual(
-            self.pause_answer(f"carousel.html?every={self.SLOW_MS}"),
+            self.pause_answer("carousel.html", every_ms=self.SLOW_MS),
             ([], [self.UNSEEN.format(self.NO_CONTROL)]),
         )
 
     def test_a_timeout_set_for_longer_than_the_watch_cannot_be_measured(self):  # #611
         self.assertEqual(
-            self.pause_answer(f"entrance.html?later={self.SLOW_MS}"),
+            self.pause_answer("entrance.html", idle_timeout_ms=self.SLOW_MS),
             ([], [self.UNSEEN.format(self.NO_CONTROL)]),
         )
 
@@ -733,14 +750,15 @@ class TimedChange(Browsed):
         self,
     ):
         self.assertEqual(
-            self.pause_answer(f"carousel.html?every={self.SLOW_MS}&pause"), ([], [])
+            self.pause_answer("carousel.html", every_ms=self.SLOW_MS, pause="stops"),
+            ([], []),
         )
 
     def test_a_pause_button_that_restarts_the_slow_timer_does_not_count_as_clearing_it(  # #611
         self,
     ):
         self.assertEqual(
-            self.pause_answer(f"carousel.html?every={self.SLOW_MS}&pause=restart"),
+            self.pause_answer("carousel.html", every_ms=self.SLOW_MS, pause="restarts"),
             (
                 [],
                 [
@@ -755,37 +773,57 @@ class TimedChange(Browsed):
         for carousels in ([".slides"], []):
             with self.subTest(carousels=carousels):
                 self.assertEqual(
-                    self.pause_answer("carousel.html?pause", carousels=carousels),
+                    self.pause_answer(
+                        "carousel.html", carousels=carousels, pause="stops"
+                    ),
                     ([], []),
                 )
 
     def test_an_entrance_that_ends_within_5_s_beside_a_running_interval_passes(self):
-        for query in ("", "?chain"):
+        for query in ({}, {"rearming_timeout": 1}):
             with self.subTest(query=query):
-                self.assertEqual(self.pause_answer(f"entrance.html{query}"), ([], []))
+                self.assertEqual(self.pause_answer("entrance.html", **query), ([], []))
+
+    CHANGING_TRIED = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked"
 
     def test_vault_pause_holds_a_declared_carousel_for_the_span_vault_carousel_focus_timed(
         self,
     ):
         access = siblings.load(SCRIPTS, "check-access.py")
-        holds, hold_ms = [], access.hold_ms
-
-        def recorded(span):
-            holds.append(span)
-            return hold_ms(span)
-
-        self.addCleanup(setattr, access, "hold_ms", hold_ms)
-        access.hold_ms = recorded
+        page = {"every_ms": access.keys.ROTATE_MS // 3, "pause": "resumes"}
+        self.assertLess(
+            2 * page["every_ms"],
+            access.hold_ms(None),
+            "the fixture's resume outlasts the default hold",
+        )
         context = self.browser.new_context()
         try:
             _, judged = access.motion_answers(
-                context, fixture_url("carousel.html?pause"), [".slides"], mouse=False
+                context,
+                fixture_page("carousel.html", **page),
+                [".slides"],
+                mouse=False,
             )
         finally:
             context.close()
         self.assertEqual((judged.faults, judged.unmeasured), ([], []))
-        self.assertTrue(holds)
-        self.assertTrue(all(isinstance(span, float) for span in holds), holds)
+        self.assertEqual(
+            self.pause_answer("carousel.html", carousels=[".slides"], **page),
+            ([{"subject": "main > div.slides", "detail": self.CHANGING_TRIED}], []),
+        )
+
+    def test_a_carousel_that_holds_under_the_pointer_is_judged_with_the_pointer_off_it(
+        self,
+    ):
+        self.assertEqual(
+            self.pause_answer(
+                "carousel.html",
+                carousels=[".slides"],
+                pause="restarts",
+                hover_pauses=1,
+            ),
+            ([{"subject": "main > div.slides", "detail": self.CHANGING_TRIED}], []),
+        )
 
 
 class PauseClick(Browsed):

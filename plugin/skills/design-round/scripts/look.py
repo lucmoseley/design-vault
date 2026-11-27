@@ -40,6 +40,7 @@ never return.
 """
 
 import argparse
+import collections
 import json
 import os
 import pathlib
@@ -64,11 +65,6 @@ colour_space = siblings.load(
 
 WIDTH = conditions.DESKTOP_WIDTH
 SETTLE_MS = 4000  # guess, #170
-FIRST_SCREEN = {
-    "zoom": ("check-layout.py's first screen", conditions.HEIGHTS),
-    "measure": ("check-layout.py's first screen", conditions.HEIGHTS),
-    "scrub": ("the motion scripts' window", conditions.MOTION_HEIGHTS),
-}
 
 MEASURE_JS = r"""
 ([x, y]) => {
@@ -103,14 +99,14 @@ def parse(argv):
     p = argparse.ArgumentParser(prog="look.py", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
     pages = {}
-    for name in ("zoom", "scrub", "measure"):
+    for name in COMMANDS:
         s = sub.add_parser(name)
         s.add_argument("page")
         s.add_argument("--width", type=int, default=WIDTH)
         s.add_argument(
             "--height",
             type=int,
-            help=f"default: {FIRST_SCREEN[name][0]} at --width",
+            help=f"default: {COMMANDS[name].screen} at --width",
         )
         pages[name] = s
     pages["zoom"].add_argument("--clip", required=True)
@@ -147,7 +143,7 @@ def parse(argv):
         if value is not None and value < least:
             p.error(f"--{flag} wants {least} or more")
     if args.height is None:
-        args.height = conditions.height_at(args.width, FIRST_SCREEN[args.cmd][1])
+        args.height = conditions.height_at(args.width, COMMANDS[args.cmd].heights)
     args.url = runner.page_url(p, args.page)
     if args.cmd == "zoom":
         args.clip = numbers(p, "--clip", args.clip, 4)
@@ -215,6 +211,18 @@ def measure(browser, args):
     return json.dumps(found, indent=1)
 
 
+Command = collections.namedtuple("Command", "work flags screen heights")
+COMMANDS = {
+    "zoom": Command(zoom, [], "check-layout.py's first screen", conditions.HEIGHTS),
+    "scrub": Command(
+        scrub, frames.HASH_ARGS, "the motion scripts' window", conditions.MOTION_HEIGHTS
+    ),
+    "measure": Command(
+        measure, [], "check-layout.py's first screen", conditions.HEIGHTS
+    ),
+}
+
+
 def pixels(args):
     try:
         from PIL import Image
@@ -243,15 +251,11 @@ def main(argv):
     args = parse(argv)
     if args.cmd == "pixels":
         return pixels(args)
-    work, flags = {
-        "zoom": (zoom, []),
-        "scrub": (scrub, frames.HASH_ARGS),
-        "measure": (measure, []),
-    }[args.cmd]
+    command = COMMANDS[args.cmd]
 
     def run():
-        with runner.chromium(flags) as browser:
-            return work(browser, args)
+        with runner.chromium(command.flags) as browser:
+            return command.work(browser, args)
 
     said, code = runner.run_browser(
         run,

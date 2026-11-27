@@ -758,9 +758,7 @@ class Pause(unittest.TestCase):
         try:
             if init:
                 ctx.add_init_script(init)
-            return self.access.pause_answer(
-                ctx, url, list(carousels), [None] * len(carousels)
-            )
+            return self.access.pause_answer(ctx, url, list(carousels), [])
         finally:
             ctx.close()
 
@@ -785,6 +783,20 @@ class Pause(unittest.TestCase):
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
         )
         self.assertEqual(self.pause_answer("clean"), self.clean_answer())
+
+    STOPS_EVERYTHING = """
+      const intervals = [], set = window.setInterval;
+      window.setInterval = function (...a) { const id = set.apply(this, a); intervals.push(id); return id; };
+      addEventListener('DOMContentLoaded', () => document.querySelector('.pause').addEventListener('click', () => {
+        intervals.forEach((id) => clearInterval(id));
+        document.querySelector('.carousel').dispatchEvent(new Event('focusin'));
+      }));
+    """
+
+    def test_the_clean_page_passes_where_its_pause_control_also_stops_the_dot_and_the_carousel_paired_with_test_check_access_answers_the_pause_plant_545(
+        self,
+    ):
+        self.assertEqual(self.pause_answer("clean", self.STOPS_EVERYTHING), ([], []))
 
     def test_a_read_reaching_5_s_late_still_sees_the_carousel_turn_628_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
