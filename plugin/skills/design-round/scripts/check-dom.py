@@ -146,7 +146,7 @@ layout = probe.layout
 runner = siblings.load(HERE, "runner.py")
 
 TABLE = os.path.join(HERE, "check-dom.table")
-WIDTHS = (layout.PHONE_WIDTH, layout.DESKTOP_WIDTH)
+WIDTHS = (conditions.PHONE_WIDTH, conditions.DESKTOP_WIDTH)
 PAGE, RTL, MISSING = "page", "under rtl", "on missing page"
 DEFINE = re.compile(r"define (\$[\w-]+) = (.+)")
 NAME = re.compile(r"\$[\w-]+")
@@ -535,7 +535,7 @@ def run(browser, url, blocks, *, parts, unset, timeout):
         ) as page:
             page.set_default_timeout(timeout)
             for width in WIDTHS:
-                layout.load(page, target, width, layout.HEIGHTS)
+                layout.load(page, target, width, conditions.HEIGHTS)
                 stamp(page, parts)
                 if load == MISSING:
                     page.evaluate(

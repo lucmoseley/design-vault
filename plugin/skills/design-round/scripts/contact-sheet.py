@@ -37,9 +37,8 @@ if HERE not in sys.path:
 import siblings  # noqa: E402
 
 frames = siblings.load(HERE, "check-frames.py")
-flow = frames.flow
 runner = siblings.load(HERE, "runner.py")
-layout = siblings.load(HERE, "check-layout.py")
+conditions = siblings.load(HERE, "conditions.py")
 UnmeasurableError = runner.UnmeasurableError
 
 # guess, #501
@@ -202,10 +201,10 @@ def parse(argv):
         metavar="MS",
         help="time between frames; 250, as cth9191/animate's review sheets (mmm-infra#28)",
     )
-    p.add_argument("--desktop", default=flow.DESKTOP, metavar="WxH")
+    p.add_argument("--desktop", default=conditions.DESKTOP, metavar="WxH")
     p.add_argument(
         "--phone",
-        default=f"{layout.PHONE_WIDTH}x{layout.HEIGHTS[0]}",
+        default=f"{conditions.PHONE_WIDTH}x{conditions.HEIGHTS[0]}",
         metavar="WxH",
         help="check-layout.py's phone first screen by default, Safari's on a 390x844 iPhone",
     )
@@ -215,8 +214,8 @@ def parse(argv):
     if at.step < 1:
         p.error("--step wants at least 1 ms")
     at.desktop, at.phone = (
-        flow.size_arg(p, "--desktop", at.desktop),
-        flow.size_arg(p, "--phone", at.phone),
+        conditions.size_arg(p, "--desktop", at.desktop),
+        conditions.size_arg(p, "--phone", at.phone),
     )
     at.url = runner.page_url(p, at.url)
     return at

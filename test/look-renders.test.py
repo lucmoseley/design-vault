@@ -192,7 +192,9 @@ class ContactsFromCheckCurves(unittest.TestCase):
 
 class Bends(unittest.TestCase):
     WIDTH = 1024
-    HEIGHT = look_renders.layout.height_at(WIDTH, look_renders.layout.MOTION_HEIGHTS)
+    HEIGHT = look_renders.conditions.height_at(
+        WIDTH, look_renders.conditions.MOTION_HEIGHTS
+    )
 
     def test_a_bend_outside_the_viewport_on_a_bare_svg_file_is_shot_once_the_viewport_fits_it(
         self,

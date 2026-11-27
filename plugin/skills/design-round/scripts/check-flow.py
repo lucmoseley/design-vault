@@ -127,10 +127,6 @@ MERGE_FRAMES = 1  # guess, #632
 FRAME_SLACK = 1e-9  # guess, #632
 QUIET_MS = 2000  # guess, #141
 POLL_MS = 100  # guess, #182
-DESKTOP_SCREEN = (1920, 1080)  # measured: the commonest desktop screen, #183
-DESKTOP_BARS = 135  # measured on Windows 11 with Chromium, #197
-DESKTOP_WINDOW = (DESKTOP_SCREEN[0], DESKTOP_SCREEN[1] - DESKTOP_BARS)
-DESKTOP = f"{DESKTOP_WINDOW[0]}x{DESKTOP_WINDOW[1]}"
 # guess, #196
 STILL_FRACTION = 0.01
 # guess at Leibowitz 1955's 1-2 arcmin/s, #183
@@ -1148,14 +1144,6 @@ def esc(s):
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def size_arg(p, flag, value, *, number=int, example=DESKTOP):
-    try:
-        w, h = (number(n) for n in value.lower().split("x", 1))
-    except ValueError:
-        p.error(f"{flag} wants WxH, e.g. {example} — got {value!r}")
-    return {"width": w, "height": h}
-
-
 def settled(s, quiet):
     return s["looped"] or (
         s["firstFrame"] is not None
@@ -1375,6 +1363,7 @@ TABLE = os.path.join(HERE, "check-flow.table")
 records = siblings.load(HERE, "motion-records.py")
 pointer = siblings.load(HERE, "drive-pointer.py")
 runner = siblings.load(HERE, "runner.py")
+conditions = siblings.load(HERE, "conditions.py")
 
 TRACK_CAP = 400  # guess, #318
 STOP_CAP = 80  # guess, #318
@@ -1809,8 +1798,7 @@ RUNS = {
 
 
 def run_records(at):
-    layout = siblings.load(HERE, "check-layout.py")
-    phone = (layout.PHONE_WIDTH, layout.HEIGHTS[0], layout.PHONE)
+    phone = (conditions.PHONE_WIDTH, conditions.HEIGHTS[0], conditions.PHONE)
     values = {line.mode: line.value for line in at.lines}
     out = {}
     with runner.chromium() as browser:
@@ -1904,7 +1892,7 @@ def parse(argv):
     )
     p.add_argument("--wait", metavar="SELECTOR")
     p.add_argument("--timeout", type=int, default=runner.PLAY_TIMEOUT_MS, metavar="MS")
-    p.add_argument("--viewport", default=DESKTOP, metavar="WxH")
+    p.add_argument("--viewport", default=conditions.DESKTOP, metavar="WxH")
     p.add_argument(
         "--reduced-motion",
         action="store_true",
@@ -1933,7 +1921,7 @@ def parse(argv):
         p.error(
             "--fps wants 1 or more, --jolt-ratio a number in (0, 1], --view-cm a number above 0"
         )
-    at.viewport_size = size_arg(p, "--viewport", at.viewport)
+    at.viewport_size = conditions.size_arg(p, "--viewport", at.viewport)
     at.url = runner.page_url(p, at.url)
     if at.parts_file and not at.records:
         p.error("--parts goes with --records")
