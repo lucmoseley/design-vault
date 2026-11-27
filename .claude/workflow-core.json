@@ -344,21 +344,6 @@
 			"tag": "v3.2.3",
 			"type": "act",
 			"text": "Close a refill panel started before the loop restarted on this release, which crashes on the new status output, and reopen it with `node \"$WFC_PLUGIN_ROOT\"/scripts/refill-panel-open.js <pid>`, the agents view's pid from `pgrep -a claude`."
-		},
-		{
-			"tag": "v3.2.3",
-			"type": "notice",
-			"text": "Rolling a checkout back past this release leaves a control file the older loop reads as damaged; run `node \"$WFC_PLUGIN_ROOT\"/scripts/refill-loop.js start` there."
-		},
-		{
-			"tag": "v3.2.3",
-			"type": "notice",
-			"text": "The stricter gate checks bind only a new or rewritten `Gated on:` line; an existing one is judged as before. A refusal names the `met:`/`unmet:` print or the fetch the check lacks."
-		},
-		{
-			"tag": "v3.2.3",
-			"type": "notice",
-			"text": "In fantasy-books, lucmoseley/workflow-core-tracker#5709's `\"commentMarkers\": [\"@encodes\"]` commits once this bump lands."
 		}
 	],
 	"pythonRoutes": {
