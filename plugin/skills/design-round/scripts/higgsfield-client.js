@@ -57,7 +57,7 @@ function sniff(bytes) {
 
 const dollars = (usd) => `$${usd.toFixed(PRICE_DECIMALS)}`;
 
-function readCredentials(value) {
+function checkCredentials(value) {
   const colon = (value ?? "").indexOf(":");
   if (colon < 1 || colon === value.length - 1) {
     throw new Error("HIGGSFIELD_API_KEY must be set, in the environment or ~/.higgsfield.env, to <key id>:<key secret>, as the Higgsfield console issues them");
@@ -65,7 +65,7 @@ function readCredentials(value) {
   return value;
 }
 
-function readCeiling(value) {
+function parseCeiling(value) {
   const ceiling = Number(value);
   if (value === undefined || String(value).trim() === "" || !Number.isFinite(ceiling) || ceiling < 0) {
     throw new Error("HIGGSFIELD_ROUND_CEILING_USD must be set, in the environment or ~/.higgsfield.env, to the most one round may spend, in dollars; the founder sets it");
@@ -266,7 +266,7 @@ function unlockAll(held, log) {
   }
 }
 
-function readUsd(value) {
+function parseUsd(value) {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim()) return Number(value);
   return NaN;
@@ -274,7 +274,7 @@ function readUsd(value) {
 
 async function estimate(ctx, job) {
   const answer = await withRetry(ctx, "POST", `${API}/estimate/${job.model}`, { body: job.input });
-  const usd = readUsd(answer?.usd);
+  const usd = parseUsd(answer?.usd);
   if (usd <= 0) throw new Error(`the estimate for ${job.model} is not a positive usd figure: ${JSON.stringify(answer)}`);
   if (Number.isFinite(usd)) return { usd, credits: answer.credits, discount: answer.discount };
   if (answer?.type !== "description") throw new Error(`the estimate for ${job.model} is neither a usd figure nor a price rule: ${JSON.stringify(answer)}`);
@@ -339,7 +339,7 @@ async function save(ctx, job, outputs, files) {
 async function render(jobs, options = {}) {
   const log = options.log ?? console.log;
   const ctx = {
-    credentials: readCredentials(options.credentials),
+    credentials: checkCredentials(options.credentials),
     fetch: options.fetch ?? globalThis.fetch,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     now: options.now ?? Date.now,
@@ -347,7 +347,7 @@ async function render(jobs, options = {}) {
     retryDeadlineMs: options.retryDeadlineMs ?? RETRY_DEADLINE_MS,
     timeout: options.timeout ?? AbortSignal.timeout,
   };
-  const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : readCeiling(options.ceiling);
+  const ceiling = options.estimateOnly && options.ceiling === undefined ? undefined : parseCeiling(options.ceiling);
 
   const checked = jobs.map(checkJob);
   const made = [];
@@ -552,7 +552,7 @@ function parseArgs(argv) {
   return { jobs, estimateOnly };
 }
 
-function settings(env, file = ENV_FILE) {
+function readSettings(env, file = ENV_FILE) {
   const fromFile = {};
   if (fs.existsSync(file)) {
     for (const line of fs.readFileSync(file, "utf8").split("\n")) {
@@ -563,4 +563,4 @@ function settings(env, file = ENV_FILE) {
   return Object.fromEntries(SETTINGS.map((name) => [name, env[name] ?? fromFile[name]]));
 }
 
-module.exports = { render, parseArgs, settings };
+module.exports = { render, parseArgs, readSettings };

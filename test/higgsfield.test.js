@@ -8,7 +8,7 @@ const { after, test } = require("node:test");
 const { runInProcessAsync } = require("./core-run-in-process.js");
 
 const SCRIPT = path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield.js");
-const { render, parseArgs, settings } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-client.js"));
+const { render, parseArgs, readSettings } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-client.js"));
 const { RefusalError, withRetry } = require(path.join(__dirname, "..", "plugin", "skills", "design-round", "scripts", "higgsfield-api.js"));
 const LEDGER = "higgsfield-spend.jsonl";
 
@@ -1263,16 +1263,16 @@ function envFile(text) {
 
 test("the key and ceiling are read from ~/.higgsfield.env where the environment lacks them, so no session has to find them", () => {
   const file = envFile('# set by the founder\nexport HIGGSFIELD_API_KEY="id:secret"\nexport HIGGSFIELD_ROUND_CEILING_USD=3\nexport OTHER=x\n');
-  assert.deepEqual(settings({}, file), { HIGGSFIELD_API_KEY: "id:secret", HIGGSFIELD_ROUND_CEILING_USD: "3" });
+  assert.deepEqual(readSettings({}, file), { HIGGSFIELD_API_KEY: "id:secret", HIGGSFIELD_ROUND_CEILING_USD: "3" });
 });
 
 test("a variable already in the environment wins over the file", () => {
   const file = envFile("export HIGGSFIELD_API_KEY=file:key\nHIGGSFIELD_ROUND_CEILING_USD='2'\n");
-  assert.deepEqual(settings({ HIGGSFIELD_API_KEY: "env:key" }, file), { HIGGSFIELD_API_KEY: "env:key", HIGGSFIELD_ROUND_CEILING_USD: "2" });
+  assert.deepEqual(readSettings({ HIGGSFIELD_API_KEY: "env:key" }, file), { HIGGSFIELD_API_KEY: "env:key", HIGGSFIELD_ROUND_CEILING_USD: "2" });
 });
 
 test("with no key file the environment alone is used", () => {
-  assert.deepEqual(settings({ HIGGSFIELD_ROUND_CEILING_USD: "3" }, path.join(os.tmpdir(), "no-such-dir-49", ".higgsfield.env")), { HIGGSFIELD_API_KEY: undefined, HIGGSFIELD_ROUND_CEILING_USD: "3" });
+  assert.deepEqual(readSettings({ HIGGSFIELD_ROUND_CEILING_USD: "3" }, path.join(os.tmpdir(), "no-such-dir-49", ".higgsfield.env")), { HIGGSFIELD_API_KEY: undefined, HIGGSFIELD_ROUND_CEILING_USD: "3" });
 });
 
 const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from("ftypisom"), Buffer.alloc(8)]);
