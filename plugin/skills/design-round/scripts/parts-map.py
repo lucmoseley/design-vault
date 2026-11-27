@@ -226,6 +226,8 @@ MAP_JS = (
   };
   // guess, #501
   const GRID = 5;
+  // guess, #501
+  const BESIDE_PX = 4;
   for (const [i, p] of parts.entries()) {
     const outer = actableOf(p.el.parentElement);
     p.inside = outer ? index.get(outer) : null;
@@ -248,9 +250,8 @@ MAP_JS = (
     }
     p.hit = seen ? Math.round((100 * mine) / seen) : null;
     p.takenBy = [...others].sort((a, b) => b[1] - a[1]).map(([who]) => who);
-    // guess, #501
     const around = new Map();
-    for (const [x, y] of [[r.left - 4, r.top + r.height / 2], [r.right + 4, r.top + r.height / 2], [r.left + r.width / 2, r.top - 4], [r.left + r.width / 2, r.bottom + 4]]) {
+    for (const [x, y] of [[r.left - BESIDE_PX, r.top + r.height / 2], [r.right + BESIDE_PX, r.top + r.height / 2], [r.left + r.width / 2, r.top - BESIDE_PX], [r.left + r.width / 2, r.bottom + BESIDE_PX]]) {
       const by = landing(x, y)?.part;
       if (by !== undefined && by !== i) around.set(by, (around.get(by) || 0) + 1);
     }
@@ -357,7 +358,7 @@ def number(found):
     ids = {tuple(e["path"]): f"p{i}" for i, e in enumerate(ordered, 1)}
 
     def named(w):
-        return ids.get(tuple(w), "a part not listed") if isinstance(w, list) else w
+        return ids[tuple(w)] if isinstance(w, list) else w
 
     for e in ordered:
         e["id"] = ids[tuple(e["path"])]

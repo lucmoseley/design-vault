@@ -8,21 +8,14 @@ const CHORD_POINTS = 32; // guess, #501
 const MIN_SPAN_MS = 0.05; // guess, #501
 const SPEED_SPAN_MS = 1; // guess, #142
 const FRAME_MS = 1000 / 60;
-const STILL_SHARE = 0.01; // guess, #501
-const STILL_ARCMIN_S = 1; // guess, #501
-const VIEW_CM = 60; // guess, #501
+const SHARED = Object.fromEntries(Object.entries(require("./flow-pace.json")).map(([name, { value }]) => [name, value]));
+const STILL_FRACTION = SHARED.stillFraction;
+const STILL_ARCMIN_S = SHARED.stillArcminS;
+const VIEW_CM = SHARED.viewCm;
 const CSS_PX_CM = 2.54 / 96;
 const SPAN_SPEED_RATIO = 1.15; // measured: no step at 1.15 on a grid of 1,020 falls and settles, steps at 1.5, #196
-// measured: the model's thresholds in docs/research/jolt-onset.md, 0.80 of top speed at 200 ms to 0.17-0.35 at 2000 ms, #297
-const JOLT_BAND = [
-  [200, 0.8, 0.8],
-  [250, 0.54, 0.67],
-  [300, 0.43, 0.6],
-  [500, 0.27, 0.47],
-  [1000, 0.19, 0.39],
-  [2000, 0.17, 0.35],
-];
-const JUMP_DEG = 0.26; // measured: a 0.26 deg jump drew attention in Sunny and von Muhlenen 2014 (docs/research/jolt-onset.md F10), #297
+const JOLT_BAND = SHARED.joltBand;
+const JUMP_DEG = SHARED.jumpDeg;
 
 function stillPx(viewCm) {
   return STILL_ARCMIN_S / ((60 * 180 * Math.atan(CSS_PX_CM / viewCm)) / Math.PI);
@@ -106,7 +99,7 @@ function fall({ drop, scale, sink, damping = 1, tolerance = DEFAULT_TOLERANCE, v
   const g = G * scale;
   const fallS = fallSeconds(drop, scale);
   const impact = g * fallS;
-  const still = Math.min(STILL_SHARE * impact, stillPx(viewCm));
+  const still = Math.min(STILL_FRACTION * impact, stillPx(viewCm));
   const { shape, slope, peak, end } = arrivingLanding(damping, still / impact);
   const omega = (impact * shape(peak)) / sink;
   const past = (s) => (impact / omega) * shape(omega * s);
@@ -133,7 +126,7 @@ function settle({ distance, ms, damping = 1, tolerance = DEFAULT_TOLERANCE, view
   const rest = settleShape(damping);
   const { shape: speed, peak } = landingShape(damping);
   const pxSpeed = (end) => (u) => (distance / (1 - rest(end))) * (end / (ms / 1000)) * speed(u);
-  let end = fallsTo(speed, STILL_SHARE * speed(peak), peak);
+  let end = fallsTo(speed, STILL_FRACTION * speed(peak), peak);
   if (pxSpeed(end)(end) > stillPx(viewCm)) end = fallsTo((u) => pxSpeed(u)(u), stillPx(viewCm), end);
   const omega = end / (ms / 1000);
   const aim = distance / (1 - rest(end));

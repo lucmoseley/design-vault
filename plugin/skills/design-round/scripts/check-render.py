@@ -42,9 +42,8 @@ import siblings  # noqa: E402
 from crash_exit import run_main  # noqa: E402
 
 SIZES = HERE.parent / "references" / "render-sizes.json"
-REQUIREMENTS = HERE.parents[2] / "requirements.txt"
 
-
+runner = siblings.load(HERE, "runner.py")
 spend_log = siblings.load(HERE, "spend-log.py")
 UnreadableError = spend_log.UnreadableError
 
@@ -212,11 +211,7 @@ def main(argv):
         for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
             importlib.import_module(package)
     except ImportError as err:
-        print(
-            f"check-render: {err.name} is missing — python3 -m pip install -r {REQUIREMENTS}",
-            file=sys.stderr,
-        )
-        sys.exit(3)
+        sys.exit(runner.missing(err))
     from PIL import Image
 
     if args.aspect is not None:

@@ -1,9 +1,15 @@
 "use strict";
 const { spawnSync } = require("child_process");
+const { parseArgs: parseStrict } = require("node:util");
 const fs = require("fs");
 const path = require("path");
 const { gitIn } = require("./git-read.js");
 
+const TAG_BODY = String.raw`rounds\/([\w.-]+-r([1-9]\d*))`;
+const ROUND_TAG = new RegExp(`^${TAG_BODY}$`);
+const ROUND_CANDIDATE = new RegExp(`^${TAG_BODY} [\\w.-]+$`);
+
+const isObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const isText = (value) => typeof value === "string" && value.trim() !== "";
 const isDate = (value) => {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -17,7 +23,7 @@ function parseRows(text, fault) {
     if (line.trim() === "") return;
     try {
       const row = JSON.parse(line);
-      if (typeof row !== "object" || row === null || Array.isArray(row)) throw new Error("not a JSON object");
+      if (!isObject(row)) throw new Error("not a JSON object");
       rows.push({ row, line: index + 1, raw: line.trim() });
     } catch (error) {
       fault("json", `line ${index + 1}: ${error.message}`);
@@ -26,20 +32,17 @@ function parseRows(text, fault) {
   return rows;
 }
 
+function parseFlags(argv, defaults, booleans = []) {
+  const options = Object.fromEntries(Object.entries(defaults).map(([name, value]) => [name, booleans.includes(name) ? { type: "boolean" } : { type: "string", multiple: Array.isArray(value) }]));
+  const { values } = parseStrict({ args: argv, options, strict: true });
+  const empty = Object.keys(values).find((name) => [values[name]].flat().includes(""));
+  if (empty) throw new Error(`Option '--${empty} <value>' argument missing`);
+  return { ...defaults, ...values };
+}
+
 function parseArgs(argv, extra = {}) {
-  const options = { staged: false, log: null, previous: null };
-  for (const [name, times] of Object.entries(extra)) options[name] = times === "many" ? [] : null;
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    const own = arg.slice(2);
-    if (arg === "--staged") options.staged = true;
-    else if (["--log", "--previous"].includes(arg) && argv[i + 1]) options[own] = argv[++i];
-    else if (arg.startsWith("--") && Object.hasOwn(extra, own)) {
-      if (!argv[i + 1]) throw new Error(`${arg} takes a value: ${arg} <value>`);
-      if (extra[own] === "many") options[own].push(argv[++i]);
-      else options[own] = argv[++i];
-    } else throw new Error(`unknown argument ${JSON.stringify(arg)}`);
-  }
+  const extras = Object.fromEntries(Object.entries(extra).map(([name, times]) => [name, times === "many" ? [] : null]));
+  const options = parseFlags(argv, { staged: false, log: null, previous: null, ...extras }, ["staged"]);
   if (options.staged && (options.log || options.previous)) throw new Error("--staged reads the index's and HEAD's log; it takes no paths");
   return options;
 }
@@ -94,4 +97,4 @@ function runGate(argv, { log, name, noun, check, report, extra }) {
   return 0;
 }
 
-module.exports = { isText, isDate, parseRows, runGate };
+module.exports = { ROUND_TAG, ROUND_CANDIDATE, isObject, isText, isDate, parseRows, parseFlags, runGate };

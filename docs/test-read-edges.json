@@ -142,7 +142,8 @@
 			"test/gate-wording.test.js"
 		],
 		"plugin/skills/design-critique/rules.md": [
-			"test/gate-select.test.js"
+			"test/gate-select.test.js",
+			"test/gate.test.js"
 		],
 		"plugin/skills/design-critique/rules/buttons.md": [
 			"test/gate-select.test.js",
@@ -269,7 +270,8 @@
 			"test/select-suites.test.js"
 		],
 		"plugin/skills/design-round/SKILL.md": [
-			"test/gate-wording.test.js"
+			"test/gate-wording.test.js",
+			"test/gate.test.js"
 		],
 		"plugin/skills/design-round/references/calibration.md": [
 			"test/rule-store-pointers.test.js"
@@ -289,6 +291,9 @@
 		"plugin/skills/design-round/scripts/fall.js": [
 			"test/failed-files.test.js",
 			"test/fall-check.test.js",
+			"test/fall.test.js"
+		],
+		"plugin/skills/design-round/scripts/flow-pace.json": [
 			"test/fall.test.js"
 		],
 		"plugin/skills/design-round/scripts/gate-form.js": [

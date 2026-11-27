@@ -13,12 +13,11 @@
  * The command line, its exit codes and the reading of the log from git are log-gate.js's.
  */
 "use strict";
-const { isText, isDate, parseRows, runGate } = require("./log-gate.js");
+const { ROUND_CANDIDATE, isText, isDate, parseRows, runGate } = require("./log-gate.js");
 const { ASSET_CLASSES } = require("./plugin/skills/design-round/scripts/gate-form.js");
 
 const LOG = "data/corrections-log.jsonl";
 const FIELDS = ["date", "project", "asset", "where", "candidate", "words", "stance", "principle", "missed_by", "ruling"];
-const CANDIDATE = /^rounds\/[\w.-]+-r[1-9]\d* [\w.-]+$/;
 const MISSED_BY = ["lint", "gate", "critic", "building session", "no rule"];
 const STANCES = ["kept", "rejected"];
 
@@ -35,7 +34,7 @@ function checkCorrectionsLog(text, previousText = "") {
     for (const key of Object.keys(row)) if (!FIELDS.includes(key)) fault("unknown-field", `${at}: ${key} is not a corrections-log field`);
     if (!isDate(row.date)) fault("date", `${at}: date ${JSON.stringify(row.date)} is not a YYYY-MM-DD day`);
     for (const field of ["project", "where", "words", "principle"]) if (!isText(row[field])) fault(field, `${at}: ${field} is missing`);
-    if (!(row.candidate === null || (typeof row.candidate === "string" && CANDIDATE.test(row.candidate))))
+    if (!(row.candidate === null || (typeof row.candidate === "string" && ROUND_CANDIDATE.test(row.candidate))))
       fault("candidate", `${at}: candidate ${JSON.stringify(row.candidate)} is not "rounds/<slug>-r<n> <name>", or null`);
     if (!ASSET_CLASSES.includes(row.asset)) fault("asset", `${at}: asset ${JSON.stringify(row.asset)} is not one of ${ASSET_CLASSES.join(", ")}`);
     if (!STANCES.includes(row.stance)) fault("stance", `${at}: stance ${JSON.stringify(row.stance)} is not "kept" or "rejected"`);

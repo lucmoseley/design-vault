@@ -85,7 +85,7 @@ class OnAnArtboard(Fixtures):
         )
         self.assertEqual(out.returncode, 3, out.stderr)
         self.assertIn(
-            "check-logo: PIL is missing — python3 -m pip install -r", out.stderr
+            "check-logo.py: PIL is missing — python3 -m pip install -r", out.stderr
         )
 
     def test_an_exact_placement_passes_both(self):
