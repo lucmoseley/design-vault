@@ -2,6 +2,12 @@
 
 This repo's own choices beside the workflow-core plugin's standards base, `docs/code-standards-base.md` under the plugin root (workflow-core#947).
 
+## Changes to the base
+
+| # | Base id | Operation | Scope | Reason | Ticket |
+|---|---|---|---|---|---|
+| 1 | §N6 | exception | `rule-triggers.js`, its `fs.readFileSync(0)` payload read | A stack it cannot fit: the read runs on every Edit, Write and Bash call before the hook knows it has a trigger, and `readFdAll` is workflow-core's, which a repo-root hook reaches only through `resolveCore()`, one `git` child per call from a linked worktree, against §G13. | #593 |
+
 ## Route rows and risk paths
 
 | Path | Code kind |

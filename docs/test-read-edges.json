@@ -110,7 +110,8 @@
 		],
 		"ingest.js": [
 			"test/ingest.test.js",
-			"test/rule-store-pointers.test.js"
+			"test/rule-store-pointers.test.js",
+			"test/rule-triggers.test.js"
 		],
 		"ledger-upkeep.js": [
 			"test/ledger-check.test.js",
@@ -562,6 +563,7 @@
 			"test/ledger-upkeep.test.js",
 			"test/release-check.test.js",
 			"test/round-log.test.js",
+			"test/rule-triggers.test.js",
 			"test/select-suites.test.js",
 			"test/validate.test.js"
 		],
