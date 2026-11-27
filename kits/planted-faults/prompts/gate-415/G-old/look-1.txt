@@ -13,7 +13,7 @@ Look questions, for the critics:
 5. vault.pixel-image-kind: Is each such image declared as the round's `pixel-image` part, and is no photograph declared as one?
    Applies to: every raster image shown larger than its natural size whose content is pixels or hard edges: pixel art, a QR or bar code, a screenshot of interface or a line diagram
 6. vault.affordance: Does every part a visitor can act on look as if they can, and every part they cannot look as if they cannot, save a hidden link that goes where a part that does look actable also goes, which is reported and does not fail?
-   Applies to: each part on the parts map's key, at desktop and phone width, answered part by part: does it look as if a visitor can act on it?
+   Applies to: each part on the parts map's key, at desktop and phone width, answered part by part
 7. vault.dialog-default-look: Is an action that destroys something the visitor did not deliberately choose to destroy neither the dialog's default button nor in the primary style, and is the default otherwise the action the visitor most likely came to take?
    Applies to: every dialog, alert or confirmation whose action destroys something
 8. vault.shadow-meaning: Is each edge outside the controls that carries meaning drawn as a `border` or `outline`, or as a `box-shadow` over a transparent `border` or `outline` of equal width, so no meaning rests on a shadow that forced-colours mode drops?

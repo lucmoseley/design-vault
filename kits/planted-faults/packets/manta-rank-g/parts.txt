@@ -8,9 +8,9 @@ p3  "How we rank"  acts: link -> this page
 p4  "Partner launch price: 40% off ends in 02:14:37"  static  (could look actable: a link's colour)
 p5  "02:14:37"  static  (could look actable: draws its own box)
 p6  "ONLY 3 SPOTS LEFT!"  static  (could look actable: draws its own box)
-p7  "No hostel can pay for a higher position."  static  (could look actable: draws its own box)
-p8  "Recent stays count more than old ones."  static  (could look actable: draws its own box, a link's colour)
-p9  "A hostel with only a few reviews starts close to its area's average."  static  (could look actable: draws its own box)
+p7  "BALI Canggu See the ranking"  acts: link -> this page
+p8  "BALI Uluwatu See the ranking"  acts: link -> this page
+p9  "BALI Ubud See the ranking"  acts: link -> this page
 p10  "MantaHostels"  static  (could look actable: a link's colour)
 p11  "Privacy"  acts: link -> this page
 p12  "Terms"  acts: link -> this page
