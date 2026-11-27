@@ -1,11 +1,5 @@
 # Research: Manta design research that did not cross into design-vault (#115)
 
-⚠ **Bound 14 Oct 2026 (#101): ranks 1, 2, 4 and 5 go to research #143. Rank 6 (logo design and small-size tests), ranks 3, 7, 8 and 9, keep-the-best comparison included, and C11 (the distinctive-asset method) are accepted as gaps.**
-
-⚠ **Bound 14 Oct 2026 (#103): L9 (the figure-ground build check) is not a gate question and stays Manta's own code. Of the rules planned "via #98 → #103": C3's measured contrast is a vault gate question (WCAG 2.2 AA); C1 and Z4 are not, C1 staying with impeccable and Z4 ("loud claim, calm mechanics") a critique point.**
-
-⚠ **Bound 13 Oct 2026 (#100): P2 is adopted as a corrections log in the vault, for map #96's spec. L9 is not taken by #100, which adds no lint (impeccable's detector already runs in the build); whether a figure-ground rule becomes a gate question is #103's.**
-
 Ticket: lucmoseley/design-vault#115, child of map #96.
 Question: Which design research from Manta's brand and design-system work did not go into design-vault? Does any of it fill a gap, or show a gap, that #104 does not cover?
 Date of reads: 13 October 2026.
@@ -114,9 +108,9 @@ Context for the read: the second project, mmm-infra, shows the transfer. Its rul
 
 | # | Item | Vault | imp | Planned | Result |
 |---|---|---|---|---|---|
-| C1 | One job per colour; no information-free colour in a working zone | N (DNA line 12 "several colours at equal weight, none dominant" is near, but not the same) | P: "Decoration without a relationship to hierarchy, state, content … is not a color strategy"; "do not spend [the primary action's] color on decoration" (`colorize.md`) | #98 B10 "portable in principle"; #103 decides where portable rules live | Covered by impeccable in substance. Planned as a rule (#98 → #103). |
+| C1 | One job per colour; no information-free colour in a working zone | N (DNA line 12 "several colours at equal weight, none dominant" is near, but not the same) | P: "Decoration without a relationship to hierarchy, state, content … is not a color strategy"; "do not spend [the primary action's] color on decoration" (`colorize.md`) | #98 B10 "portable in principle"; #103 decides where portable rules live | Covered by impeccable in substance. It stays with impeccable, not a gate question (#103). |
 | C2 | Warm = act, cool = read | N | N | #98 B16 "maybe" | Gap, but unsourced (W). Not worth research alone. |
-| C3 | Text-safe partner rule (measure each fill on each ground; named darker partner; parent marked fill-only) | N | P: "Verify computed foreground/background pairs" with the AA table. No token discipline (named partner, fill-only mark). | #98 B21 portable; #104 colour row "C for Manta; P for others" | **Absent from vault.** Planned only as a rule to place (#103). No ticket writes the method into the setup or identity round. |
+| C3 | Text-safe partner rule (measure each fill on each ground; named darker partner; parent marked fill-only) | N | P: "Verify computed foreground/background pairs" with the AA table. No token discipline (named partner, fill-only mark). | #98 B21 portable; #104 colour row "C for Manta; P for others" | **Absent from vault.** Its measured contrast is a vault gate question, WCAG 2.2 AA (#103). No ticket writes the method into the setup or identity round. |
 | C4 | Large-text limit used on purpose for a CTA label | N | Y: large text 3:1 in the AA table | #104 W1 (APCA cross-check, "not a gap to fill now") | Covered by impeccable. |
 | C5 | Night pattern (white text on a dark ground; semantic on border/icon; do not make light text partners) | N | P: "In dark mode, design surface elevation and contrast explicitly; do not invert"; light-on-dark type compensation (`typeset.md`) | #98 B6, B22 "partly"; #117 asks how each attribute "behaves in dark mode"; #104 W5 dark mode | Partly covered by impeccable; partly planned (#117 for fills, borders, focus). The "no light partner" collision reason is in no plan. |
 | C6 | Near-miss rule (two colours decisively identical or decisively different; ΔE00 thresholds) | N | N | #98 B26 portable, "none" asks it | **Gap no ticket fills.** The thresholds (~7 bad, 10–20 safe) have no source. CIEDE2000 itself is a CIE standard. |
@@ -124,7 +118,7 @@ Context for the read: the second project, mmm-infra, shows the transfer. Its rul
 | C8 | Semantic states as tinted chips with a text partner | N | P: semantic tokens | #117 "Fills, tints and surface tones (… selected and hover grounds)" | Planned (#117). |
 | C9 | Hue geometry: complement shimmer, analogous ramp, ground shifts perceived hue | N | N (no "complement", "analogous", "vibrat" in colour sense; grep) | #98 B27 portable, "none" asks it. #104 colour row says theory is covered ("T (theory, contrast)", imp "Yes (colorize)"), but `colorize.md` holds contrast and OKLCH ramps, not harmony or chromatic interaction. | **Gap no ticket fills.** #104 counts it as covered; it is not. |
 | C10 | Chroma is affordance; colour carries genre | N | N | none | Gap; weak source. Low. |
-| C11 | Competitor colour firewall | N | N | #104 W13, gap rank 9 (distinctive-asset method: fame and uniqueness); #101 rules it | Planned (#104 W13 → #101). Manta's §12 is a worked example #104 already names. |
+| C11 | Competitor colour firewall | N | N | #104 W13, gap rank 9 (distinctive-asset method: fame and uniqueness); #101 rules it | Accepted as a gap (#101). Manta's §12 is a worked example #104 already names. |
 | C13 | Falsifiable prediction for a colour fix | N | N | none | Process habit. Low. Not a gap worth a ticket. |
 
 ### 2.2 Logo and mark items
@@ -141,7 +135,7 @@ Context for the read: the second project, mmm-infra, shows the transfer. Its rul
 | L6 | Logo audit; render each candidate at full, 32px and 16px on every ground; isolate one feature per variant | N | N | none | **Gap no ticket fills.** |
 | L7 | Small chrome is a recognition surface; personality goes where the mark is large | N | N | none | Gap; folds into L5. |
 | L8 | A bounded ground carries the mark across a forbidden ground; pixel acceptance test across widths | N | N | #78 width-sweep check (overflow, overlap) | Partly planned (#78 checks widths, not mark-on-ground pixels). |
-| L9 | A figure-ground hard rule enforced as a build error | N | N | #100 (lint mechanism), #98 counts 50 mechanical rules | Partly planned (#100). |
+| L9 | A figure-ground hard rule enforced as a build error | N | N | #100 (lint mechanism), #98 counts 50 mechanical rules | Stays Manta's own code: not a gate question (#103), and #100 adds no lint, since impeccable's detector already runs in the build. |
 | L10 | Two-tone wordmark: dark anchor plus mid-tone | N | N | #98 B31 "no" | Gap; single in-context test, low strength. Low. |
 
 ### 2.3 Type, spacing, layout, zones, accessibility, process, perception
@@ -157,11 +151,11 @@ Context for the read: the second project, mmm-infra, shows the transfer. Its rul
 | S2 | Size chrome from its content on the grid (72 = 48 mark + 2×12) | N | N | none | Low. Not a gap worth a ticket. |
 | Z1 | Zone and volume: each surface has one register | N | Y in another form: impeccable's modes (Persuade, Operate, Read, Experience) set the register per surface | #104 W4 (Persuade against Operate) | Covered by impeccable. Manta's "volume" number is extra. |
 | Z3 | One focal action per view | N (design-critique: "CTA count") | Y | — | Covered. |
-| Z4 | Loud claim, calm mechanics | N | N | #98 B50 portable | Planned as a rule (#98 → #103). No research gap. |
+| Z4 | Loud claim, calm mechanics | N | N | #98 B50 portable | A critique point, not a gate question (#103). No research gap. |
 | A1 | Focus ring clears 3:1 on each ground it can sit on | N | Y: focus indicators 3:1 | #117 (focus rings); #104 W1 (2.4.11) | Covered by impeccable; planned (#117). |
 | A2 | Never colour alone | N | Y | — | Covered by impeccable. |
 | P1 | Brand-sheet form: north star, feeling hierarchy, named enemy, acceptable failure mode, section status (LOCKED / PARKED with its dependency …) | P: `design-project/SKILL.md:28-39` makes six sections (who, colour, type, logo, voice, standing rules) and marks "open" items | P: `init.md` writes PRODUCT.md (voice, personality) | #113 (client-fit gate at set-up) | Partly present. The feeling hierarchy and named enemy are absent; #113 is near but does not name them. |
-| P2 | Record rejected options with reasons | P: the design record; #102 | — | #100 ("a corrections log", "a precedents file") | Planned (#100). |
+| P2 | Record rejected options with reasons | P: the design record; #102 | — | #100 ("a corrections log", "a precedents file") | Adopted as a corrections log in the vault (#100). |
 | P3 | Colour-count measurement (median-cut, merge, ≥2% coverage) | N | N | none | **Gap no ticket fills**, but small. It could make DNA line 12 ("several colours at equal weight") and any "≤N colours" rule mechanical. |
 | P4 | One source of truth; derived files cut to match | Y: `references/impeccable.md` "The project's rules file wins" | — | — | Present. |
 | P5 | Manta's design-review lenses (#926) | Y: design-critique §1 (accessibility persona forced), §2 (six Gestalt, conversion, SEO), §3 (no change for change's sake). **The "Measure 45–75" lens was dropped at the hand-over (#3536).** | — | #86 restores Measure; #104 W4 adds common fate, synchrony, connectedness | Present, except Measure (planned #86). |
@@ -208,7 +202,7 @@ Of the 42 portable items (a + c), design-vault holds **2 in full** (P4, P5) and 
 | 8 | C2 warm = act; C10 chroma is affordance | Websites | Weak sources; research only if rank 1 runs and finds them. |
 | 9 | L10 two-tone wordmark; S2 chrome sized from its content; C13 falsifiable prediction; T5 sentence case | Rare or low | Not worth a ticket alone. |
 
-Ranks 1, 2, 4 and 5 can share one research ticket: **"How is a brand palette built and checked against its grounds and its logo?"**, with Manta's sheet §2, §3, §6 and §8 as the worked example and mmm-infra as the first case to apply it. That ticket would also give `design-project` step 2 its Colour and Logo questions, and #101 is where it gets ruled.
+Ranks 1, 2, 4 and 5 are researched together in `docs/research/brand-palette.md` (#143, "How is a brand palette built and checked against its grounds and its logo?"). Ranks 3, 6, 7, 8 and 9 are accepted as gaps (#101).
 
 ## Bound
 

@@ -1,7 +1,5 @@
 # Design principles: how they interact and how each clash is resolved (design-vault#121)
 
-⚠ **Bound 14 Oct 2026 (#103): §5's form is cut to nine fields, for gate questions only: `id`, `applies-when`, the check question, who answers it (script, code or look), `writes`, `yields-to`, `source` with its strength, `era` and `owner`. `function`, `inputs`, `output` and `trades-off` are dropped. Map #96's spec builds it.**
-
 Question: Where the design principles from map #96 depend on context or pull against each other, how is each resolved, so that the house rules work as one system?
 
 Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/gallery.json`). Manta = lucmoseley/mantahostels (read-only here; out of write scope). Rule ids: B1-B53 and X1-X9 are Manta rules, G and R are vault rules, all from the census `docs/research/design-rules-census.md` §1-§4. K1-K27 are from `docs/research/manta-element-coverage.md` §4 (#118). C1-C10, B7.x and D1-D3 are from `docs/research/function-fit.md` (#127). F5 is `docs/research/adopt-or-build.md:141`-`:160` (#119). "#117 E<n>" is `docs/research/surface-styling.md` Part E (`:315`-`:331`). "#123 D<n>" is `docs/research/text-presentation.md` Part D (`:289`-`:301`). Era: T = timeless; E = era-bound, current as of the date given.
@@ -21,7 +19,7 @@ Abbreviations. Vault = the portable method (design-vault `plugin/`, `data/galler
    Every remaining property is a double-allowed answer (K6 rest shadow, K10 shape, numerals), a gap (sheet radius, scrim, placeholder token, nesting fallback, focus under a sheet) or a Manta fault the rules already decide (control edge 1.24:1, hero input with `outline:none` and no replacement, a compare "checkbox" that a keyboard cannot reach).
 5. **Rule form.** A rule that names applies-when (function code plus context), the property it writes and what it yields to lets the critic detect a clash mechanically. A clash is two matching rules that write one property of one part with different outputs, where neither yields to the other. Section 5 gives the schema, three rewritten rules and a worked detection.
 
-**Recommended answer to #121.** Adopt the dependency order function → role → treatment → value, with #119 F5 precedence inside each step. Write every house rule in the section 5 form, with its applies-when condition. Resolve the conflicts as in the section 3 table. Put the 11 rulings below to the founder. Send the Manta-only fixes to lucmoseley/mantahostels.
+**Recommended answer to #121.** Adopt the dependency order function → role → treatment → value, with #119 F5 precedence inside each step. Write every gate question in the section 5 form, with its applies-when condition. Resolve the conflicts as in the section 3 table. Put the 11 rulings below to the founder. Send the Manta-only fixes to lucmoseley/mantahostels.
 
 Confidence: 0.7 that this order and form remove the conflicts without a new clash.
 - Most risk: the critic may not code element parts reliably from a render. #127 D2 calls a model's Q4/Q5 answers unverified.
@@ -243,7 +241,9 @@ Parts: sheet surface C; drag handle A (it changes the sheet height); list rows =
 
 Result: 6 of 12 properties get one answer today (role, border, shadow, handle, input path, touch target); motion is the seventh once mantahostels#2988 writes the clause. Gaps: radius token, scrim token, focus under the sheet, map contrast. Rulings: R1, R6.
 
-## 5. Rule form (input to #103)
+## 5. Rule form (#103)
+
+The form is for gate questions only: a rule that cannot fail a candidate takes none.
 
 ### 5.1 Schema
 
@@ -251,26 +251,18 @@ Result: 6 of 12 properties get one answer today (role, border, shadow, handle, i
 |---|---|---|
 | `id` | Stable id (for example `manta.B46`) | Clash reports cite it |
 | `applies-when` | Function codes (N A I S T R C D) **and** context predicates: zone (marketing / working), mode (Read / Operate), ground (sand / white / turquoise / ink / photo / map), device (touch / pointer), state (rest / hover / focus / selected / disabled), floats (yes / no) | The dependency root: a rule that names no function code fails a lint |
-| `function` | The job the rule protects, in one line | Lets a reviewer judge whether an exception keeps the job |
-| `inputs` | The measured properties it reads (ratio, px, neighbours' treatments) | Tells the critic what to measure from code or render (#127 D2) |
 | `writes` | The property it sets: one of role, border, shadow, radius, fill, text-colour, type, spacing, state, motion, target, contrast | Two rules that write one property of one part can clash |
-| `output` | The value or constraint | Compared between rules |
-| `trades-off` | Rule ids it pulls against | Documents the known tension |
 | `yields-to` | Rule ids, or a precedence level (F5 1-6) | Decides the clash with no human |
 | `source` | Citation plus F5 level plus strength | Ranks it |
 | `era` | T, or E with a date to review | Flags dated advice |
-| `check` | One question, and whether a render or code answers it (#127 D2) | The critic runs it |
+| `check` | One question, and who answers it: a script, code or a look (#127 D2) | The critic runs it |
 | `owner` | vault or a project | Write scope |
 
 ### 5.2 Three real rules rewritten
 
 **manta.B46 (shadow).** Now: "Borders first; shadow only on hover and popovers; nothing at rest under a heavy shadow" (census `:254`, `brand-sheet.md:216`).
 - applies-when: C or A; state rest or hover; floats any
-- function: depth says "floats above" or "you can act"; it is not decoration
-- inputs: floats?; interactive?; shadow blur and alpha
 - writes: shadow
-- output: floats → `--shadow-popover`; interactive and resting → none or ≤ `--shadow-card` (number by R3); static → none; hover → one signal (R2)
-- trades-off: `manta.border-weak`, `vault.surface-E1`
 - yields-to: level 1 (none apply); `#117 B2.1` for floating layers
 - source: Manta level 2; condition from #117 B2.1 (M3, Atlassian)
 - era: E (2026)
@@ -278,11 +270,7 @@ Result: 6 of 12 properties get one answer today (role, border, shadow, handle, i
 
 **manta.B20 + #117 E8 (selected wash).** Now: "lagoon wash for hover/selected only, never a card ground".
 - applies-when: S, N (list row); state selected or hover
-- function: show which item is chosen, not by colour alone
-- inputs: wash ratio vs ground; presence of a second cue; that cue's ratio
 - writes: fill, state
-- output: hover → wash alone; selected → wash plus (check, or weight +1 step, or edge ≥3:1)
-- trades-off: `manta.B10` (no information-free colour)
 - yields-to: level 1 (WCAG 1.4.11, 1.4.1)
 - source: Manta level 2; WCAG level 1
 - era: T
@@ -290,11 +278,7 @@ Result: 6 of 12 properties get one answer today (role, border, shadow, handle, i
 
 **manta.B12/B25 (coral).** Now: "coral is CTAs only, one per view"; "one coral object per view = sticky compare bar or hero search".
 - applies-when: A; zone any; view-level count
-- function: one primary action owns the strongest colour
-- inputs: count of coral objects in the viewport; label size and weight
 - writes: role, fill
-- output: exactly one coral object per viewport; its label ≥19px/700 (B29); no other label above it in weight × size (P28)
-- trades-off: `vault.conversion-lens` (more CTAs), `manta.eyebrow` (C9)
 - yields-to: level 1 (contrast: 3.05:1 holds only at large text)
 - source: Manta level 2; Apple HIG / GOV.UK level 3
 - era: T (one primary); E (coral value)
@@ -303,11 +287,11 @@ Result: 6 of 12 properties get one answer today (role, border, shadow, handle, i
 ### 5.3 How the critic detects a clash
 
 1. For each part, take its function code and context. Select every rule whose `applies-when` matches.
-2. Group the selected rules by `writes`. If one property has two outputs that differ and neither rule names the other in `yields-to`, apply F5. The lower level wins. If both are level 2 (two rules in one project file), report "unresolved clash; founder ruling" and name both ids.
-3. Lint at write time: (a) every rule names a function code; (b) `trades-off` is mutual (A lists B → B lists A); (c) no `yields-to` cycle.
+2. Group the selected rules by `writes`. If two rules set one property of one part differently and neither names the other in `yields-to`, apply F5. The lower level wins. If both are level 2 (two rules in one project file), report "unresolved clash; founder ruling" and name both ids.
+3. Lint at write time: (a) every rule names a function code; (b) no `yields-to` cycle.
 
 Worked example, hero search box (E19), property shadow:
-- `manta.B46` matches (A, rest) and outputs "≤ `--shadow-card` at rest".
+- `manta.B46` matches (A, rest) and sets "≤ `--shadow-card` at rest".
 - `#117 B2.1` matches only if `floats = yes`. The hero box does not float, so it does not match.
 - The box carries `--shadow-popover` → a breach of B46, not a clash.
 

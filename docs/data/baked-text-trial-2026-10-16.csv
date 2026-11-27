@@ -137,5 +137,5 @@ images__yosemite,images/yosemite.jpg,text,,signature bottom-right,no,0,0,,0.994,
 images__zentangle-manta,images/zentangle-manta.png,none,,patterned manta on white,yes,3,444,0.95,1.0,1,0,
 images__zuno-orange-workspace,images/zuno-orange-workspace.png,text,,"site screenshot: headline, navigation and body copy",yes,49,4080,0.993,1.0,59,59,"Zuno. | StartFree | Log In → | Turn tasks and meetings into | a structured day. | We turn your tasks, meetings, and priorities into a clear daily | schedulebeforeyoustartworking. | SeeHowItWorks"
 mmm__v1-into-the-valley-still,mmm-infra rounds/aqueduct-storyboard:r2/v1-into-the-valley-still.png,none,,generated photograph of an aqueduct over a river,no,0,0,,0.003,2,2,
-mmm__valley,mmm-infra rounds/aqueduct-storyboard:r2/valley.jpg,none,,"the same picture as the still, as a 2400 px JPEG",no,0,0,,0.001,4,4,
-palette-52__v1-gpt-sunburst-palette,~/higgsfield-palette-52/v1-gpt-sunburst-palette.png,none,,"painterly Greek courtyard, lanterns, shutters, stairs",no,0,0,,0.0,1,1,
+mmm__valley,mmm-infra rounds/aqueduct-storyboard:r2/v1-into-the-valley/valley.jpg,none,,"the same picture as the still, as a 2400 px JPEG",no,0,0,,0.001,4,4,
+palette-52__v1-gpt-sunburst-palette,~/higgsfield-palette-52/r1/v1-gpt-sunburst-palette.png,none,,"painterly Greek courtyard, lanterns, shutters, stairs",no,0,0,,0.0,1,1,

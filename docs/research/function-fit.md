@@ -1,7 +1,5 @@
 # Research: visual choice follows element function; what happens when looks and function pull apart (design-vault#127, map #96)
 
-⚠ **Bound 13 Oct 2026 (#121): the C2 ruling (what white means) is R1 and the C1 shape ruling is R4 in `docs/research/principle-interactions.md`; both are Manta-only and go to lucmoseley/mantahostels. C1–C10 are each resolved or routed in that file's §3.**
-
 Date: 13 Oct 2026. Status: complete.
 
 Question (from #127): how must each visual choice follow from the function of its element? What does design psychology say occurs when looks and function pull apart? How does a critic check function fit, element by element, from a render?
@@ -266,9 +264,11 @@ Not a fault, recorded so a critic does not flag it:
 - The whole-card destination link (E21): one destination per card, a link-coloured label as the cue (`.dest-card__cta`), hover and focus states. This meets B8.1 and B2.3.
 - Coral as the one CTA per view, links on ink as white plus underline, the current nav link by weight, semantic chips with text partners, and "never colour alone" for errors (sheet §2-§3, §10).
 
+Each of C1–C10 is resolved or routed in `docs/research/principle-interactions.md` §3 (#121).
+
 What the list shows:
 1. **Colour has function rules; shape, fill and type do not.** Every Manta function rule is a colour rule (coral, semantic colours, links on ink). The top three pull-aparts are shape (C1), fill (C2) and structure (C3), where no rule reserves a signifier for its function.
-2. **The sheet's own signifier rule is broken by its own corpus** (C2). Either white means "tappable" and static blocks need another container, or white means "a card" and the sheet must stop calling it a tappable signal. That is a ruling for #121, not a research gap.
+2. **The sheet's own signifier rule is broken by its own corpus** (C2). Either white means "tappable" and static blocks need another container, or white means "a card" and the sheet must stop calling it a tappable signal. That is a Manta ruling, not a research gap: R1 in `docs/research/principle-interactions.md` (#121), owner lucmoseley/mantahostels.
 3. **The faults are mostly in the spec, not the build.** Built: C1 (guide chips, the pill button), C2 (guide chips), C6 (mobile nav), C9 (eyebrow). The rest are in the corpus or the roadmap, so they can be fixed before they ship.
 4. **Manta rule B16 "warm = act, cool = read" holds only if links count as "read".** Links are cool (`lagoon-text`) and they are interactive (N). The rule needs that condition stated: warm marks the action (A); navigation (N) takes the cool link signal plus an underline.
 
@@ -317,8 +317,8 @@ Verdicts as in #119: **ADOPT** = an outside source states it, point to it; **EXT
 
 | Rank | Gap | House holds now | Manta pull-aparts it would catch (Part C score) | Owner |
 |---|---|---|---|---|
-| 1 | No rule reserves a **shape** for a function: static facts take the button and filter-chip pill | Manta sheet §10 gives one pill to badges, tags and chips; impeccable silent | C1 (19.3), part of C2 | Manta sheet and #121; vault rule via ADOPT GOV.UK Tag |
-| 2 | The **fill signifier rule** ("white = tappable, always") is broken by the corpus; the house has no container rule (C) | Manta sheet §3 (rule); corpus contradicts it | C2 (15.3) | #121 ruling (narrow the rule, or change static containers) |
+| 1 | No rule reserves a **shape** for a function: static facts take the button and filter-chip pill | Manta sheet §10 gives one pill to badges, tags and chips; impeccable silent | C1 (19.3), part of C2 | Manta sheet, ruling R4 in `principle-interactions.md`; vault rule via ADOPT GOV.UK Tag |
+| 2 | The **fill signifier rule** ("white = tappable, always") is broken by the corpus; the house has no container rule (C) | Manta sheet §3 (rule); corpus contradicts it | C2 (15.3) | Manta ruling R1 in `principle-interactions.md` (narrow the rule, or change static containers) |
 | 3 | No **one target per surface** rule | None | C3 (15.0) | Vault rule (ADOPT HTML + NN/g); Manta listing card spec |
 | 4 | Links on light grounds rely on colour alone | #123 gap rank 1 covers it | C4 (13.3) | #123 (no new work here) |
 | 5 | No **element-by-element function walk** in the critic, and no beauty-bias guard | design-critique has neither; design-round checks purpose per candidate only | Would catch C1-C9 on a render; without it each depends on luck | design-critique (D1-D3) |
@@ -329,7 +329,6 @@ Verdicts as in #119: **ADOPT** = an outside source states it, point to it; **EXT
 | 10 | Decoration in the working area | mantahostels#3057-#3058 cover it | C10 (2.0) | Already owned |
 
 Rank 5 is placed by effect, not by score: it is the check that finds every other row on a new project.
-
 
 ## Answer
 

@@ -1,7 +1,5 @@
 # Research #205: the founder's notes N1–N19 against the house
 
-⚠ **Bound 15 Oct 2026 (#208): the ten research questions below are ruled. Filled: 1 to 9, with 7 one combined job and 9 without the optional mood-word scale positions (accepted); 10 (carry-over) goes to #210 (P8). The three house errors this note found are fixed by the spec. Only a dependency order is fixed (5 first, then 4 before 3); ranking waits for #210's full ledger. The warm-or-cool-text half of N19c is ruled out as unsourced.**
-
 Question (#205, map #202): for each note N1–N19, what do the house references and research hold? Is the note sound design theory? Is it covered, partly covered, or a gap?
 
 Language: ASD-STE100 Simplified Technical English.
@@ -78,7 +76,6 @@ Era words: **timeless**, or **era-bound** (tied to a period, which the entry dat
 - House: research only, `text-presentation.md` B2.1 (rank by weight first, then a colour step, then size; one cue down is enough), B2.2 (Butterick: bold or italic, never both, rarely; with a sans, bold). `principle-interactions.md:85` P24 (working-area emphasis by weight, size, position, not colour). impeccable `typeset.md:42` ("Combine size, weight, space, and tone"). Override `impeccable.md:85` (flat-type-hierarchy).
 - Not in a house reference. Verdict: **partly**.
 - Sound: yes. Era: timeless.
-
 
 ### N2. Section background colours, and a subtle gradient against a solid fill
 
@@ -383,12 +380,14 @@ Note: sibling ticket #204 asks this question in full ("What do designers call a 
 | N18 | Responsive: sidebars collapse | partly | gate `vault.layout`; `impeccable.md:77,89`; imp `adapt.md` | Sound (Android window size classes; WCAG 1.4.10) | E |
 | N19a | Rules record context | covered (form) | every Ref; Res principle-interactions | Sound; completeness is #206 | T |
 | N19b | Typeface traits drive size, spacing | gap | imp `typeset.md:21,49` | Sound (MDN font-size-adjust; Legge and Bigelow 2011) | T |
-| N19c | Weight by palette, crowding, warm/cool | partly (hue: gap, no evidence) | `impeccable.md:74`; Res B2.1 | Lightness: small effect; temperature: unsourced | T |
+| N19c | Weight by palette, crowding, warm/cool | partly (hue: gap, no evidence) | `impeccable.md:74`; Res B2.1 | Lightness: small effect; temperature: unsourced, so ruled out (#208) | T |
 | N19d | Research oversimplified? | finding | — | Main loss is research not carried into references (#123: ~20 principles researched, 2 in the reference) | — |
 
 Counts: covered 4 (N1a, N3a, N6, N19a) plus covered halves of N1b, N1d, N1e, N5, N9; partly 19; gap 6 (N1g, N2a, N2b, N4, N5 resting edges, N19b); not worth its own ticket: N8 (fold in).
 
-## Research questions named for the gaps (not filled here; #208 rules each: fill or accept)
+## Research questions named for the gaps
+
+#208 fills 1 to 9, with 7 one combined job and 9 without the optional mood-word scale positions; 10 is #210's P8. Order: 5 first, then 4 before 3; the coverage ledger (`docs/coverage-ledger.json`, #215) ranks the rest.
 
 1. Alignment and block width (N1f, N1h, N12): when a page centres, left- or right-aligns text, how a measure-limited column sits in a wide section, which alignment lines hold across sections.
 2. `text-wrap` (N1g): which roles take `balance` or `pretty`, and the cost.

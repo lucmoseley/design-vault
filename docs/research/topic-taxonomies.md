@@ -1,7 +1,5 @@
 # How design sources divide web and interface design into topics, and how to show a topic list is complete (#207, map #202)
 
-⚠ **Bound 15 Oct 2026 (#210): B2's method is adopted, with five source families plus current practitioner writing, an area stop at 90% of Chao2, and one held-out source coded blind as a fourth check. The ledger build is #215.**
-
 Status: complete (15 Oct 2026).
 
 Question: How do authoritative design sources divide web and interface design into topics? Which method gives confidence that a coverage list made from them is complete?
@@ -167,7 +165,6 @@ Source: `m3.material.io/sitemap.xml` (lastmod July 2026) gives the full tree. Th
 | Curricula (NN/g, IxDF, MIT) | G1–G2 | — | primary for own outline |
 | Lupton, Tidwell, Lidwell, Müller-Brockmann | G1–G2 as read here | not verified | weak (listings) |
 
-
 ## Part B. How to show a topic list is complete
 
 ### B1. Methods other fields use
@@ -180,13 +177,14 @@ Source: `m3.material.io/sitemap.xml` (lastmod July 2026) gives the full tree. Th
 
 ### B2. Recommendation: a systematic-review-style search with three stopping checks
 
-Use method 4 as the frame, with methods 2 and 3 as its stopping checks and the founder's notes as the known-item test set:
+Use method 4 as the frame, with methods 2 and 3 as its stopping checks and the founder's notes as the known-item test set. #210 adopted it with the changes below; the ledger it builds is `docs/coverage-ledger.json` (#215).
 
-1. **Frame (sources).** Choose sources in three independent families, so that the capture–recapture assumption is less wrong: (a) craft books at G3 (Refactoring UI, Butterick, Bringhurst; add one current web book); (b) design systems with G3 guidance (HIG, Atlassian, M3 component and token pages, GOV.UK, USWDS); (c) checklists and limits (WCAG 2.2, impeccable's rule list, Baymard for its areas). Curricula only as a G1 cross-check that no subject is missing.
+1. **Frame (sources).** Choose sources in five independent families plus current practitioner writing (2023 on), so that the capture–recapture assumption is less wrong: (a) craft books at G3 (Refactoring UI, Butterick, Bringhurst; add one current web book); (b) design systems with G3 guidance (HIG, Atlassian, M3 component and token pages, GOV.UK, USWDS); (c) checklists and limits (WCAG 2.2, impeccable's rule list, Baymard for its areas); (d) current web-platform docs (MDN, web.dev CSS guides, Baseline); (e) landing-page and marketing-page practice for section-level decisions. Curricula only as a G1 cross-check that no subject is missing.
 2. **Extract at G3.** One row per *decision*: property × element × context (for example "letter-spacing × heading × large size"). Record which sources name it (an incidence table, one column per source).
 3. **Stop check 1, saturation.** After a base of four sources, add sources in runs of two; stop when a run adds ≤5% new rows (Guest et al.). Randomise order once to see that the stop is not an artefact of order.
-4. **Stop check 2, Chao2 per area.** Compute Chao2 per area (typography, surfaces, colour, layout …). If S_obs is below about 80–90% of Chao2, the area is not saturated: add a source from a family not yet used. Report Chao2 as a floor.
+4. **Stop check 2, Chao2 per area.** Compute Chao2 per area (typography, surfaces, colour, layout …). If S_obs is below 90% of Chao2, the area is not saturated: add a source from a family not yet used. Report Chao2 as a floor.
 5. **Stop check 3, known-item recall.** Hold the founder's notes (N1–N19) and any later founder lead out of the search. After the search, score how many the list found. A miss means the frame lacks a source family (as #104's frame lacked G3 sources). Per Cochrane, finding them is necessary, not enough.
+6. **Stop check 4, a held-out source.** Hold one source out of the search and code it blind; a row it names that the list lacks is a miss.
 
 **Cost (estimate, from this ticket's own run):** reading one G3 source for two areas and coding its rows took about 15–25 minutes of agent work here (fetch tool, about 10–30k tokens per source). The full method, at about 12–15 sources × 8–10 areas, is about 120–150 source-area readings: **about 2–4 sessions of agent work (roughly 1.5–3M tokens), plus about 30 minutes of founder time** only for gaps the search leaves open (a taste or business fact). Books that are not online (Refactoring UI body text, Bringhurst, Lupton) cost more: their TOCs are online, their content is not, so G3 rows from them rest on the TOC line alone unless someone reads the book.
 
@@ -246,7 +244,7 @@ From the script (T = 4 sources):
 ## Answer
 
 1. **How sources divide the field.** Design systems divide it into foundations (type, colour, layout and spacing, elevation or materials, shape or radius, border, motion, icons, content, accessibility) and components. Craft books divide it into subjects and then into decisions. Curricula divide it into subjects only. **Only the craft books (Refactoring UI, Butterick, Bringhurst) and the bold-sentence design systems (Apple HIG, Atlassian's border and elevation pages) name single decisions** such as "letter-spacing of capitals", "greys don't have to be grey", "minimize the number of typefaces" or "whitespace or borders instead". #104 drew its ~20 areas at the curricula's level (G1), so it could not see decision-level gaps.
-2. **The method to use.** A systematic-review-style search: sources from at least three independent families (craft books, design systems with G3 guidance, checklists and current web-platform docs); extraction at one row per decision with an incidence column per source; three stopping checks — saturation (≤5% new rows per run of two sources, Guest et al. 2020), a Chao2 lower bound per area (stop when found rows reach about 80–90% of it), and recall of a held-out known-item set (the founder's notes), as Cochrane §4.4.11 does with known studies. Card sorting comes after, to group the list for loading, not to find gaps.
+2. **The method to use.** A systematic-review-style search: sources from five independent families (craft books, design systems with G3 guidance, checklists, current web-platform docs, landing-page practice) plus current practitioner writing; extraction at one row per decision with an incidence column per source; four stopping checks — saturation (≤5% new rows per run of two sources, Guest et al. 2020), a Chao2 lower bound per area (stop when found rows reach 90% of it), recall of a held-out known-item set (the founder's notes), as Cochrane §4.4.11 does with known studies, and one held-out source coded blind. Card sorting comes after, to group the list for loading, not to find gaps.
 3. **Its cost.** About 2–4 agent sessions (roughly 1.5–3M tokens) for 12–15 sources over 8–10 areas, and about 30 minutes of the founder's time for the gaps the search cannot settle. Books not online are the costly part: their TOCs give the decision names, but not their content.
 4. **The small test.** Four sources, two areas, 55 decision rows. It surfaced 6 of the 9 founder topics in full and 3 in part, and missed none outright. The parts it missed are the ring-vs-border choice at rest (N5), *when and how much* border opacity (N11, a token in HIG only) and the 2023–24 CSS wrap controls (N1). Chao2 marks surfaces as the unsaturated area (62% of the lower bound found), which is where the founder's partial hits sit.
 

@@ -1,9 +1,5 @@
 # mmm-infra site-look round (#8): what went wrong or was done again
 
-⚠ **Bound 13 Oct 2026 (#94): every finding here is ruled. S1 takes no change: the critic stays before the founder's first look (#94 Q1 (B), #95). S2 goes to #113 (a client-fit project gate written at set-up); S3, S4, S5 and S8 to #109; S6 to #112 and #78; S7 to #78; S9 to #112; S10 to #114; S12 to #77. P1–P4 went to #93. S11 is workflow-core's (workflow-core#924).**
-
-Owner of every proposed change below: #94 (which mmm-infra findings design-vault adopts) rules on each; a finding about judging a client's photos goes to #93 (photo method).
-
 Ticket: design-vault #91. Question: where did lucmoseley/mmm-infra#8 ("What should the new mmminfra.com look like?") miss what the founder wanted, or do work again, beyond design-vault #77 and #78?
 
 Sessions: `.claude3:631cff6d` (raw: `/home/lucmo/.claude3/projects/-home-lucmo-mmm-infra/631cff6d-e88f-4197-b29b-84f4621ba7d8.jsonl`, 5-8 Oct 2026). `.claude3:2b924dbd` (raw: `/home/lucmo/.claude3/projects/-home-lucmo-mmm-infra/2b924dbd-a1d5-4c61-af49-7abb54471191.jsonl`, 4 Oct 2026).
@@ -20,7 +16,6 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Evidence:** 631cff6d L75, L83, L600; 2b924dbd L64, L70; `git log 5d1f926 -1`.
 - **Confidence:** 95% (90-99%). The cache path names the sha.
 
-
 ### S1: Round one went through the full craft loop before the founder made a taste read
 - **What happened:** Round one (5 Oct, 07:44 to 14:07) sent about 33 agents before the founder saw a tile: 5 finish reviewers, 5 more after the first 5 stopped, 4 vault-sweep agents, 5 builders and 13 critic dispatches. Builders rebuilt v2 and v3 and fixed v1, v4 and v5. Then the founder rejected all five tiles on direction, not on craft.
 - **Founder's words:** "I don't really like any of them" (631cff6d L2986). v1: "childish feel... opposite of what a C-suite trusted lawyer wants to project"; v5: "boring" (631cff6d L3017).
@@ -30,6 +25,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md` §2.
 - **Already filed:** no. #79 covers precedent research before round one. #77 covers the round record. Neither covers the order "taste read first, craft pass second".
 - **Proposed change:** In round one of an identity or whole-site look, show the founder one static first screen per direction, with only a width check (#78), before any finish reviewer or critic runs. Run the critic loop only on the directions he keeps.
+- **Ruling:** no change: the critic stays before the founder's first look (#94 Q1 (B), #95).
 - **Confidence:** 70% (55%–80%) that this order would have saved most of the 33 runs. It moves down if round-two data shows the critics' craft fixes changed which tiles he chose.
 
 ### S2: The critics had brand and audience signal but did not rank it first
@@ -41,6 +37,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-critique/SKILL.md` and `plugin/skills/design-round/SKILL.md` §1 (brief).
 - **Already filed:** no. #77 asks the round record to trace each candidate to the client's wishes. That is the record side. This is the critic side.
 - **Proposed change:** Add a "client fit" gate as step one of design-critique: audience seniority and register, the client's own colours and marks, and any standing rule like the advisor test. A fail stops the craft review for that tile. An open client question goes into the round record as a risk, not out as "not a defect".
+- **Ruling:** taken up in #113, as a client-fit project gate written at set-up.
 - **Confidence:** 65% (50%–80%) that a fit gate first would have stopped v1, v2 and v3 before the founder saw them. A full read of all 13 round-one critic reports would move it.
 
 ### S3: The critic loop had no stop rule and went down to sub-pixel findings
@@ -52,6 +49,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-critique/SKILL.md`.
 - **Already filed:** no (searched design-vault for critic loop, convergence; workflow-core#1545 asks how many reviewer runs a code change needs, which is the same question for code, not for design).
 - **Proposed change:** A re-check passes when it finds no P0 or P1. Stop at the first such pass, or after two re-checks, and list what is left as P2 in the round record. A measurement quoted to the founder comes from a script that a test or a second method has checked.
+- **Ruling:** taken up in #109.
 - **Confidence:** 75% (60%–85%) that a P1 floor would have cut the re-checks by half with no change to his choice. It moves down if a sub-pixel finding changed a founder verdict.
 
 ### S4: The critics had no list of stand-ins, so they judged placeholders
@@ -63,6 +61,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-critique/SKILL.md` (critic input), with #77.
 - **Already filed:** partly, #77 (record side only).
 - **Proposed change:** Add to #77: the same placeholder list goes into every critic prompt, and a critic finding against a listed stand-in is out of scope.
+- **Ruling:** taken up in #109.
 - **Confidence:** 80% (70%–90%) that the list would have removed the Gelasio question. The polish on placeholder photos is a judgement call; 60% (40%–75%) that the list would have stopped it.
 
 ### S5: A critic finding on one tile was not checked on the other tiles
@@ -74,6 +73,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md` (critique step).
 - **Already filed:** no.
 - **Proposed change:** After each critic pass, sort findings into "this tile only" and "shared rule". Apply a shared-rule finding to every tile in the round before the next pass.
+- **Ruling:** taken up in #109.
 - **Confidence:** 60% (45%–75%). Only one clear case was found. A count across all 34 round-two critic reports would move it.
 
 ### S6: Builders drew the logo too large, and no canonical lockup existed
@@ -85,6 +85,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md` §1 (brief): an identity round starts with a lockup sheet. The mmm-infra lockup itself is mmm-infra's.
 - **Already filed:** no.
 - **Proposed change:** Where a client has a logo, the brief carries one lockup file and its rules, and the width check (#78) also checks the lockup ratio and clear space.
+- **Ruling:** taken up in #112, #78.
 - **Confidence:** 70% (55%–85%) that a lockup file would have stopped the size errors.
 
 ### S7: Finish reviewers got screenshots older than the pages
@@ -96,6 +97,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md` (render step), or the width-sweep script that #78 will add.
 - **Already filed:** no. It can fold into #78: the sweep makes the screenshots, so they are new when the critics start.
 - **Proposed change:** The reviewer dispatch shows each screenshot's time and each page's last change. A screenshot older than its page stops the dispatch.
+- **Ruling:** taken up in #78.
 - **Confidence:** 85% (75%–95%) that this check stops the same loss.
 
 ### S8: A critic made a new test outside the brief, and the result went to the founder
@@ -107,6 +109,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-critique/SKILL.md`.
 - **Already filed:** no.
 - **Proposed change:** The critic prompt names its tests. A critic that finds a problem outside them writes it as a note for the build, not as a breach. A build matter does not go to the founder in a design round.
+- **Ruling:** taken up in #109.
 - **Confidence:** 60% (40%–75%). One case only.
 
 ### S9: The tiles dressed the page in the object's props, and earlier rounds on a sibling ticket were not read
@@ -118,6 +121,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md` §1 and §2.
 - **Already filed:** partly. #79 asks for precedent research before round one (outside work). Reading the project's own earlier rounds is not in #79.
 - **Proposed change:** The brief step reads every round record on the project's other tickets and copies the founder's verdicts into Client values. A direction card that comes from one client idea says which part the idea was for.
+- **Ruling:** taken up in #112.
 - **Confidence:** 55% (40%–70%) that this would have changed round one. It is a judgement about taste, so the range is wide.
 
 ### S10: The brief had no client-effort limits, so the round-three plan assumed a photo shoot
@@ -129,6 +133,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md` §1 (brief).
 - **Already filed:** no.
 - **Proposed change:** Add a "Client gives" line to the brief: assets on hand, assets he will make, and his time per round. A plan that needs more than the line says is a question for the founder before the plan is written.
+- **Ruling:** taken up in #114.
 - **Confidence:** 80% (65%–90%) that the line would have caught it.
 
 ### S11: The same question went to the founder about eight times while he was away
@@ -140,6 +145,7 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** workflow-core.
 - **Already filed:** workflow-core#924 (filed 8 Oct from a later session, closed).
 - **Proposed change:** none here.
+- **Ruling:** taken up in workflow-core#924.
 - **Confidence:** 90% (80%–95%) that it is the same fault.
 
 ### S12: The local preview server died during a critic pass
@@ -151,9 +157,10 @@ Already filed from this session, so not found again here: #77 (round record), #7
 - **Owner of the fix:** design-vault `plugin/skills/design-round/SKILL.md`.
 - **Already filed:** already filed (#77), which asks for a viewing link that works.
 - **Proposed change:** none beyond #77. Add to #77 that critics check the server is up before they start.
+- **Ruling:** taken up in #77.
 - **Confidence:** 70% (55%–85%).
 
-### P1–P4: The #22 photo work inside this session (route to the photo-method ticket, g1)
+### P1–P4: The #22 photo work inside this session (ruled in #93)
 These four are inside 631cff6d (6 to 8 Oct). The t3 session list does not include them.
 - **P1: The shortlist had a duplicate.** The session showed "five" photos. Founder: "I believe 3 and 6 are the same photo" (631cff6d L8792). No dedup step. Owner: the photo method (g1). Already filed: no. Confidence 85% (75%–95%).
 - **P2: An untested judgement became an ask to Mark.** Blind scorers called a clean edit "unrealistic", and the session drafted email asks to Mark from that. Founder: "Surely these tasks are trivial?" (631cff6d L8894). The session said that the judgement was not tested. Owner: g1. Already filed: no. Confidence 75% (60%–85%).
