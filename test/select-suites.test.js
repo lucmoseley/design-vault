@@ -127,7 +127,7 @@ test("a file only the fast checks read is recognised, so it runs no Python suite
   }
 });
 
-test("a script joined on from a directory a test named runs that test's suite: check-dom.test.py's os.path.join(SCRIPTS, \"check-dom.py\") (#486)", () => {
+test("a script joined on from a directory a test named runs that test's suite (#486)", () => {
   const dom = ["python3 test/crash-exit.test.py", "python3 test/check-load-files.test.py", "python3 test/check-dom.test.py"];
   for (const file of ["check-dom.py", "check-dom.table"]) {
     assert.equal(plan(SUITES, [`${SCRIPTS}/${file}`]).all, undefined, file);
@@ -354,7 +354,7 @@ test("a deleted path a suite still imports or names runs that suite: test/child.
   }
 });
 
-test("a commit renaming a table and its reader's name for it runs the reader's suites, not every suite (#486)", () => {
+test("a commit renaming a table and its reader's name for it runs the reader's suites (#486)", () => {
   const reader = path.join(repo, SCRIPTS, "check-dom.py");
   git(["mv", `${SCRIPTS}/check-dom.table`, `${SCRIPTS}/check-dom-rows.table`]);
   fs.writeFileSync(reader, fs.readFileSync(reader, "utf8").replaceAll("check-dom.table", "check-dom-rows.table"));
