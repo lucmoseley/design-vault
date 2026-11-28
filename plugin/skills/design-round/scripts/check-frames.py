@@ -172,7 +172,7 @@ async ({ quiet, cap, shown, timeline }) => {
 
 SCRIPTED_JS = (
     r"""
-({ frames, span, shown }) => {
+({ shown }) => {
   """
     + flow.LABEL_JS
     + flow.LOOP_JS
@@ -181,7 +181,7 @@ SCRIPTED_JS = (
   const f = window.__flow;
   f.scan();
   f.stopped = true;
-  return drawn(f, { frames, span, shown, morphs: true });
+  return drawn(f, { shown, morphs: true });
 }
 """
 )
@@ -421,8 +421,6 @@ def open_page(browser, load, scale, *, device=None, timeline=None):
     reasons = prep["reasons"] + page.evaluate(
         SCRIPTED_JS,
         {
-            "frames": flow.REWRITE_FRAMES,
-            "span": flow.REWRITE_SPAN_MS,
             "shown": flow.NAMES_SHOWN,
         },
     )
