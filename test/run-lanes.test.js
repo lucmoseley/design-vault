@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { after, describe, test } = require("node:test");
+const { fakeMeminfo, fakePs, idleMachine, meminfoLine, psLines, viaReaders } = require("./lane-fakes");
 
 const LANES = path.join(__dirname, "run-lanes.sh");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "run-lanes-"));
@@ -55,26 +56,15 @@ os.remove(os.path.join(run, name))
 sys.exit(code)
 `);
 
-const meminfo = (mb) => {
-  const file = path.join(dir, `meminfo-${mb}`);
-  if (!fs.existsSync(file)) fs.writeFileSync(file, `MemTotal:       10162176 kB\nMemAvailable:   ${mb * 1024} kB\n`);
-  return file;
-};
-const ps = (name, lines) => {
-  const file = path.join(dir, `ps-${name}`);
-  fs.writeFileSync(file, `#!/bin/sh\ncat <<'EOF'\n${lines.join("\n")}\nEOF\n`, { mode: 0o755 });
-  return file;
-};
-const QUIET = ps("quiet", []);
-const AMPLE = 8000;
+const meminfo = (mb) => fakeMeminfo(dir, mb);
+const ps = (name, args) => fakePs(dir, name, args);
 const keptFile = (times, suite) => path.join(times, spawnSync("cksum", { input: suite, encoding: "utf8" }).stdout.split(" ")[0]);
 
-const UNLIMITED = fs.mkdtempSync(path.join(dir, "cgroup-"));
-const UNSEATED = { WFC_GATE_SEAT: "", VAULT_CGROUP: UNLIMITED, VAULT_LANE_WAIT_S: "" };
+const IDLE = idleMachine(dir);
 
 let runs = 0;
 function spawnLanes(args, env, { cwd } = {}) {
-  const full = { ...process.env, ...UNSEATED, VAULT_SUITE_LANES: "", VAULT_SUITE_TIMES: "", VAULT_SUITE_BUDGET: "", CI: "1", ...env };
+  const full = { ...process.env, ...IDLE, CI: "1", ...env };
   for (const key of Object.keys(full)) if (full[key] === undefined) delete full[key];
   return spawn("bash", [LANES, ...args], { cwd, env: full });
 }
@@ -100,7 +90,7 @@ async function lanes(n, { env = {}, red = [], psFor, own, peak } = {}) {
     return copy;
   };
   const suites = Array.from({ length: n }, (_, i) => `python3 ${fake(i)} ${d} s${i} ${red.includes(i) ? 1 : 0}`);
-  const proc = await run(suites, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, LANE_PEERS: String(peak ?? 1), ...env });
+  const proc = await run(suites, { LANE_PEERS: String(peak ?? 1), ...env });
   assert.equal(proc.status, red.length ? 1 : 0, proc.stderr + proc.stdout);
   const counts = fs.readFileSync(path.join(d, "peaks"), "utf8").trim().split("\n").map((l) => Number(l.split(" ")[0]));
   if (peak !== undefined) assert.equal(Math.max(...counts), peak);
@@ -124,8 +114,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
   test("a red suite that writes its failing files to VAULT_FAILED_FILES is named by those alone", async () => {
     const writer = path.join(dir, "writer.sh");
     fs.writeFileSync(writer, 'code=$1; shift; printf "%s\\n" "$@" >>"$VAULT_FAILED_FILES"; exit "$code"\n');
-    const proc = await run([`sh ${writer} 1 test/a.test.js test/b.test.js`, `sh ${writer} 0 test/green.test.js`],
-      { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET });
+    const proc = await run([`sh ${writer} 1 test/a.test.js test/b.test.js`, `sh ${writer} 0 test/green.test.js`]);
     assert.equal(proc.status, 1, proc.stderr);
     assert.equal(proc.stderr, "FAIL test/a.test.js\nFAIL test/b.test.js\n");
   });
@@ -134,7 +123,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     const two = path.join(dir, "two.test.py");
     fs.writeFileSync(two, "");
     const several = `sh -c false ${FAKE} ${two}`;
-    const proc = await run(["false", several], { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET });
+    const proc = await run(["false", several]);
     assert.equal(proc.status, 1);
     assert.deepEqual(proc.stderr.trim().split("\n").sort(), ["RED  false", `RED  ${several}`]);
   });
@@ -164,10 +153,10 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     assert.match(proc.stderr, /VAULT_SUITE_LANES wants 1 or more — got '0'/);
   });
 
-  const THREE = ["  11 python3 -m pytest", "  12 node --test", "  13 node /r/node_modules/.bin/vitest run"];
+  const THREE = ["python3 -m pytest", "node --test", "node /r/node_modules/.bin/vitest run"];
   for (const [others, lines, n, peak] of [
-    ["one", ["  11 /usr/bin/python3 test/check-flow.test.py"], 3, 2],
-    ["two", ["  11 python3 test/check-flow.test.py", "  12 /home/u/.nvm/bin/node --test"], 3, 1],
+    ["one", ["/usr/bin/python3 test/check-flow.test.py"], 3, 2],
+    ["two", ["python3 test/check-flow.test.py", "/home/u/.nvm/bin/node --test"], 3, 1],
   ]) {
     test(`with ${others} suite(s) running elsewhere on the machine, ${peak} of this run's go at once`, async () => {
       await lanes(n, { env: { VAULT_PS: ps(others, lines) }, peak });
@@ -176,13 +165,13 @@ describe("run-lanes.sh", { concurrency: true }, () => {
 
   test("a checker, a node --test child, a wrapper shell and a vitest list are no suites", async () => {
     const busy = ps("busy", [
-      "  11 python3 plugin/skills/design-round/scripts/check-access.py page.html",
-      "  12 /usr/bin/node --test-concurrency=0 --test-isolation=process test/fall.test.js",
-      '  13 bash -c python3 test/check-flow.test.py',
-      "  14 node --testing",
-      "  15 node /r/node_modules/.bin/vitest list --json",
-      "  16 bash -c node_modules/.bin/vitest run",
-      "  17 timeout 300 node_modules/.bin/vitest run",
+      "python3 plugin/skills/design-round/scripts/check-access.py page.html",
+      "/usr/bin/node --test-concurrency=0 --test-isolation=process test/fall.test.js",
+      "bash -c python3 test/check-flow.test.py",
+      "node --testing",
+      "node /r/node_modules/.bin/vitest list --json",
+      "bash -c node_modules/.bin/vitest run",
+      "timeout 300 node_modules/.bin/vitest run",
     ]);
     await lanes(3, { env: { VAULT_PS: busy }, peak: 3 });
   });
@@ -210,7 +199,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
     test(`where ${why}, the first suite waits for its rung too, and the run is refused at VAULT_LANE_WAIT_S`, async () => {
       const d = path.join(dir, `held-${runs++}`);
       fs.mkdirSync(d);
-      const proc = await run([`python3 ${FAKE} ${d} s0 0`], { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, ...env, VAULT_LANE_WAIT_S: "0" });
+      const proc = await run([`python3 ${FAKE} ${d} s0 0`], { ...env, VAULT_LANE_WAIT_S: "0" });
       assert.equal(proc.status, 1, proc.stderr);
       assert.equal(fs.existsSync(path.join(d, "peaks")), false, "a suite ran");
       assert.match(proc.stdout, /waiting up to 0 s for the machine to run fewer suites or free more memory/);
@@ -227,10 +216,10 @@ describe("run-lanes.sh", { concurrency: true }, () => {
 echo >>'${reads}'
 [ "$(wc -l <'${reads}')" -gt 2 ] && exit 0
 cat <<'EOF'
-${THREE.join("\n")}
+${psLines(THREE)}
 EOF
 `);
-    const proc = await run([`python3 ${FAKE} ${d} s0 0 0.1`], { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: freeing });
+    const proc = await run([`python3 ${FAKE} ${d} s0 0 0.1`], { VAULT_PS: freeing });
     assert.equal(proc.status, 0, proc.stderr);
     assert.ok(fs.existsSync(path.join(d, "peaks")), "the suite never ran");
   });
@@ -354,7 +343,7 @@ EOF
     const seed = { short: 5000, long: 30000, red: 77000 };
     for (const [name, secs] of Object.entries(seed)) fs.writeFileSync(file(suite(name, name === "red" ? 1 : 0)), `${secs}\n`);
     const given = [suite("short"), suite("red", 1), suite("new"), suite("long")];
-    const proc = await run(given, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, VAULT_SUITE_LANES: "1", VAULT_SUITE_TIMES: kept });
+    const proc = await run(given, { VAULT_SUITE_LANES: "1", VAULT_SUITE_TIMES: kept });
     assert.equal(proc.status, 1, proc.stderr);
     const ended = [...proc.stdout.matchAll(/^== python3 \S+ \S+ (\w+) /gm)].map((m) => m[1]);
     assert.deepEqual(ended, ["new", "red", "long", "short"]);
@@ -370,7 +359,7 @@ EOF
     const d = path.join(dir, "untimed");
     fs.mkdirSync(d);
     const given = ["b", "a", "c"].map((n) => `python3 ${FAKE} ${d} ${n} 0`);
-    const proc = await run(given, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, VAULT_SUITE_LANES: "1", VAULT_SUITE_TIMES: "" });
+    const proc = await run(given, { VAULT_SUITE_LANES: "1", VAULT_SUITE_TIMES: "" });
     assert.deepEqual([...proc.stdout.matchAll(/^== python3 \S+ \S+ (\w+) /gm)].map((m) => m[1]), ["b", "a", "c"]);
   });
 
@@ -386,7 +375,7 @@ EOF
       given.push(suite(name));
     }
     if (untimed) given.push(suite("new"));
-    return run(given, { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, VAULT_SUITE_TIMES: times, VAULT_SUITE_BUDGET: String(budget), ...env })
+    return run(given, { VAULT_SUITE_TIMES: times, VAULT_SUITE_BUDGET: String(budget), ...env })
       .then((proc) => ({ ...proc, ran: fs.existsSync(path.join(d, "peaks")) }));
   }
 
@@ -406,7 +395,7 @@ EOF
   test("the budget is judged on the lanes open at the start, longest first onto the one that frees first", async () => {
     const three = await underBudget(8);
     assert.equal(three.status, 0, three.stderr);
-    const two = await underBudget(8, { VAULT_PS: ps("one-budget", ["  11 python3 test/check-flow.test.py"]) });
+    const two = await underBudget(8, { VAULT_PS: ps("one-budget", ["python3 test/check-flow.test.py"]) });
     assert.equal(two.status, 1, two.stderr);
     assert.equal(two.ran, false);
     assert.match(two.stderr, /on the 2 lane\(s\) the machine opens now end at about 9 s, past VAULT_SUITE_BUDGET's 8 s/);
@@ -434,7 +423,7 @@ EOF
       const d = path.join(dir, `stopped-${signal}`);
       fs.mkdirSync(d);
       const child = spawnLanes(["a", "b"].map((n) => `python3 ${FAKE} ${d} ${n} 0`),
-        { VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, LANE_SLEEP: String(5 * (START_S + GONE_S)), LANE_KID: "1" });
+        { LANE_SLEEP: String(5 * (START_S + GONE_S)), LANE_KID: "1" });
       t.after(() => spawnSync("pkill", ["-KILL", "-f", d]));
       const kids = path.join(d, "kids");
       const alive = () => spawnSync("pgrep", ["-f", d], { encoding: "utf8" }).stdout.trim().split("\n")
@@ -475,7 +464,7 @@ EOF
       return d;
     };
     const ROOT = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: __dirname, encoding: "utf8" }).stdout.trim();
-    const quiet = (core) => ({ VAULT_MEMINFO: meminfo(AMPLE), VAULT_PS: QUIET, CI: "", WORKFLOW_CORE_DIR: core });
+    const reporting = (core) => ({ CI: "", WORKFLOW_CORE_DIR: core });
 
     for (const red of [false, true]) {
       test(`a ${red ? "red" : "green"} run hands the report each file's own seconds, after the suites' output, and exits as its suites ${red ? "failed" : "passed"}`, async () => {
@@ -485,7 +474,7 @@ EOF
         fs.writeFileSync(one, `import sys\nsys.exit(${red ? 1 : 0})\n`);
         const many = selfTimingSuite(d, "many", ["test/a.test.js\t1.250", "test/b.test.js\t0.040"]);
         const proc = await run([`python3 ${one}`, many, "true"],
-          quiet(core));
+          reporting(core));
         assert.equal(proc.status, red ? 1 : 0, proc.stderr);
         assert.equal(proc.stderr.includes(`FAIL ${one}`), red);
         const { root, timings } = JSON.parse(fs.readFileSync(called, "utf8"));
@@ -501,7 +490,7 @@ EOF
     test("with CI set the report is not called", async () => {
       const d = scratch("ci");
       const { core, called } = coreStandIn("ci");
-      const proc = await run([selfTimingSuite(d, "many", ["test/a.test.js\t12"])], { ...quiet(core), CI: "true" });
+      const proc = await run([selfTimingSuite(d, "many", ["test/a.test.js\t12"])], { ...reporting(core), CI: "true" });
       assert.equal(proc.status, 0, proc.stderr);
       assert.equal(fs.existsSync(called), false);
       assert.doesNotMatch(proc.stdout, /STAND-IN|run-cost/);
@@ -512,7 +501,7 @@ EOF
         const d = scratch(`broken-${code}`);
         const { core } = coreStandIn(`broken-${code}`, { throws: true });
         const many = selfTimingSuite(d, "many", ["test/a.test.js\t12"], code);
-        const proc = await run([many], quiet(core));
+        const proc = await run([many], reporting(core));
         assert.equal(proc.status, code, proc.stderr);
         assert.equal(proc.stdout.match(/run-cost/g).length, 1);
         assert.match(proc.stdout, /test\/run-lanes\.sh: workflow-core's run-cost report would not run \(at load\); the suites' verdict stands \(#370\)\.\n$/);
@@ -529,10 +518,52 @@ EOF
       git("commit", "-qm", "base");
       fs.writeFileSync(path.join(d, "new.test.py"), "");
       const proc = await run([selfTimingSuite(d, "many", ["new.test.py\t12.5", "old.test.py\t11"])],
-        { ...quiet(undefined), WFC_SHARD_TIMINGS: path.join(d, "absent.csv") }, { cwd: d });
+        { ...reporting(undefined), WFC_SHARD_TIMINGS: path.join(d, "absent.csv") }, { cwd: d });
       assert.equal(proc.status, 0, proc.stderr);
       assert.match(proc.stdout, /^== bash .*many\.test\.sh \(\d+ s\)\nRUN COST: new\.test\.py took 12\.5 s, over the 10 s budget — new since HEAD: /);
       assert.doesNotMatch(proc.stdout, /old\.test\.py/);
+    });
+  });
+
+  describe("the fakes against the real ps and /proc/meminfo, through run-lanes' own readers (#629)", () => {
+    test("the kernel's MemAvailable line is the fake's, and each reads as its kB over 1024", () => {
+      const real = fs.readFileSync("/proc/meminfo", "utf8");
+      const snapshot = path.join(dir, "meminfo-real");
+      fs.writeFileSync(snapshot, real);
+      const line = real.split("\n").find((l) => l.startsWith("MemAvailable:"));
+      const kb = Number(line.match(/(\d+) kB$/)[1]);
+      assert.equal(meminfoLine("MemAvailable", kb), line);
+      const mb = Math.floor(kb / 1024);
+      for (const file of [snapshot, meminfo(mb)]) {
+        const r = viaReaders("available_mb", { VAULT_MEMINFO: file });
+        assert.equal(r.status, 0, r.stderr);
+        assert.equal(r.stdout, `${mb}\n`, file);
+      }
+    });
+
+    test("real ps lines for a suite and for a script that is none count as the fake's lines for the same args", async (t) => {
+      const probe = path.join(dir, "contract");
+      fs.mkdirSync(probe);
+      const files = ["held.test.py", "held.py"].map((f) => path.join(probe, f));
+      for (const f of files) fs.writeFileSync(f, "import time\ntime.sleep(60)\n");
+      const kids = files.map((f) => spawn("python3", [f], { stdio: "ignore" }));
+      t.after(() => kids.forEach((k) => k.kill()));
+      const args = files.map((f) => `python3 ${f}`);
+      const shown = () => kids.every((k, i) =>
+        spawnSync("ps", ["-o", "args=", "-p", String(k.pid)], { encoding: "utf8" }).stdout.trim() === args[i]);
+      // guess #629: time for two python3 children to exec on a loaded machine
+      for (let i = 0; i < 100 && !shown(); i++) await new Promise((r) => setTimeout(r, 100));
+      assert.ok(shown(), "the held processes never showed their args to ps");
+      const realPs = path.join(probe, "ps");
+      fs.writeFileSync(realPs, `#!/bin/sh\nps "$@" | grep -F '${probe}/held'\n`, { mode: 0o755 });
+      for (const psBin of [realPs, ps("contract", args)]) {
+        const r = viaReaders("others", { VAULT_PS: psBin });
+        assert.equal(r.status, 0, r.stderr);
+        assert.equal(r.stdout, "1\n", psBin);
+      }
+      const whole = viaReaders("others");
+      assert.equal(whole.status, 0, whole.stderr);
+      assert.ok(Number(whole.stdout) >= 1, `the whole of ps counted ${whole.stdout.trim()} suites`);
     });
   });
 });
