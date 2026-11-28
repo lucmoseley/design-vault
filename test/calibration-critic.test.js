@@ -9,7 +9,7 @@ const { runInProcess } = require("./core-run-in-process.js");
 const ROOT = path.join(__dirname, "..");
 const SCRIPT = path.join(ROOT, "calibration-critic.js");
 const FIXTURES = path.join(__dirname, "fixtures", "calibration");
-const STUB = path.join(FIXTURES, "stub-claude", "claude");
+const CLAUDE = path.join(__dirname, "claude-fake.js");
 
 const scratch = [];
 after(() => {
@@ -38,10 +38,14 @@ function packedRound() {
   return { dir, round: path.join(dir, "packet", "mmm-infra.hero-r1") };
 }
 
-function run(args, env = {}) {
+function run(args, { reply, reads: canaryReads = "confined", version } = {}) {
   const dir = tmp("calibration-critic-run-");
   const log = path.join(dir, "calls.jsonl");
-  const result = runInProcess(SCRIPT, args, { env: { ...process.env, WFC_CLAUDE_BIN: STUB, STUB_LOG: log, ...env } });
+  const replies = path.join(dir, "replies.json");
+  const critics = reply === undefined ? [] : [{ text: reply }];
+  fs.writeFileSync(replies, JSON.stringify(args.includes("--round") ? critics : [{ reads: canaryReads }, { reads: canaryReads }, ...critics]));
+  const env = { ...process.env, WFC_CLAUDE_BIN: CLAUDE, FAKE_CLAUDE_LOG: log, FAKE_CLAUDE_REPLIES: replies, ...(version ? { FAKE_CLAUDE_VERSION: version } : {}) };
+  const result = runInProcess(SCRIPT, args, { env });
   const calls = fs.existsSync(log) ? fs.readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l)) : [];
   return { ...result, calls, dir };
 }
@@ -52,20 +56,18 @@ const reply = {
   principles: { "v1-arches": { 1: answer("no") }, "v2-slow": { 1: answer("yes") } },
   leader: { candidate: "v2-slow", turned_on: "the conversion lens" },
 };
-function replyFile(dir, data, fence = false) {
-  const file = path.join(dir, "reply.txt");
+function replyText(data, fence = false) {
   const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-  fs.writeFileSync(file, fence ? "```json\n" + text + "\n```\n" : text);
-  return file;
+  return fence ? "```json\n" + text + "\n```\n" : text;
 }
 
 test("a critic runs confined, in its round's folder, and its answers are written with the run beside them (#168)", () => {
   const { dir, round } = packedRound();
   const out = path.join(dir, "answers", "mmm-infra.hero-r1", "critic-a.json");
-  const result = run(["--round", round, "--model", "claude-opus-5-5", "--out", out], { STUB_REPLY: replyFile(dir, reply, true) });
+  const result = run(["--round", round, "--model", "claude-opus-5-5", "--out", out], { reply: replyText(reply, true) });
   assert.equal(result.status, 0, result.stderr);
   const [version, child] = [result.calls.length, result.calls.at(-1)];
-  assert.equal(version, 1, "--version runs on the stub without logging, so the one call logged is the critic");
+  assert.equal(version, 1, "--version runs on the fake without logging, so the one call logged is the critic");
   assert.equal(child.cwd, fs.realpathSync(round));
   for (const flag of ["--restricted", "--safe-mode", "--strict-mcp-config", "--no-session-persistence"]) assert.ok(child.args.includes(flag), flag);
   const value = (flag) => child.args[child.args.indexOf(flag) + 1];
@@ -95,13 +97,13 @@ test("answers that leave out, add or misspell an answer are refused and the repl
     ["I would lead with v2-slow.", /the critic's reply is not JSON/],
   ];
   for (const [data, message] of cases) {
-    const result = run(["--round", round, "--model", "m", "--out", out], { STUB_REPLY: replyFile(dir, data) });
+    const result = run(["--round", round, "--model", "m", "--out", out], { reply: replyText(data) });
     assert.equal(result.status, 1, JSON.stringify(data));
     assert.match(result.stderr, message);
     assert.equal(fs.existsSync(out), false);
     assert.ok(fs.existsSync(`${out}.reply.txt`));
   }
-  const noLeader = run(["--round", round, "--model", "m", "--out", out], { STUB_REPLY: replyFile(dir, { ...reply, leader: { candidate: null, turned_on: "none carries the brief" } }) });
+  const noLeader = run(["--round", round, "--model", "m", "--out", out], { reply: replyText({ ...reply, leader: { candidate: null, turned_on: "none carries the brief" } }) });
   assert.equal(noLeader.status, 0, noLeader.stderr);
 });
 
@@ -132,7 +134,7 @@ test("a canary read, a control unread, or a canary no control could see fails th
     ["no-add-dir", /canary inconclusive: the child given the canary's folders did not read it/],
   ];
   for (const [mode, message] of cases) {
-    const result = run(["--canary", "--model", "m", "--out", out], { STUB_MODE: mode });
+    const result = run(["--canary", "--model", "m", "--out", out], { reads: mode });
     assert.equal(result.status, 1, mode);
     assert.match(result.stderr, message);
     assert.equal(JSON.parse(fs.readFileSync(out, "utf8")).held, false);
@@ -153,7 +155,7 @@ test("bad usage, a folder that is no round, or a claude with no version is a usa
     [run(["--round", round, "--model", "m", "--out", out, "--seed", "1"]), /Unknown option '--seed'/],
     [run(["--round", dir, "--model", "m", "--out", out]), /holds no gate-list/],
     [run(["--round", bare, "--model", "m", "--out", out]), /holds no copy-bans/],
-    [run(["--canary", "--model", "m", "--out", out], { STUB_VERSION: "unknown" }), /claude --version printed no version/],
+    [run(["--canary", "--model", "m", "--out", out], { version: "unknown" }), /claude --version printed no version/],
   ];
   for (const [result, message] of cases) {
     assert.equal(result.status, 2, result.stderr);
@@ -164,14 +166,14 @@ test("bad usage, a folder that is no round, or a claude with no version is a usa
 test("--packet runs the canary, then three critics on each round folder; a canary not held runs no critic", () => {
   const { dir, round } = packedRound();
   const answers = path.join(dir, "answers");
-  const result = run(["--packet", path.dirname(round), "--model", "m", "--answers", answers], { STUB_REPLY: replyFile(dir, reply) });
+  const result = run(["--packet", path.dirname(round), "--model", "m", "--answers", answers], { reply: replyText(reply) });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.calls.length, 5, "the canary's two children, then three critics");
   assert.ok(result.calls.slice(2).every((c) => c.cwd === fs.realpathSync(round)));
   assert.equal(JSON.parse(fs.readFileSync(path.join(answers, "canary.json"), "utf8")).held, true);
   for (const c of ["a", "b", "c"]) assert.equal(JSON.parse(fs.readFileSync(path.join(answers, "mmm-infra.hero-r1", `critic-${c}.json`), "utf8")).run.round, "mmm-infra.hero-r1");
 
-  const leaked = run(["--packet", path.dirname(round), "--model", "m", "--answers", path.join(dir, "leaked")], { STUB_MODE: "leak", STUB_REPLY: replyFile(dir, reply) });
+  const leaked = run(["--packet", path.dirname(round), "--model", "m", "--answers", path.join(dir, "leaked")], { reads: "leak", reply: replyText(reply) });
   assert.equal(leaked.status, 1);
   assert.equal(leaked.calls.length, 2, "no critic runs once the canary is read");
 });
@@ -179,7 +181,7 @@ test("--packet runs the canary, then three critics on each round folder; a canar
 test("--packet runs a refused critic once more, and stops where it is refused twice", () => {
   const { dir, round } = packedRound();
   const answers = path.join(dir, "answers");
-  const result = run(["--packet", path.dirname(round), "--model", "m", "--answers", answers], { STUB_REPLY: replyFile(dir, { ...reply, leader: null }) });
+  const result = run(["--packet", path.dirname(round), "--model", "m", "--answers", answers], { reply: replyText({ ...reply, leader: null }) });
   assert.equal(result.status, 1);
   assert.equal(result.calls.length, 4, "the canary's two children, then critic a twice");
   assert.match(result.stderr, /leader is not/);
