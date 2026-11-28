@@ -317,7 +317,7 @@ test("--model reaches the claude -p call for every image, and a run without it a
   assert.equal(sonnet.status, 0, out(sonnet));
   assert.deepEqual([...haiku.calls, ...sonnet.calls].map((call) => call.model), ["haiku", "haiku", "sonnet", "sonnet"]);
   for (const [run, model] of [[haiku, "haiku"], [sonnet, "sonnet"]])
-    assert.deepEqual(run.stdout.split("\n").filter((line) => line.includes("cost")), [`  cost $0.010 on claude-${model}`, `  cost $0.010 on claude-${model}`]);
+    assert.deepEqual(run.stdout.split("\n").filter((line) => line.includes("cost")), [`  cost $0.010 on claude-${model}-9`, `  cost $0.010 on claude-${model}-9`]);
 });
 
 test("each image rebuilds data/vault-data.js from the gallery it just wrote", () => {

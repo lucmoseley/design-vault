@@ -55,11 +55,15 @@ class ChildTimeout(unittest.TestCase):
             "fail-open: runs/r1/W/c01's partial transcript is read: TimeoutExpired: ",
             err.getvalue(),
         )
-        partial = (folder / "transcript.jsonl").read_text().splitlines()
-        self.assertEqual(len(partial), 1, partial)
+        init = {
+            "type": "system",
+            "subtype": "init",
+            "cwd": os.path.realpath(folder),
+            "model": self.runner.MODEL,
+        }
         self.assertEqual(
-            {k: json.loads(partial[0])[k] for k in ("type", "subtype")},
-            {"type": "system", "subtype": "init"},
+            (folder / "transcript.jsonl").read_text(),
+            json.dumps(init, separators=(",", ":")) + "\n",
         )
         self.assertFalse((folder / "result.json").exists())
 
