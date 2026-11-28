@@ -11,7 +11,7 @@ const ROOT = path.join(__dirname, "..");
 const VALIDATOR_FILES = require("./validator-files.js");
 const PROGRAMS = ["ingest.js", "bundle.js", ...VALIDATOR_FILES];
 const SHOTS = path.join(__dirname, "fixtures", "ingest");
-const STAND_IN = path.join(SHOTS, "claude.js");
+const CLAUDE = path.join(__dirname, "claude-fake.js");
 const FIXTURES = path.join(__dirname, "fixtures", "validate");
 const GREEN = path.join(FIXTURES, "green.json");
 const FIXTURE_IMAGES = path.join(FIXTURES, "images");
@@ -22,11 +22,6 @@ const scratch = [];
 after(() => {
   for (const dir of scratch) fs.rmSync(dir, { recursive: true, force: true });
 });
-
-const bin = fs.mkdtempSync(path.join(os.tmpdir(), "fake-claude-"));
-scratch.push(bin);
-const CLAUDE = path.join(bin, "claude");
-fs.writeFileSync(CLAUDE, `#!${process.execPath}\nrequire(${JSON.stringify(STAND_IN)});\n`, { mode: 0o755 });
 
 function makeVault(edit) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ingest-")));
@@ -45,10 +40,14 @@ function makeVault(edit) {
   }
   const answersPath = path.join(dir, "answers.json");
   const callsPath = path.join(dir, "calls.jsonl");
-  const env = { ...process.env, WFC_CLAUDE_BIN: CLAUDE, FAKE_CLAUDE_ANSWERS: answersPath, FAKE_CLAUDE_CALLS: callsPath };
-  const calls = () => (fs.existsSync(callsPath) ? fs.readFileSync(callsPath, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line)) : []);
+  const env = { ...process.env, WFC_CLAUDE_BIN: CLAUDE, FAKE_CLAUDE_REPLIES: answersPath, FAKE_CLAUDE_LOG: callsPath, FAKE_CLAUDE_WATCH: galleryPath };
+  const call = ({ args, prompt, named, watched }) => {
+    const image = prompt.match(/^Read the image at this exact path: (.+)$/m)?.[1] ?? null;
+    return { model: args[args.indexOf("--model") + 1], prompt, image, imageExisted: named[image] === true, onDisk: JSON.parse(watched).entries.map((entry) => entry.id) };
+  };
+  const calls = () => (fs.existsSync(callsPath) ? fs.readFileSync(callsPath, "utf8").split("\n").filter(Boolean).map((line) => call(JSON.parse(line))) : []);
   const answer = (answers) => {
-    fs.writeFileSync(answersPath, JSON.stringify(answers));
+    fs.writeFileSync(answersPath, JSON.stringify(answers.map((a) => (a.fail || a.kill ? a : { structured: a }))));
     fs.rmSync(callsPath, { force: true });
   };
   return {

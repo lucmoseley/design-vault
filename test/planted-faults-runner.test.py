@@ -1,6 +1,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 import os
 import pathlib
 import shutil
@@ -11,18 +12,11 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPT = os.path.join(HERE, "..", "kits", "planted-faults", "tools", "runner.py")
-PARTIAL = '{"type":"system","subtype":"init"}\n'
+CLAUDE = os.path.join(HERE, "claude-fake.js")
 # guess, #586
-STUB_SLEEP_S = 30
+HANG_S = 30
 # guess, #586
 TIMEOUT_S = 1
-STUB = (
-    "#!/usr/bin/env python3\n"
-    "import sys, time\n"
-    f"sys.stdout.write({PARTIAL!r})\n"
-    "sys.stdout.flush()\n"
-    f"time.sleep({STUB_SLEEP_S})\n"
-)
 
 
 def load_runner(work):
@@ -39,10 +33,11 @@ class ChildTimeout(unittest.TestCase):
         self.work = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.work)
         self.runner = load_runner(self.work)
-        stub = pathlib.Path(self.work, "claude-stub")
-        stub.write_text(STUB)
-        stub.chmod(0o755)
-        self.env = mock.patch.dict(os.environ, {"WFC_CLAUDE_BIN": str(stub)})
+        replies = pathlib.Path(self.work, "replies.json")
+        replies.write_text(json.dumps([{"hang": HANG_S}]))
+        self.env = mock.patch.dict(
+            os.environ, {"WFC_CLAUDE_BIN": CLAUDE, "FAKE_CLAUDE_REPLIES": str(replies)}
+        )
         self.env.start()
         self.addCleanup(self.env.stop)
         self.runner.TIMEOUT = TIMEOUT_S
@@ -60,7 +55,16 @@ class ChildTimeout(unittest.TestCase):
             "fail-open: runs/r1/W/c01's partial transcript is read: TimeoutExpired: ",
             err.getvalue(),
         )
-        self.assertEqual((folder / "transcript.jsonl").read_text(), PARTIAL)
+        init = {
+            "type": "system",
+            "subtype": "init",
+            "cwd": os.path.realpath(folder),
+            "model": self.runner.MODEL,
+        }
+        self.assertEqual(
+            (folder / "transcript.jsonl").read_text(),
+            json.dumps(init, separators=(",", ":")) + "\n",
+        )
         self.assertFalse((folder / "result.json").exists())
 
 

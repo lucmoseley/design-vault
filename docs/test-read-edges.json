@@ -524,6 +524,18 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/claude-fake.js": [
+			"test/calibration-critic.test.js",
+			"test/claude.contract.test.js",
+			"test/ingest.test.js",
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/claude.contract.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/client-originals.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
@@ -919,10 +931,6 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
-		"test/fixtures/calibration/stub-claude/claude": [
-			"test/ledger-check.test.js",
-			"test/select-suites.test.js"
-		],
 		"test/fixtures/check-seams/closed.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -953,6 +961,16 @@
 		],
 		"test/fixtures/check-seams/translucent.html": [
 			"test/check-curves.test.js",
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/claude/json-schema.json": [
+			"test/claude.contract.test.js",
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/claude/stream-json.jsonl": [
+			"test/claude.contract.test.js",
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1603,10 +1621,6 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/gate/yields-to-vault.md": [
-			"test/ledger-check.test.js",
-			"test/select-suites.test.js"
-		],
-		"test/fixtures/ingest/claude.js": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
