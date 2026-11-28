@@ -14,30 +14,13 @@ set -u
 ceiling=3
 max=${VAULT_SUITE_LANES:-$ceiling}
 [[ $max =~ ^[1-9][0-9]*$ ]] || { echo "test/run-lanes.sh: VAULT_SUITE_LANES wants 1 or more — got '$max'" >&2 && exit 2; }
-meminfo=${VAULT_MEMINFO:-/proc/meminfo}
-ps_bin=${VAULT_PS:-ps}
+# shellcheck source=test/lane-readers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lane-readers.sh"
 # guess, #363
 rungs=(0 2500 3400 4050)
 # guess #434
 wait_s=${VAULT_LANE_WAIT_S:-600}
 [[ $wait_s =~ ^[0-9]+$ ]] || { echo "test/run-lanes.sh: VAULT_LANE_WAIT_S wants whole seconds — got '$wait_s'" >&2 && exit 2; }
-suite_line='^([^ ]*/)?(python3?( [^ ]+)* [^ ]*\.test\.py|node( [^ ]+)* --test|pytest|py\.test|python3? -m (pytest|unittest)|(node( [^ ]+)* )?[^ ]*[.]bin/vitest)( |$)'
-
-others() {
-  local out pid args n=0
-  out="$("$ps_bin" -eo pid=,args= 2>/dev/null)" || return 1
-  while read -r pid args; do
-    [[ ! $pid =~ ^[0-9]+$ || -n ${lane[$pid]:-} || $args =~ [.]bin/vitest\ list( |$) ]] && continue
-    [[ $args =~ $suite_line ]] && n=$((n + 1))
-  done <<<"$out"
-  echo "$n"
-}
-
-available_mb() {
-  local line
-  line="$(grep -m1 '^MemAvailable:' "$meminfo" 2>/dev/null)" && [[ $line =~ ([0-9]+)\ kB ]] || return 1
-  echo $((BASH_REMATCH[1] / 1024))
-}
 
 fits() {
   local mb
