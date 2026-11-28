@@ -90,7 +90,7 @@ KEYS = {
     "vault.focus-colour-kept": "#focus-colour-kept",
     "vault.focus-visible": "#focus-visible",
 }
-PARALLEL = 4  # guess, #501
+PARALLEL = 4  # guess, #501; 8 measured ~2.2 GiB, past run-lanes.sh's lane room, #656
 SCRATCH = tempfile.TemporaryDirectory()
 DONE = {}
 READS = []
@@ -613,6 +613,9 @@ class Read:
         )
         self.future = None
 
+    def answer(self):
+        return self.future.result()
+
     def run(self):
         from playwright.sync_api import sync_playwright
 
@@ -642,7 +645,7 @@ def reading(*reads):
     def wrap(test):
         @functools.wraps(test)
         def case(self):
-            return test(self, *(read.future.result() for read in reads))
+            return test(self, *reads)
 
         return case
 
@@ -652,9 +655,9 @@ def reading(*reads):
 class LateMotionRead(unittest.TestCase):
     @reading(Read("ended.html", watch_ms=10_000))
     def test_a_long_animation_that_ended_before_the_read_cannot_be_measured_368_paired_with_a_looping_and_a_long_animation_whose_pause_button_does_not_stop_them_fail(
-        self, got
+        self, read
     ):
-        faults, unmeasured = got
+        faults, unmeasured = read.answer()
         self.assertEqual(faults, [])
         ended = "runs 6.0 s from the page's load and ended before a control could be tried on it"
         self.assertEqual(
@@ -663,9 +666,9 @@ class LateMotionRead(unittest.TestCase):
 
     @reading(Read("ended-tried.html", watch_ms=1000))
     def test_a_long_animation_that_ends_while_its_controls_are_tried_cannot_be_measured(
-        self, got
+        self, read
     ):
-        faults, unmeasured = got
+        faults, unmeasured = read.answer()
         self.assertEqual(faults, [])
         self.assertEqual(
             unmeasured,
@@ -741,12 +744,12 @@ class TimedChange(unittest.TestCase):  # #545
         )
     )
     def test_a_declared_carousel_with_no_pause_control_fails_naming_it_and_that_no_control_pauses_it(
-        self, *got
+        self, *reads
     ):
-        for turn_by, answer in zip(self.DECLARED_TURNS, got, strict=True):
+        for turn_by, read in zip(self.DECLARED_TURNS, reads, strict=True):
             with self.subTest(turn_by=turn_by):
                 self.assertEqual(
-                    answer,
+                    read.answer(),
                     ([{"subject": "main > div.slides", "detail": self.CHANGING}], []),
                 )
 
@@ -754,11 +757,11 @@ class TimedChange(unittest.TestCase):  # #545
 
     @reading(*(Read("carousel.html", turn_by=turn_by) for turn_by in UNDECLARED_TURNS))
     def test_an_undeclared_carousel_with_no_pause_control_cannot_be_measured(
-        self, *got
+        self, *reads
     ):
-        for turn_by, answer in zip(self.UNDECLARED_TURNS, got, strict=True):
+        for turn_by, read in zip(self.UNDECLARED_TURNS, reads, strict=True):
             with self.subTest(turn_by=turn_by):
-                self.assertEqual(answer, ([], [self.UNDECLARED]))
+                self.assertEqual(read.answer(), ([], [self.UNDECLARED]))
 
     @reading(
         Read(
@@ -768,10 +771,10 @@ class TimedChange(unittest.TestCase):  # #545
         )
     )
     def test_a_declared_carousel_slower_than_the_watch_cannot_be_measured_naming_its_own_watch_154(
-        self, got
+        self, read
     ):
         long_s, rotate_s = prelude.LONG_MS / 1000, keys.ROTATE_MS / 1000
-        faults, unmeasured = got
+        faults, unmeasured = read.answer()
         self.assertEqual(faults, [])
         held = re.compile(
             r"main > div\.slides held still from ([\d.]+) s to ([\d.]+) s after the page's load, its pixels "
@@ -794,28 +797,28 @@ class TimedChange(unittest.TestCase):  # #545
 
     @reading(Read("carousel.html", every_ms=SLOW_MS))
     def test_an_undeclared_carousel_slower_than_the_watch_cannot_be_measured_for_its_unseen_timer(  # #611
-        self, got
+        self, read
     ):
-        self.assertEqual(got, ([], [self.UNSEEN.format(self.NO_CONTROL)]))
+        self.assertEqual(read.answer(), ([], [self.UNSEEN.format(self.NO_CONTROL)]))
 
     @reading(Read("entrance.html", idle_timeout_ms=SLOW_MS))
     def test_a_timeout_set_for_longer_than_the_watch_cannot_be_measured(  # #611
-        self, got
+        self, read
     ):
-        self.assertEqual(got, ([], [self.UNSEEN.format(self.NO_CONTROL)]))
+        self.assertEqual(read.answer(), ([], [self.UNSEEN.format(self.NO_CONTROL)]))
 
     @reading(Read("carousel.html", every_ms=SLOW_MS, pause="stops"))
     def test_an_undeclared_carousel_slower_than_the_watch_passes_where_a_pause_button_clears_its_timer(  # #611
-        self, got
+        self, read
     ):
-        self.assertEqual(got, ([], []))
+        self.assertEqual(read.answer(), ([], []))
 
     @reading(Read("carousel.html", every_ms=SLOW_MS, pause="restarts"))
     def test_a_pause_button_that_restarts_the_slow_timer_does_not_count_as_clearing_it(  # #611
-        self, got
+        self, read
     ):
         self.assertEqual(
-            got,
+            read.answer(),
             (
                 [],
                 [
@@ -834,20 +837,20 @@ class TimedChange(unittest.TestCase):  # #545
             for carousels in STOPPED_CAROUSELS
         )
     )
-    def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self, *got):
-        for carousels, answer in zip(self.STOPPED_CAROUSELS, got, strict=True):
+    def test_a_carousel_a_pause_button_stops_passes_declared_or_not(self, *reads):
+        for carousels, read in zip(self.STOPPED_CAROUSELS, reads, strict=True):
             with self.subTest(carousels=carousels):
-                self.assertEqual(answer, ([], []))
+                self.assertEqual(read.answer(), ([], []))
 
     ENTRANCE_QUERIES = ({}, {"rearming_timeout": 1})
 
     @reading(*(Read("entrance.html", **query) for query in ENTRANCE_QUERIES))
     def test_an_entrance_that_ends_within_5_s_beside_a_running_interval_passes(
-        self, *got
+        self, *reads
     ):
-        for query, answer in zip(self.ENTRANCE_QUERIES, got, strict=True):
+        for query, read in zip(self.ENTRANCE_QUERIES, reads, strict=True):
             with self.subTest(query=query):
-                self.assertEqual(answer, ([], []))
+                self.assertEqual(read.answer(), ([], []))
 
     CHANGING_TRIED = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked"
     RESUMING = {"every_ms": keys.ROTATE_MS // 3, "pause": "resumes"}
@@ -865,10 +868,10 @@ class TimedChange(unittest.TestCase):  # #545
             access.hold_ms(None),
             "the fixture's resume outlasts the default hold",
         )
-        _, judged = motion
+        _, judged = motion.answer()
         self.assertEqual((judged.faults, judged.unmeasured), ([], []))
         self.assertEqual(
-            pause,
+            pause.answer(),
             ([{"subject": "main > div.slides", "detail": self.CHANGING_TRIED}], []),
         )
 
@@ -876,10 +879,10 @@ class TimedChange(unittest.TestCase):  # #545
         Read("carousel.html", carousels=[".slides"], pause="restarts", hover_pauses=1)
     )
     def test_a_carousel_that_holds_under_the_pointer_is_judged_with_the_pointer_off_it(
-        self, got
+        self, read
     ):
         self.assertEqual(
-            got,
+            read.answer(),
             ([{"subject": "main > div.slides", "detail": self.CHANGING_TRIED}], []),
         )
 
@@ -915,18 +918,18 @@ class PauseClick(Browsed):
     """
 
     @reading(Read("clean.html", init=LATE_FRAMES))
-    def test_a_clean_page_passes_when_each_frame_comes_late(self, got):
-        self.assertEqual(got, ([], []))
+    def test_a_clean_page_passes_when_each_frame_comes_late(self, read):
+        self.assertEqual(read.answer(), ([], []))
 
     @reading(Read("settling.html"))
-    def test_a_control_that_shifts_once_as_it_is_scrolled_to_is_clicked(self, got):
-        self.assertEqual(got, ([], []))
+    def test_a_control_that_shifts_once_as_it_is_scrolled_to_is_clicked(self, read):
+        self.assertEqual(read.answer(), ([], []))
 
     @reading(Read("unclickable.html"))
     def test_a_covered_control_a_moving_one_and_one_disabled_once_scrolled_to_cannot_be_clicked(
-        self, got
+        self, read
     ):
-        faults, unmeasured = got
+        faults, unmeasured = read.answer()
         self.assertEqual(unmeasured, [])
         tried = "none of the 3 control(s) named for pausing it stops it, clicked (3 could not be clicked)"
         self.assertEqual(
