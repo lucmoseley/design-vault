@@ -1199,11 +1199,11 @@ box.animate([{ transform: "translateX(0)" }, { transform: "translateX(300px)" }]
         self.assertEqual(data["jumps"], [], proc.stdout + proc.stderr)
 
 
-def loops(*gaps):
+def loops(*gaps, every=1):
     log, at = [], 0
     for k, gap in enumerate((0, *gaps)):
         at += gap
-        log.append({"frame": k, "at": at, "frameAt": at, "chain": 1})
+        log.append({"frame": k * every, "frameAt": at, "chain": 1})
     proc = subprocess.run(
         ["node", "-e", flow.LOOP_JS + f"console.log(loop({json.dumps(log)}))"],
         capture_output=True,
@@ -1222,12 +1222,29 @@ class LoopRule(unittest.TestCase):
     ):  # #617
         self.assertFalse(loops(300, 300, 300, 300))
 
+    def test_five_writes_within_a_span_by_their_frames_are_a_loop_in_any_frames(
+        self,
+    ):  # #658
+        self.assertTrue(loops(60, 60, 60, 60, every=4))
+
+    def test_five_writes_past_a_span_by_their_frames_are_not_a_loop_in_spaced_frames(
+        self,
+    ):  # #658
+        self.assertFalse(loops(67, 67, 67, 67, every=4))
+
 
 class Pages(unittest.TestCase):
     def test_a_frame_loop_cycling_its_writes_over_four_elements_is_measured(
         self,
     ):  # #469
         proc, data, _ = run("cycle-loop.html", "--timeout", "5000")
+        self.assertIsNotNone(data, proc.stdout + proc.stderr)
+        self.assertEqual([e["label"] for e in data["elements"]], ["div#waapi"])
+
+    def test_a_frame_loop_cycling_its_writes_is_timed_by_its_frames_as_script_loop_late_is_refused(
+        self,
+    ):  # #658
+        proc, data, _ = run("cycle-loop-late.html", "--timeout", "5000")
         self.assertIsNotNone(data, proc.stdout + proc.stderr)
         self.assertEqual([e["label"] for e in data["elements"]], ["div#waapi"])
 
