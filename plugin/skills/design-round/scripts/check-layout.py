@@ -19,10 +19,9 @@ range of widths it holds over:
   nothing between them scrolls. A cut marked by the text's own box's
   text-overflow: ellipsis, or by a line-clamp in effect, is not reported, nor
   is text in a scroll-snap track or a carousel's track (aria-roledescription
-  "carousel", as the ARIA carousel pattern names one; a box inside one of its
-  slides is judged), nor a block the box hides whole, as a closed panel or an
-  off-screen slide is, nor text in a link or a box holding a control, since
-  the link's page or the control may show it;
+  "carousel"; a box inside one of its slides is judged), nor a block the box
+  hides whole, as a closed panel or an off-screen slide is, nor text in a link
+  or a box holding a control;
 - overlap: a text block's lines crossing another text block's, crossing an
   image's edge, or lying under an image. Text wholly inside an image's box and
   drawn on top of it is a caption or a hero overlay, and is not reported. An
@@ -55,9 +54,9 @@ range of widths it holds over:
   past the file's edge, or an art shown at no swept width) is listed as not
   measured.
 
-Every section under content-visibility: auto is laid out as drawn before
-any of this is measured, as content-visibility: visible, and stays so for
-the records read from the same load.
+Every section under content-visibility: auto is measured as
+content-visibility: visible, and stays so for the records read from the
+same load.
 
 The first five answer vault.reflow, the cta check vault.layout and the
 focal check vault.focal-crop: the report gives each question pass or fail,
@@ -84,7 +83,7 @@ since the link's page or the control may show it.
   CSS px wide at a device scale of the zoom, on screens no narrower than
   the zoom times 320 px, reflow's floor;
 - --text size raises the browser's default text sizes, proportional and
-  monospace, by the factor (Chromium's Page.setFontSizes), so rem, em and
+  monospace, by the factor, so rem, em and
   keyword sizes grow and px sizes do not.
 
 Zoom and size also list each text that grows less than the factor, beside
