@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>deferred</title>
+<!-- The section sits far below the first screen under content-visibility:
+     auto, so the browser sizes it at its 100 px intrinsic size until it is
+     drawn. Its text is 20 lines, 480 px. Measured at the intrinsic size, the
+     note after it would cross its text; drawn, the section is 480 px and the
+     note crosses nothing. The pinned label is placed over line 11 at either
+     size, so it crosses that line both ways. -->
+<style>
+  body { margin: 0; font: 16px/24px sans-serif }
+  .spacer { height: 3000px }
+  section { content-visibility: auto; contain-intrinsic-size: auto 100px }
+  section p { margin: 0 }
+  .note { margin: 0 }
+  .pinned { position: absolute; top: 3240px; left: 0; margin: 0 }
+</style>
+<div class="spacer"></div>
+<section>
+  <p>Line 1</p><p>Line 2</p><p>Line 3</p><p>Line 4</p><p>Line 5</p>
+  <p>Line 6</p><p>Line 7</p><p>Line 8</p><p>Line 9</p><p>Line 10</p>
+  <p>Line 11</p><p>Line 12</p><p>Line 13</p><p>Line 14</p><p>Line 15</p>
+  <p>Line 16</p><p>Line 17</p><p>Line 18</p><p>Line 19</p><p>Line 20</p>
+</section>
+<p class="note">A note after the section</p>
+<p class="pinned">A pinned label</p>

@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>clip</title>
+<!-- Each card is one 24 px line tall and hides its overflow, its title about
+     300 px long. On a 320 px screen the cards are 280 px wide, so each title
+     wraps: the plain card's second line is cut off, a fault; the clamped and
+     the ellipsis cards mark the cut, the scrolling card can be scrolled, the
+     closed panel hides its text whole, and the snapped and the carousel
+     tracks show part of a slide. Two cards fail as the plain one does: the
+     loose card sets its ellipsis on the card, which marks no cut of the
+     wrapped title, and the slide card sits inside a carousel's slide. At
+     420 px every title fits. -->
+<style>
+  body { margin: 0; padding: 0 20px; font: 16px/24px sans-serif }
+  .card { height: 24px; overflow: hidden; margin: 0 0 24px }
+  .card p { margin: 0 }
+  .clamp p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1 }
+  .ellipsis p { white-space: nowrap; text-overflow: ellipsis; overflow: hidden }
+  .scroll { overflow: auto }
+  .panel { max-height: 0; overflow: hidden }
+  .track { display: flex; overflow: hidden; margin: 0 0 24px }
+  .track p { flex: 0 0 80%; margin: 0 }
+  .snap { scroll-snap-type: x mandatory }
+  .loose { text-overflow: ellipsis }
+</style>
+<div class="card plain"><p>Sea-view dorm with breakfast and lockers</p></div>
+<div class="card clamp"><p>Sea-view dorm with breakfast and lockers</p></div>
+<div class="card ellipsis"><p>Sea-view dorm with breakfast and lockers</p></div>
+<div class="card scroll"><p>Sea-view dorm with breakfast and lockers</p></div>
+<div class="panel"><p>Closed panel text</p></div>
+<div class="track snap"><p>First slide</p><p>Second slide</p></div>
+<section aria-roledescription="carousel"><div class="track"><p>First slide</p><p>Second slide</p></div></section>
+<div class="card loose"><p>Sea-view dorm with breakfast and lockers</p></div>
+<section aria-roledescription="carousel"><div aria-roledescription="slide"><div class="card slid"><p>Sea-view dorm with breakfast and lockers</p></div></div></section>
