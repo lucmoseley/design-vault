@@ -7,7 +7,7 @@ import sys
 REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
 PIP_INSTALL = f"python3 -m pip install --only-binary :all: -r {REQUIREMENTS}"
 CANNOT_RUN = 2  # #543
-MISSING = 3  # #649
+MISSING = 3
 IMPORTED_AS = {"PIL": "pillow"}
 
 
