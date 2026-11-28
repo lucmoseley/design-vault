@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { after, test } = require("node:test");
+const { idleMachine } = require("./idle-machine");
 
 const ROOT = path.join(__dirname, "..");
 const ALL_SH = path.join(ROOT, "test", "all.sh");
@@ -31,21 +32,15 @@ const TESTS = {
 function scratch(name) {
   const root = path.join(dir, name);
   fs.mkdirSync(path.join(root, "test"), { recursive: true });
-  for (const f of ["all.sh", "run-lanes.sh", "failed-files.js"]) fs.copyFileSync(path.join(ROOT, "test", f), path.join(root, "test", f));
+  for (const f of ["all.sh", "run-lanes.sh", "lane-readers.sh", "failed-files.js"]) fs.copyFileSync(path.join(ROOT, "test", f), path.join(root, "test", f));
   for (const [f, body] of Object.entries(TESTS)) fs.writeFileSync(path.join(root, "test", f), body);
   fs.writeFileSync(path.join(root, "test", "palette.test.py"), "import sys\nsys.exit(1)\n");
   fs.writeFileSync(path.join(root, "test", "cutout.test.py"), "print('cutout ran')\n");
   return root;
 }
 
-const QUIET_PS = path.join(dir, "quiet-ps");
-fs.writeFileSync(QUIET_PS, "#!/bin/sh\n", { mode: 0o755 });
-const AMPLE_MEMINFO = path.join(dir, "meminfo");
-// guess #627: past run-lanes' top rung of 4050 MB
-fs.writeFileSync(AMPLE_MEMINFO, "MemAvailable:   8192000 kB\n");
 // #627
-const isolatedEnv = () => env({ VAULT_SUITE_LANES: "1", VAULT_PS: QUIET_PS, VAULT_MEMINFO: AMPLE_MEMINFO,
-  WFC_GATE_SEAT: "", VAULT_SUITE_BUDGET: "", VAULT_SUITE_TIMES: "" });
+const isolatedEnv = () => env({ ...idleMachine(dir), VAULT_SUITE_LANES: "1" });
 
 const NODE = spawnSync("bash", [ALL_SH, "--plan"], { encoding: "utf8", env: env({}) }).stdout.match(/^RUN (node .*)$/m)[1];
 const plan = (...files) => spawnSync("bash", [ALL_SH, "--plan", ...files], { cwd: ROOT, encoding: "utf8", env: env({}) });
