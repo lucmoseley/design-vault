@@ -33,7 +33,10 @@ test("a real ps line for a suite and for a script that is none has the fake's sh
     for (const [i, h] of held.entries()) {
       assert.equal(realLine(h).match(LINE)[1], String(h.kid.pid));
       assert.equal(psLines([h.args]).match(LINE)[2], h.args);
-      for (const psBin of [realPsMatching(dir, `real-${i}`, h.file), fakePs(dir, `fake-${i}`, [h.args])]) {
+      const realPs = realPsMatching(dir, `real-${i}`, h.file);
+      const lines = spawnSync(realPs, ["-eo", "pid=,args="], { encoding: "utf8" }).stdout.split("\n");
+      assert.equal(lines.filter((l) => l.match(LINE)?.[2] === h.args).length, 1, `${h.args} in the filtered real ps`);
+      for (const psBin of [realPs, fakePs(dir, `fake-${i}`, [h.args])]) {
         const r = suitesCounted(psBin);
         assert.equal(r.status, 0, r.stderr);
         assert.equal(r.stdout, h.counted, `${h.args} through ${psBin}`);
