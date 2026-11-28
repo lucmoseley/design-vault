@@ -93,21 +93,29 @@ or, for --records, numpy or Pillow / 4 the page did not render in time / 5 the
 browser refused the page / 6 the page cannot be measured / 7 a call hung that
 would never return, or its renderer died. Exits 0, 1 and 6 are results and
 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import base64
-import importlib
-import io
-import itertools
-import json
-import math
 import os
-import pathlib
-import re
 import sys
-import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import importlib  # noqa: E402
+import io  # noqa: E402
+import itertools  # noqa: E402
+import json  # noqa: E402
+import math  # noqa: E402
+import pathlib  # noqa: E402
+import re  # noqa: E402
+import time  # noqa: E402
 
 QUIET_MS = 2000  # guess, #141
 POLL_MS = 100  # guess, #182
@@ -819,11 +827,7 @@ def report(at, sample, result, *, svg_path, json_path, morph_path):
     return "\n".join(lines)
 
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-if HERE not in sys.path:
-    sys.path.insert(0, HERE)
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 
 TABLE = os.path.join(HERE, "check-flow.table")
 
@@ -1288,11 +1292,8 @@ def run_records(at):
 
 
 def records_main(at):
-    try:
-        importlib.import_module("numpy")
-        importlib.import_module("PIL")
-    except ImportError as err:
-        sys.exit(runner.missing(err))
+    importlib.import_module("numpy")
+    importlib.import_module("PIL")
     got, code = runner.run_browser(lambda: run_records(at), at.timeout, at.url)
     if code:
         return code
@@ -1479,4 +1480,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

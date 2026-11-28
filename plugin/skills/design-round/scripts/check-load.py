@@ -22,10 +22,10 @@ it when it shows. A run ends once no new entry has come for QUIET_MS after
 load.
 
 EXITS 0 the median LCP is within --limit / 1 it is over / 2 the arguments are
-wrong / 3 Playwright or its browser is missing / 4 the page did not load in time
+wrong / 3 Playwright, its browser, numpy or Pillow is missing / 4 the page did not load in time
 / 5 the browser refused the page / 6 the page drew no LCP element / 7 a call
 hung that would never return.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 
 FILES MODE
   python3 check-load.py <url or file> --files --out DIR [--parts FILE]
@@ -85,24 +85,28 @@ earlier run's is deleted. The files mode exits as the timing does, 1 meaning
 a miss and 2 also a table or declaration it cannot read; it never exits 6.
 """
 
-import argparse
-import base64
-import collections
-import contextlib
-import functools
-import http.server
 import os
-import re
-import statistics
 import sys
-import threading
-import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import collections  # noqa: E402
+import contextlib  # noqa: E402
+import functools  # noqa: E402
+import http.server  # noqa: E402
+import re  # noqa: E402
+import statistics  # noqa: E402
+import threading  # noqa: E402
+import urllib.parse  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
@@ -1092,4 +1096,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))
