@@ -36,10 +36,10 @@ holds every finding; an earlier run's is deleted. A sweep with a step over 5
 px, or not over every width, prints NOT A GATING SWEEP.
 
 EXITS 0 no miss / 1 a miss (each printed) / 2 the arguments, the table or a
-selector is wrong / 3 Playwright or its browser is missing / 4 the page did not
+selector is wrong / 3 Playwright, its browser, numpy or Pillow is missing / 4 the page did not
 render in time / 5 the browser refused the page / 7 a call hung that would never
 return. Exits 0 and 1 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -52,8 +52,10 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 
 
 probe = siblings.load(HERE, "probe.py")
@@ -515,4 +517,4 @@ def without(block, parts):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

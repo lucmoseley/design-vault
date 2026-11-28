@@ -27,7 +27,7 @@ This repo's own choices beside the workflow-core plugin's standards base, `docs/
 | `plugin/skills/design-round/scripts/access-contrast.py` | library: check-access.py's contrast questions past text and field edges, with their table's parser (#316) |
 | `plugin/skills/design-round/scripts/text-checks.py` | library: check-text.py's checks, its table and word lists, and how each load's findings merge into one answer per record, split out so its tests call what the program calls (#314) |
 | `plugin/skills/design-round/scripts/fail_open.py` | library: the core's `fail_open` and `expected` reporters, held in the plugin, which ships without the core (#380) |
-| `plugin/skills/design-round/scripts/crash_exit.py` | library: every check-*.py's `__main__` guard, which exits 2 with its traceback on stderr for an exception the check does not handle (#543) |
+| `plugin/skills/design-round/scripts/crash_exit.py` | library: every check-*.py's guard, set before anything it loads, which exits 2 with its traceback on stderr for an exception the check does not handle, and 3 for a missing package (#543, #649) |
 | `plugin/skills/design-round/scripts/siblings.py` | library: loads a design-round script's siblings once per process, cached by real path, so every caller shares one copy of each error class (#558) |
 | `plugin/skills/design-round/scripts/rule-table.py` | library: the rule tables' line reader, `ID \| CHECK [\| VALUE]` grammar and per-record answers, for the family scripts (#413) |
 | `plugin/skills/design-round/scripts/answers-file.py` | library: the family scripts' answers file, cleared with the earlier run's other output before the browser starts and written `url` and `run_at` first after it (#594) |

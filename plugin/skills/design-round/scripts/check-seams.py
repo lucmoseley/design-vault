@@ -33,7 +33,7 @@ measured: a fill that lets the ground through, a contact off its crop, a shape
 check-curves.js cannot read, a cover whose selector names no element in the
 page, or a page that cannot be rendered frame by frame.
 Exits 0, 1 and 6 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -48,18 +48,17 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
+import numpy as np  # noqa: E402
+from PIL import Image  # noqa: E402
 
 
 renders = siblings.load(HERE, "look-renders.py")
 frames = siblings.load(HERE, "check-frames.py")
 runner = siblings.load(HERE, "runner.py")
-try:
-    import numpy as np
-    from PIL import Image
-except ImportError as err:
-    sys.exit(runner.missing(err))
 colour_space = siblings.load(
     HERE, os.path.join("..", "..", "design-project", "scripts", "colour_space.py")
 )
@@ -377,4 +376,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

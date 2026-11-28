@@ -113,10 +113,10 @@ miss names its block and width. DIR/dom.json holds every finding; an earlier
 run's is deleted.
 
 EXITS 0 no miss / 1 a miss (each printed) / 2 the arguments, the table or a
-selector is wrong / 3 Playwright or its browser is missing / 4 a page did not
+selector is wrong / 3 Playwright, its browser, numpy or Pillow is missing / 4 a page did not
 render in time / 5 the browser refused the page / 7 a call hung that would never
 return. Exits 0 and 1 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
 import argparse
@@ -128,14 +128,15 @@ import secrets
 import sys
 import urllib.parse
 
-import numpy as np
-from PIL import Image
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+import numpy as np  # noqa: E402
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
+from PIL import Image  # noqa: E402
 
 
 probe = siblings.load(HERE, "probe.py")
@@ -723,4 +724,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))
