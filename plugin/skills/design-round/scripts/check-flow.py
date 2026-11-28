@@ -122,21 +122,31 @@ COLLECTOR_JS = r"""
   const rewrites = new Map();
   const morphs = new Map();
   const pending = new Map();
-  const state = { seen, rewrites, morphs, pending, frame: 0, firstFrame: null, frameAt: null, prevFrameAt: null,
+  const repeats = new Map();
+  const state = { seen, rewrites, morphs, pending, repeats, frame: 0, firstFrame: null, frameAt: null, prevFrameAt: null,
     lastNew: 0, lastPageFrame: -1, stopped: false };
   window.__flow = state;
-  const setT = window.setTimeout;
-  const clearT = window.clearTimeout;
+  const [setT, setI, clearT] = [window.setTimeout, window.setInterval, window.clearTimeout];
+  const run = (fn, self, a) => (typeof fn === 'function' ? fn.apply(self, a) : (0, eval)(String(fn)));
+  const timer = (ms) => ({ due: performance.now() + (Number(ms) || 0), ms: Number(ms) || 0 });
   window.setTimeout = function (fn, ms, ...args) {
     const id = setT.call(this, function (...a) {
       pending.delete(id);
       state.lastNew = performance.now();
-      return typeof fn === 'function' ? fn.apply(this, a) : (0, eval)(String(fn));
+      return run(fn, this, a);
     }, ms, ...args);
-    pending.set(id, performance.now() + (Number(ms) || 0));
+    pending.set(id, timer(ms));
     return id;
   };
-  window.clearTimeout = function (id) { pending.delete(id); return clearT.call(this, id); };
+  // #686
+  window.setInterval = function (fn, ms, ...args) {
+    const id = setI.call(this, function (...a) { return run(fn, this, a); }, ms, ...args);
+    repeats.set(id, timer(ms));
+    return id;
+  };
+  // clearTimeout and clearInterval clear one list of timers, either kind:
+  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-cleartimeout
+  window.clearTimeout = window.clearInterval = function (id) { pending.delete(id); repeats.delete(id); return clearT.call(this, id); };
   // #135 #326
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = function (cb) {
@@ -274,7 +284,7 @@ STATUS_JS = (
     if (a.playState === 'running' && a.timeline === document.timeline && t && t.endTime !== Infinity) running++;
   }
   const now = performance.now();
-  const timers = [...f.pending.values()].map((due) => Math.max(0, due - now));
+  const timers = [...f.pending.values()].map((t) => Math.max(0, t.due - now));
   const morphed = [...f.morphs.values()].some((log) => loop(log, frames, span));
   // #469
   const logs = [...f.rewrites.values()];

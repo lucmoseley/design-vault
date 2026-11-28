@@ -11,7 +11,8 @@ The timeline is read and seeked as check-frames.py reads and seeks it: the Web
 Animations API animations the page has made once it has loaded, its fonts are
 ready, --wait has matched and none has started for check-frames.py's QUIET_MS.
 Time zero is the earliest animation's start. A build that starts animations
-when others finish is refused, as check-frames.py refuses it.
+when others finish, through a timer or not, or that holds a script timer past
+check-frames.py's SETTLE_CAP_MS, is refused, as check-frames.py refuses it.
 
 The phone size is a viewport width only: no touch, no mobile user agent, device
 scale 1. It writes DIR/sheet-desktop.png and DIR/sheet-phone.png, drawn at

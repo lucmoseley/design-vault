@@ -40,7 +40,9 @@ QUIET_MS: `element.animate()`, CSS animations and CSS transitions. Time zero is
 the earliest animation's start. They refuse a page whose animations never end,
 run off a scroll timeline or play in reverse, or that keeps starting them for
 SETTLE_CAP_MS. `hash` also refuses one that starts animations after that
-point, or when one finishes; `last` finishes those too, and refuses a page that
+point, or when one finishes, watching until no script timer is pending and none
+has fired for QUIET_MS; it refuses a page holding a timer, or a repeating one,
+past SETTLE_CAP_MS then. `last` finishes those too, and refuses a page that
 keeps starting them. `hash` renders every frame on the timeline its first load
 timed, and --save keeps that timeline for --check, which names any start its
 own load put more than STAGE_JITTER_MS away. Both refuse,
@@ -188,26 +190,38 @@ SCRIPTED_JS = (
 
 CHAIN_JS = (
     r"""
-async (quiet) => {
+async ({ quiet, cap }) => {
   """
     + NAME_JS
     + r"""
   const f = window.__frames;
+  const flow = window.__flow;
   // A finished animation with no fill leaves getAnimations(): https://www.w3.org/TR/web-animations-1/#relevant-animations-section
+  // #686
   const watch = async () => {
     const found = new Set();
     const began = performance.now();
     for (;;) {
       for (const a of document.getAnimations()) if (!f.anims.has(a)) found.add(a);
-      if (performance.now() - began >= quiet) break;
+      const now = performance.now();
+      const timers = [...flow.pending.values()];
+      const capped = now - began >= cap;
+      const [repeating] = flow.repeats.values();
+      const last = timers.reduce((most, t) => (t.due > most.due ? t : most), timers[0]);
+      const timer = repeating ? { kind: 'repeats', ms: repeating.ms }
+        : last && (capped || last.due - began > cap) ? { kind: last.ms > cap ? 'long' : 'held', ms: last.ms }
+        : null;
+      if (timer) return { found: [...found].map(name), timer };
+      if (capped || (!timers.length && now - Math.max(began, flow.lastNew) >= quiet)) break;
       await new Promise((next) => requestAnimationFrame(next));
     }
-    return [...found].map(name);
+    return { found: [...found].map(name), timer: null };
   };
   const late = await watch();
-  if (late.length) return { late, chained: [] };
+  if (late.found.length || late.timer) return { late: late.found, chained: [], timer: late.timer };
   for (const r of f.rows) r.a.finish();
-  return { late, chained: await watch() };
+  const chained = await watch();
+  return { late: [], chained: chained.found, timer: chained.timer };
 }
 """
 )
@@ -450,9 +464,11 @@ def read_timeline(browser, load, scale, device=None):
 
 
 def refuse_chain(page):
-    found = page.evaluate(CHAIN_JS, QUIET_MS)
+    found = page.evaluate(CHAIN_JS, {"quiet": QUIET_MS, "cap": SETTLE_CAP_MS})
     if found["late"]:
         raise late_error(found["late"])
+    if found["timer"]:
+        raise UnmeasurableError([timer_reason(found["timer"])])
     if found["chained"]:
         raise UnmeasurableError(
             [
@@ -461,6 +477,18 @@ def refuse_chain(page):
                 "when the page loads, held back by its delay"
             ]
         )
+
+
+def timer_reason(timer):
+    what = {
+        "repeats": f"repeats a script timer every {ms(timer['ms'])} ms, which never stops pending",
+        "held": f"keeps setting script timers, one of {ms(timer['ms'])} ms due past the {SETTLE_CAP_MS} ms it waits for them",
+        "long": f"sets a script timer for {ms(timer['ms'])} ms, past the {SETTLE_CAP_MS} ms it waits for one",
+    }[timer["kind"]]
+    return (
+        f"{what}, so a link of its motion that a timer starts goes unseen; "
+        "start every link when the page loads, held back by its delay"
+    )
 
 
 def listed(found):

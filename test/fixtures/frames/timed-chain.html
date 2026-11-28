@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { width: 400px; height: 40px; margin: 40px; background: #2a2a2a; }
+</style></head>
+<body>
+<div id="mark"></div>
+<div id="tagline"></div>
+<script>
+const fade = (id, timing) => document.getElementById(id).animate([{ opacity: 0 }, { opacity: 1 }], timing);
+fade("mark", { duration: 300, fill: "forwards" }).onfinish = () =>
+  setTimeout(() => fade("tagline", { duration: 200 }), 1000);
+</script>
+</body></html>
