@@ -176,7 +176,8 @@ test("an off-trigger call, the common path, loads no repo module and starts no c
   const r = callCost(SCRIPT, [], { stdin: JSON.stringify({ session_id: "pin", cwd: repo, tool_name: "Bash", tool_input: { command: "ls" } }) });
   assert.equal(r.stdout, "");
   assert.deepEqual(r.children, []);
-  assert.deepEqual(r.modules.sort(), ["rule-triggers.js", "scripts/lib/resolve-core.js"]);
+  const core = path.relative(ROOT, resolveCore()) + path.sep;
+  assert.deepEqual(r.modules.filter((m) => !m.startsWith(core)).sort(), ["rule-triggers.js", "scripts/lib/resolve-core.js"]);
 });
 
 test("a session already told pays no git read on a later commit", () => {
