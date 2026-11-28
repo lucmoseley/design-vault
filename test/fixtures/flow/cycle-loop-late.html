@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- cycle-loop.html with performance.now() reading 40 ms late in every 32nd
+     frame, as a loaded machine runs a frame's callbacks late. The first bar's
+     five writes from a late frame end 16 frames on, on a frame read on time,
+     so they span 227 ms by the clock and 267 ms by their frames (#658). -->
+<html><body>
+<div id="waapi" style="width:40px;height:40px;background:#333"></div>
+<div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+<script>
+document.getElementById("waapi").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+const bars = document.querySelectorAll(".bar");
+let frame = 0;
+const clock = performance.now.bind(performance);
+performance.now = () => clock() + ((frame - 1) % 32 === 0 ? 40 : 0);
+requestAnimationFrame(function tick() {
+  bars[frame % bars.length].style.height = `${10 + (frame % 7) * 5}px`;
+  frame++;
+  requestAnimationFrame(tick);
+});
+</script>
+</body></html>

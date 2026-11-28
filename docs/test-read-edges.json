@@ -1109,6 +1109,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/cycle-loop-late.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/cycle-loop.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"

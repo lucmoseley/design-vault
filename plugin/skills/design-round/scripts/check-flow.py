@@ -229,7 +229,7 @@ COLLECTOR_JS = r"""
       if (!last || last.frame !== state.frame) {
         const prior = last && last.link;
         const chained = link && prior && link.from === prior.id && link.cb === prior.cb;
-        log.push({ frame: state.frame, at: performance.now(), frameAt: state.frameAt, link, chain: chained ? last.chain + 1 : 1 });
+        log.push({ frame: state.frame, frameAt: state.frameAt, link, chain: chained ? last.chain + 1 : 1 });
       }
       rewrites.set(m.target, log);
     }
@@ -287,7 +287,8 @@ const loop = (log) => log.some((w, i) => {
   // #617
   const linked = (x, prev) => x.link && prev.link && x.link.from === prev.link.id;
   const close = run.every((x, k) => k === 0 || x.frameAt - run[k - 1].frameAt < LOOP.span || linked(x, run[k - 1]));
-  return last && (last.at - w.at <= LOOP.span || (last.frame - w.frame === LOOP.frames - 1 && close));
+  // #658
+  return last && (last.frameAt - w.frameAt <= LOOP.span || (last.frame - w.frame === LOOP.frames - 1 && close));
 });
 """
 )
