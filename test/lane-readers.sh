@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# #629
 meminfo=${VAULT_MEMINFO:-/proc/meminfo}
 ps_bin=${VAULT_PS:-ps}
 

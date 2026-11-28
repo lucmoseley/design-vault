@@ -2457,21 +2457,22 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/idle-machine.js": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/ingest.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
-			"test/select-suites.test.js"
-		],
-		"test/lane-fakes.js": [
-			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/lane-readers.sh": [
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/meminfo.contract.test.js",
 			"test/npm-preflight.test.js",
-			"test/run-lanes.test.js",
+			"test/ps.contract.test.js",
 			"test/select-suites.test.js",
 			"test/suite-budget.test.js",
 			"test/suite-needs.test.js"
@@ -2513,6 +2514,15 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/meminfo-fake.js": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/meminfo.contract.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/no-git-env.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
@@ -2551,6 +2561,15 @@
 		],
 		"test/probe.test.py": [
 			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/ps-fake.js": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/ps.contract.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/release-check.test.js": [

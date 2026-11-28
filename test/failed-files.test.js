@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { after, test } = require("node:test");
-const { idleMachine } = require("./lane-fakes");
+const { idleMachine } = require("./idle-machine");
 
 const ROOT = path.join(__dirname, "..");
 const ALL_SH = path.join(ROOT, "test", "all.sh");

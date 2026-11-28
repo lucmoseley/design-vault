@@ -6,7 +6,9 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { after, describe, test } = require("node:test");
-const { fakeMeminfo, fakePs, idleMachine, meminfoLine, psLines, viaReaders } = require("./lane-fakes");
+const { idleMachine } = require("./idle-machine");
+const { fakeMeminfo } = require("./meminfo-fake");
+const { fakePs, realPsMatching } = require("./ps-fake");
 
 const LANES = path.join(__dirname, "run-lanes.sh");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "run-lanes-"));
@@ -177,11 +179,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
   });
 
   test("this run's own suites are counted once, not again as the machine's", async () => {
-    const psFor = (d) => {
-      const own = path.join(d, "ps");
-      fs.writeFileSync(own, `#!/bin/sh\nps "$@" | grep -F '${FAKE} ${d} ' || true\n`, { mode: 0o755 });
-      return own;
-    };
+    const psFor = (d) => realPsMatching(d, "own", `${FAKE} ${d} `);
     await lanes(3, { psFor, peak: 3 });
   });
 
@@ -210,15 +208,7 @@ describe("run-lanes.sh", { concurrency: true }, () => {
   test("a first suite held for its rung starts once it frees", async () => {
     const d = path.join(dir, "freed");
     fs.mkdirSync(d);
-    const reads = path.join(d, "reads");
-    const freeing = ps("freeing", []);
-    fs.writeFileSync(freeing, `#!/bin/sh
-echo >>'${reads}'
-[ "$(wc -l <'${reads}')" -gt 2 ] && exit 0
-cat <<'EOF'
-${psLines(THREE)}
-EOF
-`);
+    const freeing = fakePs(dir, "freeing", THREE, { reads: 2 });
     const proc = await run([`python3 ${FAKE} ${d} s0 0 0.1`], { VAULT_PS: freeing });
     assert.equal(proc.status, 0, proc.stderr);
     assert.ok(fs.existsSync(path.join(d, "peaks")), "the suite never ran");
@@ -522,48 +512,6 @@ EOF
       assert.equal(proc.status, 0, proc.stderr);
       assert.match(proc.stdout, /^== bash .*many\.test\.sh \(\d+ s\)\nRUN COST: new\.test\.py took 12\.5 s, over the 10 s budget — new since HEAD: /);
       assert.doesNotMatch(proc.stdout, /old\.test\.py/);
-    });
-  });
-
-  describe("the fakes against the real ps and /proc/meminfo, through run-lanes' own readers (#629)", () => {
-    test("the kernel's MemAvailable line is the fake's, and each reads as its kB over 1024", () => {
-      const real = fs.readFileSync("/proc/meminfo", "utf8");
-      const snapshot = path.join(dir, "meminfo-real");
-      fs.writeFileSync(snapshot, real);
-      const line = real.split("\n").find((l) => l.startsWith("MemAvailable:"));
-      const kb = Number(line.match(/(\d+) kB$/)[1]);
-      assert.equal(meminfoLine("MemAvailable", kb), line);
-      const mb = Math.floor(kb / 1024);
-      for (const file of [snapshot, meminfo(mb)]) {
-        const r = viaReaders("available_mb", { VAULT_MEMINFO: file });
-        assert.equal(r.status, 0, r.stderr);
-        assert.equal(r.stdout, `${mb}\n`, file);
-      }
-    });
-
-    test("real ps lines for a suite and for a script that is none count as the fake's lines for the same args", async (t) => {
-      const probe = path.join(dir, "contract");
-      fs.mkdirSync(probe);
-      const files = ["held.test.py", "held.py"].map((f) => path.join(probe, f));
-      for (const f of files) fs.writeFileSync(f, "import time\ntime.sleep(60)\n");
-      const kids = files.map((f) => spawn("python3", [f], { stdio: "ignore" }));
-      t.after(() => kids.forEach((k) => k.kill()));
-      const args = files.map((f) => `python3 ${f}`);
-      const shown = () => kids.every((k, i) =>
-        spawnSync("ps", ["-o", "args=", "-p", String(k.pid)], { encoding: "utf8" }).stdout.trim() === args[i]);
-      // guess #629: time for two python3 children to exec on a loaded machine
-      for (let i = 0; i < 100 && !shown(); i++) await new Promise((r) => setTimeout(r, 100));
-      assert.ok(shown(), "the held processes never showed their args to ps");
-      const realPs = path.join(probe, "ps");
-      fs.writeFileSync(realPs, `#!/bin/sh\nps "$@" | grep -F '${probe}/held'\n`, { mode: 0o755 });
-      for (const psBin of [realPs, ps("contract", args)]) {
-        const r = viaReaders("others", { VAULT_PS: psBin });
-        assert.equal(r.status, 0, r.stderr);
-        assert.equal(r.stdout, "1\n", psBin);
-      }
-      const whole = viaReaders("others");
-      assert.equal(whole.status, 0, whole.stderr);
-      assert.ok(Number(whole.stdout) >= 1, `the whole of ps counted ${whole.stdout.trim()} suites`);
     });
   });
 });
