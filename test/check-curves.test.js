@@ -662,22 +662,27 @@ test("#668: with no parse5 to load, an HTML file exits 2 naming the install, and
   }
 });
 
-test("a parse5 this Node cannot require() exits 2 naming the Node floor, not an install", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-curves-esm-"));
-  try {
-    const copy = path.join(dir, "check-curves.js");
-    fs.copyFileSync(SCRIPT, copy);
-    fs.mkdirSync(path.join(dir, "node_modules", "parse5"), { recursive: true });
-    fs.writeFileSync(path.join(dir, "node_modules", "parse5", "index.js"), 'throw Object.assign(new Error("require() of ES Module"), { code: "ERR_REQUIRE_ESM" });');
-    fs.writeFileSync(path.join(dir, "page.html"), `<!doctype html><svg width="100" height="100">${A()}${B()}</svg>`);
-    const r = runInProcess(copy, ["--contacts", path.join(dir, "page.html")]);
-    assert.equal(r.status, 2, r.stderr);
-    assert.match(r.stderr, /Node 20\.19 or later/);
-    assert.doesNotMatch(r.stderr, /claude plugin update/);
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-});
+for (const [why, body, says, never] of [
+  ["a parse5 this Node cannot require() names the Node floor", 'throw Object.assign(new Error("require() of ES Module"), { code: "ERR_REQUIRE_ESM" });', /Node 20\.19\+ or 22\.12\+/, /claude plugin update/],
+  ["a parse5 that fails to load another way names the reinstall", "this is (not js", /claude plugin update design-vault@lucmoseley/, /Node 20\.19/],
+]) {
+  test(`${why} and exits 2`, () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-curves-load-"));
+    try {
+      const copy = path.join(dir, "check-curves.js");
+      fs.copyFileSync(SCRIPT, copy);
+      fs.mkdirSync(path.join(dir, "node_modules", "parse5"), { recursive: true });
+      fs.writeFileSync(path.join(dir, "node_modules", "parse5", "index.js"), body);
+      fs.writeFileSync(path.join(dir, "page.html"), `<!doctype html><svg width="100" height="100">${A()}${B()}</svg>`);
+      const r = runInProcess(copy, ["--contacts", path.join(dir, "page.html")]);
+      assert.equal(r.status, 2, r.stderr);
+      assert.match(r.stderr, says);
+      assert.doesNotMatch(r.stderr, never);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
 
 test("only an SVG-namespace element draws: an XML <PATH> and an HTML <path> under <foreignObject> are not shapes", () => {
   const xml = path.join(scratch, "upper-case.svg");

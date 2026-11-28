@@ -125,12 +125,10 @@
 		],
 		"package-lock.json": [
 			"test/ledger-check.test.js",
-			"test/npm-preflight.test.js",
 			"test/select-suites.test.js"
 		],
 		"package.json": [
 			"test/ledger-check.test.js",
-			"test/npm-preflight.test.js",
 			"test/select-suites.test.js"
 		],
 		"plugin/.claude-plugin/plugin.json": [
@@ -1616,11 +1614,19 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/layout/clip.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/layout/crowd.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/layout/cut.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/deferred.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -2570,7 +2576,6 @@
 		"test/run-cost.js": [
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
-			"test/npm-preflight.test.js",
 			"test/run-lanes.test.js",
 			"test/select-suites.test.js",
 			"test/suite-budget.test.js"
@@ -2591,6 +2596,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/runner.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/scratch-vault.js": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
