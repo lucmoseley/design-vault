@@ -36,22 +36,26 @@ where one is needed, is missing / 4 the page did not render in time / 5 the
 browser refused the page / 6 nothing fails but a check cannot be judged / 7 a
 call hung that would never return. Exits 0, 1 and 6 are results and print on
 stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import base64
-import importlib
-import math
-import os
 import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import importlib  # noqa: E402
+import math  # noqa: E402
+import os  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 
 
 runner = siblings.load(HERE, "runner.py")
@@ -550,10 +554,7 @@ def parse(argv):
 
 def main(argv):
     args = parse(argv)
-    try:
-        importlib.import_module("PIL")
-    except ImportError as err:
-        sys.exit(runner.missing(err))
+    importlib.import_module("PIL")
     try:
         kind, logo = read_logo(args.logo)
         if kind == "raster":
@@ -603,4 +604,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))
