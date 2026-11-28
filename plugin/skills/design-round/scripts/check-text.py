@@ -41,21 +41,25 @@ anything to judge, else no match. DIR/text.json holds every finding; an
 earlier run's is deleted.
 
 EXITS 0 no miss / 1 a miss / 2 the arguments, the table or the word lists are
-wrong / 3 Playwright or its browser is missing / 4 the page did not render in
+wrong / 3 Playwright, its browser, numpy or Pillow is missing / 4 the page did not render in
 time / 5 the browser refused the page / 7 a call hung that would never return.
 Exits 0 and 1 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 
 
 runner = siblings.load(HERE, "runner.py")
@@ -485,4 +489,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

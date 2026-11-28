@@ -129,20 +129,24 @@ wrong, the selectors and the table included / 3 Playwright or its browser is
 missing / 4 the page did not render in time / 5 the browser refused the page / 6
 no fault, but a --focal art was not measured (each printed) / 7 a call hung that
 would never return. Exits 0, 1 and 6 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import collections
 import os
-import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import collections  # noqa: E402
+import re  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
@@ -1493,4 +1497,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

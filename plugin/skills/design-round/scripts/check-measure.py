@@ -30,24 +30,28 @@ stylesheet went unread and no --widths were given, or no running text sets a
 full line at any width and no line runs over --max / 7 a call hung that would
 never return. Exits 0, 1 and 6 are results and print on stdout; the rest
 print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import contextlib
-import math
 import os
-import pathlib
-import re
 import sys
-import urllib.parse
-import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import contextlib  # noqa: E402
+import math  # noqa: E402
+import pathlib  # noqa: E402
+import re  # noqa: E402
+import urllib.parse  # noqa: E402
+import urllib.request  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 from fail_open import fail_open  # noqa: E402
 
 conditions = siblings.load(HERE, "conditions.py")
@@ -410,4 +414,4 @@ def verdict(at, breaks, results):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

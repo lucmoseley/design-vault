@@ -25,21 +25,25 @@ EXITS 0 every render passes / 1 a render fails / 2 the arguments are wrong, or
 a render, the log or render-sizes.json cannot be read / 3 Pillow, or numpy for
 --transparent, is missing / 6 no render fails but one cannot be judged. Exits 0, 1 and 6 are results and print on stdout; the
 rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import importlib
-import json
 import pathlib
-import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import importlib  # noqa: E402
+import json  # noqa: E402
+import re  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 
 SIZES = HERE.parent / "references" / "render-sizes.json"
 
@@ -207,11 +211,8 @@ def main(argv):
         help="the brief asked for a transparent background: check for a painted checkerboard",
     )
     args = parser.parse_args(argv)
-    try:
-        for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
-            importlib.import_module(package)
-    except ImportError as err:
-        sys.exit(runner.missing(err))
+    for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
+        importlib.import_module(package)
     from PIL import Image
 
     if args.aspect is not None:
@@ -254,4 +255,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))

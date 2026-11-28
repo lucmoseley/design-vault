@@ -64,22 +64,26 @@ EXITS 0 no miss / 1 a miss (each printed) / 2 the arguments or the table are
 wrong / 3 Playwright or its browser is missing / 4 a page did not render in time
 / 5 the browser refused the home page or a flow's first step / 7 a call hung that
 would never return. Exits 0 and 1 print on stdout; the rest print on stderr.
-An exception it does not handle once loaded exits 2, its traceback on stderr.
+An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import collections
-import difflib
 import os
-import re
 import sys
-import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+import crash_exit  # noqa: E402
+
+crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import collections  # noqa: E402
+import difflib  # noqa: E402
+import re  # noqa: E402
+import urllib.parse  # noqa: E402
+
 import siblings  # noqa: E402
-from crash_exit import run_main  # noqa: E402
 from fail_open import expected  # noqa: E402
 
 
@@ -515,4 +519,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    run_main(main)
+    sys.exit(main(sys.argv[1:]))
