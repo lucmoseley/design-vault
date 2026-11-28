@@ -16,9 +16,11 @@ field() { printf '%s' "$payload" | jq -r "$1 // \"\"" 2>/dev/null; }
 
 event="$(field '.hook_event_name')"
 
-session="$(field '.session_id')"
-state_dir="${TMPDIR:-/tmp}/design-round-pointer-${UID:-0}"
-marker="$state_dir/${session//[^A-Za-z0-9_-]/_}"
+locate_marker() {
+  session="$(field '.session_id')"
+  state_dir="${TMPDIR:-/tmp}/design-round-pointer-${UID:-0}"
+  marker="$state_dir/${session//[^A-Za-z0-9_-]/_}"
+}
 
 RENDERING=(design prototype animate design-mode)
 
@@ -53,6 +55,7 @@ case "$event" in
     fi
     ;;
   SessionStart)
+    locate_marker
     [[ -n "$session" ]] && rm -f "$marker" 2>/dev/null
     exit 0
     ;;
@@ -73,6 +76,7 @@ if [[ -n "$matched" ]]; then
 fi
 
 MARKER_MAX_AGE_MINUTES=1440 # guess, #5
+locate_marker
 if [[ -n "$session" ]]; then
   mkdir -p "$state_dir" 2>/dev/null
   set -o noclobber

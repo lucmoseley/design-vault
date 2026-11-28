@@ -19,7 +19,7 @@ session_start() {
   local source="$1" id="$2" cmd
   while IFS= read -r cmd; do
     jq -nc --arg s "$source" --arg id "$id" '{hook_event_name:"SessionStart",source:$s,session_id:$id}' |
-      CLAUDE_PLUGIN_ROOT="$plugin" bash -c "$cmd"
+      CLAUDE_PLUGIN_ROOT="$plugin" bash -c "$cmd" || return
   done < <(jq -r --arg s "$source" '.hooks.SessionStart[]? | select((.matcher // "") | split("|") | index($s)) | .hooks[].command' "$plugin/hooks/hooks.json")
 }
 
@@ -78,13 +78,14 @@ expect "and injects again" "$home" "$(skill prototype '')" inject
 expect "a session's pointer injects" "$home" "$(skill design s13)" inject
 expect "and is silent again before a compaction" "$home" "$(skill design s13)" silent
 compacted="$(session_start compact s13)"
-if [[ -z "$compacted" ]]; then
-  echo "ok   a compaction prints nothing"
+status=$?
+if ((status == 0)) && [[ -z "$compacted" ]]; then
+  echo "ok   a compaction prints nothing and exits 0"
 else
-  echo "FAIL a compaction prints nothing: $compacted"
+  echo "FAIL a compaction prints nothing and exits 0 (exit $status): $compacted"
   fails=$((fails + 1))
 fi
-expect "after a compaction it injects once more" "$home" "$(skill design s13)" inject
+expect "after a compaction it injects once more (#688)" "$home" "$(skill design s13)" inject
 expect "and then is silent" "$home" "$(skill design s13)" silent
 session_start resume s13 >/dev/null
 expect "a resume does not re-arm it" "$home" "$(skill design s13)" silent
