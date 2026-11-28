@@ -41,8 +41,8 @@ the earliest animation's start. They refuse a page whose animations never end,
 run off a scroll timeline or play in reverse, or that keeps starting them for
 SETTLE_CAP_MS. `hash` also refuses one that starts animations after that
 point, or when one finishes, watching until no script timer is pending and none
-has fired for QUIET_MS; it refuses a page holding a timer, or a repeating one,
-past SETTLE_CAP_MS then. `last` finishes those too, and refuses a page that
+has fired for QUIET_MS; it refuses a page running a repeating timer, or holding
+a timer due past SETTLE_CAP_MS. `last` finishes those too, and refuses a page that
 keeps starting them. `hash` renders every frame on the timeline its first load
 timed, and --save keeps that timeline for --check, which names any start its
 own load put more than STAGE_JITTER_MS away. Both refuse,
@@ -197,7 +197,6 @@ async ({ quiet, cap }) => {
   const f = window.__frames;
   const flow = window.__flow;
   // A finished animation with no fill leaves getAnimations(): https://www.w3.org/TR/web-animations-1/#relevant-animations-section
-  // #686
   const watch = async () => {
     const found = new Set();
     const began = performance.now();
@@ -479,7 +478,7 @@ def refuse_chain(page):
 
 def timer_reason(timer):
     what = {
-        "repeats": f"repeats a script timer every {ms(timer['ms'])} ms, which never stops pending",
+        "repeats": f"repeats a script timer every {ms(timer['ms'])} ms",
         "held": f"keeps setting script timers, one of {ms(timer['ms'])} ms due past the {SETTLE_CAP_MS} ms it waits for them",
         "long": f"sets a script timer for {ms(timer['ms'])} ms, past the {SETTLE_CAP_MS} ms it waits for one",
     }[timer["kind"]]
