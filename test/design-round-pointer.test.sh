@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 set -u
-hook="$(cd "$(dirname "$0")/.." && pwd)/plugin/hooks/design-round-pointer.sh"
+plugin="$(cd "$(dirname "$0")/.." && pwd)/plugin"
+hook="$plugin/hooks/design-round-pointer.sh"
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 export TMPDIR="$scratch/tmp"
@@ -13,6 +14,14 @@ absent='not at ~/design-vault'
 
 skill() { jq -nc --arg s "$1" --arg id "$2" '{hook_event_name:"PreToolUse",tool_name:"Skill",tool_input:{skill:$s},session_id:$id}'; }
 prompt() { jq -nc --arg p "$1" --arg id "$2" '{hook_event_name:"UserPromptSubmit",prompt:$p,session_id:$id}'; }
+
+session_start() {
+  local source="$1" id="$2" cmd
+  while IFS= read -r cmd; do
+    jq -nc --arg s "$source" --arg id "$id" '{hook_event_name:"SessionStart",source:$s,session_id:$id}' |
+      CLAUDE_PLUGIN_ROOT="$plugin" bash -c "$cmd"
+  done < <(jq -r --arg s "$source" '.hooks.SessionStart[]? | select((.matcher // "") | split("|") | index($s)) | .hooks[].command' "$plugin/hooks/hooks.json")
+}
 
 expect() {
   local name="$1" home="$2" payload="$3" want="$4" has="${5:-}" hasnt="${6:-}" out status
@@ -65,6 +74,22 @@ expect "and spends the pointer" "$home" "$(skill prototype s10)" silent
 
 expect "no session id still injects" "$home" "$(skill prototype '')" inject
 expect "and injects again" "$home" "$(skill prototype '')" inject
+
+expect "a session's pointer injects" "$home" "$(skill design s13)" inject
+expect "and is silent again before a compaction" "$home" "$(skill design s13)" silent
+compacted="$(session_start compact s13)"
+if [[ -z "$compacted" ]]; then
+  echo "ok   a compaction prints nothing"
+else
+  echo "FAIL a compaction prints nothing: $compacted"
+  fails=$((fails + 1))
+fi
+expect "after a compaction it injects once more" "$home" "$(skill design s13)" inject
+expect "and then is silent" "$home" "$(skill design s13)" silent
+session_start resume s13 >/dev/null
+expect "a resume does not re-arm it" "$home" "$(skill design s13)" silent
+session_start compact other-session >/dev/null
+expect "another session's compaction does not re-arm it" "$home" "$(skill design s13)" silent
 
 ro="$scratch/ro-tmp"
 mkdir -p "$ro/design-round-pointer-${UID:-0}"
