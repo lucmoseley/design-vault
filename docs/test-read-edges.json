@@ -2106,6 +2106,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/text/touch.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/tree-pages.json": [
 			"test/check-curves.test.js",
 			"test/ledger-check.test.js",
