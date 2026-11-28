@@ -1,10 +1,13 @@
 import argparse
 import contextlib
+import http.server
 import io
 import os
 import pathlib
 import re
 import sys
+import tempfile
+import threading
 import unittest
 
 HERE = os.path.dirname(__file__)
@@ -200,7 +203,7 @@ class Breakpoints(unittest.TestCase):
             ["(min-width: 40em)", "print"],
         )
 
-    def test_a_sheet_that_cannot_be_fetched_is_named_with_the_way_round_it(self):
+    def test_a_sheet_that_cannot_be_fetched_is_named(self):
         missing = pathlib.Path(FIXTURES, "missing.css").resolve().as_uri()
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
@@ -213,10 +216,96 @@ class Breakpoints(unittest.TestCase):
         out = measure.report(
             at, {"starts": set(), "unread": ["https://cdn.example/site.css"]}, []
         )
-        self.assertIn(
-            "\n  UNREAD stylesheet https://cdn.example/site.css: its breakpoints are unknown; add its widths with --widths",
+        self.assertTrue(
+            out.endswith(
+                "\n  UNREAD stylesheet https://cdn.example/site.css: its breakpoints are unknown"
+            ),
             out,
         )
+
+
+@contextlib.contextmanager
+def sheet_read_once(css):
+    served = []
+
+    class Once(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            ok = not served
+            served.append(self.path)
+            self.send_response(200 if ok else 500)
+            self.send_header("Content-Type", "text/css")
+            self.end_headers()
+            if ok:
+                self.wfile.write(css.encode())
+
+        def log_message(self, *_):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Once)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}/site.css"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+class UnreadSheet(unittest.TestCase):
+    def page(self, href):
+        body = pathlib.Path(FIXTURES, "linked.html").read_text(encoding="utf8")
+        page = pathlib.Path(
+            self.enterContext(tempfile.TemporaryDirectory()), "page.html"
+        )
+        page.write_text(
+            body.replace('href="linked.css"', f'href="{href}"'), encoding="utf8"
+        )
+        return str(page)
+
+    def check(self, *args):
+        with sheet_read_once(
+            "@media (min-width: 800px) and (max-width: 999px) { p { width: 90ch } }"
+        ) as href:
+            page = self.page(href)
+            return child.run(
+                [sys.executable, SCRIPT, page, *args], timeout=RUN_TIMEOUT_S
+            ), href
+
+    def test_an_unread_sheet_with_no_widths_given_cannot_be_measured_639(self):
+        proc, href = self.check()
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            f"\n  UNREAD stylesheet {href}: its breakpoints are unknown\n", proc.stdout
+        )
+        self.assertIn(
+            f"\nThe Measure lens is unjudged: {href} went unread, so the widths between"
+            " its breakpoints were never rendered; run again with --widths set to both"
+            " sides of each of its breakpoints.\n",
+            proc.stdout,
+        )
+
+    def test_widths_given_for_an_unread_sheet_find_the_lines_it_hid(self):
+        proc, _ = self.check("--widths", "799,800,999,1000")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("\n800px: 89 characters", proc.stdout)
+        self.assertNotIn("unjudged", proc.stdout)
+
+    def test_widths_given_in_range_pass_though_a_sheet_went_unread(self):
+        proc, _ = self.check("--widths", "390,1440")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn(
+            "\n1440px: 59 characters, 5 full lines in 1 block(s) — all in range",
+            proc.stdout,
+        )
+        self.assertNotIn("unjudged", proc.stdout)
+
+    def test_a_line_out_of_range_fails_even_where_a_sheet_went_unread(self):
+        proc, _ = self.check("--max", "55")
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn(
+            "\n320px: 59 characters, 5 full lines in 1 block(s) — 1 block(s) out of range",
+            proc.stdout,
+        )
+        self.assertNotIn("unjudged", proc.stdout)
 
 
 class Arguments(unittest.TestCase):
