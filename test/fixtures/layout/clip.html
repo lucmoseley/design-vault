@@ -2,15 +2,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>clip</title>
-<!-- Each card is one 24 px line tall and hides its overflow, its title about
-     300 px long. On a 320 px screen the cards are 280 px wide, so each title
-     wraps: the plain card's second line is cut off, a fault; the clamped and
-     the ellipsis cards mark the cut, the scrolling card can be scrolled, the
-     closed panel hides its text whole, and the snapped and the carousel
-     tracks show part of a slide. Two cards fail as the plain one does: the
-     loose card sets its ellipsis on the card, which marks no cut of the
-     wrapped title, and the slide card sits inside a carousel's slide. At
-     420 px every title fits. -->
+<!-- Each card's title is about 300 px long. On a 320 px screen the cards
+     are 280 px wide, so each title wraps: the plain card's second line is
+     cut off, a fault; the clamped and the ellipsis cards mark the cut, the
+     scrolling card can be scrolled, the closed panel hides its text whole,
+     and the snapped and the carousel tracks show part of a slide. Two cards
+     fail as the plain one does: the loose card sets its ellipsis on the
+     card, which marks no cut of the wrapped title, and the slide card sits
+     inside a carousel's slide. At 420 px every title fits. -->
 <style>
   body { margin: 0; padding: 0 20px; font: 16px/24px sans-serif }
   .card { height: 24px; overflow: hidden; margin: 0 0 24px }

@@ -285,7 +285,8 @@ const loop = (log) => log.some((w, i) => {
   const run = log.slice(i, i + LOOP.frames);
   const last = run[LOOP.frames - 1];
   // #617
-  const close = run.every((x, k) => k === 0 || x.frameAt - run[k - 1].frameAt < LOOP.span);
+  const linked = (x, prev) => x.link && prev.link && x.link.from === prev.link.id;
+  const close = run.every((x, k) => k === 0 || x.frameAt - run[k - 1].frameAt < LOOP.span || linked(x, run[k - 1]));
   return last && (last.at - w.at <= LOOP.span || (last.frame - w.frame === LOOP.frames - 1 && close));
 });
 """
