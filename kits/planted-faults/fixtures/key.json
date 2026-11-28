@@ -225,7 +225,7 @@
   "record": "vault.sibling-emphasis",
   "stage": "role",
   "area": "text",
-  "what": "In the header navigation the current page's link, Profile, is set apart from Articles, Blog and Contact only by the logo blue the page keeps for its links and its one button, with no change of weight, fill, size or place."
+  "what": "In the header navigation the current page's link, Profile, is set apart from Articles, Blog and Contact only by semibold against their regular weight, a step too small to catch at a glance, with no change of colour, fill, size or place."
  },
  {
   "candidate": "r1-v5g",
@@ -261,7 +261,7 @@
   "record": "vault.icon-use",
   "stage": "function",
   "area": "imagery",
-  "what": "Each section heading (Palette, Type pair, Texture, An article page, Motion sketch) opens with a large blue decorative icon (a star, a lightning bolt, a drop, a leaf, a sparkle) that marks no action or information."
+  "what": "Each section heading (Palette, Type pair, Texture, An article page, Motion sketch) opens with a large decorative icon in the heading's ink (a star, a lightning bolt, a drop, a leaf, a sparkle) that marks no action or information."
  },
  {
   "candidate": "r2-v7g",
@@ -279,7 +279,7 @@
   "record": "vault.zebra-rows",
   "stage": "treatment",
   "area": "data",
-  "what": "The short motion timeline table, four narrow columns, has heavy alternating row fills, saturated mid-blue and pale grey, on a table too small for the eye to lose its row."
+  "what": "The short motion timeline table, four narrow columns, has heavy alternating row fills, mid grey and pale grey, on a table too small for the eye to lose its row."
  },
  {
   "candidate": "r2-v7g",
@@ -333,6 +333,6 @@
   "record": "vault.card-type",
   "stage": "treatment",
   "area": "surfaces",
-  "what": "The three ranking principles under the lede sit as a row of like cards, and the middle one alone ('Recent stays count more than old ones.') takes a dark fill with white text, though it is the same kind of thing as the other two."
+  "what": "A row of three destination cards (Canggu, Uluwatu, Ubud) under the ranking principles, each a link of the same kind, and the middle one alone (Uluwatu) is shaped differently: square corners where the others are rounded, and its text centred where theirs is set left."
  }
 ]

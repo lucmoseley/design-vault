@@ -45,8 +45,6 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 import argparse
 import collections
 import contextlib
-import datetime
-import json
 import os
 import re
 import sys
@@ -64,6 +62,7 @@ conditions = siblings.load(HERE, "conditions.py")
 rule_table = siblings.load(HERE, "rule-table.py")
 layout = probe.layout
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 
 TABLE = os.path.join(HERE, "check-style.table")
 ACROSS_WIDTH = conditions.DESKTOP_WIDTH
@@ -450,11 +449,7 @@ def parse_args(argv):
 
 def main(argv):
     p, at = parse_args(argv)
-    os.makedirs(at.out, exist_ok=True)
-    json_path = os.path.join(at.out, "style.json")
-    with contextlib.suppress(FileNotFoundError):
-        os.unlink(json_path)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    when, json_path = answers_file.start(at.out, "style.json")
     widths = layout.sweep_widths(at.step, *at.span)
     blocks = [without(b, at.parts) for b in at.blocks]
 
@@ -486,23 +481,19 @@ def main(argv):
         found + [_finding(i) for i in ids if i not in {f["id"] for f in found}],
         key=lambda f: ids.index(f["id"]),
     )
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "gating": layout.gating(at.step, at.span),
-                "step": at.step,
-                "span": at.span,
-                "parts": at.parts,
-                "brief": at.brief,
-                "looping_animations": looping,
-                "answers": {f["id"]: f["answer"] for f in found},
-                "findings": found,
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        gating=layout.gating(at.step, at.span),
+        step=at.step,
+        span=at.span,
+        parts=at.parts,
+        brief=at.brief,
+        looping_animations=looping,
+        answers={f["id"]: f["answer"] for f in found},
+        findings=found,
+    )
     print(report(at, widths, found, looping=looping, json_path=json_path))
     return 1 if any(f["misses"] for f in found) else 0
 

@@ -3,11 +3,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>carousel</title>
-<!-- vault.pause (#545): three slides a setInterval changes every 3 s forever, and no control on the page.
-     ?route= picks how a slide changes: class (the default, a class swap fading by a short CSS transition),
-     text (the slide's text rewritten), hidden (the hidden attribute moved) or scroll (a scroller stepped);
-     ?every= sets the interval in ms; ?pause adds a Pause button that stops it,
-     ?pause=restart one that sets it going again from the start. -->
 <style>
   body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
   main { padding: 16px }
@@ -15,9 +10,10 @@
   .slides { position: relative; width: 300px; height: 120px; border: 1px solid #767676; overflow: hidden }
   .slide { position: absolute; inset: 0; padding: 16px; opacity: 0; transition: opacity 300ms }
   .slide.on { opacity: 1 }
-  [data-route=text] .slide, [data-route=hidden] .slide { opacity: 1 }
-  [data-route=scroll] { display: flex; overflow-x: hidden }
-  [data-route=scroll] .slide { position: static; flex: none; width: 300px; box-sizing: border-box; opacity: 1 }
+  .slides button { position: relative; z-index: 1 }
+  [data-turn-by=text] .slide, [data-turn-by=hidden] .slide { opacity: 1 }
+  [data-turn-by=scroll] { display: flex; overflow-x: hidden }
+  [data-turn-by=scroll] .slide { position: static; flex: none; width: 300px; box-sizing: border-box; opacity: 1 }
 </style>
 <main>
   <div class="slides">
@@ -28,30 +24,38 @@
 </main>
 <script>
   const query = new URLSearchParams(location.search);
-  const route = query.get('route') || 'class';
+  const turnBy = query.get('turn_by') || 'class';
   const box = document.querySelector('.slides');
   const slides = [...box.querySelectorAll('.slide')];
   const words = slides.map((s) => s.textContent);
-  box.dataset.route = route;
-  if (route === 'text') slides.slice(1).forEach((s) => s.remove());
-  if (route === 'hidden') slides.forEach((s, i) => { s.hidden = i > 0; });
+  box.dataset.turnBy = turnBy;
+  if (turnBy === 'text') slides.slice(1).forEach((s) => s.remove());
+  if (turnBy === 'hidden') slides.forEach((s, i) => { s.hidden = i > 0; });
   let at = 0;
   const turn = {
     class: () => { slides[at].classList.remove('on'); at = (at + 1) % 3; slides[at].classList.add('on'); },
     text: () => { at = (at + 1) % 3; slides[0].textContent = words[at]; },
     hidden: () => { slides[at].hidden = true; at = (at + 1) % 3; slides[at].hidden = false; },
     scroll: () => { at = (at + 1) % 3; box.scrollLeft = at * 300; },
-  }[route];
-  const every = Number(query.get('every')) || 3000;
-  let turning = setInterval(turn, every);
+  }[turnBy];
+  const every = Number(query.get('every_ms')) || 3000;
+  let hovered = false;
+  const step = () => { if (!hovered) turn(); };
+  let turning = setInterval(step, every);
+  const start = () => { clearInterval(turning); turning = setInterval(step, every); };
+  if (query.has('hover_pauses')) {
+    box.addEventListener('mouseenter', () => { hovered = true; });
+    box.addEventListener('mouseleave', () => { hovered = false; });
+  }
   if (query.has('pause')) {
     const pause = document.createElement('button');
     pause.textContent = 'Pause';
     pause.addEventListener('click', () => {
       clearInterval(turning);
-      if (query.get('pause') === 'restart') turning = setInterval(turn, every);
+      if (query.get('pause') === 'restarts') start();
+      if (query.get('pause') === 'resumes') setTimeout(start, every);
     });
-    document.querySelector('main').append(pause);
+    (query.has('hover_pauses') ? box : document.querySelector('main')).append(pause);
   }
 </script>
 </html>

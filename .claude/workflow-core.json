@@ -4,7 +4,7 @@
 	"tracker": "lucmoseley/design-vault-tracker",
 	"codeRepo": "lucmoseley/design-vault",
 	"modules": ["comments"],
-	"walkedTo": "v3.2.3",
+	"walkedTo": "v3.2.4",
 	"refillPanel": true,
 	"admissionGate": true,
 	"commands": {
@@ -12,9 +12,11 @@
 		"testCanary": "test/verdict-canary.test.js"
 	},
 	"fullTestShards": 4,
+	"worktreeLinks": ["plugin/node_modules"],
 	"ciSetup": [
 		"python3 -m pip install -r plugin/requirements.txt",
-		"python3 -m playwright install --with-deps chromium"
+		"python3 -m playwright install --with-deps chromium",
+		"npm ci --ignore-scripts --prefix plugin"
 	],
 	"sessionMeanMb": 698,
 	"sessionSigmaMb": 683,

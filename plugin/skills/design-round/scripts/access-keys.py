@@ -1,3 +1,4 @@
+import collections
 import json
 import os
 import sys
@@ -650,6 +651,9 @@ STILL_JS = (
 )
 WATCH_LIMIT = 200
 
+Span = collections.namedtuple("Span", "subject span")
+Driven = collections.namedtuple("Driven", "answers spans")
+
 
 def _shot(page, handle, in_window):
     import io
@@ -751,7 +755,7 @@ def _carousels(page, carousels):
             "(n) => window.__drive.carousels[n]", n
         ).as_element()
         span = _span(page, handle)
-        spans.append(span)
+        spans.append(Span(c["subject"], span))
         if isinstance(span, str):
             unmeasured.append(f"{c['subject']} {span}")
         elif span is not None:
@@ -870,4 +874,4 @@ def driven(context, url, carousels, *, mouse):
         out["vault.focus-visible"].unmeasured.extend(unmeasured)
     out["vault.menu-focus"].faults.extend(_menus(page))
     page.close()
-    return out, spans
+    return Driven(out, spans)

@@ -538,6 +538,10 @@ class TheCommandLine(unittest.TestCase):
             self.assertEqual(code, 1)
             written = json.loads(stale.read_text())
             self.assertEqual(written["answers"], dict.fromkeys(RECORDS, "fail"))
+            self.assertEqual(
+                list(written),
+                ["url", "run_at", "answers", "findings", "pages", "unread", "flows"],
+            )
             for record in RECORDS:
                 self.assertIn(f"{record}: fail", printed)
 

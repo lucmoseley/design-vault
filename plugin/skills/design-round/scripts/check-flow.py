@@ -113,6 +113,7 @@ QUIET_MS = 2000  # guess, #141
 POLL_MS = 100  # guess, #182
 REWRITE_FRAMES = 5  # guess, #60
 REWRITE_SPAN_MS = 250  # guess, #60
+REWRITE_CHAIN = 2  # guess, #617
 ATTEMPTS = 3  # guess, #126
 NAMES_SHOWN = 3  # guess, #182
 
@@ -122,27 +123,42 @@ COLLECTOR_JS = r"""
   const rewrites = new Map();
   const morphs = new Map();
   const pending = new Map();
-  const state = { seen, rewrites, morphs, pending, frame: 0, firstFrame: null, frameAt: null, prevFrameAt: null,
-    lastNew: 0, lastPageFrame: -1, stopped: false };
+  const repeats = new Map();
+  const state = { seen, rewrites, morphs, pending, repeats, frame: 0, firstFrame: null, frameAt: null, prevFrameAt: null,
+    lastNew: 0, lastPageFrame: -1, stopped: false, link: null, links: 0 };
   window.__flow = state;
-  const setT = window.setTimeout;
-  const clearT = window.clearTimeout;
+  const [setT, setI, clearT] = [window.setTimeout, window.setInterval, window.clearTimeout];
+  const run = (fn, self, a) => (typeof fn === 'function' ? fn.apply(self, a) : (0, eval)(String(fn)));
+  const timer = (ms) => ({ due: performance.now() + (Number(ms) || 0), ms: Number(ms) || 0 });
   window.setTimeout = function (fn, ms, ...args) {
     const id = setT.call(this, function (...a) {
       pending.delete(id);
       state.lastNew = performance.now();
-      return typeof fn === 'function' ? fn.apply(this, a) : (0, eval)(String(fn));
+      return run(fn, this, a);
     }, ms, ...args);
-    pending.set(id, performance.now() + (Number(ms) || 0));
+    pending.set(id, timer(ms));
     return id;
   };
-  window.clearTimeout = function (id) { pending.delete(id); return clearT.call(this, id); };
+  // #686
+  window.setInterval = function (fn, ms, ...args) {
+    const id = setI.call(this, function (...a) { return run(fn, this, a); }, ms, ...args);
+    repeats.set(id, timer(ms));
+    return id;
+  };
+  // clearTimeout and clearInterval clear one list of timers, either kind:
+  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-cleartimeout
+  window.clearTimeout = window.clearInterval = function (id) { pending.delete(id); repeats.delete(id); return clearT.call(this, id); };
   // #135 #326
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = function (cb) {
     state.lastPageFrame = state.frame;
     if (typeof cb !== 'function') return raf(cb);
-    return raf((t) => { try { return cb(t); } finally { state.scan(t); } });
+    // #617
+    const link = { id: ++state.links, from: state.link && state.link.id, cb };
+    return raf((t) => {
+      state.link = link;
+      try { return cb(t); } finally { state.link = null; state.take(link); state.scan(t); }
+    });
   };
   state.raf = raf;
   state.neverStarted = () => [...seen].filter(([a, rec]) => a.startTime === null && rec.start === null && a.playState === 'paused').map(([a]) => a);
@@ -193,7 +209,8 @@ COLLECTOR_JS = r"""
   const WATCHED = ['style', 'class', 'transform', 'd', 'points', 'x', 'y', 'cx', 'cy', 'r',
     'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'opacity', 'offset', 'fill',
     'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-dashoffset', 'viewBox', 'href', 'src'];
-  new MutationObserver((records) => {
+  const observer = new MutationObserver((records) => record(records, null));
+  const record = (records, link) => {
     if (state.stopped) return;
     for (const m of records) {
       const value = m.target.getAttribute(m.attributeName);
@@ -208,10 +225,17 @@ COLLECTOR_JS = r"""
         continue;
       }
       const log = rewrites.get(m.target) || [];
-      if (!log.length || log[log.length - 1].frame !== state.frame) log.push({ frame: state.frame, at: performance.now() });
+      const last = log[log.length - 1];
+      if (!last || last.frame !== state.frame) {
+        const prior = last && last.link;
+        const chained = link && prior && link.from === prior.id && link.cb === prior.cb;
+        log.push({ frame: state.frame, at: performance.now(), frameAt: state.frameAt, link, chain: chained ? last.chain + 1 : 1 });
+      }
       rewrites.set(m.target, log);
     }
-  }).observe(document, { subtree: true, attributes: true, attributeOldValue: true,
+  };
+  state.take = (link) => record(observer.takeRecords(), link);
+  observer.observe(document, { subtree: true, attributes: true, attributeOldValue: true,
     attributeFilter: WATCHED });
 })();
 """
@@ -253,16 +277,24 @@ const cssPaused = (a) => {
 };
 """
 
-LOOP_JS = r"""
-const loop = (log, frames, span) => log.some((w, i) => {
-  const last = log[i + frames - 1];
-  return last && (last.at - w.at <= span || last.frame - w.frame === frames - 1);
+LOOP_JS = (
+    f"const LOOP = {json.dumps({'frames': REWRITE_FRAMES, 'span': REWRITE_SPAN_MS, 'chain': REWRITE_CHAIN})};"
+    + r"""
+const loop = (log) => log.some((w, i) => {
+  if (w.chain >= LOOP.chain) return true;
+  const run = log.slice(i, i + LOOP.frames);
+  const last = run[LOOP.frames - 1];
+  // #617
+  const linked = (x, prev) => x.link && prev.link && x.link.from === prev.link.id;
+  const close = run.every((x, k) => k === 0 || x.frameAt - run[k - 1].frameAt < LOOP.span || linked(x, run[k - 1]));
+  return last && (last.at - w.at <= LOOP.span || (last.frame - w.frame === LOOP.frames - 1 && close));
 });
 """
+)
 
 STATUS_JS = (
     r"""
-({ frames, span }) => {
+() => {
   """
     + LOOP_JS
     + r"""
@@ -274,11 +306,11 @@ STATUS_JS = (
     if (a.playState === 'running' && a.timeline === document.timeline && t && t.endTime !== Infinity) running++;
   }
   const now = performance.now();
-  const timers = [...f.pending.values()].map((due) => Math.max(0, due - now));
-  const morphed = [...f.morphs.values()].some((log) => loop(log, frames, span));
+  const timers = [...f.pending.values()].map((t) => Math.max(0, t.due - now));
+  const morphed = [...f.morphs.values()].some(loop);
   // #469
   const logs = [...f.rewrites.values()];
-  const looped = logs.some((log) => loop(log, frames, span));
+  const looped = logs.some(loop);
   const rewriting = logs.some((log) => {
     const [last, prev] = log.slice(-2).reverse();
     return last.frame === f.frame && (!prev || prev.frame === last.frame - 1);
@@ -292,8 +324,8 @@ STATUS_JS = (
 DRAWN_JS = r"""
 const listed = (names, shown) => names.slice(0, shown).join(', ') + (names.length > shown ? ', …' : '');
 const listing = (els, shown) => listed(els.map((e) => label(e)), shown);
-const looping = (logs, frames, span) => [...logs].filter(([, log]) => loop(log, frames, span)).map(([e]) => e);
-const drawn = (f, { frames, span, shown, morphs }) => {
+const looping = (logs) => [...logs].filter(([, log]) => loop(log)).map(([e]) => e);
+const drawn = (f, { shown, morphs }) => {
   const reasons = [];
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const kinds = [
@@ -308,17 +340,17 @@ const drawn = (f, { frames, span, shown, morphs }) => {
   }
   const shadowed = [...document.querySelectorAll('*')].filter((e) => e.shadowRoot);
   if (shadowed.length) reasons.push('has shadow DOM (' + listing(shadowed, shown) + ')');
-  const rewritten = looping(f.rewrites, frames, span);
+  const rewritten = looping(f.rewrites);
   if (rewritten.length) reasons.push('moves ' + rewritten.length + ' element(s) by rewriting their style or attributes from a script, frame by frame (' + listing(rewritten, shown) + ')');
-  const morphed = morphs ? looping(f.morphs, frames, span) : [];
+  const morphed = morphs ? looping(f.morphs) : [];
   if (morphed.length) reasons.push('morphs ' + morphed.length + ' path(s) by rewriting their d from a script, frame by frame (' + listing(morphed, shown) + ')');
   return reasons;
 };
 """
 
-BLOCKERS_JS = (
+UNSEEKABLE_JS = (
     r"""
-({ before, frames, span, shown }) => {
+({ before, shown }) => {
   """
     + LABEL_JS
     + LOOP_JS
@@ -328,7 +360,7 @@ BLOCKERS_JS = (
   const f = window.__flow;
   f.scan();
   f.stopped = true;
-  const reasons = drawn(f, { frames, span, shown, morphs: false });
+  const reasons = drawn(f, { shown, morphs: false });
   const scrolled = [...f.seen.keys()].filter((a) => a.timeline !== document.timeline);
   if (scrolled.length) reasons.push('drives ' + scrolled.length + ' animation(s) by scroll position, not time');
   const reversed = [...f.seen.keys()].filter((a) => a.playbackRate <= 0);
@@ -338,7 +370,7 @@ BLOCKERS_JS = (
   const seeked = paused.filter((a) => !held.includes(a));
   if (seeked.length) reasons.push('holds ' + seeked.length + ' paused animation(s) that a script seeks by hand');
   if (held.length) reasons.push('holds ' + held.length + ' animation(s) CSS animation-play-state keeps paused (' + listed([...new Set(held.map((a) => label(a.effect.target, a.effect.pseudoElement)))].sort(), shown) + '), which play only once something such as a scroll or a click releases them');
-  f.morphing = looping(f.morphs, frames, span);
+  f.morphing = looping(f.morphs);
   const scrollMorphed = f.morphing.filter((e) => f.morphs.get(e).some((w) => w.at >= f.sweptFrom));
   if (scrollMorphed.length) reasons.push('rewrites the d of ' + scrollMorphed.length + ' path(s) when the page is scrolled (' + listing(scrollMorphed, shown) + ')');
   const started = before === null ? 0 : f.seen.size - before + f.pausedAtSweep.filter((a) => a.playState !== 'paused' || f.seen.get(a).start !== null).length;
@@ -597,9 +629,7 @@ def esc(s):
 def settle(page, at):
     waited = 0
     while True:
-        s = page.evaluate(
-            STATUS_JS, {"frames": REWRITE_FRAMES, "span": REWRITE_SPAN_MS}
-        )
+        s = page.evaluate(STATUS_JS)
         if pace.settled(s, at.quiet):
             return s
         if waited >= at.timeout and s["firstFrame"] is None:
@@ -670,11 +700,9 @@ def measure(at):
                 before = page.evaluate("() => window.__flow.markSweep()")
                 sweep(page)
             reasons = page.evaluate(
-                BLOCKERS_JS,
+                UNSEEKABLE_JS,
                 {
                     "before": before,
-                    "frames": REWRITE_FRAMES,
-                    "span": REWRITE_SPAN_MS,
                     "shown": NAMES_SHOWN,
                 },
             )

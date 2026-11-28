@@ -1199,6 +1199,30 @@ box.animate([{ transform: "translateX(0)" }, { transform: "translateX(300px)" }]
         self.assertEqual(data["jumps"], [], proc.stdout + proc.stderr)
 
 
+def loops(*gaps):
+    log, at = [], 0
+    for k, gap in enumerate((0, *gaps)):
+        at += gap
+        log.append({"frame": k, "at": at, "frameAt": at, "chain": 1})
+    proc = subprocess.run(
+        ["node", "-e", flow.LOOP_JS + f"console.log(loop({json.dumps(log)}))"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return proc.stdout.strip() == "true"
+
+
+class LoopRule(unittest.TestCase):
+    def test_writes_in_consecutive_frames_under_a_beat_apart_are_a_loop(self):
+        self.assertTrue(loops(90, 90, 90, 90))
+
+    def test_writes_in_consecutive_frames_a_beat_apart_are_not_a_loop(
+        self,
+    ):  # #617
+        self.assertFalse(loops(300, 300, 300, 300))
+
+
 class Pages(unittest.TestCase):
     def test_a_frame_loop_cycling_its_writes_over_four_elements_is_measured(
         self,
@@ -1240,6 +1264,41 @@ title.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards
             sorted(e["label"] for e in data["elements"]),
             ["div#a1", "div#a2", "div#box", "div#c1", "div#c2", "div#late"],
         )
+
+    def test_a_double_raf_setup_writing_an_element_twice_is_not_a_script_loop(
+        self,
+    ):  # #617
+        page = """<!doctype html><div id="box" style="width:40px;height:40px;background:#000"></div>
+<div id="card" style="width:40px;height:40px"></div>
+<script>
+box.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+requestAnimationFrame(() => {
+  card.style.transform = "translateX(10px)";
+  requestAnimationFrame(() => { card.style.transform = "none"; });
+});
+</script>"""
+        proc, data = run_page(page)
+        self.assertNotEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertEqual([e["label"] for e in data["elements"]], ["div#box"])
+
+    def test_a_frame_ticker_writing_an_element_once_or_frames_apart_is_not_a_script_loop(
+        self,
+    ):  # #617
+        page = """<!doctype html><div id="box" style="width:40px;height:40px;background:#000"></div>
+<div id="lone"></div><div id="sparse"></div>
+<script>
+box.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+let tick = 0;
+requestAnimationFrame(function ticker() {
+  tick++;
+  if (tick === 5) lone.className = "on";
+  if (tick === 3 || tick === 10 || tick === 17) sparse.className = "t" + tick;
+  if (tick < 30) requestAnimationFrame(ticker);
+});
+</script>"""
+        proc, data = run_page(page)
+        self.assertNotEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertEqual([e["label"] for e in data["elements"]], ["div#box"])
 
     def test_a_storyboard_on_a_starved_browser_is_not_a_script_loop_135(self):
         page = """<!doctype html><h1 id="title">Story</h1><div id="box" style="width:40px;height:40px;background:#000"></div>
@@ -1405,6 +1464,31 @@ class Refused(unittest.TestCase):
         self.refuses(
             "script-loop-starved.html", "from a script, frame by frame (div#loop)"
         )
+
+    def test_a_clock_bound_frame_loop_a_stall_cuts_under_rewrite_frames(
+        self,
+    ):  # #617
+        self.refuses(
+            "script-loop-stalled.html", "from a script, frame by frame (div#loop)"
+        )
+
+    def test_a_frame_loop_through_a_fresh_closure_frames_a_beat_apart(self):  # #617
+        page = """<!doctype html><div id="waapi" style="width:40px;height:40px;background:#333"></div>
+<div id="loop" style="width:40px;height:40px;background:#333"></div>
+<script>
+waapi.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+let frame = 0;
+function tick() {
+  const held = performance.now();
+  while (performance.now() - held < 300);
+  loop.style.transform = `translateX(${30 * frame}px)`;
+  if (frame++ < 8) requestAnimationFrame(() => tick());
+}
+requestAnimationFrame(() => tick());
+</script>"""
+        proc, data = run_page(page)
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn("from a script, frame by frame (div#loop)", proc.stdout)
 
     def test_a_script_moving_an_element_frame_by_frame_after_the_quiet_window(
         self,

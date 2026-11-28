@@ -1,0 +1,7 @@
+[
+  { "name": "tbody", "body": "<table><tr><td>{svg}</td></tr></table>", "chain": "table:nth-of-type(1)>tbody:nth-of-type(1)>tr:nth-of-type(1)>td:nth-of-type(1)>" },
+  { "name": "p-closed-by-div", "body": "<p>x<div>{svg}</div>", "chain": "div:nth-of-type(1)>" },
+  { "name": "sibling-li", "body": "<ul><li>a<li>{svg}</ul>", "chain": "ul:nth-of-type(1)>li:nth-of-type(2)>" },
+  { "name": "foster-parented", "body": "<table>{svg}</table>", "chain": "" },
+  { "name": "adoption-clone", "body": "<b>1<p>2{svg}</b>3</p>", "chain": "p:nth-of-type(1)>b:nth-of-type(1)>" }
+]

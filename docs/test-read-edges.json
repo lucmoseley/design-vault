@@ -100,10 +100,12 @@
 			"test/corrections-log.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
 			"test/round-log.test.js",
 			"test/rule-store-pointers.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"index.html": [
 			"test/calibration-packet.test.js"
@@ -134,6 +136,15 @@
 		],
 		"plugin/.claude-plugin/plugin.json": [
 			"test/plugin-manifest.test.js"
+		],
+		"plugin/package.json": [
+			"test/chromium-suites.test.js",
+			"test/failed-files.test.js",
+			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"plugin/review-page/index.html": [
 			"test/review-page.test.js"
@@ -363,6 +374,7 @@
 		"scripts/lib/resolve-core.js": [
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
 			"test/rule-triggers.test.js",
 			"test/run-lanes.test.js",
 			"test/select-suites.test.js",
@@ -381,8 +393,14 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
+		],
+		"test/answers-file.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
 		],
 		"test/bundle.test.js": [
 			"test/ledger-check.test.js",
@@ -590,8 +608,10 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/drive-form.test.py": [
 			"test/ledger-check.test.js",
@@ -1189,6 +1209,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/flow/script-loop-stalled.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/flow/script-loop-starved.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
@@ -1301,11 +1325,19 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/long-timer.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/mark.svg": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/morph.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/polling.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1338,6 +1370,14 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/staggered.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/ticking.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/timed-chain.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1606,11 +1646,19 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/layout/clip.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/layout/crowd.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/layout/cut.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/layout/deferred.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -2070,6 +2118,15 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/text/touch.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/tree-pages.json": [
+			"test/check-curves.test.js",
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/validate/art-only.json": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js",
@@ -2432,10 +2489,25 @@
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/idle-machine.js": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/ingest.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
+		],
+		"test/lane-readers.sh": [
+			"test/chromium-suites.test.js",
+			"test/failed-files.test.js",
+			"test/ledger-check.test.js",
+			"test/meminfo.contract.test.js",
+			"test/npm-preflight.test.js",
+			"test/ps.contract.test.js",
+			"test/select-suites.test.js",
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/late-input.py": [
 			"test/ledger-check.test.js",
@@ -2474,6 +2546,15 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/meminfo-fake.js": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/meminfo.contract.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/no-git-env.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
@@ -2481,6 +2562,11 @@
 		],
 		"test/no-git-env.test.js": [
 			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/npm-preflight.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/palette.test.py": [
@@ -2496,6 +2582,10 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/planted-faults-score.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/plugin-manifest.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
@@ -2503,6 +2593,15 @@
 		],
 		"test/probe.test.py": [
 			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/ps-fake.js": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/ps.contract.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/release-check.test.js": [
@@ -2559,9 +2658,11 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
 			"test/run-lanes.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/run-lanes.test.js": [
 			"test/ledger-check.test.js",
@@ -2569,6 +2670,10 @@
 			"test/select-suites.test.js"
 		],
 		"test/runner.test.py": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/scratch-vault.js": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -2581,8 +2686,10 @@
 			"test/chromium-suites.test.js",
 			"test/failed-files.test.js",
 			"test/ledger-check.test.js",
+			"test/npm-preflight.test.js",
 			"test/select-suites.test.js",
-			"test/suite-budget.test.js"
+			"test/suite-budget.test.js",
+			"test/suite-needs.test.js"
 		],
 		"test/select-suites.test.js": [
 			"test/ledger-check.test.js",
@@ -2598,6 +2705,11 @@
 			"test/select-suites.test.js"
 		],
 		"test/suite-budget.test.js": [
+			"test/ledger-check.test.js",
+			"test/no-git-env.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/suite-needs.test.js": [
 			"test/ledger-check.test.js",
 			"test/no-git-env.test.js",
 			"test/select-suites.test.js"

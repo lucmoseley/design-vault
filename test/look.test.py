@@ -28,6 +28,7 @@ PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
 STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
+TIMED_CHAIN = os.path.join(HERE, "fixtures", "frames", "timed-chain.html")
 SLOW_CANVAS = os.path.join(HERE, "fixtures", "look", "slow-canvas.html")
 SLOW_MOVE = os.path.join(HERE, "fixtures", "look", "slow-move.html")
 
@@ -247,7 +248,15 @@ def first_dark_x(png, row) -> int | None:
     return int(dark[0]) if dark.size else None
 
 
-ROW_A, ROW_B = 60, 140
+def middle_row(fixture, box):
+    with open(fixture, encoding="utf8") as fh:
+        css = fh.read()
+    top = re.search(rf"#{box} {{ top: (\d+)px; }}", css).group(1)
+    height = re.search(r"\ndiv \{[^}]*height: (\d+)px", css).group(1)
+    return int(top) + int(height) // 2
+
+
+ROW_A, ROW_B = (middle_row(STAGGERED, box) for box in "ab")
 # 100 ms of staggered.html's half-px-a-ms move, a guess at a timer's lateness, #547.
 STAGGER_PX = 50
 
@@ -285,6 +294,17 @@ class Staggered(unittest.TestCase):  # #547
             self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
             self.assertIn("starts animations after its frames were read", proc.stdout)
             self.assertIn("Scrub it by eye", proc.stdout)
+            self.assertEqual(os.listdir(d), [])
+
+    def test_a_link_a_timer_starts_past_quiet_ms_is_refused_unwritten_686(self):
+        with tempfile.TemporaryDirectory() as d:
+            proc = run(
+                "scrub", TIMED_CHAIN, "--out", d, "--step", "500", "--until", "1000"
+            )
+            self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+            self.assertIn(
+                "starts animations when others finish (div#tagline)", proc.stdout
+            )
             self.assertEqual(os.listdir(d), [])
 
     def test_a_page_with_no_motion_is_named_still(self):

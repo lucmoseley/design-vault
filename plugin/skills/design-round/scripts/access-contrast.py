@@ -126,16 +126,7 @@ def scheme_table(name, table):
     return table
 
 
-Reading = collections.namedtuple("Reading", "subject role ratio")
-_ROLES = (
-    "text",
-    "large text",
-    "control edge",
-    "icon",
-    "state mark",
-    "control on a photo",
-    "chart mark",
-)
+PartReading = collections.namedtuple("PartReading", "subject role ratio")
 
 
 def _role_rungs(role, table):
@@ -152,9 +143,9 @@ def _role_rungs(role, table):
 
 def rung(ratio, role, table):
     floor, top = _role_rungs(role, table)
-    ladder = {r for each in _ROLES for r in _role_rungs(each, table)}
-    cleared = [r for r in ladder if floor <= r <= ratio]
-    return min(max(cleared), top) if cleared else None
+    if ratio >= top:
+        return top
+    return floor if ratio >= floor else None
 
 
 def _worst(readings):
@@ -166,19 +157,22 @@ def _worst(readings):
 
 
 def rung_drops(light, dark, table):
-    lit, dim = _worst(light), _worst(dark)
+    dark_worst = _worst(dark)
     out = []
-    for key, was in lit.items():
-        if key not in dim:
+    for (subject, role), light_ratio in _worst(light).items():
+        if (subject, role) not in dark_worst:
             continue
-        now = dim[key]
-        held, onto = rung(was, key[1], table), rung(now, key[1], table)
-        if onto < held:
+        dark_ratio = dark_worst[subject, role]
+        light_rung, dark_rung = (
+            rung(light_ratio, role, table),
+            rung(dark_ratio, role, table),
+        )
+        if dark_rung < light_rung:
             out.append(
                 {
-                    "subject": key[0],
-                    "detail": f"in the dark scheme, is {now:.2f}:1, down from {was:.2f}:1 on the light page: off the "
-                    f"{held:g}:1 rung it holds there, onto {onto:g}:1 (vault.contrast-ladder)",
+                    "subject": subject,
+                    "detail": f"in the dark scheme, its {role} is {dark_ratio:.2f}:1, down from {light_ratio:.2f}:1 on the light "
+                    f"page: off the {light_rung:g}:1 rung it holds there, onto {dark_rung:g}:1 (vault.contrast-ladder)",
                 }
             )
     return out
@@ -701,7 +695,7 @@ def chart_faults(chart, ids_shot, ground, table):
                 }
             )
         else:
-            readings.append(Reading(mark["subject"], "chart mark", ratio))
+            readings.append(PartReading(mark["subject"], "chart mark", ratio))
     return out, readings
 
 
@@ -943,7 +937,7 @@ def _photo_verdict(photo, sightings, table):
                 }
             )
         else:
-            passed.append(Reading(subject, "control on a photo", worst.ratio))
+            passed.append(PartReading(subject, "control on a photo", worst.ratio))
     return passed
 
 
@@ -1008,7 +1002,7 @@ def measure(page, table, *, parts, absent, texts, fresh):
                         }
                     )
                 else:
-                    readings.append(Reading(c["subject"], "icon", f.ratio))
+                    readings.append(PartReading(c["subject"], "icon", f.ratio))
 
     if got["states"]:
         on = _shoot(page)
@@ -1030,7 +1024,7 @@ def measure(page, table, *, parts, absent, texts, fresh):
                     }
                 )
             else:
-                readings.append(Reading(s["subject"], "state mark", ratio))
+                readings.append(PartReading(s["subject"], "state mark", ratio))
 
     if texts is not None:
         ladder.notes.extend(_thin_notes(page, table, texts))

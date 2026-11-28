@@ -3,9 +3,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 <title>entrance</title>
-<!-- vault.pause (#545): a heading a timeout fades in over 800 ms soon after load, beside an interval that keeps
-     running and changes nothing; ?later= adds a timeout of that many ms that changes nothing, ?chain a
-     1 s timeout that re-arms itself and changes nothing -->
 <style>
   body { margin: 0; font: 16px/1.5 sans-serif; color: #222; background: #fff }
   main { padding: 16px }
@@ -20,7 +17,7 @@
   let ticks = 0;
   setInterval(() => { ticks++; }, 1000);
   const query = new URLSearchParams(location.search);
-  if (query.has('later')) setTimeout(() => { ticks = 0; }, Number(query.get('later')));
-  if (query.has('chain')) (function tick() { ticks++; setTimeout(tick, 1000); })();
+  if (query.has('idle_timeout_ms')) setTimeout(() => { ticks = 0; }, Number(query.get('idle_timeout_ms')));
+  if (query.has('rearming_timeout')) (function tick() { ticks++; setTimeout(tick, 1000); })();
 </script>
 </html>

@@ -152,7 +152,10 @@ class Refusals(unittest.TestCase):
                 env={**os.environ, "PYTHONPATH": d},
             )
         self.assertEqual(proc.returncode, 3, proc.stdout + proc.stderr)
-        self.assertIn("video-sheet.py needs av: python3 -m pip install", proc.stderr)
+        self.assertIn(
+            "video-sheet.py: av is missing — python3 -m pip install --only-binary :all: -r",
+            proc.stderr,
+        )
         self.assertIn("requirements.txt", proc.stderr)
 
     def test_an_out_dir_that_cannot_be_written_exits_5(self):

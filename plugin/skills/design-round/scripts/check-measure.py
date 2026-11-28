@@ -25,8 +25,9 @@ fetched is named, since its breakpoints are unknown: pass its widths by hand.
 
 EXITS 0 every line in range / 1 a line out of range (each printed) / 2 the
 arguments are wrong / 3 Playwright or its browser is missing / 4 the page did
-not render in time / 5 the browser refused the page / 6 no running text sets a
-full line at any width, and no line runs over --max / 7 a call hung that would
+not render in time / 5 the browser refused the page / 6 cannot measure: a
+stylesheet went unread and no --widths were given, or no running text sets a
+full line at any width and no line runs over --max / 7 a call hung that would
 never return. Exits 0, 1 and 6 are results and print on stdout; the rest
 print on stderr.
 An exception it does not handle once loaded exits 2, its traceback on stderr.
@@ -242,21 +243,17 @@ def report(at, breaks, results):
             f"  breakpoints: {', '.join(f'{e}px' for e in edges(breaks['starts'])) or 'none'}"
         )
         for sheet in breaks["unread"]:
-            lines.append(
-                f"  UNREAD stylesheet {sheet}: its breakpoints are unknown; add its widths with --widths"
-            )
+            lines.append(f"  UNREAD stylesheet {sheet}: its breakpoints are unknown")
     for w, r in results:
-        verdict = (
-            f"{len(r['out'])} block(s) out of range" if r["out"] else "all in range"
-        )
+        state = f"{len(r['out'])} block(s) out of range" if r["out"] else "all in range"
         if r["range"] is None:
             lines.append(
                 f"{w}px: no full line of running text"
-                + (f" — {verdict}" if r["out"] else "")
+                + (f" — {state}" if r["out"] else "")
             )
         else:
             lines.append(
-                f"{w}px: {span(*r['range'])} characters, {r['lines']} full lines in {r['blocks']} block(s) — {verdict}"
+                f"{w}px: {span(*r['range'])} characters, {r['lines']} full lines in {r['blocks']} block(s) — {state}"
             )
         for b in r["out"]:
             counts = sorted(len(t) for t in b["bad"])
@@ -390,12 +387,26 @@ def main(argv):
         return code
     breaks, results = got
     print(report(at, breaks, results))
-    if all(r["range"] is None and not r["out"] for _, r in results):
-        print(
+    code, why = verdict(at, breaks, results)
+    if why:
+        print(why)
+    return code
+
+
+def verdict(at, breaks, results):
+    if any(r["out"] for _, r in results):
+        return 1, None
+    if breaks["unread"] and not at.widths:
+        return 6, (
+            f"The Measure lens is unjudged: {', '.join(breaks['unread'])} went unread, so the widths"
+            " between its breakpoints were never rendered; run again with --widths set to both sides"
+            " of each of its breakpoints."
+        )
+    if all(r["range"] is None for _, r in results):
+        return 6, (
             "No running text sets a full line at any width, and none runs over --max: skip the Measure lens, and say so."
         )
-        return 6
-    return 1 if any(r["out"] for _, r in results) else 0
+    return 0, None
 
 
 if __name__ == "__main__":

@@ -154,34 +154,34 @@ class Rungs(unittest.TestCase):
 
     def test_a_drop_is_reported_and_a_rise_or_a_move_above_the_top_is_not(self):
         light = [
-            contrasts.Reading("p#drop", "text", 7.31),
-            contrasts.Reading("p#rise", "text", 5),
-            contrasts.Reading("p#top", "text", 15),
-            contrasts.Reading("button#icon", "icon", 18),
-            contrasts.Reading("p#light-only", "text", 8),
+            contrasts.PartReading("p#drop", "text", 7.31),
+            contrasts.PartReading("p#rise", "text", 5),
+            contrasts.PartReading("p#top", "text", 15),
+            contrasts.PartReading("button#icon", "icon", 18),
+            contrasts.PartReading("p#light-only", "text", 8),
         ]
         dark = [
-            contrasts.Reading("p#drop", "text", 4.62),
-            contrasts.Reading("p#drop", "text", 9),
-            contrasts.Reading("p#rise", "text", 8),
-            contrasts.Reading("p#top", "text", 12),
-            contrasts.Reading("button#icon", "icon", 5),
-            contrasts.Reading("p#dark-only", "text", 4.6),
+            contrasts.PartReading("p#drop", "text", 4.62),
+            contrasts.PartReading("p#drop", "text", 9),
+            contrasts.PartReading("p#rise", "text", 8),
+            contrasts.PartReading("p#top", "text", 12),
+            contrasts.PartReading("button#icon", "icon", 5),
+            contrasts.PartReading("p#dark-only", "text", 4.6),
         ]
         (fault,) = contrasts.rung_drops(light, dark, TABLE)
         self.assertEqual(fault["subject"], "p#drop")
         self.assertEqual(
             fault["detail"],
-            "in the dark scheme, is 4.62:1, down from 7.31:1 on the light page: off the 7:1 rung it holds there, "
-            "onto 4.5:1 (vault.contrast-ladder)",
+            "in the dark scheme, its text is 4.62:1, down from 7.31:1 on the light page: off the 7:1 rung it holds "
+            "there, onto 4.5:1 (vault.contrast-ladder)",
         )
 
     def test_a_part_is_compared_within_its_role(self):
         light = [
-            contrasts.Reading("button#go", "text", 8),
-            contrasts.Reading("button#go", "control edge", 5),
+            contrasts.PartReading("button#go", "text", 8),
+            contrasts.PartReading("button#go", "control edge", 5),
         ]
-        dark = [contrasts.Reading("button#go", "control edge", 8)]
+        dark = [contrasts.PartReading("button#go", "control edge", 8)]
         self.assertEqual(contrasts.rung_drops(light, dark, TABLE), [])
 
     def test_a_bad_table_stops_the_run_with_exit_2(self):
@@ -511,12 +511,13 @@ class EndToEnd(unittest.TestCase):
         detail = theme["p#rung-plant"]
         self.assertRegex(
             detail,
-            r"^in the dark scheme, is 5\.5\d:1, down from 18\.8\d:1 on the light page: off the 7:1 rung it "
+            r"^in the dark scheme, its text is 5\.5\d:1, down from 18\.8\d:1 on the light page: off the 7:1 rung it "
             r"holds there, onto 4\.5:1 \(vault\.contrast-ladder\)",
         )
         self.assertNotIn(
             "p#rung-plant", {f["subject"] for f in answers["vault.contrast"]["faults"]}
         )
+        self.assertNotIn("(vault.contrast)", detail)
         self.assertNotIn("down from", theme["p#theme-plant"])
 
     def test_more_contrast_holds_an_icon_to_its_raised_rung(self):

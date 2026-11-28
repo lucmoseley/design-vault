@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; background: #f4efe4; }
+div { width: 40px; height: 40px; margin: 40px; background: #2a2a2a; }
+</style></head>
+<body>
+<div id="box"></div>
+<script>
+document.getElementById("box").animate([{ transform: "none" }, { transform: "translateX(600px)" }],
+  { duration: 1000, fill: "both" });
+const poll = () => setTimeout(poll, 100);
+poll();
+</script>
+</body></html>

@@ -578,7 +578,13 @@ test("a saved page's shapes are read past its script and style text, its void ta
   assert.ok(r.stdout.includes(`: separate: `) && r.stdout.includes(` --contact 'a.2-path2.4=${selector}@50.5,`), r.stdout);
 });
 
-test("a page's selectors count from the tree the HTML parser builds, with the <html>, <head> and <body> it adds (#663)", () => {
+const buildTreePages = (svg) => [
+  ...JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "tree-pages.json"), "utf8")).map(({ body, chain }) => [`<!doctype html>${body.replace("{svg}", svg)}`, chain]),
+  [`<!doctype html><b>1<p>2</b>${svg}</p>`, "p:nth-of-type(1)>"],
+  [`<!doctype html><template>${svg}</template><i>${svg}</i>`, "i:nth-of-type(1)>"],
+];
+
+test("a page's selectors count from the tree the HTML parser builds, with the <html>, <head> and <body> it adds (#663, #668)", () => {
   const svg = `<svg width="100" height="100">${A()}<g><path fill="#00c" d="M51 10 H90 V50 H51 Z"/></g></svg>`;
   const shape = "svg:nth-of-type(1)>g:nth-of-type(1)>path:nth-of-type(1)";
   const pages = [
@@ -597,6 +603,12 @@ test("a page's selectors count from the tree the HTML parser builds, with the <h
       `:root>body:nth-of-type(1)>svg:nth-of-type(1)>foreignObject:nth-of-type(1)>${shape}`,
     ],
     [`<html xmlns="http://www.w3.org/1999/xhtml">${svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"')}</html>`, `:root>${shape}`, "xht"],
+    ...buildTreePages(svg).map(([page, chain]) => [page, `:root>body:nth-of-type(1)>${chain}${shape}`]),
+    [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${A()}<a xmlns="http://www.w3.org/1999/xhtml"></a><a><path fill="#00c" d="M51 10 H90 V50 H51 Z"/></a></svg>`,
+      ":root>a:nth-of-type(1)>path:nth-of-type(1)",
+      "svg",
+    ],
   ];
   for (const [page, selector, ext = "html"] of pages) {
     const file = path.join(scratch, `${++files}.${ext}`);
@@ -605,6 +617,83 @@ test("a page's selectors count from the tree the HTML parser builds, with the <h
     assert.equal(JSON.parse(r.stdout).contacts[0].upper, selector, page);
   }
   assert.equal(contactsIn(`${A()}\n<g><path fill="#00c" d="M51 10 H90 V50 H51 Z"/></g>`).found[0].contact.match(CONTACT)[2], ":root>g:nth-of-type(1)>path:nth-of-type(1)");
+});
+
+test("#668: a shape in a <template>'s content is not listed, since the page never draws it", () => {
+  const file = path.join(scratch, "template.html");
+  fs.writeFileSync(file, `<!doctype html><template><svg width="100" height="100">${A()}${B()}</svg></template>`);
+  const r = runInProcess(SCRIPT, ["--contacts", "--json", file]);
+  assert.deepEqual(JSON.parse(r.stdout).contacts, []);
+});
+
+test("#668: painting order is the parsed tree's, so an <svg> foster parenting moves out of a <table> comes first", () => {
+  const file = path.join(scratch, "foster.html");
+  const pair = '<path fill="#c00" d="M10 10 H49 V50 H10 Z"/><path fill="#00c" d="M51 10 H90 V50 H51 Z"/><path fill="#0c0" d="M47 10 H53 V50 H47 Z"/>';
+  const svg = `<svg width="100" height="100">${pair}</svg>`;
+  fs.writeFileSync(file, `<!doctype html><table><tr><td>${svg}</td></tr>${svg}</table>`);
+  const { contacts } = JSON.parse(runInProcess(SCRIPT, ["--contacts", "--json", file]).stdout);
+  const gaps = contacts.filter((c) => c.cls === "covered").map((c) => [c.name, c.upper, c.covers]);
+  const moved = ":root>body:nth-of-type(1)>svg:nth-of-type(1)>path:nth-of-type";
+  const cell = ":root>body:nth-of-type(1)>table:nth-of-type(1)>tbody:nth-of-type(1)>tr:nth-of-type(1)>td:nth-of-type(1)>svg:nth-of-type(1)>path:nth-of-type";
+  assert.deepEqual(gaps, [
+    ["path1.2-path2.4", `${moved}(2)`, [`${moved}(3)`]],
+    ["path4.2-path5.4", `${cell}(2)`, [`${cell}(3)`]],
+  ]);
+});
+
+test("#668: with no parse5 to load, an HTML file exits 2 naming the install, and an SVG file is still read", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-curves-bare-"));
+  try {
+    const copy = path.join(dir, "check-curves.js");
+    fs.copyFileSync(SCRIPT, copy);
+    const run = (name, text) => {
+      fs.writeFileSync(path.join(dir, name), text);
+      return runInProcess(copy, ["--contacts", path.join(dir, name)]);
+    };
+    const html = run("page.html", `<!doctype html><svg width="100" height="100">${A()}${B()}</svg>`);
+    assert.equal(html.status, 2, html.stderr);
+    assert.match(html.stderr, /claude plugin update design-vault@lucmoseley/);
+    assert.match(html.stderr, /npm ci --ignore-scripts --prefix plugin/);
+    const svg = run("art.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${A()}${B()}</svg>`);
+    assert.equal(svg.status, 1, svg.stderr);
+    assert.match(svg.stdout, /shared edge, no underlap/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+for (const [why, body, says, never] of [
+  ["a parse5 this Node cannot require() names the Node floor", 'throw Object.assign(new Error("require() of ES Module"), { code: "ERR_REQUIRE_ESM" });', /Node 20\.19\+ or 22\.12\+/, /claude plugin update/],
+  ["a parse5 that fails to load another way names the reinstall", "this is (not js", /claude plugin update design-vault@lucmoseley/, /Node 20\.19/],
+]) {
+  test(`${why} and exits 2`, () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "check-curves-load-"));
+    try {
+      const copy = path.join(dir, "check-curves.js");
+      fs.copyFileSync(SCRIPT, copy);
+      fs.mkdirSync(path.join(dir, "node_modules", "parse5"), { recursive: true });
+      fs.writeFileSync(path.join(dir, "node_modules", "parse5", "index.js"), body);
+      fs.writeFileSync(path.join(dir, "page.html"), `<!doctype html><svg width="100" height="100">${A()}${B()}</svg>`);
+      const r = runInProcess(copy, ["--contacts", path.join(dir, "page.html")]);
+      assert.equal(r.status, 2, r.stderr);
+      assert.match(r.stderr, says);
+      assert.doesNotMatch(r.stderr, never);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+test("only an SVG-namespace element draws: an XML <PATH> and an HTML <path> under <foreignObject> are not shapes", () => {
+  const xml = path.join(scratch, "upper-case.svg");
+  fs.writeFileSync(xml, `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">${A()}${B().replace(/<path/g, "<PATH")}</svg>`);
+  const html = path.join(scratch, "foreign.html");
+  fs.writeFileSync(html, `<!doctype html><svg width="100" height="100">${A()}<foreignObject width="100" height="100"><div>${B()}</div></foreignObject></svg>`);
+  for (const file of [xml, html]) {
+    const r = runInProcess(SCRIPT, ["--contacts", file]);
+    assert.equal(r.status, 0, r.stdout);
+    assert.match(r.stdout, /^no two shapes come within 2 px/);
+  }
 });
 
 test("shapes in two <svg>s on one page are not compared: the page, not the file, places each <svg>", () => {

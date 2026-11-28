@@ -258,12 +258,10 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import datetime
 import io
 import itertools
 import json
 import os
-import pathlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -277,6 +275,7 @@ from fail_open import expected  # noqa: E402
 flow = siblings.load(HERE, "check-flow.py")
 conditions = siblings.load(HERE, "conditions.py")
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 try:
     import numpy as np
     from PIL import Image
@@ -724,7 +723,7 @@ MOTION_JS = (
     out.long.push({ subject: label(v), what: v.loop ? 'plays on a loop' : 'plays a video longer than 5 s' });
   }
   window.__motions = motions;
-  for (const [el, log] of f.rewrites) if (el.isConnected && onScreen(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
+  for (const [el, log] of f.rewrites) if (el.isConnected && onScreen(el) && loop(log)) out.scripted.push(label(el));
   const name = (el) => [el.getAttribute('aria-label'), el.textContent, el.title, el.value].filter(Boolean).join(' ');
   const PAUSE = /\b(pause|stop|hide|play|resume|freeze|motion|animations?)\b/i;
   window.__pauses = [...document.querySelectorAll('button, input[type=button], input[type=checkbox], [role=button], [role=switch], [role=checkbox], [aria-pressed]')]
@@ -853,7 +852,7 @@ const changedSince = (since, until = Infinity) => {
   f.scan();
   const out = new Set();
   const watched = (t) => t >= since && t <= until;
-  const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el), REWRITE_FRAMES, REWRITE_SPAN_MS);
+  const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el));
   const keep = (el) => el && el.isConnected && !scripted(el) && !window.__pauses.some((p) => p.contains(el));
   for (const [el, times] of window.__timers.changed) if (keep(el) && times.some(watched)) out.add(el);
   for (const [a, rec] of f.seen) {
@@ -1155,10 +1154,23 @@ def hold_ms(span):
 
 
 def motion_answers(context, url, carousels, *, mouse):
-    driven, spans = keys.driven(context, url, carousels, mouse=mouse)
-    return driven, answering.Judged(
-        *pause_answer(context, url, carousels, spans), [], []
+    driven = keys.driven(context, url, carousels, mouse=mouse)
+    return driven.answers, answering.Judged(
+        *pause_answer(context, url, carousels, driven.spans), [], []
     )
+
+
+Carousel = collections.namedtuple("Carousel", "subject el span")
+
+
+def span_of(spans, n, subject):
+    if n < len(spans) and spans[n].subject == subject:
+        return spans[n].span
+    return None
+
+
+def move_pointer_off(page):
+    page.mouse.move(0, 0)
 
 
 def loaded_page(context, url, *scripts):
@@ -1215,16 +1227,16 @@ def pause_answer(context, url, carousels, spans):
     ):
         c = el.evaluate(prelude.page_js(CAROUSEL_JS))
         if c["on"]:
-            declared.append((c["subject"], el, spans[n] if n < len(spans) else None))
+            declared.append(Carousel(c["subject"], el, span_of(spans, n, c["subject"])))
     turning, stilled, others, unseen, read = [], [], [], None, since
     if page.evaluate(prelude.page_js(TIMED_JS), len(carousels)):
         page.wait_for_timeout(max(0, since - page.evaluate("() => performance.now()")))
-        turns, read = keys.turned(page, [c[1] for c in declared], until)  # #642
+        turns, read = keys.turned(page, [c.el for c in declared], until)  # #642
         for c, m in zip(declared, turns, strict=True):
             if m:
                 turning.append(c)
             else:
-                stilled.append((c[0], m is False))
+                stilled.append((c.subject, m is False))
         page.wait_for_timeout(max(0, until - page.evaluate("() => performance.now()")))
         others = page.evaluate(
             prelude.page_js(ROTATION_JS),
@@ -1256,15 +1268,15 @@ def pause_answer(context, url, carousels, spans):
             expected(exc, "counted unclickable")
             unclickable += 1
             continue
-        page.mouse.move(0, 0)
+        move_pointer_off(page)
         page.evaluate(
             "() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))"
         )
         stopped.update(page.evaluate(STOPPED_JS))
-        for k, (_, el, span) in enumerate(turning):
+        for k, c in enumerate(turning):
             if (
                 k not in held
-                and keys.change(page, el, hold_ms(span), in_window=True) is None
+                and keys.change(page, c.el, hold_ms(c.span), in_window=True) is None
             ):
                 held.add(k)
         if len(held_others) < len(others):
@@ -1302,8 +1314,8 @@ def pause_answer(context, url, carousels, spans):
     ]
     changing = f"changes what it shows more than {prelude.LONG_MS / 1000:g} s after the page's load, and {tried}"
     found += [
-        {"subject": subject, "detail": changing}
-        for k, (subject, _, _) in enumerate(turning)
+        {"subject": c.subject, "detail": changing}
+        for k, c in enumerate(turning)
         if k not in held
     ]
     unmeasured += [
@@ -1372,7 +1384,7 @@ def judge(got, shots, measured, table):
         if worst is not None:
             big = maths.large(text["size"], text["weight"], table.floors)
             readings.append(
-                contrasts.Reading(
+                contrasts.PartReading(
                     text["subject"], "large text" if big else "text", worst
                 )
             )
@@ -1418,7 +1430,7 @@ def judge(got, shots, measured, table):
                 }
             )
         elif edge.box is not None:
-            readings.append(contrasts.Reading(subject, "control edge", edge.ratio))
+            readings.append(contrasts.PartReading(subject, "control edge", edge.ratio))
     out["vault.target-size"].faults.extend(got["targetFaults"])
     out["vault.colour-script"].faults.extend(got["linkFaults"])
     for qid, judged in measured.items():
@@ -1672,11 +1684,8 @@ MODES = {
 
 def main(argv):
     at = parse(argv)
-    os.makedirs(at.out, exist_ok=True)
     mode = MODES[at.pointer]
-    json_path = os.path.join(at.out, mode.report)
-    pathlib.Path(json_path).unlink(missing_ok=True)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    when, json_path = answers_file.start(at.out, mode.report)
     try:
         got, code = runner.run_browser(lambda: mode.run(at), at.timeout, at.url)
     except BadSelectorError as exc:
@@ -1689,18 +1698,14 @@ def main(argv):
         return code
     found, looping = got
     result = answering.answers(found, mode.questions)
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "looping_animations": looping,
-                "viewports": {name: [w, h] for name, w, h in conditions.VIEWPORTS},
-                "answers": result,
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        looping_animations=looping,
+        viewports={name: [w, h] for name, w, h in conditions.VIEWPORTS},
+        answers=result,
+    )
     print(
         report(
             at.url,

@@ -58,7 +58,7 @@
       "source": {
         "source": "git",
         "url": "https://github.com/lucmoseley/workflow-core.git",
-        "ref": "v3.2.3"
+        "ref": "v3.2.4"
       }
     }
   },

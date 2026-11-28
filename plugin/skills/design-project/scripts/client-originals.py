@@ -35,11 +35,14 @@ import subprocess
 import sys
 from datetime import date
 
-REQUIREMENTS = pathlib.Path(__file__).resolve().parents[3] / "requirements.txt"
-sys.path.append(
-    str(pathlib.Path(__file__).resolve().parents[2] / "design-round/scripts")
+ROUND_SCRIPTS = str(
+    pathlib.Path(__file__).resolve().parents[2] / "design-round/scripts"
 )
+sys.path.append(ROUND_SCRIPTS)
+import siblings  # noqa: E402
 from fail_open import expected  # noqa: E402
+
+runner = siblings.load(ROUND_SCRIPTS, "runner.py")
 
 STORE = "private/client-originals"
 MANIFEST = "docs/brand/client-originals.json"
@@ -88,9 +91,7 @@ def describe(path):
     try:
         from PIL import Image, UnidentifiedImageError
     except ImportError:
-        sys.exit(
-            f"client-originals.py add needs Pillow: python3 -m pip install -r {REQUIREMENTS}"
-        )
+        sys.exit(f"client-originals.py add needs Pillow: {runner.PIP_INSTALL}")
     try:
         with Image.open(path) as im:
             w, h = im.size

@@ -14,6 +14,14 @@ range of widths it holds over:
   element past its right edge, how far, and the innermost one inside it;
 - text cut off: text past the screen's edge that no one can scroll to, because
   the page hides its sideways overflow or the text sits off the left edge;
+- text a box hides: part of a text block hidden past the edge of a box that
+  hides its overflow (hidden or clip), the text's own box included, where
+  nothing between them scrolls. A cut marked by the text's own box's
+  text-overflow: ellipsis, or by a line-clamp in effect, is not reported, nor
+  is text in a scroll-snap track or a carousel's track (aria-roledescription
+  "carousel"; a box inside one of its slides is judged), nor a block the box
+  hides whole, as a closed panel or an off-screen slide is, nor text in a link
+  or a box holding a control;
 - overlap: a text block's lines crossing another text block's, crossing an
   image's edge, or lying under an image. Text wholly inside an image's box and
   drawn on top of it is a caption or a hero overlay, and is not reported. An
@@ -46,7 +54,11 @@ range of widths it holds over:
   past the file's edge, or an art shown at no swept width) is listed as not
   measured.
 
-The first four answer vault.reflow, the cta check vault.layout and the
+Every section under content-visibility: auto is measured as
+content-visibility: visible, and stays so for the records read from the
+same load.
+
+The first five answer vault.reflow, the cta check vault.layout and the
 focal check vault.focal-crop: the report gives each question pass or fail,
 with its faults under it, vault.layout not checked with no --cta,
 vault.focal-crop not checked with no --focal or "cannot measure" where an art
@@ -71,7 +83,7 @@ since the link's page or the control may show it.
   CSS px wide at a device scale of the zoom, on screens no narrower than
   the zoom times 320 px, reflow's floor;
 - --text size raises the browser's default text sizes, proportional and
-  monospace, by the factor (Chromium's Page.setFontSizes), so rem, em and
+  monospace, by the factor, so rem, em and
   keyword sizes grow and px sizes do not.
 
 Zoom and size also list each text that grows less than the factor, beside
@@ -122,10 +134,7 @@ An exception it does not handle once loaded exits 2, its traceback on stderr.
 
 import argparse
 import collections
-import datetime
-import json
 import os
-import pathlib
 import re
 import sys
 
@@ -137,6 +146,7 @@ from crash_exit import run_main  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")
 runner = siblings.load(HERE, "runner.py")
+answers_file = siblings.load(HERE, "answers-file.py")
 conditions = siblings.load(HERE, "conditions.py")
 
 
@@ -164,6 +174,7 @@ Kind = collections.namedtuple("Kind", "key title question fails", defaults=(True
 KINDS = (
     Kind("scroll", "sideways scroll", "vault.reflow"),
     Kind("cut", "text cut off at the screen's edge", "vault.reflow"),
+    Kind("clip", "text a box hides past its edge", "vault.reflow"),
     Kind("overlap", "overlap", "vault.reflow"),
     Kind("viewport", "not laid out at the phone's width", "vault.reflow"),
     Kind("zoom", "zoom blocked on a phone", "vault.reflow"),
@@ -263,8 +274,10 @@ MEASURE_JS = (
     + r"""
 async ({ cta, focal }) => {
   const EDGE = 1, CROSS = 2, HIDDEN = 2, EMPTY = 0.5, MIN_IMAGE = 4; // guess, #501
-  const vw = document.documentElement.clientWidth, vh = innerHeight;
   const css = (el) => getComputedStyle(el);
+  for (const el of document.querySelectorAll('*'))
+    if (css(el).contentVisibility === 'auto') el.style.setProperty('content-visibility', 'visible', 'important');
+  const vw = document.documentElement.clientWidth, vh = innerHeight;
   const faults = [];
   const add = (kind, subject, detail) => faults.push({ kind, subject, detail });
   const clips = (cs) => cs.overflowX !== 'visible' || cs.overflowY !== 'visible';
@@ -428,12 +441,25 @@ async ({ cta, focal }) => {
   }
   for (const [block, by] of cutOff) add('cut', label(block), `runs ${by} px past the screen's edge`);
   const CONTROL = 'button, summary, [role="button"], [aria-expanded], [aria-controls]';
+  const CAROUSEL = '[aria-roledescription="carousel" i]', SLIDE = '[aria-roledescription="slide" i]';
+  const clamped = (cs) => (cs.webkitLineClamp || 'none') !== 'none' && cs.webkitBoxOrient === 'vertical'
+    && /box|flow-root/.test(cs.display);
+  const excused = (block, hider) => {
+    if (hider.closest(CAROUSEL) && !hider.closest(SLIDE)) return true;
+    if (hider === block && css(block).textOverflow === 'ellipsis') return true;
+    for (let e = block; e; e = e.parentElement) {
+      const cs = css(e);
+      if (clamped(cs) || cs.scrollSnapType !== 'none') return true;
+      if (e === hider) return false;
+    }
+    return false;
+  };
   for (const [block, { by, hider }] of hidden) {
     const where = hider === block ? 'its own edge, as it hides its overflow' : `the edge of ${label(hider)}, which hides its overflow`;
     const kind = block.closest('a[href]') || hider.querySelector(CONTROL) ? 'reveal' : 'clip';
     const { all, shown: seen } = area_.get(block);
     faults.push({ kind, subject: label(block), detail: `has ${Math.round(by)} px of its text hidden past ${where}`,
-      place: place.get(block), share: all ? 1 - seen / all : 0 });
+      place: place.get(block), share: all ? 1 - seen / all : 0, reflow: kind === 'clip' && seen > 0 && !excused(block, hider) });
   }
 
   const images = [];
@@ -734,6 +760,10 @@ def load(page, url, width, heights, *, view=None):
     return conditions.settle(page)
 
 
+def unplaced(fault):
+    return {k: v for k, v in fault.items() if k not in ("place", "share", "reflow")}
+
+
 def text_faults(base, got, *, grow=None):
     kinds = {k.key for k in TEXT_KINDS}
     seen = {(f["kind"], f["subject"]) for f in base["faults"]}
@@ -747,7 +777,7 @@ def text_faults(base, got, *, grow=None):
                 continue
         elif (f["kind"], f["subject"]) in seen:
             continue
-        out.append({k: v for k, v in f.items() if k not in ("place", "share")})
+        out.append(unplaced(f))
     if grow is not None:
         before = {place: px for place, _, px in base["sizes"]}
         for place, subject, px in got["sizes"]:
@@ -1038,7 +1068,9 @@ def run(at, when):
             looping = max(looping, load(page, at.url, width, at.heights))
             base = measure(page, at.cta, at.focal)
             arts.append((width, base["arts"]))
-            faults = [f for f in base["faults"] if "place" not in f]
+            faults = [
+                unplaced(f) for f in base["faults"] if "place" not in f or f["reflow"]
+            ]
             if conditions.is_phone(width):
                 mobile = page_as(conditions.MOBILE)
                 load(mobile, at.url, width, at.heights)
@@ -1378,13 +1410,7 @@ def parse(argv):
 
 def main(argv):
     p, at = parse(argv)
-    when = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    os.makedirs(at.out, exist_ok=True)
-    for old in [
-        *pathlib.Path(at.out).glob("layout-*-*.png"),
-        pathlib.Path(at.out, "layout.json"),
-    ]:
-        old.unlink(missing_ok=True)
+    when, json_path = answers_file.start(at.out, "layout.json", "layout-*-*.png")
     try:
         got, code = runner.run_browser(lambda: run(at, when), at.timeout, at.url)
     except BadSelectorError as exc:
@@ -1412,46 +1438,39 @@ def main(argv):
         named = {**at.checks, **{n: at.modes[n] for n in at.unmet}}
         record_answers = records.answers(named, by_mode, rec.seen, at.unmet)
     widths = [w for w, _ in found]
-    json_path = os.path.join(at.out, "layout.json")
-    with open(json_path, "w", encoding="utf8") as fh:
-        json.dump(
-            {
-                "url": at.url,
-                "run_at": when.isoformat(),
-                "gating": gating(at.step, at.span),
-                "step": at.step,
-                "span": at.span,
-                "looping_animations": looping,
-                "heights": dict(
-                    zip([b[0] for b in conditions.BANDS], at.heights, strict=True)
-                ),
-                "cta": at.cta,
-                "focal": at.focal,
-                "answers": verdicts,
-                "ranges": runs,
-                "screenshots": shots,
-                "widths": [{"width": w, "faults": f} for w, f in found],
-                "records": {
-                    "answers": record_answers,
-                    "not_judged": {at.modes[n].id: why for n, why in at.unmet.items()},
-                    "ranges": record_runs,
-                }
-                if at.records
-                else None,
-                "text": {
-                    name: {
-                        "record": at.modes[name].id,
-                        "value": at.modes[name].value,
-                        "ranges": text_runs[name],
-                        **({"default_sizes": raised} if name == "size" else {}),
-                        "widths": [{"width": w, "faults": f} for w, f in text[name]],
-                    }
-                    for name in at.text
-                },
-            },
-            fh,
-            indent=1,
-        )
+    answers_file.write(
+        json_path,
+        at.url,
+        when,
+        gating=gating(at.step, at.span),
+        step=at.step,
+        span=at.span,
+        looping_animations=looping,
+        heights=dict(zip([b[0] for b in conditions.BANDS], at.heights, strict=True)),
+        cta=at.cta,
+        focal=at.focal,
+        answers=verdicts,
+        ranges=runs,
+        screenshots=shots,
+        widths=[{"width": w, "faults": f} for w, f in found],
+        records={
+            "answers": record_answers,
+            "not_judged": {at.modes[n].id: why for n, why in at.unmet.items()},
+            "ranges": record_runs,
+        }
+        if at.records
+        else None,
+        text={
+            name: {
+                "record": at.modes[name].id,
+                "value": at.modes[name].value,
+                "ranges": text_runs[name],
+                **({"default_sizes": raised} if name == "size" else {}),
+                "widths": [{"width": w, "faults": f} for w, f in text[name]],
+            }
+            for name in at.text
+        },
+    )
     print(
         report(
             at,

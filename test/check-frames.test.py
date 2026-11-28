@@ -1,6 +1,8 @@
+# #616
 import json
 import os
 import pathlib
+import re
 import shutil
 import sys
 import tempfile
@@ -23,6 +25,7 @@ frames = siblings.load(SCRIPTS, "check-frames.py")
 runner = siblings.load(SCRIPTS, "runner.py")
 conditions = siblings.load(SCRIPTS, "conditions.py")
 NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS = 10
+MID_BOTTOM_MS = 1000
 RUN_TIMEOUT_S = 180  # guess, #501
 
 
@@ -301,9 +304,7 @@ class LateStart(unittest.TestCase):
         )
 
 
-class Scripted(unittest.TestCase):
-    """#546"""
-
+class Scripted(unittest.TestCase):  # #546
     TRAILER = "\nCheck its frames by eye.\n"
 
     def refused(self, proc, why):
@@ -401,10 +402,12 @@ class StagedBuilds(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.dir)
 
-    def check_against(self, edit):
+    def check_against(self, edit, at_ms):
         with open(self.hashes, encoding="utf8") as fh:
             record = json.load(fh)
         edit(record)
+        record["frames"] = [f for f in record["frames"] if f["ms"] == at_ms]
+        self.assertEqual(len(record["frames"]), 1, at_ms)
         edited = os.path.join(self.dir, "edited.json")
         with open(edited, "w", encoding="utf8") as fh:
             json.dump(record, fh)
@@ -420,6 +423,63 @@ class StagedBuilds(unittest.TestCase):
             "where the first link ends; start every link when the page loads, held back by its delay",
             proc.stdout,
         )
+
+    def test_both_links_of_a_chain_a_timer_carries_past_quiet_ms_are_found_unlike_a_staggered_start_686(
+        self,
+    ):
+        with runner.chromium(frames.HASH_ARGS) as browser:
+            context, page, prep = frames.open_page(
+                browser, load_of(os.path.join(FIXTURES, "timed-chain.html")), 1
+            )
+            try:
+                with self.assertRaises(frames.UnmeasurableError) as caught:
+                    frames.refuse_chain(page)
+            finally:
+                context.close()
+        self.assertEqual([s["name"] for s in prep["timeline"]], ["div#mark"])
+        self.assertIn(
+            "starts animations when others finish (div#tagline)", str(caught.exception)
+        )
+
+    def test_a_timer_past_the_cap_is_refused_naming_its_delay_unlike_a_staggered_start_686(
+        self,
+    ):
+        proc = hash_page(os.path.join(FIXTURES, "long-timer.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            f"sets a script timer for 6000 ms, past the {frames.SETTLE_CAP_MS} ms it waits for one, "
+            "so a link of its motion that a timer starts goes unseen",
+            proc.stdout,
+        )
+
+    def test_a_repeating_timer_is_refused_naming_its_period_unlike_a_staggered_start_686(
+        self,
+    ):
+        proc = hash_page(os.path.join(FIXTURES, "ticking.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            "repeats a script timer every 250 ms",
+            proc.stdout,
+        )
+
+    def test_a_page_setting_timers_past_the_cap_is_refused_unlike_a_staggered_start_686(
+        self,
+    ):
+        proc = hash_page(os.path.join(FIXTURES, "polling.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            f"keeps setting script timers, one of 100 ms due past the {frames.SETTLE_CAP_MS} ms it waits for them",
+            proc.stdout,
+        )
+
+    def test_the_timer_fixtures_sit_past_quiet_ms_and_either_side_of_the_cap_686(self):
+        def delay(page):
+            with open(os.path.join(FIXTURES, page), encoding="utf8") as fh:
+                return int(re.search(r"setTimeout\(.*, (\d+)\);", fh.read()).group(1))
+
+        self.assertLess(frames.QUIET_MS, delay("timed-chain.html"))
+        self.assertLess(delay("timed-chain.html"), frames.SETTLE_CAP_MS)
+        self.assertLess(frames.SETTLE_CAP_MS, delay("long-timer.html"))
 
     def test_a_late_start_no_finish_made_is_not_called_a_chain(self):
         proc = hash_page(os.path.join(FIXTURES, "afterward.html"))
@@ -443,7 +503,9 @@ class StagedBuilds(unittest.TestCase):
     def test_a_later_stage_the_page_lists_first_is_timed_from_the_earliest_start(
         self,
     ):
-        proc = hash_page(self.page, "--wait", "body.play #bottom")
+        proc = hash_page(
+            self.page, "--wait", "body.play #bottom", "--times", str(MID_BOTTOM_MS)
+        )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertRegex(proc.stdout, r"start at 2 moments, 0, [1-9][\d.]* ms")
 
@@ -455,7 +517,7 @@ class StagedBuilds(unittest.TestCase):
             bottom["ms"] += NUDGE_UNDER_JITTER_OFF_FRAME_GRID_MS
             nudged["ms"] = bottom["ms"]
 
-        proc = self.check_against(nudge)
+        proc = self.check_against(nudge, MID_BOTTOM_MS)
         self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
         self.assertIn(
             f"start at 2 moments, 0, {frames.ms(round(nudged['ms'], 3))} ms, as the saved run timed them",
@@ -468,7 +530,7 @@ class StagedBuilds(unittest.TestCase):
         def moved(record):
             bottom_of(record)["ms"] += 300
 
-        proc = self.check_against(moved)
+        proc = self.check_against(moved, 0)
         self.assertRegex(
             proc.stdout,
             r"  this load started animations away from the file's moments \(div#bottom [\d.]+ ms then, "
@@ -480,7 +542,7 @@ class StagedBuilds(unittest.TestCase):
         def renamed(record):
             bottom_of(record)["name"] = "div#gone"
 
-        proc = self.check_against(renamed)
+        proc = self.check_against(renamed, 0)
         self.assertIn(
             "  the page makes different animations from the ones the file saved, so this load timed them",
             proc.stdout,
@@ -488,7 +550,7 @@ class StagedBuilds(unittest.TestCase):
         self.assertIn("as one load timed them", proc.stdout)
 
     def test_check_against_a_file_saved_with_no_timeline_times_the_page_itself(self):
-        proc = self.check_against(lambda record: record.pop("timeline"))
+        proc = self.check_against(lambda record: record.pop("timeline"), 0)
         self.assertIn(
             "  the file saves no timeline, so this load timed them", proc.stdout
         )

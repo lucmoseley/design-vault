@@ -183,7 +183,7 @@ class Cli(unittest.TestCase):
                 )
                 self.assertEqual(done.returncode, 3, done.stderr)
                 self.assertIn(
-                    f"cutout.py: {package} is missing — python3 -m pip install -r {REQUIREMENTS}",
+                    f"cutout.py: {package} is missing — python3 -m pip install --only-binary :all: -r {REQUIREMENTS}",
                     done.stderr,
                 )
 

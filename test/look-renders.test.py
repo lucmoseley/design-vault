@@ -151,6 +151,10 @@ class Contacts(unittest.TestCase):
 CURVES_RUN_S = 60
 
 
+with open(os.path.join(HERE, "fixtures", "tree-pages.json"), encoding="utf8") as fh:
+    TREE_PAGES = [(page["name"], page["body"]) for page in json.load(fh)]
+
+
 class ContactsFromCheckCurves(unittest.TestCase):
     def test_each_printed_contact_is_taken_unchanged_and_cropped_at_the_gap_331(self):
         self.round_trip(os.path.join(FIXTURES, "drawn-contacts.html"), 945)
@@ -162,6 +166,19 @@ class ContactsFromCheckCurves(unittest.TestCase):
         self,
     ):
         self.round_trip(os.path.join(FIXTURES, "bare-contacts.html"), 945)
+
+    def test_668_a_contact_whose_svg_the_html_parser_moves_is_cropped_there_too(
+        self,
+    ):
+        with open(os.path.join(FIXTURES, "bare-contacts.html"), encoding="utf8") as fh:
+            head, svg = fh.read().split("<svg", 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, body in TREE_PAGES:
+                page = os.path.join(tmp, f"{name}.html")
+                with open(page, "w", encoding="utf8") as fh:
+                    fh.write(head + body.format(svg="<svg" + svg))
+                with self.subTest(name):
+                    self.round_trip(page, 945)
 
     def round_trip(self, page, height):
         listed = subprocess.run(

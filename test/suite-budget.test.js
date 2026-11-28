@@ -6,23 +6,19 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { after, test } = require("node:test");
+const { allShEnv, buildScratchVault } = require("./scratch-vault");
 
 const ROOT = path.join(__dirname, "..");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "suite-budget-"));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-const root = path.join(dir, "repo");
-fs.mkdirSync(path.join(root, "test"), { recursive: true });
-fs.mkdirSync(path.join(root, "scripts", "lib"), { recursive: true });
-fs.copyFileSync(path.join(ROOT, "test", "all.sh"), path.join(root, "test", "all.sh"));
-fs.copyFileSync(path.join(ROOT, "scripts", "lib", "resolve-core.js"), path.join(root, "scripts", "lib", "resolve-core.js"));
-fs.writeFileSync(path.join(root, "test", "run-lanes.sh"), 'echo "budget=${VAULT_SUITE_BUDGET-unset}"\n');
-fs.writeFileSync(path.join(root, "test", "select-suites.js"),
-  'for (const suite of process.argv.slice(3)) console.log(`skip\\t${suite}\\tstub`);\n');
-fs.writeFileSync(path.join(root, "test", "named.test.js"), "");
+const root = buildScratchVault(path.join(dir, "repo"), {
+  "run-lanes.sh": 'echo "budget=${VAULT_SUITE_BUDGET-unset}"\n',
+  "select-suites.js": 'for (const suite of process.argv.slice(3)) console.log(`skip\\t${suite}\\tstub`);\n',
+  "named.test.js": "",
+});
 const git = (...args) => execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", ...args],
   { cwd: root, encoding: "utf8" });
-git("init", "-q", "-b", "main");
 git("add", "-A");
 git("commit", "-q", "-m", "base");
 
@@ -41,10 +37,8 @@ const SEAT = { WFC_GATE_SEAT: path.join(dir, "seat.json") };
 const FALL_OPEN = "the suite ceiling will not read from workflow-core or is already spent, so this run is not judged against it before it starts";
 
 const allSh = (args, env) => {
-  const full = { ...process.env, WFC_GATE_SEAT: undefined, VAULT_SUITE_BUDGET: undefined, VAULT_ALL_SUITES: undefined,
-    VAULT_SUITE_TIMES: undefined, WORKFLOW_CORE_DIR: TEN_MINUTE_CORE, SECONDS: String(SPENT_S), ...env };
-  for (const key of Object.keys(full)) if (full[key] === undefined) delete full[key];
-  const r = spawnSync("bash", ["test/all.sh", ...args], { cwd: root, encoding: "utf8", env: full });
+  const r = spawnSync("bash", ["test/all.sh", ...args],
+    { cwd: root, encoding: "utf8", env: allShEnv({ WORKFLOW_CORE_DIR: TEN_MINUTE_CORE, SECONDS: String(SPENT_S), ...env }) });
   assert.equal(r.status, 0, r.stderr + r.stdout);
   assert.match(r.stdout, /^budget=/m, "all.sh never reached run-lanes");
   return { budget: r.stdout.match(/^budget=(.*)$/m)[1], out: r.stdout };

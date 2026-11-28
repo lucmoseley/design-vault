@@ -12,7 +12,7 @@ set -u
 vault="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 cd "$vault" || exit 1
 # code-edges loads: failed-files.js
-registry='node --test --test-reporter=./test/failed-files.js
+registry='node --test --test-reporter=./test/failed-files.js	npm
 bash test/design-round-pointer.test.sh
 python3 test/cutout.test.py	images
 python3 test/check-render.test.py	images
@@ -21,6 +21,7 @@ python3 test/check-clip.test.py
 python3 test/check-flow.test.py	chromium
 python3 test/runner.test.py	chromium
 python3 test/planted-faults-runner.test.py
+python3 test/planted-faults-score.test.py
 python3 test/check-flow-records.test.py	images chromium
 python3 test/check-frames.test.py	chromium
 python3 test/check-overlay.test.py	images chromium
@@ -34,6 +35,7 @@ python3 test/check-access-pointer.test.py	images chromium
 python3 test/palette.test.py
 python3 test/colour-space.test.py	images
 python3 test/rule-table.test.py
+python3 test/answers-file.test.py
 python3 test/siblings.test.py
 python3 test/crash-exit.test.py	images
 python3 test/child.test.py	chromium
@@ -44,8 +46,8 @@ python3 test/check-load.test.py	chromium
 python3 test/check-load-files.test.py	chromium
 python3 test/drive-overlay.test.py	chromium openssl
 python3 test/conditions.test.py	chromium
-python3 test/look-renders.test.py	images chromium
-python3 test/check-seams.test.py	images chromium
+python3 test/look-renders.test.py	images chromium npm
+python3 test/check-seams.test.py	images chromium npm
 python3 test/drive-form.test.py	chromium
 python3 test/check-cross.test.py	chromium
 python3 test/check-dom.test.py	images chromium
@@ -55,11 +57,12 @@ python3 test/check-state.test.py	images chromium
 python3 test/check-text.test.py	chromium
 python3 test/drive-pointer.test.py	chromium
 python3 test/video-sheet.test.py	images video'
+known_needs=(images chromium openssl video npm)
 suites=()
 declare -A needs=()
 while IFS=$'\t' read -r suite need; do
   for word in ${need:-}; do
-    [[ $word == images || $word == chromium || $word == openssl || $word == video ]] || { echo "test/all.sh: $suite needs '$word', which is none of images, chromium, openssl and video" >&2 && exit 2; }
+    [[ " ${known_needs[*]} " == *" $word "* ]] || { echo "test/all.sh: $suite needs '$word', which is none of ${known_needs[*]}" >&2 && exit 2; }
   done
   suites+=("$suite")
   needs[$suite]=${need:-}
@@ -97,7 +100,10 @@ for file in "$@"; do
   fi
   [[ " ${named[*]} " == *" $suite "* ]] || named+=("$suite")
 done
-((${#node_files[@]})) && named=("$node_suite ${node_files[*]}" "${named[@]}")
+if ((${#node_files[@]})); then
+  named=("$node_suite ${node_files[*]}" "${named[@]}")
+  needs["$node_suite ${node_files[*]}"]=${needs[$node_suite]}
+fi
 if (($#)) && ((!${#named[@]})); then
   echo "no named file has a suite to run"
   exit 0
@@ -193,21 +199,28 @@ suites_needing() {
   done
   printf '%s' "$out"
 }
+if [ -f plugin/package.json ] && for_npm="$(suites_needing npm)"; then
+  need "the plugin's npm packages at plugin/package-lock.json's versions, for $for_npm" 'npm ci --ignore-scripts --prefix plugin' \
+    node -e 'for (const [at, entry] of Object.entries(require("./plugin/package-lock.json").packages))
+      if (at && !entry.link && !entry.optional && !entry.dev && require(`./plugin/${at}/package.json`).version !== entry.version) process.exit(1)
+      require("./plugin/node_modules/parse5")'
+fi
 if [[ " ${run[*]} " == *" python3 "* ]]; then
+  pip_install='python3 -m pip install --only-binary :all: -r plugin/requirements.txt'
   need python3 'Python 3, from miniforge (the machine-wide Python)' command -v python3
   if for_images="$(suites_needing images)"; then
     for module in numpy PIL scipy; do
-      need "the Python package $module, for $for_images" "python3 -m pip install -r plugin/requirements.txt" \
+      need "the Python package $module, for $for_images" "$pip_install" \
         python3 -c "import $module"
     done
   fi
   if for_video="$(suites_needing video)"; then
-    need "the Python package av, for $for_video" "python3 -m pip install --only-binary :all: -r plugin/requirements.txt" \
+    need "the Python package av, for $for_video" "$pip_install" \
       python3 -c "import av"
   fi
   if for_chromium="$(suites_needing chromium)"; then
     need "the Python package playwright, for $for_chromium" \
-      'python3 -m pip install -r plugin/requirements.txt && python3 -m playwright install chromium' \
+      "$pip_install && python3 -m playwright install chromium" \
       python3 -c 'import playwright.sync_api'
     python3 -c 'import playwright.sync_api' 2>/dev/null &&
       need "Playwright's Chromium, for $for_chromium" \
