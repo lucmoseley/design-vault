@@ -39,7 +39,7 @@ ROSTER = os.path.join(
 GROK = "xai/grok-imagine-image-2.0"
 QWEN = "alibaba/qwen-image-3/text-to-image"
 IDEOGRAM = "ideogram/v4.0"
-# measured, the 30 Sep calibration renders r1–r3/v3-grok.png at 2k; a literal, never read from render-sizes.json, #651
+# measured, the 30 Sep calibration renders r1–r3/v3-grok.png at 2k, #651
 GROK_16_9 = (2816, 1584)
 CELL_SLACK_PX = 1  # guess, #332
 CELL_SLACK_SHARE = 0.15  # guess, #332
