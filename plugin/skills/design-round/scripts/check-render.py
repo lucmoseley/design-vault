@@ -28,11 +28,7 @@ rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import importlib
-import json
 import pathlib
-import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -41,6 +37,12 @@ if str(HERE) not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import importlib  # noqa: E402
+import json  # noqa: E402
+import re  # noqa: E402
+
 import siblings  # noqa: E402
 
 SIZES = HERE.parent / "references" / "render-sizes.json"
@@ -209,11 +211,8 @@ def main(argv):
         help="the brief asked for a transparent background: check for a painted checkerboard",
     )
     args = parser.parse_args(argv)
-    try:
-        for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
-            importlib.import_module(package)
-    except ImportError as err:
-        sys.exit(runner.missing(err))
+    for package in ["PIL", "numpy"] if args.transparent else ["PIL"]:
+        importlib.import_module(package)
     from PIL import Image
 
     if args.aspect is not None:

@@ -256,11 +256,6 @@ but a question cannot be measured / 7 a call hung that would never return. Exits
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import collections
-import io
-import itertools
-import json
 import os
 import sys
 
@@ -270,6 +265,13 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import collections  # noqa: E402
+import io  # noqa: E402
+import itertools  # noqa: E402
+import json  # noqa: E402
+
 import siblings  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402

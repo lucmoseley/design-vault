@@ -119,14 +119,8 @@ return. Exits 0 and 1 print on stdout; the rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import collections
-import io
 import os
-import re
-import secrets
 import sys
-import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
@@ -134,6 +128,14 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import collections  # noqa: E402
+import io  # noqa: E402
+import re  # noqa: E402
+import secrets  # noqa: E402
+import urllib.parse  # noqa: E402
+
 import numpy as np  # noqa: E402
 import siblings  # noqa: E402
 from PIL import Image  # noqa: E402

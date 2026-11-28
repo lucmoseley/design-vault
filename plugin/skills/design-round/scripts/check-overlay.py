@@ -39,14 +39,8 @@ print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import base64
-import io
-import math
 import os
-import re
 import sys
-import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
@@ -54,6 +48,14 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import io  # noqa: E402
+import math  # noqa: E402
+import re  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
 import siblings  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402

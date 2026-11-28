@@ -62,15 +62,8 @@ stdout; the rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import base64
-import dataclasses
-import hashlib
-import json
 import os
-import re
 import sys
-import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
@@ -78,6 +71,15 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import dataclasses  # noqa: E402
+import hashlib  # noqa: E402
+import json  # noqa: E402
+import re  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
 import siblings  # noqa: E402
 
 flow = siblings.load(HERE, "check-flow.py")

@@ -38,10 +38,7 @@ wrong / 3 Playwright, its browser, numpy or Pillow is missing / 4 a page did not
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import collections
 import os
-import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +47,11 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import collections  # noqa: E402
+import re  # noqa: E402
+
 import siblings  # noqa: E402
 
 AXE = os.path.join(HERE, "..", "vendor", "axe-core", "axe.min.js")

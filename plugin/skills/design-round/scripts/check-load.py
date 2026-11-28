@@ -85,18 +85,8 @@ earlier run's is deleted. The files mode exits as the timing does, 1 meaning
 a miss and 2 also a table or declaration it cannot read; it never exits 6.
 """
 
-import argparse
-import base64
-import collections
-import contextlib
-import functools
-import http.server
 import os
-import re
-import statistics
 import sys
-import threading
-import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
@@ -104,6 +94,18 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import collections  # noqa: E402
+import contextlib  # noqa: E402
+import functools  # noqa: E402
+import http.server  # noqa: E402
+import re  # noqa: E402
+import statistics  # noqa: E402
+import threading  # noqa: E402
+import urllib.parse  # noqa: E402
+
 import siblings  # noqa: E402
 from fail_open import expected  # noqa: E402
 

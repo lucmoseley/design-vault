@@ -36,13 +36,7 @@ Exits 0, 1 and 6 print on stdout; the rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import io
-import json
-import math
 import os
-import shlex
-import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -51,6 +45,14 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import io  # noqa: E402
+import json  # noqa: E402
+import math  # noqa: E402
+import shlex  # noqa: E402
+import subprocess  # noqa: E402
+
 import siblings  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402

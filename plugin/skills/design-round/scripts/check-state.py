@@ -139,17 +139,8 @@ wrong / 3 Playwright, its browser, numpy or Pillow is missing / 4 the page did n
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import colorsys
-import contextlib
-import io
-import math
 import os
-import re
-import shutil
 import sys
-import tempfile
-import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
@@ -157,6 +148,17 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import colorsys  # noqa: E402
+import contextlib  # noqa: E402
+import io  # noqa: E402
+import math  # noqa: E402
+import re  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+import urllib.parse  # noqa: E402
+
 import siblings  # noqa: E402
 from fail_open import expected, fail_open  # noqa: E402
 

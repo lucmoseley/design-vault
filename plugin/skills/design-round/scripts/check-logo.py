@@ -39,11 +39,6 @@ stdout; the rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import base64
-import importlib
-import math
-import os
 import pathlib
 import sys
 
@@ -53,6 +48,13 @@ if str(HERE) not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import base64  # noqa: E402
+import importlib  # noqa: E402
+import math  # noqa: E402
+import os  # noqa: E402
+
 import siblings  # noqa: E402
 
 
@@ -552,10 +554,7 @@ def parse(argv):
 
 def main(argv):
     args = parse(argv)
-    try:
-        importlib.import_module("PIL")
-    except ImportError as err:
-        sys.exit(runner.missing(err))
+    importlib.import_module("PIL")
     try:
         kind, logo = read_logo(args.logo)
         if kind == "raster":

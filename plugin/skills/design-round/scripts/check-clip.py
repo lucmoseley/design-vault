@@ -20,11 +20,7 @@ results and print on stdout; the rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
-import json
 import pathlib
-import re
-import struct
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -33,6 +29,12 @@ if str(HERE) not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+import re  # noqa: E402
+import struct  # noqa: E402
+
 import siblings  # noqa: E402
 
 FIELDS = HERE.parent / "references" / "loop-fields.json"

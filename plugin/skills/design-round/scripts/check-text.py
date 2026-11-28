@@ -47,7 +47,6 @@ Exits 0 and 1 print on stdout; the rest print on stderr.
 An exception it does not handle exits 2, its traceback on stderr.
 """
 
-import argparse
 import os
 import sys
 
@@ -57,6 +56,9 @@ if HERE not in sys.path:
 import crash_exit  # noqa: E402
 
 crash_exit.guard(__name__)
+
+import argparse  # noqa: E402
+
 import siblings  # noqa: E402
 
 
