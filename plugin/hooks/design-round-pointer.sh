@@ -2,8 +2,9 @@
 # Usage: printf '%s' "$hook_payload_json" | bash design-round-pointer.sh
 #   PreToolUse, matcher Skill: reads `.tool_input.skill`.
 #   UserPromptSubmit: reads a `/command` at the start of `.prompt`.
-#   Prints `{hookSpecificOutput: {hookEventName, additionalContext}}` once per `.session_id` for a rendering skill,
-#   nothing otherwise. Exits 0 on every path, 1 on an unset variable.
+#   SessionStart, matcher compact: clears `.session_id`'s marker, printing nothing.
+#   Prints `{hookSpecificOutput: {hookEventName, additionalContext}}` once per `.session_id`, and once more after each
+#   compaction, for a rendering skill; nothing otherwise. Exits 0 on every path, 1 on an unset variable.
 
 # workflow-core#1315
 set -uo pipefail
@@ -14,6 +15,12 @@ payload="$(cat)"
 field() { printf '%s' "$payload" | jq -r "$1 // \"\"" 2>/dev/null; }
 
 event="$(field '.hook_event_name')"
+
+locate_marker() {
+  session="$(field '.session_id')"
+  state_dir="${TMPDIR:-/tmp}/design-round-pointer-${UID:-0}"
+  marker="$state_dir/${session//[^A-Za-z0-9_-]/_}"
+}
 
 RENDERING=(design prototype animate design-mode)
 
@@ -47,6 +54,11 @@ case "$event" in
       classify "${BASH_REMATCH[1]}"
     fi
     ;;
+  SessionStart)
+    locate_marker
+    [[ -n "$session" ]] && rm -f "$marker" 2>/dev/null
+    exit 0
+    ;;
   *) exit 0 ;;
 esac
 
@@ -64,10 +76,8 @@ if [[ -n "$matched" ]]; then
 fi
 
 MARKER_MAX_AGE_MINUTES=1440 # guess, #5
-session="$(field '.session_id')"
+locate_marker
 if [[ -n "$session" ]]; then
-  state_dir="${TMPDIR:-/tmp}/design-round-pointer-${UID:-0}"
-  marker="$state_dir/${session//[^A-Za-z0-9_-]/_}"
   mkdir -p "$state_dir" 2>/dev/null
   set -o noclobber
   if ! { : >"$marker"; } 2>/dev/null; then

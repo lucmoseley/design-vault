@@ -95,7 +95,7 @@ class Size(unittest.TestCase):
         )
 
     def test_a_render_below_its_models_largest_size_fails_by_either_side_328(self):
-        w, h = largest(GROK)
+        w, h = 2816, 1584
         self.logged(
             ("r1/v1-half", GROK, "16:9"),
             ("r1/v2-narrow", GROK, "16:9"),
@@ -131,10 +131,10 @@ class Size(unittest.TestCase):
                 self.assertIn("render it again at the model's largest size", out)
 
     def test_a_render_over_its_models_largest_size_passes(self):
-        w, h = largest(GROK)
         self.logged(("r1/v1-up", GROK, "16:9"))
-        code, out, _ = run(self.render("v1-up", (w * 2, h * 2)))
+        code, out, _ = run(self.render("v1-up", (5632, 3168)))
         self.assertEqual(code, 0, out)
+        self.assertIn("size: PASS — 5632x3168 against the largest, 2816x1584", out)
 
     def test_a_model_or_aspect_with_no_size_row_is_not_judged_with_exit_6(self):
         self.logged(

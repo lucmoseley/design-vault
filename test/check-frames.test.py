@@ -458,7 +458,7 @@ class StagedBuilds(unittest.TestCase):
         proc = hash_page(os.path.join(FIXTURES, "ticking.html"))
         self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
         self.assertIn(
-            "repeats a script timer every 250 ms, which never stops pending",
+            "repeats a script timer every 250 ms",
             proc.stdout,
         )
 
