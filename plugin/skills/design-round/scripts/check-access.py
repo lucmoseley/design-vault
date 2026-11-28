@@ -723,7 +723,7 @@ MOTION_JS = (
     out.long.push({ subject: label(v), what: v.loop ? 'plays on a loop' : 'plays a video longer than 5 s' });
   }
   window.__motions = motions;
-  for (const [el, log] of f.rewrites) if (el.isConnected && onScreen(el) && loop(log, REWRITE_FRAMES, REWRITE_SPAN_MS)) out.scripted.push(label(el));
+  for (const [el, log] of f.rewrites) if (el.isConnected && onScreen(el) && loop(log)) out.scripted.push(label(el));
   const name = (el) => [el.getAttribute('aria-label'), el.textContent, el.title, el.value].filter(Boolean).join(' ');
   const PAUSE = /\b(pause|stop|hide|play|resume|freeze|motion|animations?)\b/i;
   window.__pauses = [...document.querySelectorAll('button, input[type=button], input[type=checkbox], [role=button], [role=switch], [role=checkbox], [aria-pressed]')]
@@ -852,7 +852,7 @@ const changedSince = (since, until = Infinity) => {
   f.scan();
   const out = new Set();
   const watched = (t) => t >= since && t <= until;
-  const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el), REWRITE_FRAMES, REWRITE_SPAN_MS);
+  const scripted = (el) => f.rewrites.has(el) && loop(f.rewrites.get(el));
   const keep = (el) => el && el.isConnected && !scripted(el) && !window.__pauses.some((p) => p.contains(el));
   for (const [el, times] of window.__timers.changed) if (keep(el) && times.some(watched)) out.add(el);
   for (const [a, rec] of f.seen) {
