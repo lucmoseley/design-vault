@@ -39,6 +39,8 @@ ROSTER = os.path.join(
 GROK = "xai/grok-imagine-image-2.0"
 QWEN = "alibaba/qwen-image-3/text-to-image"
 IDEOGRAM = "ideogram/v4.0"
+# measured, the 30 Sep calibration renders r1–r3/v3-grok.png at 2k; a literal, never read from render-sizes.json, #651
+GROK_16_9 = (2816, 1584)
 CELL_SLACK_PX = 1  # guess, #332
 CELL_SLACK_SHARE = 0.15  # guess, #332
 
@@ -90,12 +92,13 @@ class Size(unittest.TestCase):
         code, out, _ = run(self.render("v1-grok", largest(GROK)))
         self.assertEqual(code, 0, out)
         self.assertRegex(out, rf"{re.escape(GROK)} at 16:9 .*line for r1/v1-grok")
+        w, h = GROK_16_9
         self.assertRegex(
-            out, r"size: PASS — 2816x1584 against the largest, 2816x1584 \(measured"
+            out, rf"size: PASS — {w}x{h} against the largest, {w}x{h} \(measured"
         )
 
     def test_a_render_below_its_models_largest_size_fails_by_either_side_328(self):
-        w, h = 2816, 1584
+        w, h = GROK_16_9
         self.logged(
             ("r1/v1-half", GROK, "16:9"),
             ("r1/v2-narrow", GROK, "16:9"),
@@ -131,10 +134,11 @@ class Size(unittest.TestCase):
                 self.assertIn("render it again at the model's largest size", out)
 
     def test_a_render_over_its_models_largest_size_passes(self):
+        w, h = GROK_16_9
         self.logged(("r1/v1-up", GROK, "16:9"))
-        code, out, _ = run(self.render("v1-up", (5632, 3168)))
+        code, out, _ = run(self.render("v1-up", (w * 2, h * 2)))
         self.assertEqual(code, 0, out)
-        self.assertIn("size: PASS — 5632x3168 against the largest, 2816x1584", out)
+        self.assertIn(f"size: PASS — {w * 2}x{h * 2} against the largest, {w}x{h}", out)
 
     def test_a_model_or_aspect_with_no_size_row_is_not_judged_with_exit_6(self):
         self.logged(
