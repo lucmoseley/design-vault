@@ -1472,6 +1472,24 @@ class Refused(unittest.TestCase):
             "script-loop-stalled.html", "from a script, frame by frame (div#loop)"
         )
 
+    def test_a_frame_loop_through_a_fresh_closure_frames_a_beat_apart(self):  # #617
+        page = """<!doctype html><div id="waapi" style="width:40px;height:40px;background:#333"></div>
+<div id="loop" style="width:40px;height:40px;background:#333"></div>
+<script>
+waapi.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, fill: "forwards" });
+let frame = 0;
+function tick() {
+  const held = performance.now();
+  while (performance.now() - held < 300);
+  loop.style.transform = `translateX(${30 * frame}px)`;
+  if (frame++ < 8) requestAnimationFrame(() => tick());
+}
+requestAnimationFrame(() => tick());
+</script>"""
+        proc, data = run_page(page)
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn("from a script, frame by frame (div#loop)", proc.stdout)
+
     def test_a_script_moving_an_element_frame_by_frame_after_the_quiet_window(
         self,
     ):  # #469
