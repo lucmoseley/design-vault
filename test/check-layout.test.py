@@ -46,6 +46,8 @@ RUNS = {
     "nested": ("nested.html", ["--widths", "320-620"]),
     "probe": ("probe.html", ["--widths", "420-430"]),
     "cut": ("cut.html", ["--widths", "320-520"]),
+    "clip": ("clip.html", ["--widths", "320-420", "--step", "100"]),
+    "deferred": ("deferred.html", ["--widths", "320-320"]),
     "slide": ("slide.html", ["--widths", "1080-1360"]),
     "under": ("under.html", ["--widths", "780-920"]),
     "crowd": ("crowd.html", ["--widths", "1480-1620"]),
@@ -463,6 +465,28 @@ class Detectors(unittest.TestCase):
             "320–520 px: p.lead:nth-of-type(2) runs 40 px past the screen's edge",
             stdout,
         )
+
+    def test_a_cards_wrapped_title_its_box_cuts_off_fails_but_a_marked_or_reachable_cut_does_not(
+        self,
+    ):  # #683
+        code, stdout, stderr, found, _ = DONE["clip"]
+        self.assertEqual(code, 1, stdout + stderr)
+        cut = sorted(
+            (low, high, subject) for low, high, subject, _ in spans("clip", "clip")
+        )
+        self.assertEqual(len(cut), 3, cut)
+        self.assertTrue(all((low, high) == (320, 320) for low, high, _ in cut), cut)
+        for card in ("div.card.plain", "div.card.loose", "div.card.slid"):
+            self.assertTrue(any(card in s for _, _, s in cut), (card, cut))
+        self.assertEqual(found["answers"]["vault.reflow"], "fail")
+
+    def test_a_section_under_content_visibility_auto_is_measured_at_its_drawn_height_where_a_label_over_it_still_overlaps(
+        self,
+    ):  # #683
+        crossed = [subject for _, _, subject, _ in spans("deferred", "overlap")]
+        self.assertEqual(len(crossed), 1, crossed)
+        self.assertIn("p.pinned", crossed[0])
+        self.assertNotIn("p.note", crossed[0])
 
     def test_text_sliding_over_a_photos_edge_overlaps_at_that_range(self):
         low, high, subject, detail = self.fault("slide", "overlap")
