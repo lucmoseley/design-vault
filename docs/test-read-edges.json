@@ -1313,11 +1313,19 @@
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
+		"test/fixtures/frames/long-timer.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
 		"test/fixtures/frames/mark.svg": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/morph.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/polling.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],
@@ -1350,6 +1358,14 @@
 			"test/select-suites.test.js"
 		],
 		"test/fixtures/frames/staggered.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/ticking.html": [
+			"test/ledger-check.test.js",
+			"test/select-suites.test.js"
+		],
+		"test/fixtures/frames/timed-chain.html": [
 			"test/ledger-check.test.js",
 			"test/select-suites.test.js"
 		],

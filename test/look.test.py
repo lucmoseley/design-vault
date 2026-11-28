@@ -28,6 +28,7 @@ PAGE = os.path.join(HERE, "fixtures", "look", "page.html")
 STAGGERED = os.path.join(HERE, "fixtures", "look", "staggered.html")
 LATE = os.path.join(HERE, "fixtures", "look", "late.html")
 STILL = os.path.join(HERE, "fixtures", "look", "still.html")
+TIMED_CHAIN = os.path.join(HERE, "fixtures", "frames", "timed-chain.html")
 SLOW_CANVAS = os.path.join(HERE, "fixtures", "look", "slow-canvas.html")
 SLOW_MOVE = os.path.join(HERE, "fixtures", "look", "slow-move.html")
 
@@ -293,6 +294,17 @@ class Staggered(unittest.TestCase):  # #547
             self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
             self.assertIn("starts animations after its frames were read", proc.stdout)
             self.assertIn("Scrub it by eye", proc.stdout)
+            self.assertEqual(os.listdir(d), [])
+
+    def test_a_link_a_timer_starts_past_quiet_ms_is_refused_unwritten_686(self):
+        with tempfile.TemporaryDirectory() as d:
+            proc = run(
+                "scrub", TIMED_CHAIN, "--out", d, "--step", "500", "--until", "1000"
+            )
+            self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+            self.assertIn(
+                "starts animations when others finish (div#tagline)", proc.stdout
+            )
             self.assertEqual(os.listdir(d), [])
 
     def test_a_page_with_no_motion_is_named_still(self):

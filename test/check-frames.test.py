@@ -2,6 +2,7 @@
 import json
 import os
 import pathlib
+import re
 import shutil
 import sys
 import tempfile
@@ -422,6 +423,63 @@ class StagedBuilds(unittest.TestCase):
             "where the first link ends; start every link when the page loads, held back by its delay",
             proc.stdout,
         )
+
+    def test_both_links_of_a_chain_a_timer_carries_past_quiet_ms_are_found_unlike_a_staggered_start_686(
+        self,
+    ):
+        with runner.chromium(frames.HASH_ARGS) as browser:
+            context, page, prep = frames.open_page(
+                browser, load_of(os.path.join(FIXTURES, "timed-chain.html")), 1
+            )
+            try:
+                with self.assertRaises(frames.UnmeasurableError) as caught:
+                    frames.refuse_chain(page)
+            finally:
+                context.close()
+        self.assertEqual([s["name"] for s in prep["timeline"]], ["div#mark"])
+        self.assertIn(
+            "starts animations when others finish (div#tagline)", str(caught.exception)
+        )
+
+    def test_a_timer_past_the_cap_is_refused_naming_its_delay_unlike_a_staggered_start_686(
+        self,
+    ):
+        proc = hash_page(os.path.join(FIXTURES, "long-timer.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            f"sets a script timer for 6000 ms, past the {frames.SETTLE_CAP_MS} ms it waits for one, "
+            "so a link of its motion that a timer starts goes unseen",
+            proc.stdout,
+        )
+
+    def test_a_repeating_timer_is_refused_naming_its_period_unlike_a_staggered_start_686(
+        self,
+    ):
+        proc = hash_page(os.path.join(FIXTURES, "ticking.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            "repeats a script timer every 250 ms, which never stops pending",
+            proc.stdout,
+        )
+
+    def test_a_page_setting_timers_past_the_cap_is_refused_unlike_a_staggered_start_686(
+        self,
+    ):
+        proc = hash_page(os.path.join(FIXTURES, "polling.html"))
+        self.assertEqual(proc.returncode, 6, proc.stdout + proc.stderr)
+        self.assertIn(
+            f"keeps setting script timers, one of 100 ms due past the {frames.SETTLE_CAP_MS} ms it waits for them",
+            proc.stdout,
+        )
+
+    def test_the_timer_fixtures_sit_past_quiet_ms_and_either_side_of_the_cap_686(self):
+        def delay(page):
+            with open(os.path.join(FIXTURES, page), encoding="utf8") as fh:
+                return int(re.search(r"setTimeout\(.*, (\d+)\);", fh.read()).group(1))
+
+        self.assertLess(frames.QUIET_MS, delay("timed-chain.html"))
+        self.assertLess(delay("timed-chain.html"), frames.SETTLE_CAP_MS)
+        self.assertLess(frames.SETTLE_CAP_MS, delay("long-timer.html"))
 
     def test_a_late_start_no_finish_made_is_not_called_a_chain(self):
         proc = hash_page(os.path.join(FIXTURES, "afterward.html"))

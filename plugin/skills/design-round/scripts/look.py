@@ -18,8 +18,9 @@ USAGE
       starts after it sits at its own time since then, and the frames are the
       motion at any speed they are played. --wait waits for the element that
       marks a start later than check-frames.py's QUIET_MS. A page that starts
-      an animation when another finishes, or after its timeline was read, is
-      refused and its frames are not written.
+      an animation when another finishes, through a timer or not, or after
+      its timeline was read, or that holds a script timer past check-frames.py's
+      SETTLE_CAP_MS, is refused and its frames are not written.
   python3 look.py measure <url or file> --at X,Y [--width W] [--height H]
         [--after MS]
       The part under the point (CSS px, page coordinates) on the settled page:
