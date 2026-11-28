@@ -4,7 +4,7 @@ Where things sit on the page: reflow across widths and the first screen. The for
 
 ### vault.reflow
 - applies-when: web-surface; the page at every width
-- question: At every width, is there no sideways scroll, no text cut off at the screen's edge, and no text crossing other text or an image's edge or hidden under an image, and at phone widths does the viewport meta let a phone lay the page out at its own width and zoom it to 200%, save a fault the brief chose and names?
+- question: At every width, is there no sideways scroll, no text cut off at the screen's edge or partly hidden by a box that hides its overflow, save a cut an ellipsis or line clamp marks, a carousel or snap track, or a link or control that may show it, and no text crossing other text or an image's edge or hidden under an image, and at phone widths does the viewport meta let a phone lay the page out at its own width and zoom it to 200%, save a fault the brief chose and names?
 - answered-by: script
 - writes: reflow
 - yields-to: none
