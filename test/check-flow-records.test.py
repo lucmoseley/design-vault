@@ -22,7 +22,7 @@ ACCESS = os.path.join(
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
 LATE_INPUT = os.path.join(HERE, "late-input.py")
-PAUSE = os.path.join(HERE, "pause-answer.py")
+PAUSE_HELPER = os.path.join(HERE, "pause-answer.py")
 
 
 SCRIPTS = os.path.dirname(FLOW)
@@ -648,20 +648,19 @@ PAUSE_JOBS = {
         watch_ms=LATER_MS,
     ),
 }
-# measured, #654: the clean page's full run sets the wall time, and 6 workers ended it no sooner
-PARALLEL = 4
+PARALLEL = 4  # measured 156 s, #654
 SCRATCH = tempfile.TemporaryDirectory()
 FUTURES = {}
 
 
-def started():
+def start_runs():
     if not FUTURES:
         runs = page_runs(SCRATCH.name)
 
         def page(name):
-            page, *extra = runs[name]
+            fixture, *extra = runs[name]
             return run(
-                page,
+                fixture,
                 os.path.join(SCRATCH.name, name),
                 *extra,
                 **PAGE_OPTIONS.get(name, {}),
@@ -669,20 +668,29 @@ def started():
 
         def pause(name):
             return child.run(
-                [sys.executable, PAUSE, json.dumps(PAUSE_JOBS[name])],
+                [sys.executable, PAUSE_HELPER, json.dumps(PAUSE_JOBS[name])],
                 timeout=RUN_TIMEOUT_S,
             )
 
+        longest = ["fault", "clean"]
+        jobs = (
+            [(page, "page", name) for name in longest]
+            + [(pause, "pause", name) for name in PAUSE_JOBS]
+            + [(page, "page", name) for name in runs if name not in longest]
+        )
         pool = concurrent.futures.ThreadPoolExecutor(PARALLEL)
-        FUTURES.update(
-            {("page", name): pool.submit(page, name) for name in ("fault", "clean")}
-        )
-        FUTURES.update(
-            {("pause", name): pool.submit(pause, name) for name in PAUSE_JOBS}
-        )
-        FUTURES.update({("page", name): pool.submit(page, name) for name in runs})
+        for go, kind, name in jobs:
+            FUTURES[kind, name] = pool.submit(go, name)
         pool.shutdown(wait=False)
     return FUTURES
+
+
+def results(kind):
+    return {
+        name: future.result()
+        for (of, name), future in start_runs().items()
+        if of == kind
+    }
 
 
 def tearDownModule():
@@ -695,11 +703,7 @@ def tearDownModule():
 class Pages(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.runs = {
-            name: future.result()
-            for (kind, name), future in started().items()
-            if kind == "page"
-        }
+        cls.runs = results("page")
         cls.fault, cls.clean = cls.runs["fault"], cls.runs["clean"]
 
     def test_the_fault_page_names_every_plant(self):
@@ -846,11 +850,7 @@ class Pause(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.done = {
-            name: future.result()
-            for (kind, name), future in started().items()
-            if kind == "pause"
-        }
+        cls.done = results("pause")
 
     def read(self, name):
         done = self.done[name]
