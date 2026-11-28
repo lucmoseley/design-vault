@@ -7,7 +7,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 
 import numpy as np
 
@@ -23,6 +22,7 @@ ACCESS = os.path.join(
 )
 FIXTURES = os.path.join(HERE, "fixtures", "flow")
 LATE_INPUT = os.path.join(HERE, "late-input.py")
+PAUSE = os.path.join(HERE, "pause-answer.py")
 
 
 SCRIPTS = os.path.dirname(FLOW)
@@ -31,6 +31,7 @@ import siblings  # noqa: E402
 
 records = siblings.load(SCRIPTS, "motion-records.py")
 flow = siblings.load(SCRIPTS, os.path.basename(FLOW))
+access = siblings.load(SCRIPTS, os.path.basename(ACCESS))
 with open(flow.TABLE, encoding="utf8") as fh:
     LINES = records.parse_table(fh.read())
 V = {line.mode: line.value for line in LINES}
@@ -525,65 +526,181 @@ FIXES = {
 }
 
 
+def page_runs(where):
+    return {
+        "fault": (os.path.join(FIXTURES, "tier01-fault.html"),),
+        "clean": (os.path.join(FIXTURES, "tier01-clean.html"),),
+        "keys": (
+            os.path.join(FIXTURES, "scrolljack-keys.html"),
+            "--table",
+            table_of(where, "native-scroll"),
+        ),
+        "map": (
+            os.path.join(FIXTURES, "touch-map.html"),
+            "--table",
+            table_of(where, "native-scroll"),
+        ),
+        "narrow": (
+            os.path.join(FIXTURES, "tier01-clean.html"),
+            "--viewport",
+            "500x800",
+            "--table",
+            table_of(where, "carousel"),
+        ),
+        "slow": (
+            os.path.join(FIXTURES, "slow-script.html"),
+            "--table",
+            table_of(where, "slow-update"),
+        ),
+        "late": (
+            os.path.join(FIXTURES, "tier01-clean.html"),
+            "--table",
+            table_of(where, "drag-release"),
+        ),
+        "rest": (
+            os.path.join(FIXTURES, "tier01-fault.html"),
+            "--table",
+            table_of(where, "drag-release"),
+        ),
+    }
+
+
+PAGE_OPTIONS = {
+    "late": {"script": LATE_INPUT},
+    "rest": {"parts": "tier01-rest-parts.json"},
+}
+
+
+def fixture_url(name):
+    return "file://" + os.path.abspath(os.path.join(FIXTURES, f"tier01-{name}.html"))
+
+
+def pause_job(url, init=None, watch_ms=access.WATCH_MS, carousels=()):
+    return {
+        "url": url,
+        "init": init,
+        "watch_ms": watch_ms,
+        "carousels": list(carousels),
+    }
+
+
+def without_pause(script):
+    return f"addEventListener('DOMContentLoaded', () => {{ document.querySelector('.pause').remove(); {script} }});"
+
+
+PAST_MS = 500  # guess, #628
+LATE_MS = access.prelude.LONG_MS + PAST_MS
+PAST_ROTATE_MS = access.PAUSE_WINDOW[1] + PAST_MS
+LATER_MS = access.prelude.LONG_MS + access.keys.ROTATE_MS + 4 * PAST_MS
+DEBOUNCED = "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => %s.setAttribute('data-w', String(Math.random()))), 50));"  # guess, #646
+TALL_PX = 3000  # guess, #647: past the 720 px window of a default context
+TALL = f"document.head.insertAdjacentHTML('beforeend', '<style>.carousel {{ height: {TALL_PX}px; }}</style>');"
+STOPS_EVERYTHING = """
+  const intervals = [], set = window.setInterval;
+  window.setInterval = function (...a) { const id = set.apply(this, a); intervals.push(id); return id; };
+  addEventListener('DOMContentLoaded', () => document.querySelector('.pause').addEventListener('click', () => {
+    intervals.forEach((id) => clearInterval(id));
+    document.querySelector('.carousel').dispatchEvent(new Event('focusin'));
+  }));
+"""
+CLEAN_FIRST_SLIDE_HOLD_MS = 5000
+FIRST_SLIDE_TURN_MS = access.prelude.LONG_MS + PAST_MS // 2
+FIRST_SLIDE_HELD = f"""const wait = window.setTimeout;
+window.setTimeout = function (fn, t, ...a) {{ return wait.call(this, fn, t === {CLEAN_FIRST_SLIDE_HOLD_MS} ? {FIRST_SLIDE_TURN_MS} : t, ...a); }};"""
+PAUSE_JOBS = {
+    "fault": pause_job(fixture_url("fault")),
+    "clean": pause_job(fixture_url("clean")),
+    "stops": pause_job(fixture_url("clean"), STOPS_EVERYTHING),
+    "late": pause_job(fixture_url("clean"), watch_ms=LATE_MS),
+    "debounced": pause_job(
+        fixture_url("clean"),
+        without_pause(DEBOUNCED % "document.querySelector('.lane')"),
+        LATE_MS,
+    ),
+    "onresize": pause_job(
+        fixture_url("clean"),
+        without_pause(
+            "document.body.onresize = () => document.querySelector('.lane').setAttribute('data-w', String(Math.random()));"
+        ),
+        LATE_MS,
+    ),
+    "past-rotate": pause_job(
+        fixture_url("clean"),
+        without_pause(
+            f"setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-late', 'on'); console.log('late'); }}, {PAST_ROTATE_MS});"
+        ),
+        LATER_MS,
+    ),
+    "tall": pause_job(
+        fixture_url("clean"), without_pause(TALL), carousels=[".carousel"]
+    ),
+    "tall-handler": pause_job(
+        fixture_url("clean"),
+        without_pause(TALL + DEBOUNCED % "document.body"),
+        carousels=[".carousel"],
+    ),
+    "turning": pause_job(
+        fixture_url("clean"), FIRST_SLIDE_HELD, LATE_MS, carousels=[".carousel"]
+    ),
+    "interval": pause_job(
+        "data:text/html,"
+        + f"<p>Hostel</p><script>setInterval(() => {{}}, {PAST_ROTATE_MS});</script>",
+        watch_ms=LATER_MS,
+    ),
+}
+# measured, #654: the clean page's full run sets the wall time, and 6 workers ended it no sooner
+PARALLEL = 4
+SCRATCH = tempfile.TemporaryDirectory()
+FUTURES = {}
+
+
+def started():
+    if not FUTURES:
+        runs = page_runs(SCRATCH.name)
+
+        def page(name):
+            page, *extra = runs[name]
+            return run(
+                page,
+                os.path.join(SCRATCH.name, name),
+                *extra,
+                **PAGE_OPTIONS.get(name, {}),
+            )
+
+        def pause(name):
+            return child.run(
+                [sys.executable, PAUSE, json.dumps(PAUSE_JOBS[name])],
+                timeout=RUN_TIMEOUT_S,
+            )
+
+        pool = concurrent.futures.ThreadPoolExecutor(PARALLEL)
+        FUTURES.update(
+            {("page", name): pool.submit(page, name) for name in ("fault", "clean")}
+        )
+        FUTURES.update(
+            {("pause", name): pool.submit(pause, name) for name in PAUSE_JOBS}
+        )
+        FUTURES.update({("page", name): pool.submit(page, name) for name in runs})
+        pool.shutdown(wait=False)
+    return FUTURES
+
+
+def tearDownModule():
+    for future in FUTURES.values():
+        future.cancel()
+    concurrent.futures.wait(FUTURES.values())
+    SCRATCH.cleanup()
+
+
 class Pages(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.TemporaryDirectory()
-        where = cls.tmp.name
-        runs = {
-            "fault": (os.path.join(FIXTURES, "tier01-fault.html"),),
-            "clean": (os.path.join(FIXTURES, "tier01-clean.html"),),
-            "keys": (
-                os.path.join(FIXTURES, "scrolljack-keys.html"),
-                "--table",
-                table_of(where, "native-scroll"),
-            ),
-            "map": (
-                os.path.join(FIXTURES, "touch-map.html"),
-                "--table",
-                table_of(where, "native-scroll"),
-            ),
-            "narrow": (
-                os.path.join(FIXTURES, "tier01-clean.html"),
-                "--viewport",
-                "500x800",
-                "--table",
-                table_of(where, "carousel"),
-            ),
-            "slow": (
-                os.path.join(FIXTURES, "slow-script.html"),
-                "--table",
-                table_of(where, "slow-update"),
-            ),
-            "late": (
-                os.path.join(FIXTURES, "tier01-clean.html"),
-                "--table",
-                table_of(where, "drag-release"),
-            ),
-            "rest": (
-                os.path.join(FIXTURES, "tier01-fault.html"),
-                "--table",
-                table_of(where, "drag-release"),
-            ),
+        cls.runs = {
+            name: future.result()
+            for (kind, name), future in started().items()
+            if kind == "page"
         }
-        options = {
-            "late": {"script": LATE_INPUT},
-            "rest": {"parts": "tier01-rest-parts.json"},
-        }
-
-        def go(name):
-            page, *extra = runs[name]
-            return name, run(
-                page, os.path.join(where, name), *extra, **options.get(name, {})
-            )
-
-        with concurrent.futures.ThreadPoolExecutor(2) as pool:
-            cls.runs = dict(pool.map(go, runs))
         cls.fault, cls.clean = cls.runs["fault"], cls.runs["clean"]
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.tmp.cleanup()
 
     def test_the_fault_page_names_every_plant(self):
         code, got, out = self.fault
@@ -656,8 +773,8 @@ class Pages(unittest.TestCase):
         self.assertEqual(got["vault.drag-release"]["answer"], "pass", out)
 
     def test_a_part_record_without_parts_is_not_judged(self):
-        tmp = os.path.join(self.tmp.name, "bare")
-        table = os.path.join(self.tmp.name, "parts.table")
+        tmp = os.path.join(SCRATCH.name, "bare")
+        table = os.path.join(SCRATCH.name, "parts.table")
         with open(table, "w", encoding="utf8") as fh:
             fh.write(
                 "vault.carousel-timing | carousel | "
@@ -725,47 +842,24 @@ class Pages(unittest.TestCase):
 
 
 class Pause(unittest.TestCase):
-    PAST_MS = 500  # guess, #628
-    DEBOUNCED = "addEventListener('resize', () => setTimeout(() => requestAnimationFrame(() => %s.setAttribute('data-w', String(Math.random()))), 50));"  # guess, #646
-    TALL_PX = 3000  # guess, #647: past the 720 px window of a default context
     TRIED = "changes what it shows more than 5 s after the page's load, and none of the 1 control(s) named for pausing it stops it, clicked; no carousel was declared, so whether the change shows cannot be told"
 
     @classmethod
     def setUpClass(cls):
-        from playwright.sync_api import sync_playwright
+        cls.done = {
+            name: future.result()
+            for (kind, name), future in started().items()
+            if kind == "pause"
+        }
 
-        cls.access = siblings.load(SCRIPTS, os.path.basename(ACCESS))
-        cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch()
+    def read(self, name):
+        done = self.done[name]
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.close()
-        cls.playwright.stop()
-
-    def pause_answer(self, name, init=None, logged=None, carousels=()):
-        return self.answer_at(
-            "file://" + os.path.abspath(os.path.join(FIXTURES, f"tier01-{name}.html")),
-            init,
-            logged,
-            carousels,
-        )
-
-    def answer_at(self, url, init=None, logged=None, carousels=()):
-        ctx = self.browser.new_context()
-        if logged is not None:
-            ctx.on("console", lambda m: logged.append(m.text))
-        try:
-            if init:
-                ctx.add_init_script(init)
-            return self.access.pause_answer(ctx, url, list(carousels), [])
-        finally:
-            ctx.close()
-
-    def late(self, past_ms=PAST_MS):
-        return mock.patch.object(
-            self.access, "WATCH_MS", self.access.prelude.LONG_MS + past_ms
-        )
+    def pause_answer(self, name):
+        got = self.read(name)
+        return got["faults"], got["unmeasured"]
 
     def clean_answer(self):
         return (
@@ -784,36 +878,18 @@ class Pause(unittest.TestCase):
         )
         self.assertEqual(self.pause_answer("clean"), self.clean_answer())
 
-    STOPS_EVERYTHING = """
-      const intervals = [], set = window.setInterval;
-      window.setInterval = function (...a) { const id = set.apply(this, a); intervals.push(id); return id; };
-      addEventListener('DOMContentLoaded', () => document.querySelector('.pause').addEventListener('click', () => {
-        intervals.forEach((id) => clearInterval(id));
-        document.querySelector('.carousel').dispatchEvent(new Event('focusin'));
-      }));
-    """
-
     def test_the_clean_page_passes_where_its_pause_control_also_stops_the_dot_and_the_carousel_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        self.assertEqual(self.pause_answer("clean", self.STOPS_EVERYTHING), ([], []))
+        self.assertEqual(self.pause_answer("stops"), ([], []))
 
     def test_a_read_reaching_5_s_late_still_sees_the_carousel_turn_628_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        with self.late():
-            got = self.pause_answer("clean")
-        self.assertEqual(got, self.clean_answer())
+        self.assertEqual(self.pause_answer("late"), self.clean_answer())
 
-    def unwatched_after_5_s(self, script, past_ms=PAST_MS, logged=None):
-        init = f"""
-          addEventListener('DOMContentLoaded', () => {{
-            document.querySelector('.pause').remove();
-            {script}
-          }});
-        """
-        with self.late(past_ms):
-            faults, unmeasured = self.pause_answer("clean", init, logged)
+    def unwatched_after_5_s(self, name):
+        faults, unmeasured = self.pause_answer(name)
         self.assertEqual(
             [f["subject"] for f in faults],
             ["section:nth-of-type(1) > div.spinner:nth-of-type(1)"],
@@ -833,60 +909,33 @@ class Pause(unittest.TestCase):
     def test_a_change_a_debounced_resize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        self.unwatched_after_5_s(self.DEBOUNCED % "document.querySelector('.lane')")
+        self.unwatched_after_5_s("debounced")
 
     def test_a_change_a_body_onresize_handler_makes_past_5_s_is_no_rotation_646_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        self.unwatched_after_5_s(
-            "document.body.onresize = () => document.querySelector('.lane').setAttribute('data-w', String(Math.random()));"
-        )
+        self.unwatched_after_5_s("onresize")
 
     def test_a_change_past_rotate_ms_from_5_s_is_not_read_628_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        window_ms = self.access.PAUSE_WINDOW[1]
-        logged = []
-        self.unwatched_after_5_s(
-            f"setTimeout(() => {{ document.querySelector('.lane').setAttribute('data-late', 'on'); console.log('late'); }}, {window_ms + self.PAST_MS});",
-            self.access.keys.ROTATE_MS + 4 * self.PAST_MS,
-            logged,
-        )
-        self.assertIn("late", logged)
+        self.unwatched_after_5_s("past-rotate")
+        self.assertIn("late", self.read("past-rotate")["logged"])
 
     def test_a_change_a_debounced_resize_handler_makes_past_5_s_beside_a_declared_carousel_taller_than_the_window_is_no_rotation_647_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        tall = f"document.head.insertAdjacentHTML('beforeend', '<style>.carousel {{ height: {self.TALL_PX}px; }}</style>');"
-        handler = self.DEBOUNCED % "document.body"
-        answers = [
-            self.pause_answer(
-                "clean",
-                f"addEventListener('DOMContentLoaded', () => {{ document.querySelector('.pause').remove(); {script} }});",
-                carousels=[".carousel"],
-            )
-            for script in (tall, tall + handler)
-        ]
+        tall, handled = self.pause_answer("tall"), self.pause_answer("tall-handler")
         self.assertIn(
             "section:nth-of-type(2) > div.carousel",
-            [f["subject"] for f in answers[0][0]],
+            [f["subject"] for f in tall[0]],
         )
-        self.assertEqual(answers[1], answers[0])
-
-    CLEAN_FIRST_SLIDE_HOLD_MS = 5000
-
-    def first_slide_held(self, ms):
-        return f"""const wait = window.setTimeout;
-        window.setTimeout = function (fn, t, ...a) {{ return wait.call(this, fn, t === {self.CLEAN_FIRST_SLIDE_HOLD_MS} ? {ms} : t, ...a); }};"""
+        self.assertEqual(handled, tall)
 
     def test_a_declared_carousel_turning_between_5_s_and_a_late_read_fails_642_paired_with_test_check_access_answers_the_pause_plant_545(
         self,
     ):
-        turn_ms = self.access.prelude.LONG_MS + self.PAST_MS // 2
-        with self.late():
-            faults, _ = self.pause_answer(
-                "clean", self.first_slide_held(turn_ms), carousels=[".carousel"]
-            )
+        faults, _ = self.pause_answer("turning")
         self.assertEqual(
             [f["subject"] for f in faults],
             ["section:nth-of-type(2) > div.carousel"],
@@ -895,12 +944,8 @@ class Pause(unittest.TestCase):
     def test_an_interval_first_run_past_rotate_ms_from_5_s_is_unwatched_642_paired_with_test_a_change_past_rotate_ms_from_5_s_is_not_read_628(
         self,
     ):
-        window_ms = self.access.PAUSE_WINDOW[1]
-        page = f"<p>Hostel</p><script>setInterval(() => {{}}, {window_ms + self.PAST_MS});</script>"
-        with self.late(self.access.keys.ROTATE_MS + 4 * self.PAST_MS):
-            _, unmeasured = self.answer_at("data:text/html," + page)
         self.assertEqual(
-            unmeasured,
+            self.pause_answer("interval")[1],
             [
                 (
                     "the page still ran a timer that did not run in the 6 s watched past 5 s from its load, "
