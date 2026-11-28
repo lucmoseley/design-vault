@@ -27,6 +27,7 @@ FIXTURES = pathlib.Path(HERE, "fixtures", "text").resolve()
 FAULT = FIXTURES / "tier01-fault.html"
 CLEAN = FIXTURES / "tier01-clean.html"
 COUNTDOWN = FIXTURES / "countdown.html"
+TOUCH = FIXTURES / "touch.html"
 OFFER = ("--part", "offer-deadline=.offer")
 TABLE = checks.parse_table(pathlib.Path(TABLE_FILE).read_text())
 RECORDS = list(TABLE)
@@ -522,6 +523,30 @@ class Checks(unittest.TestCase):
         self.assertEqual(lacks("Ends 30.11.2026 CET"), ["no time shown"])
         self.assertEqual(
             lacks("Save €12.50 until 30 November 2026 GMT"), ["no time shown"]
+        )
+
+
+class Sweep(unittest.TestCase):
+    def test_the_phone_load_has_a_touch_screen_and_the_desktop_none(self):
+        with text.runner.chromium() as browser:
+            loads = text.sweep(
+                browser,
+                TOUCH.as_uri(),
+                values={},
+                words=WORDS,
+                parts={},
+                nulls=set(),
+                timeout=text.runner.LOAD_TIMEOUT_MS,
+            )
+        self.assertEqual(
+            {
+                one.width: "".join(r["text"] for r in one.data["blocks"][0]["runs"])
+                for one in loads
+            },
+            {
+                text.conditions.PHONE_WIDTH: "Touch screen",
+                text.conditions.DESKTOP_WIDTH: "No touch screen",
+            },
         )
 
 

@@ -295,14 +295,9 @@ def sweep(browser, url, *, values, words, parts, nulls, timeout):
     loads = []
 
     def one(condition, width, **given):
-        options = {
-            "viewport": {
-                "width": width,
-                "height": conditions.height_at(width, conditions.HEIGHTS),
-            }
-        }
-        with conditions.open_page(browser, url, **given, **options) as page:
-            page.set_default_timeout(timeout)
+        with conditions.open_page(
+            browser, url, width=width, timeout=timeout, **given
+        ) as page:
             conditions.settle(page)
             data = read_page(page, values)
             if condition.startswith("locale="):
